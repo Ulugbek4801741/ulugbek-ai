@@ -1,5 +1,6 @@
-const CACHE_NAME = "ulugbek-ai-shell-v1";
-const APP_SHELL = ["/", "/index.html", "/styles.css", "/app.js", "/manifest.webmanifest", "/icon.svg"];
+const CACHE_NAME = "ulugbek-ai-shell-v2";
+const base = new URL("./", self.registration.scope);
+const APP_SHELL = ["", "index.html", "styles.css", "app.js", "manifest.webmanifest", "icon.svg"].map((path) => new URL(path, base).toString());
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
@@ -17,7 +18,7 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
-  if (url.origin !== self.location.origin || url.pathname.startsWith("/api/")) return;
+  if (url.origin !== self.location.origin || url.pathname.includes("/api/")) return;
   if (event.request.method !== "GET") return;
 
   event.respondWith(
@@ -29,7 +30,7 @@ self.addEventListener("fetch", (event) => {
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
         }
         return response;
-      }).catch(() => caches.match("/index.html"));
+      }).catch(() => caches.match(new URL("index.html", base).toString()));
     })
   );
 });
