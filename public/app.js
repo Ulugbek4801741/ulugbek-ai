@@ -21,7 +21,7 @@ async function checkHealth() {
     return;
   }
   try {
-    const response = await fetch("/api/health", { cache: "no-store" });
+    const response = await fetch(new URL("api/health", document.baseURI), { cache: "no-store" });
     if (!response.ok) throw new Error("health failed");
     status.textContent = "Server bilan bog‘langan · MVP 0.2.0";
   } catch {
@@ -49,7 +49,7 @@ form.addEventListener("submit", async (event) => {
       addMessage(offlineReply(message), "assistant");
     } else {
       try {
-        const response = await fetch("/api/chat", {
+        const response = await fetch(new URL("api/chat", document.baseURI), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ message })
@@ -82,7 +82,7 @@ installButton.addEventListener("click", async () => {
 
 if ("serviceWorker" in navigator && !isNative) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch(() => {});
+    navigator.serviceWorker.register("sw.js").catch(() => {});
   });
 }
 checkHealth();
