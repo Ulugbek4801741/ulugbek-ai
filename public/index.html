@@ -2,18 +2,22 @@
 <html lang="uz">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#101827">
-  <title>ULUGBEK AI — Sinov versiyasi</title>
+  <meta name="description" content="ULUGBEK AI — o‘zbek tilidagi AI platformasi uchun sinov ilovasi.">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <title>ULUGBEK AI</title>
   <style>
-    :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+    :root { color-scheme: dark; font-family: system-ui, -apple-system, sans-serif; }
     * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; background: #101827; color: #eef2ff; display: grid; place-items: center; padding: 18px; }
+    body { margin: 0; min-height: 100vh; min-height: 100dvh; background: #101827; color: #eef2ff; display: grid; place-items: center; padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom)); }
     main { width: min(760px, 100%); background: #172235; border: 1px solid #334155; border-radius: 20px; overflow: hidden; box-shadow: 0 18px 60px #0005; }
-    header { padding: 22px; border-bottom: 1px solid #334155; }
+    header { padding: 20px; border-bottom: 1px solid #334155; }
     h1 { margin: 0 0 6px; font-size: 1.5rem; }
     .sub, #status { color: #b6c3d8; font-size: .92rem; }
-    #messages { min-height: 280px; max-height: 52vh; overflow-y: auto; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+    #status { margin: 10px 0 0; }
+    #messages { min-height: 280px; max-height: 52vh; max-height: 52dvh; overflow-y: auto; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
     .bubble { max-width: 92%; white-space: pre-wrap; overflow-wrap: anywhere; padding: 12px 14px; border-radius: 14px; line-height: 1.45; }
     .assistant { align-self: flex-start; background: #26354d; }
     .user { align-self: flex-end; background: #2457a7; }
@@ -22,24 +26,26 @@
     button { border: 0; border-radius: 12px; padding: 0 18px; background: #60a5fa; color: #08111f; font-weight: 700; font: inherit; cursor: pointer; }
     button:disabled { opacity: .6; cursor: wait; }
     footer { padding: 0 18px 18px; }
-    @media (max-width: 480px) { form { flex-direction: column; } button { padding: 13px; } }
+    #install { display: none; margin-top: 12px; padding: 10px 14px; }
+    @media (max-width: 480px) { form { flex-direction: column; } button { padding: 13px; } main { border-radius: 14px; } }
   </style>
 </head>
 <body>
   <main>
     <header>
       <h1>🤖 ULUGBEK AI</h1>
-      <div class="sub">Birinchi web MVP — sinov versiyasi</div>
-      <p id="status" role="status">Server holati tekshirilmoqda…</p>
+      <div class="sub">Web va Android uchun MVP · 0.2.0</div>
+      <p id="status" role="status">Ilova ishga tushmoqda…</p>
+      <button id="install" type="button">Ilovani o‘rnatish</button>
     </header>
-    <section id="messages" aria-live="polite">
-      <div class="bubble assistant">Assalomu alaykum! Bu ULUGBEK AI loyihasining birinchi sinov oynasi. Hozircha haqiqiy AI modeli ulanmagan.</div>
+    <section id="messages" aria-live="polite" aria-label="Suhbat">
+      <div class="bubble assistant">Assalomu alaykum! ULUGBEK AI sinov ilovasiga xush kelibsiz. Hozircha haqiqiy AI modeli ulanmagan. Internet bo‘lmasa ham ushbu sinov oynasini ochishingiz mumkin.</div>
     </section>
     <form id="chat-form">
       <input id="message" name="message" maxlength="4000" placeholder="Xabaringizni yozing…" autocomplete="off" required>
       <button id="send" type="submit">Yuborish</button>
     </form>
-    <footer class="sub">Hozircha sinov rejimi. Maxfiy ma’lumot yoki parol yubormang.</footer>
+    <footer class="sub">Sinov versiyasi. Hozircha maxfiy ma’lumot yoki parol yubormang.</footer>
   </main>
   <script>
     const form = document.querySelector("#chat-form");
@@ -47,6 +53,9 @@
     const send = document.querySelector("#send");
     const messages = document.querySelector("#messages");
     const status = document.querySelector("#status");
+    const installButton = document.querySelector("#install");
+    const isNative = Boolean(window.Capacitor && typeof window.Capacitor.isNativePlatform === "function" && window.Capacitor.isNativePlatform());
+    let installPrompt = null;
 
     function addMessage(text, who) {
       const el = document.createElement("div");
@@ -57,13 +66,25 @@
     }
 
     async function checkHealth() {
-      try {
-        const response = await fetch("/api/health");
-        if (!response.ok) throw new Error("health failed");
-        status.textContent = "Server ishlayapti · MVP 0.1.0";
-      } catch {
-        status.textContent = "Server holatini tekshirib bo‘lmadi.";
+      if (isNative) {
+        status.textContent = "Android ilovasi tayyor · mahalliy sinov rejimi";
+        return;
       }
+      try {
+        const response = await fetch("/api/health", { cache: "no-store" });
+        if (!response.ok) throw new Error("health failed");
+        status.textContent = "Server bilan bog‘langan · MVP 0.2.0";
+      } catch {
+        status.textContent = "Oflayn rejim · chat demo javoblar bilan ishlaydi";
+      }
+    }
+
+    function offlineReply(message) {
+      const lower = message.toLocaleLowerCase("uz");
+      if (lower.includes("salom") || lower.includes("assalomu")) return "Va alaykum assalom! Men ULUGBEK AI sinov rejimiman. Hozir haqiqiy AI modeli ulanmagan.";
+      if (lower.includes("isming") || lower.includes("kimsan")) return "Men ULUGBEK AI loyihasining sinov interfeysiman. Haqiqiy AI modelini keyingi bosqichda ulaymiz.";
+      if (lower.includes("yordam")) return "Hozir chat oynasi va server aloqasini sinayapmiz. Bu demo rejimida haqiqiy AI javoblari yo‘q.";
+      return "Xabaringiz qurilmada qabul qilindi. Hozir oflayn/demo rejimidasiz — haqiqiy AI javobi olish uchun keyinchalik model va server ulanishi kerak.";
     }
 
     form.addEventListener("submit", async (event) => {
@@ -74,22 +95,46 @@
       input.value = "";
       send.disabled = true;
       try {
-        const response = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message })
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "So‘rov bajarilmadi.");
-        addMessage(data.reply, "assistant");
-      } catch (error) {
-        addMessage("Xatolik: " + error.message, "assistant");
+        if (isNative) {
+          addMessage(offlineReply(message), "assistant");
+        } else {
+          try {
+            const response = await fetch("/api/chat", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ message })
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || "So‘rov bajarilmadi.");
+            addMessage(data.reply, "assistant");
+          } catch {
+            addMessage(offlineReply(message), "assistant");
+          }
+        }
       } finally {
         send.disabled = false;
         input.focus();
       }
     });
 
+    window.addEventListener("beforeinstallprompt", (event) => {
+      event.preventDefault();
+      installPrompt = event;
+      installButton.style.display = "inline-block";
+    });
+    installButton.addEventListener("click", async () => {
+      if (!installPrompt) return;
+      installPrompt.prompt();
+      await installPrompt.userChoice;
+      installPrompt = null;
+      installButton.style.display = "none";
+    });
+
+    if ("serviceWorker" in navigator && !isNative) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("/sw.js").catch(() => {});
+      });
+    }
     checkHealth();
   </script>
 </body>
