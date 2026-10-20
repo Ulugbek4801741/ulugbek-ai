@@ -1,17 +1,17 @@
 {
-  "id": "/",
+  "id": "./",
   "name": "ULUGBEK AI",
   "short_name": "ULUGBEK AI",
   "description": "ULUGBEK AI — web va Android sinov ilovasi",
   "lang": "uz",
-  "start_url": "/",
-  "scope": "/",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#101827",
   "theme_color": "#101827",
   "icons": [
     {
-      "src": "/icon.svg",
+      "src": "icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
