@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101827">
+  <meta name="description" content="ULUGBEK AI — o‘zbek tilidagi AI platformasi uchun sinov ilovasi.">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <title>ULUGBEK AI</title>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>🤖 ULUGBEK AI</h1>
+      <div class="sub">Web va Android uchun MVP · 0.2.0</div>
+      <p id="status" role="status">Ilova ishga tushmoqda…</p>
+      <button id="install" type="button">Ilovani o‘rnatish</button>
+    </header>
+    <section id="messages" aria-live="polite" aria-label="Suhbat">
+      <div class="bubble assistant">Assalomu alaykum! ULUGBEK AI sinov ilovasiga xush kelibsiz. Hozircha haqiqiy AI modeli ulanmagan. Internet bo‘lmasa ham ushbu sinov oynasini ochishingiz mumkin.</div>
+    </section>
+    <form id="chat-form">
+      <input id="message" name="message" maxlength="4000" placeholder="Xabaringizni yozing…" autocomplete="off" required>
+      <button id="send" type="submit">Yuborish</button>
+    </form>
+    <footer class="sub">Sinov versiyasi. Hozircha maxfiy ma’lumot yoki parol yubormang.</footer>
+  </main>
+  <script src="app.js" defer></script>
+</body>
+</html>
