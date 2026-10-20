@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101827">
+  <title>ULUGBEK AI — Sinov versiyasi</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: #101827; color: #eef2ff; display: grid; place-items: center; padding: 18px; }
+    main { width: min(760px, 100%); background: #172235; border: 1px solid #334155; border-radius: 20px; overflow: hidden; box-shadow: 0 18px 60px #0005; }
+    header { padding: 22px; border-bottom: 1px solid #334155; }
+    h1 { margin: 0 0 6px; font-size: 1.5rem; }
+    .sub, #status { color: #b6c3d8; font-size: .92rem; }
+    #messages { min-height: 280px; max-height: 52vh; overflow-y: auto; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+    .bubble { max-width: 92%; white-space: pre-wrap; overflow-wrap: anywhere; padding: 12px 14px; border-radius: 14px; line-height: 1.45; }
+    .assistant { align-self: flex-start; background: #26354d; }
+    .user { align-self: flex-end; background: #2457a7; }
+    form { display: flex; gap: 10px; padding: 16px; border-top: 1px solid #334155; }
+    input { min-width: 0; flex: 1; border: 1px solid #475569; background: #0f172a; color: white; padding: 13px; border-radius: 12px; font: inherit; }
+    button { border: 0; border-radius: 12px; padding: 0 18px; background: #60a5fa; color: #08111f; font-weight: 700; font: inherit; cursor: pointer; }
+    button:disabled { opacity: .6; cursor: wait; }
+    footer { padding: 0 18px 18px; }
+    @media (max-width: 480px) { form { flex-direction: column; } button { padding: 13px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>🤖 ULUGBEK AI</h1>
+      <div class="sub">Birinchi web MVP — sinov versiyasi</div>
+      <p id="status" role="status">Server holati tekshirilmoqda…</p>
+    </header>
+    <section id="messages" aria-live="polite">
+      <div class="bubble assistant">Assalomu alaykum! Bu ULUGBEK AI loyihasining birinchi sinov oynasi. Hozircha haqiqiy AI modeli ulanmagan.</div>
+    </section>
+    <form id="chat-form">
+      <input id="message" name="message" maxlength="4000" placeholder="Xabaringizni yozing…" autocomplete="off" required>
+      <button id="send" type="submit">Yuborish</button>
+    </form>
+    <footer class="sub">Hozircha sinov rejimi. Maxfiy ma’lumot yoki parol yubormang.</footer>
+  </main>
+  <script>
+    const form = document.querySelector("#chat-form");
+    const input = document.querySelector("#message");
+    const send = document.querySelector("#send");
+    const messages = document.querySelector("#messages");
+    const status = document.querySelector("#status");
+
+    function addMessage(text, who) {
+      const el = document.createElement("div");
+      el.className = "bubble " + who;
+      el.textContent = text;
+      messages.appendChild(el);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    async function checkHealth() {
+      try {
+        const response = await fetch("/api/health");
+        if (!response.ok) throw new Error("health failed");
+        status.textContent = "Server ishlayapti · MVP 0.1.0";
+      } catch {
+        status.textContent = "Server holatini tekshirib bo‘lmadi.";
+      }
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const message = input.value.trim();
+      if (!message || send.disabled) return;
+      addMessage(message, "user");
+      input.value = "";
+      send.disabled = true;
+      try {
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "So‘rov bajarilmadi.");
+        addMessage(data.reply, "assistant");
+      } catch (error) {
+        addMessage("Xatolik: " + error.message, "assistant");
+      } finally {
+        send.disabled = false;
+        input.focus();
+      }
+    });
+
+    checkHealth();
+  </script>
+</body>
+</html>
