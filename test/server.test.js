@@ -58,6 +58,28 @@ test("API smoke tests", async (t) => {
       assert.equal(body.mode, "demo");
       assert.equal(body.receivedCharacters, 5);
     });
+
+    await t.test("agent planner creates a structured plan", async () => {
+      const response = await fetch(`${baseUrl}/api/agent/plan`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ task: "Menga veb-ilova yaratish rejasini tuz" })
+      });
+      const body = await response.json();
+      assert.equal(response.status, 200);
+      assert.equal(typeof body.plan.title, "string");
+      assert.ok(Array.isArray(body.plan.steps));
+      assert.ok(body.plan.steps.length >= 3);
+    });
+
+    await t.test("agent planner rejects an empty task", async () => {
+      const response = await fetch(`${baseUrl}/api/agent/plan`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ task: "   " })
+      });
+      assert.equal(response.status, 400);
+    });
   } finally {
     server.kill("SIGTERM");
   }
