@@ -1,32 +1,65 @@
 <!doctype html>
 <html lang="uz">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#101827">
-  <meta name="description" content="ULUGBEK AI — o‘zbek tilidagi AI platformasi uchun sinov ilovasi.">
-  <link rel="manifest" href="manifest.webmanifest">
-  <link rel="icon" href="icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="styles.css">
-  <title>ULUGBEK AI</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b1020">
+<meta name="description" content="ULUGBEK AI — AI yordamchi, agentlar va No-Code ilova yaratish platformasi.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="styles.css">
+<title>ULUGBEK AI — Agentlar platformasi</title>
 </head>
 <body>
-  <main>
-    <header>
-      <h1>🤖 ULUGBEK AI</h1>
-      <div class="sub">Web va Android uchun MVP · 0.2.0</div>
-      <p id="status" role="status">Ilova ishga tushmoqda…</p>
-      <button id="install" type="button">Ilovani o‘rnatish</button>
-    </header>
-    <section id="messages" aria-live="polite" aria-label="Suhbat">
-      <div class="bubble assistant">Assalomu alaykum! ULUGBEK AI sinov ilovasiga xush kelibsiz. Hozircha haqiqiy AI modeli ulanmagan. Internet bo‘lmasa ham ushbu sinov oynasini ochishingiz mumkin.</div>
-    </section>
-    <form id="chat-form">
-      <input id="message" name="message" maxlength="4000" placeholder="Xabaringizni yozing…" autocomplete="off" required>
-      <button id="send" type="submit">Yuborish</button>
-    </form>
-    <footer class="sub">Sinov versiyasi. Hozircha maxfiy ma’lumot yoki parol yubormang.</footer>
-  </main>
-  <script src="app.js" defer></script>
+<div class="app-shell">
+<aside class="sidebar" id="sidebar">
+<a class="brand" href="#" aria-label="ULUGBEK AI bosh sahifa"><span class="brand-mark">U</span><span><b>ULUGBEK AI</b><small>AGENT PLATFORM</small></span></a>
+<div class="workspace"><span class="workspace-dot"></span><span><b>Asosiy ish maydoni</b><small>Shaxsiy loyiha</small></span><span class="chevron">⌄</span></div>
+<nav class="nav" aria-label="Asosiy menyu">
+<p class="nav-label">ISH MAYDONI</p>
+<button class="nav-item active" data-view="overview"><span>◈</span> Boshqaruv paneli</button>
+<button class="nav-item" data-view="chat"><span>✳</span> AI Chat <span class="nav-pill">AI</span></button>
+<button class="nav-item" data-view="agents"><span>◎</span> Agentlar</button>
+<button class="nav-item" data-view="builder"><span>▦</span> No-Code Builder</button>
+<button class="nav-item" data-view="workflows"><span>⌘</span> Ish jarayonlari</button>
+<button class="nav-item" data-view="knowledge"><span>▤</span> Bilimlar bazasi</button>
+<p class="nav-label">PLATFORMA</p>
+<button class="nav-item" data-view="market"><span>◇</span> Mini-ilovalar</button>
+<button class="nav-item" data-view="security"><span>⛨</span> Xavfsizlik va ruxsatlar</button>
+</nav>
+<div class="sidebar-bottom"><div class="avatar">U</div><div><b>Loyiha egasi</b><small>Sinov rejimi</small></div><span class="more">•••</span></div>
+</aside>
+<main class="main">
+<header class="topbar"><button class="mobile-menu" id="menu-toggle" aria-label="Menyuni ochish">☰</button><div class="breadcrumbs">ULUGBEK AI <span>/</span> <b id="page-name">Boshqaruv paneli</b></div><div class="top-actions"><span class="status-chip"><i></i><span id="connection-status">Mahalliy rejim</span></span><button class="icon-button" id="help-button" aria-label="Yordam">?</button><div class="top-avatar">U</div></div></header>
+<div class="content">
+<section class="hero" id="hero"><div class="hero-copy"><span class="eyebrow"><span class="spark">✦</span> SIZNING AI ISH HAMKORINGIZ</span><h1>G‘oyadan natijagacha.<br><span>Birgalikda aqlliroq.</span></h1><p>Vazifani yozing. ULUGBEK AI uni tahlil qiladi, reja tuzadi va mavjud imkoniyatlar doirasida keyingi qadamlarni belgilaydi.</p><div class="hero-actions"><button class="primary-button" data-go="chat">✳ &nbsp; AI bilan ishlash <span>→</span></button><button class="secondary-button" data-go="builder">Ilova yaratish <span>↗</span></button></div></div><div class="hero-visual" aria-hidden="true"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="core"><span>U</span><small>AI CORE</small></div><div class="orbit-node node-a">✳</div><div class="orbit-node node-b">⌘</div><div class="orbit-node node-c">◈</div><div class="orbit-node node-d">◎</div></div></section>
+<section class="section-heading"><div><h2>Platforma ko‘rinishi</h2><p>Asosiy modullar va ish holati</p></div><span class="small-muted">MVP · 0.3.0</span></section>
+<section class="stats-grid">
+<article class="stat-card"><div class="stat-top"><span>AI yordamchi</span><span class="stat-icon purple">✳</span></div><strong>1</strong><p><span class="live-dot"></span> Chat interfeysi tayyor</p></article>
+<article class="stat-card"><div class="stat-top"><span>Agent rollari</span><span class="stat-icon blue">◎</span></div><strong>10</strong><p>Rejalashtirish va tekshirish</p></article>
+<article class="stat-card"><div class="stat-top"><span>No-Code</span><span class="stat-icon green">▦</span></div><strong>Beta</strong><p>Jarayon shablonlari</p></article>
+<article class="stat-card"><div class="stat-top"><span>Mustaqil ish</span><span class="stat-icon orange">⌘</span></div><strong>Cheklangan</strong><p>Ruxsatlar bilan boshqariladi</p></article>
+</section>
+<section class="section-heading section-heading-spaced"><div><h2>Tez boshlash</h2><p>Vazifani tanlang yoki o‘zingiz yozing</p></div></section>
+<section class="quick-grid">
+<button class="quick-card" data-prompt="Mening biznes g‘oyamni tahlil qil, mijozlar muammosini aniqlab, 7 kunlik ish rejasini tuz."><span class="quick-icon lilac">↗</span><b>Biznes reja</b><p>G‘oyani tahlil qilish va qadamlar</p><span class="card-arrow">→</span></button>
+<button class="quick-card" data-prompt="Menga oddiy No-Code veb-ilova yaratish uchun sahifalar, funksiyalar va bosqichma-bosqich reja tuz."><span class="quick-icon mint">▦</span><b>Ilova yaratish</b><p>Ilova tuzilishi va funksiyalar</p><span class="card-arrow">→</span></button>
+<button class="quick-card" data-prompt="Menga marketing strategiyasi, auditoriya, kontent rejasi va natijani o‘lchash ko‘rsatkichlarini tuz."><span class="quick-icon peach">◉</span><b>Marketing</b><p>Auditoriya va o‘sish strategiyasi</p><span class="card-arrow">→</span></button>
+<button class="quick-card" data-prompt="Mening vazifamni kichik qadamlarga bo‘l, har bir qadam uchun mas'ul agent rolini va tekshirish mezonini belgilab ber."><span class="quick-icon sky">⌘</span><b>Agentlar jamoasi</b><p>Vazifani rollarga taqsimlash</p><span class="card-arrow">→</span></button>
+</section>
+<section class="work-area" id="work-area"><div class="section-heading"><div><h2>AI ish maydoni</h2><p>Vazifani kiriting — tizim uni rejalashtiradi</p></div><span class="badge">SINOV</span></div><div class="work-card"><div class="work-card-head"><div class="assistant-avatar">✳</div><div><b>ULUGBEK AI Planner</b><p>Rejalashtiruvchi · Tekshiruvchi · Koordinator</p></div><span class="availability"><i></i> Tayyor</span></div><div class="chat-messages" id="messages" aria-live="polite"><div class="message assistant-message"><div class="mini-avatar">U</div><div class="message-body"><b>Salom! Men ULUGBEK AI.</b><p>Vazifangizni yozing. Men maqsadni aniqlash, kichik qadamlarga bo‘lish, mos agent rollarini tanlash va bajarish rejasini tuzishga yordam beraman. Tashqi xizmatlar yoki haqiqiy AI modeli ulanmagan bo‘lsa, imkoniyatlar cheklangan bo‘ladi.</p></div></div></div><form id="chat-form" class="composer"><textarea id="message" name="message" rows="2" maxlength="4000" placeholder="Masalan: Menga internet-do‘kon yaratish rejasini tuz..." required></textarea><div class="composer-bottom"><span>Enter yuboradi · Shift+Enter yangi qator</span><button class="primary-button send-button" id="send" type="submit">Reja tuzish <span>↑</span></button></div></form></div></section>
+<section class="section-heading section-heading-spaced"><div><h2>Agentlar jamoasi</h2><p>Har bir rol vazifaning alohida qismini bajarishga mo‘ljallangan</p></div><button class="text-button" data-go="agents">Barchasi →</button></section>
+<section class="agents-grid">
+<article class="agent-card"><span class="agent-icon purple">✳</span><div><b>Core Coordinator</b><p>Maqsadni tahlil qiladi va ishni rejalashtiradi</p></div><span class="agent-state">Tayyor</span></article>
+<article class="agent-card"><span class="agent-icon blue">⌕</span><div><b>Research Agent</b><p>Ma’lumot izlash vazifalarini rejalashtiradi</p></div><span class="agent-state">Reja</span></article>
+<article class="agent-card"><span class="agent-icon green">⌘</span><div><b>Builder Agent</b><p>Ilova tuzilishi va kod vazifalarini ajratadi</p></div><span class="agent-state">Reja</span></article>
+<article class="agent-card"><span class="agent-icon orange">✓</span><div><b>Verifier Agent</b><p>Natija va xavf mezonlarini tekshiradi</p></div><span class="agent-state">Nazorat</span></article>
+</section>
+<footer class="footer"><span>© 2026 ULUGBEK AI · Global platforma konsepsiyasi</span><span>Maxfiylikka e’tibor · Harakatlar ruxsat bilan</span></footer>
+</div>
+</main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="app.js" defer></script>
 </body>
 </html>
