@@ -1,55 +1,56 @@
-# ULUGBEK AI — Web va Android MVP
+# ULUGBEK AI — Agent Planning MVP
 
-Bu loyiha ULUGBEK AI ning dastlabki ishlaydigan interfeysi va Android APK yaratish uchun boshlang‘ich asosidir. Hozirgi chat **haqiqiy AI emas**: server demo javob qaytaradi, Android ilova esa oflayn demo rejimida ishlay oladi.
+ULUGBEK AI is an early web/Android MVP for an Uzbek-first AI assistant, agent task planner, and future No-Code app-building platform.
 
-## Mavjud imkoniyatlar
+## What is implemented now
 
-- Mobil qurilmaga mos o‘zbekcha chat interfeysi.
-- Express backend: `GET /api/health` va `POST /api/chat`.
-- Helmet orqali Content Security Policy va boshqa xavfsizlik sarlavhalari.
-- API rate limit va xabar hajmi tekshiruvi.
-- Oflayn web app-shell uchun service worker.
-- PWA manifest va ilova belgisi.
-- Capacitor orqali Android ilova qobig‘i.
-- GitHub Actions orqali debug APK yig‘ish va artifact sifatida berish.
+- Responsive dashboard interface for mobile and desktop.
+- Agent task planner that splits a request into steps and assigns suggested agent roles.
+- Rule-based local fallback so the planning demo can still work on GitHub Pages/offline.
+- Express backend endpoints: `GET /api/health`, `POST /api/chat`, and `POST /api/agent/plan`.
+- Optional OpenAI-compatible model integration through server environment variables.
+- Helmet security headers, request rate limiting, input length checks, and model request timeout.
+- PWA shell, manifest, service worker, and existing Capacitor Android wrapper.
 
-## Web-serverni ishga tushirish
+## Run locally
 
-Talab: Node.js 20 yoki undan yangi versiya.
+Requires Node.js 20 or newer.
 
 ```bash
 npm install
+npm test
 npm start
 ```
 
-Brauzerda `http://localhost:3000` ni oching.
+Open `http://localhost:3000`.
 
-## Testlar
+## Connect an AI model (optional)
 
-```bash
-npm test
-```
+Set these on the **server hosting environment**, not in browser JavaScript or GitHub Pages:
 
-## Android APK yaratish
+- `OPENAI_API_KEY` — private API key.
+- `OPENAI_BASE_URL` — optional, defaults to `https://api.openai.com/v1`.
+- `OPENAI_MODEL` — optional, defaults to `gpt-4o-mini`.
 
-GitHub repository ichidagi **Actions → Build Android APK → Run workflow** orqali yig‘ishni qo‘lda boshlash mumkin. Workflow tugagach, muvaffaqiyatli ish natijasidagi **Artifacts** bo‘limidan `ulugbek-ai-debug-apk` faylini yuklab oling. Bu sinov uchun debug APK; Play Store uchun tayyor imzolangan release APK emas.
+Then restart the server. The chat and planner use the configured OpenAI-compatible `/chat/completions` API. API usage may cost money depending on provider and model. Never commit a key to this repository.
 
-Workflow `mvp/initial-scaffold` tarmog‘idagi kodni yig‘adi. O‘zgarishlar asosiy `main` tarmog‘iga hali avtomatik birlashtirilmaydi.
+Without a server and key, GitHub Pages runs only the local planning demo. GitHub Pages cannot run this Express backend, so real model responses require a separate backend host.
 
-## Muhim cheklovlar va keyingi ishlar
+## What “autonomous” means in this MVP
 
-- Haqiqiy LLM/AI modeli hali ulanmagan.
-- Foydalanuvchi ro‘yxatdan o‘tishi, autentifikatsiya va ma’lumotlar bazasi hali yo‘q.
-- Android demo rejimida xabarlar serverga yuborilmaydi; haqiqiy AI uchun xavfsiz backend endpointi kerak.
-- Hali production uchun tayyor emas. Internetga ochishdan oldin autentifikatsiya, maxfiy sozlamalar, loglash, ma’lumotlar bazasi, monitoring va xavfsizlik tekshiruvlari zarur.
-- API kalitlari, parollar va boshqa maxfiy ma’lumotlarni GitHub’ga joylamang.
-- APK workflow bajarilmaguncha tayyor APK yaratilgan deb hisoblanmaydi.
+The planner can select a task category, create a step-by-step plan, and suggest agent roles. If a model is configured, it can use the model to generate a more tailored plan. It does **not** yet run persistent background agents, freely browse the internet, edit/deploy code, operate user accounts, or complete real-world actions. Those require separately implemented tools, permissions, durable job storage, logging, and human approval for risky actions.
 
-## Rejalashtirilgan bosqichlar
+The global goal of serving billions of people is a long-term product vision, not a current capacity guarantee. Before a public production launch, implement user authentication, database persistence, authorization, privacy controls, monitoring, abuse protection, and a security review.
 
-1. CI build va test natijalarini tekshirish.
-2. Haqiqiy AI modelini backend orqali ulash.
-3. Ro‘yxatdan o‘tish/kirish va ma’lumotlar bazasi.
-4. Agentlar uchun cheklangan, tekshiriladigan vositalar.
-5. Release imzolash, xavfsizlik auditi va hosting.
-6. Oflayn kichik modelni Android qurilmada ishlatish imkoniyatini tekshirish.
+## Android
+
+Use **Actions → Build Android APK → Run workflow** in GitHub. Download the artifact after a successful run. This is a test/debug APK, not a signed Play Store release.
+
+## Roadmap
+
+1. Verify current UI and API tests.
+2. Add authentication and persistent database.
+3. Build a permission-controlled tool registry for agent execution.
+4. Add a real No-Code visual workflow/app builder.
+5. Add background jobs, observability, and human approval gates.
+6. Run a security review and staged user testing before production.
