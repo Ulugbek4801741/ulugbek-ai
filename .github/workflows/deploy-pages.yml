@@ -5,9 +5,9 @@ on:
   push:
     branches:
       - main
-      - mvp/initial-scaffold
     paths:
       - "public/**"
+      - ".github/workflows/deploy-pages.yml"
 
 permissions:
   contents: read
@@ -28,10 +28,10 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
+      # GitHub Pages must first be enabled once in repository Settings > Pages.
+      # The workflow token cannot create the Pages site automatically.
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       - name: Upload static website
         uses: actions/upload-pages-artifact@v3
