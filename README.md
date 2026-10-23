@@ -81,3 +81,16 @@ Use **Actions → Build Android APK → Run workflow** in GitHub. Download the a
 4. Add a real No-Code visual workflow/app builder.
 5. Add background jobs, observability, and human approval gates.
 6. Run a security review and staged user testing before production.
+
+
+## ULUGBEK AI 0.1 — self-hosted model support
+
+The backend now supports an OpenAI-compatible model endpoint without sending an API key when `OPENAI_API_KEY` is empty and `OPENAI_BASE_URL` points to a self-hosted or otherwise keyless compatible server. Chat and agent planning use the same configured endpoint.
+
+- Set `OPENAI_BASE_URL` to the model server's API base URL (the server must be reachable from the backend host).
+- Set `OPENAI_MODEL` to the exact model name served by that endpoint.
+- Keep `OPENAI_API_KEY` empty only if that endpoint does not require authentication. If it requires a token, configure it privately in the hosting environment.
+- Do not put real keys or private server credentials in GitHub.
+- Without a model endpoint, the app still uses demo chat and rule-based planning; it is not an autonomous AI model.
+
+The automated test suite includes a local mock OpenAI-compatible endpoint test for chat and planning without an API key. This verifies the integration contract, not the performance of a real model or production deployment.
