@@ -66,6 +66,28 @@ function requireAdmin(req, res, next) {
   if (!verifyAdminSession(token)) return res.status(401).json({ error: "Administrator sifatida qayta kiring." });
   next();
 }
+const adminGateAttempts = new Map();
+app.post("/api/admin/chat-gate", rateLimit({ windowMs: 15 * 60 * 1000, limit: 8, standardHeaders: "draft-8", legacyHeaders: false }), (req, res) => {
+  if (!ADMIN_ACCESS_CODE || !ADMIN_SESSION_SECRET) return res.status(503).json({ error: "Admin himoyasi sozlanmagan." });
+  const code = typeof req.body?.code === "string" ? req.body.code : "";
+  const ip = req.ip || req.socket.remoteAddress || "unknown";
+  if (!safeEqual(code, ADMIN_ACCESS_CODE)) {
+    adminGateAttempts.delete(ip);
+    return res.status(401).json({ error: "Kirish kodi noto‘g‘ri. Hisoblagich qayta boshlandi." });
+  }
+  const now = Date.now();
+  const previous = adminGateAttempts.get(ip);
+  const next = previous && now - previous.at <= 2 * 60 * 1000 ? previous.count + 1 : 1;
+  if (next < 2) {
+    adminGateAttempts.set(ip, { count: next, at: now });
+    return res.json({ ok: true, remaining: 1, message: "Birinchi tasdiq qabul qilindi. Shu kodni yana bir marta kiriting." });
+  }
+  adminGateAttempts.delete(ip);
+  const token = signAdminSession({ role: "admin", jti: crypto.randomUUID(), exp: Date.now() + ADMIN_SESSION_TTL_MS });
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("Set-Cookie", "ulugbek_admin=" + encodeURIComponent(token) + "; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=28800");
+  return res.json({ ok: true, authenticated: true, redirect: "/admin.html", message: "Tasdiqlandi." });
+});
 app.get("/api/admin/status", (req, res) => {
   const cookie = (req.headers.cookie || "").split(";").map(x => x.trim()).find(x => x.startsWith("ulugbek_admin="));
   const token = cookie ? decodeURIComponent(cookie.slice("ulugbek_admin=".length)) : "";
