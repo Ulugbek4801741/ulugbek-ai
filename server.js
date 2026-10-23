@@ -37,6 +37,23 @@ app.get("/api/health", (_req, res) => {
   res.json({ ok: true, app: "ULUGBEK AI", version: "0.3.0", aiConfigured: Boolean(process.env.OPENAI_API_KEY) });
 });
 
+app.get("/api/diagnostics", (_req, res) => {
+  res.json({
+    ok: true,
+    app: "ULUGBEK AI",
+    backend: "running",
+    ai: process.env.OPENAI_API_KEY ? "configured" : "demo-only-no-model-key",
+    publicWebResearch: "available-through-lab-route-when-server-has-internet",
+    knowledgeStorage: "server-local-json-files",
+    voiceInput: "browser-dependent-and-user-permission-required",
+    voiceOutput: "browser-dependent",
+    autonomousAgents: "not-implemented-as-independent-background-services",
+    automaticFailover: "not-configured-requires-authorized-backup-host",
+    productionDatabase: "not-configured",
+    note: "Bu diagnostika faqat konfiguratsiya holatini bildiradi; u tashqi xizmatlarni to‘liq end-to-end sinamaydi."
+  });
+});
+
 function createPlan(task) {
   const lower = task.toLocaleLowerCase("uz");
   let title = "Umumiy vazifa";
