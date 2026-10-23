@@ -150,7 +150,7 @@ app.get("/api/admin/overview", requireAdmin, (_req, res) => {
 });
 
 app.get("/api/health", (_req, res) => {
-  res.json({ ok: true, app: "ULUGBEK AI", version: "0.3.0", aiConfigured: Boolean(process.env.OPENAI_API_KEY) });
+  res.json({ ok: true, app: "ULUGBEK AI", version: "0.3.0", aiConfigured: Boolean(process.env.OPENAI_API_KEY || (process.env.OPENAI_BASE_URL && process.env.OPENAI_BASE_URL !== "https://api.openai.com/v1")) });
 });
 
 app.get("/api/diagnostics", (_req, res) => {
