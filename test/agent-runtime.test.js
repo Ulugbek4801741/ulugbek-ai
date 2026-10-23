@@ -25,12 +25,12 @@ test("agent queue sends a task to a compatible model, records result, and suppor
   const runtime = require("../agent-runtime");
   try {
     await runtime.startWorker();
-    const task = runtime.createTask({ prompt: "ULUGBEK AI uchun xavfsizlik rejasini yoz", role: "security" });
+    const task = await runtime.createTask({ prompt: "ULUGBEK AI uchun xavfsizlik rejasini yoz", role: "security" });
     assert.equal(task.status, "queued");
     assert.equal(task.role, "security");
-    assert.throws(() => runtime.createTask({ prompt: "   ", role: "security" }), /bo‘sh/);
-    assert.throws(() => runtime.createTask({ prompt: "x".repeat(4001), role: "security" }), /4000/);
-    assert.throws(() => runtime.createTask({ prompt: "Sinov", role: "shell" }), /noto‘g‘ri/);
+    await assert.rejects(() => runtime.createTask({ prompt: "   ", role: "security" }), /bo‘sh/);
+    await assert.rejects(() => runtime.createTask({ prompt: "x".repeat(4001), role: "security" }), /4000/);
+    await assert.rejects(() => runtime.createTask({ prompt: "Sinov", role: "shell" }), /noto‘g‘ri/);
 
     const deadline = Date.now() + 4000;
     let result;
