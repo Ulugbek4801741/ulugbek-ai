@@ -227,4 +227,5 @@ function reviewTask(id, decision) {
   persist().catch(error => console.error("Could not save review:", error.message));
   return publicTask(task);
 }
-module.exports = { startWorker, createTask, listTasks, getTask, cancelTask, reviewTask, modelConfig };
+async function flush() { await saveChain; }
+module.exports = { startWorker, createTask, listTasks, getTask, cancelTask, reviewTask, modelConfig, flush };
