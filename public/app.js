@@ -175,13 +175,49 @@ $$("[data-prompt]").forEach(button=>button.addEventListener("click",()=>{
  input.focus();
  $("#work-area").scrollIntoView({behavior:"smooth",block:"start"});
 }));
+
+function renderBuilder(){
+ messages.replaceChildren();
+ addAssistantMessage("No-Code Builder","Loyiha tavsifi va boshlang‘ich veb-fayl yarating. Bu MVP hozircha tayyor native Android/iOS/Windows dastur emas; keyingi yig‘ish va server ishlari talab etiladi.");
+ const panel=textElement("section","","builder-panel");
+ const makeField=(label,control)=>{const w=textElement("label","","builder-field");w.appendChild(textElement("span",label));w.appendChild(control);return w;};
+ const name=document.createElement("input");name.className="builder-input";name.value="Mening ULUGBEK AI ilovam";name.maxLength=60;
+ const desc=document.createElement("textarea");desc.className="builder-input";desc.rows=3;desc.maxLength=1200;desc.value="Foydalanuvchilarning muammosini hal qiladigan qulay ilova.";
+ const platform=document.createElement("select");platform.className="builder-input";
+ [["web","Veb / PWA"],["android","Android (APK uchun yig‘ish kerak)"],["ios","iPhone / iOS (Mac va Xcode kerak)"],["windows","Windows (desktop qadoqlash kerak)"],["all","Barcha platformalar rejasi"]].forEach(([v,t])=>{const o=document.createElement("option");o.value=v;o.textContent=t;platform.appendChild(o);});
+ panel.append(makeField("Loyiha nomi",name),makeField("Ilova nima muammoni hal qiladi?",desc),makeField("Maqsadli platforma",platform));
+ panel.appendChild(textElement("span","Funksiyalar","builder-label"));
+ const features=[["login","Ro‘yxatdan o‘tish va profil"],["chat","AI chat"],["database","Ma’lumotlar bazasi"],["admin","Boshqaruv paneli"],["payments","To‘lovlar"],["offline","Offline asosiy sahifa"]];
+ const checks=[];
+ const grid=textElement("div","","builder-features");
+ features.forEach(([id,label])=>{const l=textElement("label","","builder-check");const c=document.createElement("input");c.type="checkbox";c.value=id;c.checked=["login","chat","database"].includes(id);checks.push(c);l.append(c,document.createTextNode(" "+label));grid.appendChild(l);});
+ panel.appendChild(grid);
+ const actions=textElement("div","","builder-actions");
+ const build=document.createElement("button");build.type="button";build.className="primary-button";build.textContent="Loyiha fayllarini yaratish";
+ const json=document.createElement("button");json.type="button";json.className="secondary-button";json.textContent="JSON tavsifini yuklab olish";json.disabled=true;
+ actions.append(build,json);panel.appendChild(actions);
+ const out=textElement("div","","builder-result");out.setAttribute("aria-live","polite");panel.appendChild(out);messages.appendChild(panel);
+ let project=null;
+ const download=(file,data,type)=>{const u=URL.createObjectURL(new Blob([data],{type}));const a=document.createElement("a");a.href=u;a.download=file;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1500);};
+ build.addEventListener("click",()=>{
+  if(!name.value.trim()){notify("Loyiha nomini kiriting.");name.focus();return;}
+  const chosen=checks.filter(c=>c.checked).map(c=>c.value);
+  project={product:"ULUGBEK AI App Builder",name:name.value.trim(),description:desc.value.trim(),platform:platform.value,features:chosen,createdAt:new Date().toISOString(),stage:"starter-blueprint",limitations:["Boshlang‘ich shablon; backend va ma’lumotlar bazasi ulanmagan.","Android uchun APK yig‘ish va sinash kerak.","iOS uchun Mac, Xcode va Apple imzolashi kerak.","Windows uchun desktop qadoqlash va sinov kerak."]};
+  const esc=x=>x.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const list=chosen.map(id=>features.find(f=>f[0]===id)?.[1]).filter(Boolean).map(x=>"<li>"+esc(x)+"</li>").join("")||"<li>Asosiy sahifa</li>";
+  project.starterHtml='<!doctype html><html lang="uz"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(project.name)+'</title><style>*{box-sizing:border-box}body{margin:0;padding:8vh 18px;background:#0b1020;color:#f3f4f6;font:16px system-ui}main{max-width:760px;margin:auto;padding:28px;border:1px solid #334155;border-radius:18px;background:#111827}h1{font-size:clamp(28px,6vw,44px)}p,li{line-height:1.7;color:#cbd5e1}button{padding:12px 16px;border:0;border-radius:10px;background:#a78bfa;font-weight:bold}</style><main><p>ULUGBEK AI · STARTER</p><h1>'+esc(project.name)+'</h1><p>'+esc(project.description)+'</p><h2>Funksiyalar</h2><ul>'+list+'</ul><button onclick="document.getElementById(\'notice\').textContent=\'Boshlang‘ich shablon ishlayapti; backend ulanmagan.\'">Sinab ko‘rish</button><p id="notice"></p></main></html>';
+  out.replaceChildren(textElement("b","Boshlang‘ich shablon tayyor"),textElement("p","Tanlangan platforma: "+platform.options[platform.selectedIndex].text),textElement("p","Funksiyalar: "+(chosen.join(", ")||"Asosiy sahifa")));
+  const htmlBtn=document.createElement("button");htmlBtn.type="button";htmlBtn.className="primary-button";htmlBtn.textContent="index.html yuklab olish";htmlBtn.addEventListener("click",()=>download("index.html",project.starterHtml,"text/html;charset=utf-8"));out.appendChild(htmlBtn);json.disabled=false;
+ });
+ json.addEventListener("click",()=>{if(project)download("ulugbek-ai-project.json",JSON.stringify(project,null,2),"application/json;charset=utf-8");});
+}
 function switchView(view){
  const title=views[view]||views.overview;
  $("#page-name").textContent=title;
  $$(".nav-item").forEach(button=>button.classList.toggle("active",button.dataset.view===view));
  $("#sidebar").classList.remove("open");
  if(view==="overview") window.scrollTo({top:0,behavior:"smooth"});
- else if(view==="chat") $("#work-area").scrollIntoView({behavior:"smooth",block:"start"});
+ else if(view==="chat") $("#work-area").scrollIntoView({behavior:"smooth",block:"start"});\n else if(view==="builder"){ $("#work-area").scrollIntoView({behavior:"smooth",block:"start"}); renderBuilder(); }
  else {
    const messagesByView={
     agents:["Agentlar jamoasi","10 ta asosiy agent roli konsepsiyada belgilangan. Hozirgi MVP faqat vazifani rejalashtiradi; agentlar alohida mustaqil xizmatlar sifatida hali ishga tushirilmagan."],
