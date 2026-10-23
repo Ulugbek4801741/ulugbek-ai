@@ -33,7 +33,7 @@ app.use(helmet({
       styleSrc: ["'self'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
       imgSrc: ["'self'", "data:", "blob:"],
-      connectSrc: ["'self'"],
+      connectSrc: ["'self'", ...(FRONTEND_ORIGIN ? [FRONTEND_ORIGIN] : [])],
       manifestSrc: ["'self'"],
       workerSrc: ["'self'"],
       objectSrc: ["'none'"],
