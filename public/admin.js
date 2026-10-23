@@ -19,14 +19,78 @@ async function loadOverview() {
     metric("Server ishlash vaqti", Math.floor(data.uptimeSeconds / 60) + " daqiqa"),
     metric("Node.js", data.nodeVersion),
     metric("AI modeli", data.aiConfigured ? data.model : "Ulanmagan"),
+    metric("Navbatdagi vazifalar", data.queuedTasks ?? 0),
+    metric("Ishlayotgan vazifalar", data.runningTasks ?? 0),
     metric("Xotira (RSS)", Math.round(data.memory.rssBytes / 1024 / 1024) + " MB")
   );
   $("details").textContent = JSON.stringify(data, null, 2);
 }
+function addText(parent, tag, value, cls) {
+  const node = document.createElement(tag); node.textContent = value || "";
+  if (cls) node.className = cls;
+  parent.append(node); return node;
+}
+function renderTask(task) {
+  const card = document.createElement("article"); card.className = "task-card";
+  const top = document.createElement("div"); top.className = "task-top";
+  addText(top, "strong", task.roleLabel + " · " + task.status);
+  addText(top, "small", new Date(task.createdAt).toLocaleString());
+  card.append(top);
+  addText(card, "p", task.prompt, "task-prompt-text");
+  if (task.error) addText(card, "p", "Xato: " + task.error, "error");
+  if (task.output) addText(card, "pre", task.output, "task-output");
+  addText(card, "p", "Ko‘rib chiqish: " + task.approvalStatus + (task.tests ? " · Sinov: " + task.tests.status : ""), "task-meta");
+  if (task.status === "queued") {
+    const cancel = document.createElement("button"); cancel.className = "secondary"; cancel.textContent = "Navbatdan bekor qilish";
+    cancel.addEventListener("click", async () => { try { await request("/api/admin/tasks/" + encodeURIComponent(task.id) + "/cancel", { method: "POST", body: "{}" }); await loadTasks(); } catch (e) { $("task-message").textContent = e.message; } });
+    card.append(cancel);
+  }
+  if (task.approvalStatus === "pending_review") {
+    const actions = document.createElement("div"); actions.className = "task-actions";
+    for (const [decision, label] of [["approved", "Taklifni ko‘rib chiqdim"], ["rejected", "Taklifni rad etish"]]) {
+      const button = document.createElement("button"); button.className = "secondary"; button.textContent = label;
+      button.addEventListener("click", async () => {
+        try { await request("/api/admin/tasks/" + encodeURIComponent(task.id) + "/review", { method: "POST", body: JSON.stringify({ decision }) }); await loadTasks(); }
+        catch (e) { $("task-message").textContent = e.message; }
+      });
+      actions.append(button);
+    }
+    card.append(actions);
+  }
+  if (task.logs?.length) {
+    const details = document.createElement("details"); const summary = document.createElement("summary"); summary.textContent = "Jarayon jurnali (" + task.logs.length + ")";
+    const log = document.createElement("pre"); log.textContent = task.logs.map(item => item.at + " — " + item.message).join("\n");
+    details.append(summary, log); card.append(details);
+  }
+  return card;
+}
+async function loadTasks() {
+  const data = await request("/api/admin/tasks");
+  const list = $("task-list");
+  list.replaceChildren();
+  if (!data.tasks.length) { list.textContent = "Hozircha topshiriq yo‘q."; return; }
+  for (const task of data.tasks) list.append(renderTask(task));
+}
 async function checkSession() {
-  try { const status = await request("/api/admin/status"); if (status.authenticated) { showDashboard(true); await loadOverview(); } else showDashboard(false); }
-  catch (_) { showDashboard(false); $("status").textContent = "Backend server talab qilinadi"; }
+  try {
+    const status = await request("/api/admin/status");
+    if (status.authenticated) { showDashboard(true); await Promise.all([loadOverview(), loadTasks()]); }
+    else showDashboard(false);
+  } catch (_) { showDashboard(false); $("status").textContent = "Backend server talab qilinadi"; }
 }
 $("logout").addEventListener("click", async () => { try { await request("/api/admin/logout", { method: "POST", body: "{}" }); } finally { showDashboard(false); } });
 $("refresh").addEventListener("click", async () => { try { await loadOverview(); $("status").textContent = "Yangilandi"; } catch (error) { $("details").textContent = error.message; } });
+$("refresh-tasks").addEventListener("click", async () => { try { await loadTasks(); $("task-message").textContent = ""; } catch (error) { $("task-message").textContent = error.message; } });
+$("task-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const button = $("submit-task"); button.disabled = true; $("task-message").textContent = "Vazifa qo‘shilmoqda…";
+  try {
+    const data = await request("/api/admin/tasks", { method: "POST", body: JSON.stringify({ role: $("task-role").value, prompt: $("task-prompt").value }) });
+    $("task-prompt").value = "";
+    $("task-message").textContent = "Vazifa navbatga qo‘shildi: " + data.task.id;
+    await Promise.all([loadTasks(), loadOverview()]);
+  } catch (error) { $("task-message").textContent = error.message; }
+  finally { button.disabled = false; }
+});
 checkSession();
+setInterval(() => { if (!$("dashboard").hidden) { loadTasks().catch(() => {}); loadOverview().catch(() => {}); } }, 10000);
