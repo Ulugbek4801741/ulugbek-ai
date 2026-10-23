@@ -72,6 +72,38 @@ test("API smoke tests", async (t) => {
       assert.ok(body.plan.steps.length >= 3);
     });
 
+
+    await t.test("malformed JSON receives a safe 400 response", async () => {
+      const response = await fetch(`${baseUrl}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{invalid-json"
+      });
+      const body = await response.json();
+      assert.equal(response.status, 400);
+      assert.match(body.error, /JSON/i);
+    });
+
+    await t.test("oversized JSON receives a safe 413 response", async () => {
+      const response = await fetch(`${baseUrl}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: "x".repeat(25000) })
+      });
+      const body = await response.json();
+      assert.equal(response.status, 413);
+      assert.ok(typeof body.error === "string");
+    });
+
+    await t.test("planner rejects tasks above the documented limit", async () => {
+      const response = await fetch(`${baseUrl}/api/agent/plan`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ task: "x".repeat(4001) })
+      });
+      assert.equal(response.status, 413);
+    });
+
     await t.test("agent planner rejects an empty task", async () => {
       const response = await fetch(`${baseUrl}/api/agent/plan`, {
         method: "POST",
