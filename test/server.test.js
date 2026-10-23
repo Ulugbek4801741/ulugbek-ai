@@ -48,6 +48,17 @@ test("API smoke tests", async (t) => {
       assert.equal(response.status, 400);
     });
 
+    await t.test("voice avatar page and assets are served", async () => {
+      const page = await fetch(`${baseUrl}/voice.html`);
+      const script = await fetch(`${baseUrl}/voice.js`);
+      const css = await fetch(`${baseUrl}/voice.css`);
+      assert.equal(page.status, 200);
+      assert.match(await page.text(), /Shaxsiy AI avatar/);
+      assert.equal(script.status, 200);
+      assert.match(await script.text(), /SpeechRecognition/);
+      assert.equal(css.status, 200);
+    });
+
     await t.test("virtual lab page and client script are served", async () => {
       const page = await fetch(`${baseUrl}/lab.html`);
       const script = await fetch(`${baseUrl}/lab.js`);
