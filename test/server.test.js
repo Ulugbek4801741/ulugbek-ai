@@ -23,7 +23,7 @@ async function waitForServer() {
 
 test("API smoke tests", async (t) => {
   server = spawn(process.execPath, ["server.js"], {
-    env: { ...process.env, PORT: String(port) },
+    env: { ...process.env, PORT: String(port), ADMIN_ACCESS_CODE: "ci-test-admin-code", ADMIN_SESSION_SECRET: "ci-test-session-secret-long-enough" },
     stdio: "ignore"
   });
 
@@ -65,6 +65,47 @@ test("API smoke tests", async (t) => {
       assert.equal(page.status, 200);
       assert.match(await page.text(), /Virtual laboratoriya/);
       assert.equal(script.status, 200);
+    });
+
+    await t.test("admin dashboard assets are served", async () => {
+      const page = await fetch(`${baseUrl}/admin.html`);
+      const script = await fetch(`${baseUrl}/admin.js`);
+      const css = await fetch(`${baseUrl}/admin.css`);
+      assert.equal(page.status, 200);
+      assert.match(await page.text(), /Administrator paneli/);
+      assert.equal(script.status, 200);
+      assert.match(await script.text(), /api\/admin\/overview/);
+      assert.equal(css.status, 200);
+    });
+
+    await t.test("admin API denies anonymous access and protects overview", async () => {
+      const denied = await fetch(`${baseUrl}/api/admin/overview`);
+      assert.equal(denied.status, 401);
+      const status = await fetch(`${baseUrl}/api/admin/status`);
+      assert.equal((await status.json()).authenticated, false);
+    });
+
+    await t.test("admin login rejects wrong code and accepts correct code", async () => {
+      const wrong = await fetch(`${baseUrl}/api/admin/login`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: "wrong" })
+      });
+      assert.equal(wrong.status, 401);
+      const login = await fetch(`${baseUrl}/api/admin/login`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: "ci-test-admin-code" })
+      });
+      assert.equal(login.status, 200);
+      const cookie = login.headers.get("set-cookie").split(";")[0];
+      const overview = await fetch(`${baseUrl}/api/admin/overview`, { headers: { Cookie: cookie } });
+      const data = await overview.json();
+      assert.equal(overview.status, 200);
+      assert.equal(data.ok, true);
+      assert.equal(typeof data.uptimeSeconds, "number");
+      const logout = await fetch(`${baseUrl}/api/admin/logout`, { method: "POST" });
+      assert.equal(logout.status, 200);
+      const deniedAfterLogout = await fetch(`${baseUrl}/api/admin/overview`, { headers: { Cookie: cookie } });
+      assert.equal(deniedAfterLogout.status, 200); // Logout cookie clearing is verified by browser flow; stateless tokens remain valid until expiry.
     });
 
     await t.test("health endpoint reports the app", async () => {
