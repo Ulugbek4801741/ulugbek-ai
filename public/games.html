@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0b1020">
+<title>ULUGBEK AI — Mini-o‘yinlar</title>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:#0b1020;color:#f3f4f6;font:16px system-ui;padding:24px}main{max-width:720px;margin:5vh auto;padding:24px;border:1px solid #334155;border-radius:20px;background:#111827}h1{font-size:clamp(28px,6vw,42px)}p{color:#cbd5e1;line-height:1.6}.game{margin-top:20px;padding:20px;border:1px solid #475569;border-radius:16px}button{padding:12px 16px;border:0;border-radius:10px;background:#a78bfa;color:#111827;font-weight:700;margin:4px;cursor:pointer}button:disabled{opacity:.5;cursor:not-allowed}.stats{font-size:20px;font-weight:700}
+</style>
+</head>
+<body><main>
+<p>ULUGBEK AI · O‘YIN LABORATORIYASI</p>
+<h1>Mini-o‘yinlar</h1>
+<p>Bu birinchi sinov o‘yini. Internet orqali sahifa ochiladi, o‘yin esa hozircha brauzerning o‘zida ishlaydi. Bu multiplayer yoki serverda saqlanadigan o‘yin emas.</p>
+<section class="game">
+<h2>10 soniyada tez bosish</h2>
+<p>“Boshlash” tugmasini bosing, keyin 10 soniya ichida imkon qadar ko‘p ball yig‘ing.</p>
+<p class="stats">Vaqt: <span id="time">10</span> · Ball: <span id="score">0</span></p>
+<button id="start">O‘yinni boshlash</button><button id="tap" disabled>+1 ball</button>
+<p id="result" aria-live="polite"></p>
+</section>
+<p><a href="./" style="color:#c4b5fd">← ULUGBEK AI bosh sahifasiga qaytish</a></p>
+</main>
+<script>
+"use strict";
+const timeNode=document.getElementById("time"),scoreNode=document.getElementById("score"),start=document.getElementById("start"),tap=document.getElementById("tap"),result=document.getElementById("result");
+let time=10,score=0,timer=null;
+start.addEventListener("click",()=>{clearInterval(timer);time=10;score=0;timeNode.textContent=time;scoreNode.textContent=score;result.textContent="";tap.disabled=false;start.disabled=true;timer=setInterval(()=>{time--;timeNode.textContent=time;if(time<=0){clearInterval(timer);tap.disabled=true;start.disabled=false;result.textContent="O‘yin tugadi! Natijangiz: "+score+" ball."}},1000)});
+tap.addEventListener("click",()=>{if(time>0){score++;scoreNode.textContent=score}});
+</script>
+</body></html>
