@@ -71,7 +71,9 @@ test("self-hosted OpenAI-compatible model works without an API key", async (t) =
       });
       assert.equal(response.status, 200);
       const data = await response.json();
-      assert.equal(data.mode, "ai");
+      assert.equal(data.mode, "multi-agent");
+      assert.ok(Array.isArray(data.agents));
+      assert.ok(data.agents.length >= 2);
       assert.match(data.reply, /sinov modeli/);
     });
 
