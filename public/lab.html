@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0b1020">
+<title>ULUGBEK AI — Virtual laboratoriya</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="lab.css">
+<script src="lab.js" defer></script>
+</head>
+<body class="lab-body">
+<main class="lab-shell">
+<header class="lab-header">
+<div><p class="lab-kicker">ULUGBEK AI · TAJRIBA MUHITI</p><h1>Virtual laboratoriya</h1><p>Internetdan izlash · manbalarni tekshirish · bilim va agent xotirasini saqlash</p></div>
+<a class="secondary-button lab-home" href="./">Asosiy sahifa ↗</a>
+</header>
+<section class="lab-status" aria-live="polite">
+<div><span class="lab-dot"></span><b id="lab-state">Holat tekshirilmoqda…</b></div>
+<div class="lab-stats"><span>Bilimlar: <b id="knowledge-count">0</b></span><span>Agent xotiralari: <b id="memory-count">0</b></span><span>API kaliti: <b>Qidiruv uchun kerak emas</b></span></div>
+</section>
+<section class="lab-grid">
+<div class="lab-panel">
+<h2>1. Internetdan izlash</h2>
+<p class="lab-help">Ommaviy qidiruv natijalari olinadi. Natija avtomatik ravishda haqiqat deb qabul qilinmaydi.</p>
+<form id="search-form">
+<label for="search-query">Nimani o‘rganamiz?</label>
+<div class="lab-search-row"><input id="search-query" maxlength="240" placeholder="Masalan: ochiq manbali AI agent framework" required><button class="primary-button" id="search-button">Qidirish</button></div>
+</form>
+<div id="search-results" class="lab-results" aria-live="polite"><p class="lab-empty">Qidiruv natijalari shu yerda ko‘rinadi.</p></div>
+</div>
+<div class="lab-panel">
+<h2>2. Bilimlar bazasi</h2>
+<p class="lab-help">Faqat o‘zingiz ko‘rib chiqqan manbani saqlang. Bu ma’lumotlar bazasini boyitadi, ammo model vaznlarini qayta o‘qitmaydi.</p>
+<form id="knowledge-form" class="lab-form">
+<label for="knowledge-title">Sarlavha</label><input id="knowledge-title" maxlength="240" required placeholder="Bilim nomi">
+<label for="knowledge-content">Tekshirilgan ma’lumot</label><textarea id="knowledge-content" maxlength="5000" rows="4" required placeholder="Muhim xulosa va dalillar"></textarea>
+<label for="knowledge-source">Manba URL (ixtiyoriy)</label><input id="knowledge-source" type="url" placeholder="https://…">
+<label for="knowledge-agent">Mas’ul agent</label><select id="knowledge-agent"><option>Research Agent</option><option>Core Coordinator</option><option>Builder Agent</option><option>Verifier Agent</option><option>Business Agent</option><option>Security Agent</option></select>
+<button class="primary-button" id="save-knowledge">Bilimni saqlash</button>
+</form>
+</div>
+<div class="lab-panel">
+<h2>3. Agentning shaxsiy xotirasi</h2>
+<p class="lab-help">Har bir agent uchun alohida xotira yozuvlari saqlanadi.</p>
+<form id="memory-form" class="lab-form">
+<label for="memory-agent">Agent</label><select id="memory-agent"><option>Research Agent</option><option>Core Coordinator</option><option>Builder Agent</option><option>Verifier Agent</option><option>Business Agent</option><option>Security Agent</option><option>Marketing Agent</option><option>Education Agent</option><option>Data Agent</option><option>Customer Support Agent</option></select>
+<label for="memory-content">Xotira yozuvi</label><textarea id="memory-content" maxlength="5000" rows="3" required placeholder="Agent keyingi safar eslab qolishi kerak bo‘lgan ma’lumot"></textarea>
+<button class="primary-button" id="save-memory">Xotirani saqlash</button>
+</form>
+<div id="memory-list" class="lab-results"><p class="lab-empty">Agent tanlanganda uning xotirasi chiqadi.</p></div>
+</div>
+<div class="lab-panel">
+<div class="lab-panel-heading"><h2>4. Saqlangan bilimlar</h2><button class="secondary-button" id="refresh-knowledge">Yangilash</button></div>
+<div id="knowledge-list" class="lab-results"><p class="lab-empty">Ma’lumotlar yuklanmoqda…</p></div>
+</div>
+</section>
+<footer class="lab-footer">Sinov versiyasi · Serverda JSON fayllari saqlanadi · Muhim o‘zgarishlar inson nazoratida</footer>
+<div id="lab-toast" role="status" aria-live="polite"></div>
+</main>
+</body>
+</html>
