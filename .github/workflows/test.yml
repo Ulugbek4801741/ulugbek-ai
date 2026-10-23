@@ -30,7 +30,9 @@ jobs:
           node --check server.js
           node --check agent-runtime.js
           node --check agents/agent-contract.js
-          node --check agents/registry.js\n          node --check agents/memory-store.js\n          node --check agents/chat-dispatcher.js
+          node --check agents/registry.js
+          node --check agents/memory-store.js
+          node --check agents/chat-dispatcher.js
           node --check agents/chat-coordinator.js
           node --check agents/core-architect.js
           node --check agents/research-agent.js
@@ -41,7 +43,8 @@ jobs:
           node --check agents/security-agent.js
           node --check agents/devops-agent.js
           node --check agents/product-growth-agent.js
-          node --check test/agent-registry.test.js\n          node --check test/agent-memory-dispatcher.test.js
+          node --check test/agent-registry.test.js
+          node --check test/agent-memory-dispatcher.test.js
           node --check test/agent-runtime.test.js
           node --check public/app.js
           node --check public/admin.js
@@ -49,5 +52,5 @@ jobs:
           node --check public/lab.js
       - name: Run API smoke tests
         run: npm test
-      - name: Run specialist agent registry tests
-        run: node --test test/agent-registry.test.js
+      - name: Run specialist agent registry and memory tests
+        run: node --test test/agent-registry.test.js test/agent-memory-dispatcher.test.js
