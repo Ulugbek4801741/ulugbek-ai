@@ -3,10 +3,11 @@
 const fs = require("node:fs/promises");
 const path = require("node:path");
 const crypto = require("node:crypto");
+const agentRegistry = require("./agents/registry");
 
 const MAX_TASKS = 200;
 const MAX_PROMPT_LENGTH = 4000;
-const ROLES = new Set(["orchestrator", "backend", "frontend", "tester", "security", "research", "product"]);
+const ROLES = new Set(["orchestrator", "backend", "frontend", "tester", "security", "research", "product", ...agentRegistry.listAgents().map(agent => agent.id)]);
 const ROLE_LABELS = {
   orchestrator: "Boshqaruvchi agent",
   backend: "Backend/kod agenti",
@@ -14,7 +15,8 @@ const ROLE_LABELS = {
   tester: "Sinov agenti",
   security: "Xavfsizlik agenti",
   research: "Tadqiqot agenti",
-  product: "Mahsulot agenti"
+  product: "Mahsulot agenti",
+  ...Object.fromEntries(agentRegistry.listAgents().map(agent => [agent.id, agent.name]))
 };
 const TASK_STORE_PATH = path.resolve(process.env.TASK_STORE_PATH || path.join(__dirname, "data", "agent-tasks.json"));
 let tasks = [];
@@ -70,6 +72,8 @@ function modelConfig() {
   return { key, url, model: process.env.OPENAI_MODEL || "gpt-4o-mini" };
 }
 function systemPrompt(role) {
+  const registered = agentRegistry.getAgent(role);
+  if (registered) return registered.systemPrompt;
   const label = ROLE_LABELS[role] || ROLE_LABELS.orchestrator;
   return `Sen ULUGBEK AI loyihasidagi ${label}san. Faqat tahlil, reja, kod taklifi yoki tekshiruv natijasi tayyorla. O‘zbek tilida javob ber. Fayllarni o‘zgartirish, shell buyruqlarini bajarish, deploy qilish, pul sarflash yoki tashqi hisoblarda harakat qilish imkoning yo‘q. Bajarilmagan ishni bajarildi deb aytma. Kod taklifida fayl yo‘li, aniq o‘zgarish, xavf va sinov qadamlarini ko‘rsat. Inson ko‘rigi va testdan o‘tmaguncha o‘zgarish tasdiqlangan deb aytma.`;
 }
