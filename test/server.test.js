@@ -75,6 +75,43 @@ test("API smoke tests", async (t) => {
       assert.equal(body.app, "ULUGBEK AI");
     });
 
+    await t.test("diagnostics distinguish configured AI from demo mode", async () => {
+      const response = await fetch(`${baseUrl}/api/diagnostics`);
+      const body = await response.json();
+      assert.equal(response.status, 200);
+      assert.equal(body.backend, "running");
+      assert.equal(body.ai, "demo-only-no-model-key");
+      assert.equal(body.automaticFailover, "not-configured-requires-authorized-backup-host");
+    });
+
+    await t.test("knowledge entries can be saved and retrieved", async () => {
+      const title = "CI test knowledge " + Date.now();
+      const create = await fetch(`${baseUrl}/api/lab/knowledge`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, content: "Test content", source: "https://example.com", agent: "Verifier Agent" })
+      });
+      const created = await create.json();
+      assert.equal(create.status, 201);
+      assert.equal(created.entry.title, title);
+      const listResponse = await fetch(`${baseUrl}/api/lab/knowledge`);
+      const list = await listResponse.json();
+      assert.ok(list.entries.some((entry) => entry.title === title));
+    });
+
+    await t.test("agent memory can be saved and retrieved", async () => {
+      const content = "CI test memory " + Date.now();
+      const create = await fetch(`${baseUrl}/api/lab/memory/Verifier%20Agent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content })
+      });
+      assert.equal(create.status, 201);
+      const read = await fetch(`${baseUrl}/api/lab/memory/Verifier%20Agent`);
+      const body = await read.json();
+      assert.ok(body.memory.some((item) => item.content === content));
+    });
+
     await t.test("chat rejects an empty message", async () => {
       const response = await fetch(`${baseUrl}/api/chat`, {
         method: "POST",
