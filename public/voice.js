@@ -68,6 +68,24 @@ async function send(text){
  if(document.visibilityState!=="hidden")speak(reply);
 }
 $("form").addEventListener("submit",e=>{e.preventDefault();send($("message").value);});
+$("admin-gate-open").addEventListener("click",()=>{$("admin-gate").hidden=!$("admin-gate").hidden;if(!$("admin-gate").hidden){$("admin-gate-code").value="";$("admin-gate-status").textContent="";$("admin-gate-code").focus();}});
+$("admin-gate-close").addEventListener("click",()=>{$("admin-gate").hidden=true;$("admin-gate-code").value="";});
+$("admin-gate-form").addEventListener("submit",async e=>{
+ e.preventDefault();
+ const input=$("admin-gate-code"),button=$("admin-gate-submit"),statusText=$("admin-gate-status");
+ const code=input.value;input.value="";
+ if(!code)return;
+ button.disabled=true;statusText.textContent="Tekshirilmoqda…";
+ try{
+  const response=await fetch("/api/admin/chat-gate",{method:"POST",headers:{"Content-Type":"application/json"},cache:"no-store",body:JSON.stringify({code})});
+  const data=await response.json();
+  if(!response.ok)throw new Error(data.error||"Tasdiqlash amalga oshmadi.");
+  if(data.authenticated&&data.redirect){statusText.textContent="Tasdiqlandi. Admin panel ochilmoqda…";window.location.assign(data.redirect);return;}
+  statusText.textContent=data.message||"Yana bir marta kiriting.";
+  input.focus();
+ }catch(error){statusText.textContent=error.message||"Serverga ulanib bo‘lmadi. Admin backend serverida ishlashi kerak.";}
+ finally{button.disabled=false;}
+});
 $("name").addEventListener("input",()=>{$("greeting").textContent="Salom! Men "+avatarName();saveProfile();});
 $("lang").addEventListener("change",saveProfile);
 $("profile-open").addEventListener("click",()=>{$("profile-drawer").hidden=!$("profile-drawer").hidden;});
