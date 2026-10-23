@@ -47,6 +47,18 @@ A separate page is available at `/lab.html`. It includes:
 
 Knowledge and agent notes are stored as JSON files in the server's `data/` directory. For durable production storage, deploy on a host with persistent disk or replace this storage layer with a database. GitHub Pages is static hosting and cannot run these API routes; the lab UI requires the Express backend. Search snippets are not verified facts: users should open the source and review it before saving. This MVP does not retrain a language model, run an always-on autonomous agent, or connect to proprietary ChatGPT/Gemini/Claude/DeepSeek models without their supported access method. Automated tests cover the status route, input validation, and page delivery; live search depends on the external search service and still needs deployment-level verification.
 
+## Google administrator sign-in
+
+The chat page has no admin button. Open `/admin.html` on the deployed Express server and choose **Google hisob bilan kirish**. The server accepts only the exact, verified email configured in `ADMIN_GOOGLE_EMAIL`; it does not grant admin access to every Google account.
+
+Set these server-only environment variables in the hosting dashboard:
+- `PUBLIC_BASE_URL`: the full HTTPS origin of the Express app, with no trailing slash.
+- `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`: OAuth web-client credentials from Google Cloud Console.
+- `ADMIN_GOOGLE_EMAIL`: the one allowed Google account email.
+- `ADMIN_SESSION_SECRET`: a long random secret (at least 32 random bytes).
+
+In Google Cloud Console, configure the OAuth consent screen and add the exact redirect URI `PUBLIC_BASE_URL/api/auth/google/callback` to the OAuth client. Do not put OAuth secrets in the repository or browser JavaScript. The Google account owner must approve/sign in themselves. GitHub Pages cannot host the backend routes; deploy this Express app and use the admin page on that same HTTPS host. A Render blueprint is included as a deployment starting point, but it does not create Google credentials or approve account access.
+
 ## Security configuration
 
 Never put an administrator access code or model API key in HTML, browser JavaScript, public repository files, screenshots, or commit messages. Store secrets only in the backend hosting provider’s secret/environment settings. Use HTTPS in production, short-lived secure sessions, rate limiting, audit logging, least privilege, and automated tests for every authorization route. GitHub Pages is static hosting and cannot protect server-only secrets or run the Express API. The admin page shell currently added to `public/admin.html` is **not an enabled admin system** until server-side authentication and authorization routes have been implemented and tested; do not enter real credentials on a static-only deployment.
