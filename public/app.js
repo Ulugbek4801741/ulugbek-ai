@@ -8,6 +8,7 @@ const toast = $("#toast");
 const statusLabel = $("#connection-status");
 const nativeApp = Boolean(window.Capacitor && typeof window.Capacitor.isNativePlatform === "function" && window.Capacitor.isNativePlatform());
 let toastTimer;
+let currentMode = "chat";
 const views = {
  overview: "Boshqaruv paneli",
  chat: "AI Chat",
@@ -104,6 +105,29 @@ async function planTask(message) {
  } catch (_) { /* Static GitHub Pages and offline use the local planner. */ }
  return makeLocalPlan(message);
 }
+async function chatTask(message) {
+ try {
+   if (!nativeApp) {
+     const response = await fetch(new URL("api/chat", document.baseURI), {
+       method: "POST",
+       headers: { "Content-Type": "application/json" },
+       body: JSON.stringify({ message })
+     });
+     if (response.ok) {
+       const data = await response.json();
+       if (typeof data.reply === "string") return data;
+     }
+   }
+ } catch (_) { /* Static Pages has no backend API. */ }
+ return {
+   reply: "Xabaringiz qabul qilindi. Hozir sayt statik demo rejimida ishlayapti: haqiqiy suhbat uchun ULUGBEK AI backend serverini ishga tushirish va AI model kalitini serverda sozlash kerak.",
+   mode: "demo"
+ };
+}
+function showWelcome() {
+ messages.replaceChildren();
+ addAssistantMessage("Salom! Men ULUGBEK AI.", "Savolingizni yozing. Suhbat rejimi javob berishga, “Reja tuzish” esa vazifani agent rollari bo‘yicha qadamlarga ajratishga mo‘ljallangan.");
+}
 form.addEventListener("submit",async(event)=>{
  event.preventDefault();
  const prompt=input.value.trim();
@@ -111,18 +135,40 @@ form.addEventListener("submit",async(event)=>{
  addUserMessage(prompt);
  input.value="";
  send.disabled=true;
- send.textContent="Rejalashtirilmoqda…";
+ send.textContent=currentMode==="chat"?"Javob tayyorlanmoqda…":"Rejalashtirilmoqda…";
  try {
-   addAssistantMessage("Vazifa tahlil qilinmoqda","Maqsad aniqlanmoqda, mos agent rollari tanlanmoqda va bajarish qadamlari tayyorlanmoqda.");
-   const plan=await planTask(prompt);
-   renderPlan(plan);
+   if (currentMode === "chat") {
+     const body = addAssistantMessage("ULUGBEK AI", "Javob tayyorlanmoqda…");
+     const data = await chatTask(prompt);
+     const paragraph = body.querySelector("p");
+     if (paragraph) paragraph.textContent = data.reply;
+     if (data.mode === "demo") {
+       body.appendChild(textElement("small", "Demo rejim · AI backend ulanmagan", "response-note"));
+     }
+     messages.scrollTop=messages.scrollHeight;
+   } else {
+     addAssistantMessage("Vazifa tahlil qilinmoqda","Maqsad aniqlanmoqda, mos agent rollari tanlanmoqda va bajarish qadamlari tayyorlanmoqda.");
+     const plan=await planTask(prompt);
+     renderPlan(plan);
+   }
  } catch (_) {
-   addAssistantMessage("Reja tayyorlashda xatolik","Iltimos, vazifani qisqaroq qilib qayta yozing.");
+   addAssistantMessage("Xatolik yuz berdi","Iltimos, qayta urinib ko‘ring yoki vazifani qisqaroq yozing.");
  } finally {
    send.disabled=false;
-   send.innerHTML='Reja tuzish <span>↑</span>';
+   send.innerHTML=currentMode==="chat"?'Yuborish <span>↑</span>':'Reja tuzish <span>↑</span>';
    input.focus();
  }
+});
+$("[data-mode]").forEach(button=>button.addEventListener("click",()=>{
+ currentMode=button.dataset.mode;
+ $("[data-mode]").forEach(item=>item.classList.toggle("active",item===button));
+ send.innerHTML=currentMode==="chat"?'Yuborish <span>↑</span>':'Reja tuzish <span>↑</span>';
+ input.placeholder=currentMode==="chat"?"ULUGBEK AI’dan nimani so‘ramoqchisiz?":"Qaysi vazifa uchun reja tuzay?";
+}));
+$("#new-chat").addEventListener("click",()=>{
+ showWelcome();
+ input.value="";
+ notify("Yangi suhbat boshlandi.");
 });
 $$("[data-prompt]").forEach(button=>button.addEventListener("click",()=>{
  input.value=button.dataset.prompt;
