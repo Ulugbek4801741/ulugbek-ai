@@ -36,6 +36,10 @@ Then restart the server. The chat and planner use the configured OpenAI-compatib
 
 Without a server and key, GitHub Pages runs only the local planning demo. GitHub Pages cannot run this Express backend, so real model responses require a separate backend host.
 
+## Security configuration
+
+Never put an administrator access code or model API key in HTML, browser JavaScript, public repository files, screenshots, or commit messages. Store secrets only in the backend hosting provider’s secret/environment settings. Use HTTPS in production, short-lived secure sessions, rate limiting, audit logging, least privilege, and automated tests for every authorization route. GitHub Pages is static hosting and cannot protect server-only secrets or run the Express API. The admin page shell currently added to `public/admin.html` is **not an enabled admin system** until server-side authentication and authorization routes have been implemented and tested; do not enter real credentials on a static-only deployment.
+
 ## What “autonomous” means in this MVP
 
 The planner can select a task category, create a step-by-step plan, and suggest agent roles. If a model is configured, it can use the model to generate a more tailored plan. It does **not** yet run persistent background agents, freely browse the internet, edit/deploy code, operate user accounts, or complete real-world actions. Those require separately implemented tools, permissions, durable job storage, logging, and human approval for risky actions.
