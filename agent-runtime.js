@@ -73,6 +73,18 @@ function systemPrompt(role) {
   const label = ROLE_LABELS[role] || ROLE_LABELS.orchestrator;
   return `Sen ULUGBEK AI loyihasidagi ${label}san. Faqat tahlil, reja, kod taklifi yoki tekshiruv natijasi tayyorla. O‘zbek tilida javob ber. Fayllarni o‘zgartirish, shell buyruqlarini bajarish, deploy qilish, pul sarflash yoki tashqi hisoblarda harakat qilish imkoning yo‘q. Bajarilmagan ishni bajarildi deb aytma. Kod taklifida fayl yo‘li, aniq o‘zgarish, xavf va sinov qadamlarini ko‘rsat. Inson ko‘rigi va testdan o‘tmaguncha o‘zgarish tasdiqlangan deb aytma.`;
 }
+async function requestModel(config, messages, signal) {
+  const response = await fetch(config.url + "/chat/completions", {
+    method: "POST",
+    headers: { ...(config.key ? { Authorization: "Bearer " + config.key } : {}), "Content-Type": "application/json" },
+    signal, body: JSON.stringify({ model: config.model, temperature: 0.2, messages })
+  });
+  if (!response.ok) throw new Error("Model serveri HTTP " + response.status + " javob berdi.");
+  const data = await response.json();
+  const output = data?.choices?.[0]?.message?.content;
+  if (typeof output !== "string" || !output.trim()) throw new Error("Model bo‘sh javob qaytardi.");
+  return output.slice(0, 12000);
+}
 async function runModel(task) {
   const config = modelConfig();
   if (!config.url) {
@@ -87,28 +99,41 @@ async function runModel(task) {
   const timeout = setTimeout(() => controller.abort(), 45000);
   try {
     addLog(task, "Modelga topshiriq yuborilmoqda.");
-    const response = await fetch(config.url + "/chat/completions", {
-      method: "POST",
-      headers: { ...(config.key ? { Authorization: "Bearer " + config.key } : {}), "Content-Type": "application/json" },
-      signal: controller.signal,
-      body: JSON.stringify({
-        model: config.model,
-        temperature: 0.2,
-        messages: [
-          { role: "system", content: systemPrompt(task.role) },
-          { role: "user", content: task.prompt }
-        ]
-      })
-    });
-    if (!response.ok) throw new Error("Model serveri HTTP " + response.status + " javob berdi.");
-    const data = await response.json();
-    const output = data?.choices?.[0]?.message?.content;
-    if (typeof output !== "string" || !output.trim()) throw new Error("Model bo‘sh javob qaytardi.");
-    task.output = output.slice(0, 20000);
+    if (task.role === "orchestrator") {
+      const specialists = [
+        { role: "research", title: "Tahlil agenti" },
+        { role: "backend", title: "Backend agenti" },
+        { role: "frontend", title: "Interfeys agenti" },
+        { role: "tester", title: "Sinov agenti" },
+        { role: "security", title: "Xavfsizlik agenti" }
+      ];
+      const results = [];
+      for (const specialist of specialists) {
+        addLog(task, specialist.title + " vazifani tahlil qilmoqda.");
+        results.push("## " + specialist.title + "\n" + await requestModel(config, [
+          { role: "system", content: systemPrompt(specialist.role) + " Faqat o‘z sohang bo‘yicha amaliy taklif yoz. Bajarilmagan testni bajarildi deb ko‘rsatma." },
+          { role: "user", content: "Asosiy vazifa:\n" + task.prompt + "\nSohang: " + specialist.title + ". Kodni o‘zgartirma va tashqi harakat bajarma. Taklif, xavf va tekshirish usulini yoz." }
+        ], controller.signal));
+      }
+      addLog(task, "Tekshiruvchi agent takliflarni jamlamoqda.");
+      const verified = await requestModel(config, [
+        { role: "system", content: systemPrompt("orchestrator") + " Mutaxassislar javoblarini solishtir, qarama-qarshilik va xavflarni ko‘rsat, aniq ustuvor reja ber. Haqiqiy testlar bajarilmaganini ayt." },
+        { role: "user", content: "Asosiy vazifa:\n" + task.prompt + "\n\nTakliflar:\n" + results.join("\n\n") }
+      ], controller.signal);
+      task.output = (results.join("\n\n") + "\n\n## Yakuniy tekshiruv\n" + verified).slice(0, 20000);
+      task.tests = { status: "not_run", note: "Sinov agenti test rejasini taklif qildi; kod testlari avtomatik bajarilmadi." };
+      addLog(task, "5 ta mutaxassis tahlili va yakuniy tekshiruv tugadi. Kod o‘zgartirilmadi.");
+    } else {
+      task.output = await requestModel(config, [
+        { role: "system", content: systemPrompt(task.role) },
+        { role: "user", content: task.prompt }
+      ], controller.signal);
+      task.tests = { status: "not_run", note: "Model taklifi haqiqiy kod sinovi emas." };
+      addLog(task, "Tanlangan mutaxassisning javobi olindi.");
+    }
     task.status = "completed";
     task.approvalStatus = "pending_review";
-    task.tests = { status: "not_run", note: "Model yaratgan taklif avtomatik kod sifatida bajarilmadi; test va inson ko‘rigi kerak." };
-    addLog(task, "Model javobi olindi. Natija taklif sifatida saqlandi; loyiha fayllari o‘zgartirilmadi.");
+    addLog(task, "Natija taklif sifatida saqlandi; loyiha fayllari o‘zgartirilmadi.");
   } catch (error) {
     task.status = "failed";
     task.error = error.name === "AbortError" ? "Model javobi 45 soniyada kelmadi." : String(error.message || "Model xatosi").slice(0, 300);
