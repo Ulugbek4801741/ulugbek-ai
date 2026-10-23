@@ -204,10 +204,11 @@ app.get("/api/diagnostics", (_req, res) => {
     knowledgeStorage: "server-local-json-files",
     voiceInput: "browser-dependent-and-user-permission-required",
     voiceOutput: "browser-dependent",
-    autonomousAgents: "not-implemented-as-independent-background-services",
+    autonomousAgents: "single-process-queued-model-task-worker; not-independent-24-7-service",
     automaticFailover: "not-configured-requires-authorized-backup-host",
-    productionDatabase: "not-configured",
-    note: "Bu diagnostika faqat konfiguratsiya holatini bildiradi; u tashqi xizmatlarni to‘liq end-to-end sinamaydi."
+    productionDatabase: "not-configured-task-store-uses-local-json-file",
+    agentExecution: "model-generated-proposals-only-no-shell-no-file-edit-no-deploy",
+    note: "Agent navbati server jarayoni ishlayotganida bajariladi. Hosting qayta ishga tushsa yoki uxlab qolsa 24/7 kafolatlanmaydi. JSON saqlash vaqtinchalik; doimiy ishlab chiqarish uchun PostgreSQL/Redis va alohida worker kerak. Bu diagnostika end-to-end sinov o‘rnini bosmaydi."
   });
 });
 
