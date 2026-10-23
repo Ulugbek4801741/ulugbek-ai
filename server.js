@@ -2,6 +2,7 @@ const express = require("express");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const path = require("node:path");
+const crypto = require("node:crypto");
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -32,6 +33,70 @@ app.use("/api/", rateLimit({
   standardHeaders: "draft-8",
   legacyHeaders: false
 }));
+
+
+const ADMIN_ACCESS_CODE = process.env.ADMIN_ACCESS_CODE || "";
+const ADMIN_SESSION_SECRET = process.env.ADMIN_SESSION_SECRET || "";
+const ADMIN_SESSION_TTL_MS = 8 * 60 * 60 * 1000;
+function safeEqual(a, b) {
+  const left = Buffer.from(String(a));
+  const right = Buffer.from(String(b));
+  return left.length === right.length && crypto.timingSafeEqual(left, right);
+}
+function signAdminSession(payload) {
+  const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const signature = crypto.createHmac("sha256", ADMIN_SESSION_SECRET).update(encoded).digest("base64url");
+  return encoded + "." + signature;
+}
+function verifyAdminSession(token) {
+  if (!token || !ADMIN_SESSION_SECRET) return false;
+  const parts = token.split(".");
+  if (parts.length !== 2) return false;
+  const expected = crypto.createHmac("sha256", ADMIN_SESSION_SECRET).update(parts[0]).digest("base64url");
+  if (!safeEqual(parts[1], expected)) return false;
+  try {
+    const payload = JSON.parse(Buffer.from(parts[0], "base64url").toString("utf8"));
+    return payload.exp > Date.now() && payload.role === "admin";
+  } catch (_) { return false; }
+}
+function requireAdmin(req, res, next) {
+  const cookie = (req.headers.cookie || "").split(";").map(x => x.trim()).find(x => x.startsWith("ulugbek_admin="));
+  const token = cookie ? decodeURIComponent(cookie.slice("ulugbek_admin=".length)) : "";
+  if (!verifyAdminSession(token)) return res.status(401).json({ error: "Administrator sifatida qayta kiring." });
+  next();
+}
+app.get("/api/admin/status", (req, res) => {
+  const cookie = (req.headers.cookie || "").split(";").map(x => x.trim()).find(x => x.startsWith("ulugbek_admin="));
+  const token = cookie ? decodeURIComponent(cookie.slice("ulugbek_admin=".length)) : "";
+  res.json({ ok: true, authenticated: verifyAdminSession(token), configured: Boolean(ADMIN_ACCESS_CODE && ADMIN_SESSION_SECRET) });
+});
+app.post("/api/admin/login", rateLimit({ windowMs: 15 * 60 * 1000, limit: 8, standardHeaders: "draft-8", legacyHeaders: false }), (req, res) => {
+  if (!ADMIN_ACCESS_CODE || !ADMIN_SESSION_SECRET) return res.status(503).json({ error: "Admin himoyasi sozlanmagan. Hosting muhitida ADMIN_ACCESS_CODE va ADMIN_SESSION_SECRET belgilang." });
+  const code = typeof req.body?.code === "string" ? req.body.code : "";
+  if (!safeEqual(code, ADMIN_ACCESS_CODE)) return res.status(401).json({ error: "Kirish kodi noto‘g‘ri." });
+  const token = signAdminSession({ role: "admin", exp: Date.now() + ADMIN_SESSION_TTL_MS });
+  res.setHeader("Set-Cookie", "ulugbek_admin=" + encodeURIComponent(token) + "; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=28800");
+  res.json({ ok: true, expiresInSeconds: 28800 });
+});
+app.post("/api/admin/logout", (_req, res) => {
+  res.setHeader("Set-Cookie", "ulugbek_admin=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0");
+  res.json({ ok: true });
+});
+app.get("/api/admin/overview", requireAdmin, (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({
+    ok: true,
+    app: "ULUGBEK AI",
+    serverTime: new Date().toISOString(),
+    uptimeSeconds: Math.floor(process.uptime()),
+    nodeVersion: process.version,
+    memory: { rssBytes: process.memoryUsage().rss, heapUsedBytes: process.memoryUsage().heapUsed },
+    aiConfigured: Boolean(process.env.OPENAI_API_KEY),
+    model: process.env.OPENAI_API_KEY ? (process.env.OPENAI_MODEL || "gpt-4o-mini") : null,
+    adminAuth: "session-cookie",
+    deployment: "manual-host-configuration-required"
+  });
+});
 
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true, app: "ULUGBEK AI", version: "0.3.0", aiConfigured: Boolean(process.env.OPENAI_API_KEY) });
