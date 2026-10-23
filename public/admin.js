@@ -27,13 +27,6 @@ async function checkSession() {
   try { const status = await request("/api/admin/status"); if (status.authenticated) { showDashboard(true); await loadOverview(); } else showDashboard(false); }
   catch (_) { showDashboard(false); $("status").textContent = "Backend server talab qilinadi"; }
 }
-$("login-form").addEventListener("submit", async (event) => {
-  event.preventDefault(); $("login-error").textContent = "";
-  const button = event.submitter; if (button) button.disabled = true;
-  try { await request("/api/admin/login", { method: "POST", body: JSON.stringify({ code: $("admin-code").value }) }); $("admin-code").value = ""; showDashboard(true); await loadOverview(); }
-  catch (error) { $("login-error").textContent = error.message; }
-  finally { if (button) button.disabled = false; }
-});
 $("logout").addEventListener("click", async () => { try { await request("/api/admin/logout", { method: "POST", body: "{}" }); } finally { showDashboard(false); } });
 $("refresh").addEventListener("click", async () => { try { await loadOverview(); $("status").textContent = "Yangilandi"; } catch (error) { $("details").textContent = error.message; } });
 checkSession();
