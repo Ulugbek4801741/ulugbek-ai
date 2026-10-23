@@ -23,7 +23,7 @@ async function waitForServer() {
 
 test("API smoke tests", async (t) => {
   server = spawn(process.execPath, ["server.js"], {
-    env: { ...process.env, PORT: String(port), ADMIN_ACCESS_CODE: "ci-test-admin-code", ADMIN_SESSION_SECRET: "ci-test-session-secret-long-enough" },
+    env: { ...process.env, PORT: String(port), FRONTEND_ORIGIN: "https://ulugbek4801741.github.io", ADMIN_ACCESS_CODE: "ci-test-admin-code", ADMIN_SESSION_SECRET: "ci-test-session-secret-long-enough" },
     stdio: "ignore"
   });
 
@@ -94,6 +94,15 @@ test("API smoke tests", async (t) => {
       assert.equal(denied.status, 401);
       const status = await fetch(`${baseUrl}/api/admin/status`);
       assert.equal((await status.json()).authenticated, false);
+    });
+
+    await t.test("configured GitHub Pages origin can call backend and CSP permits it", async () => {
+      const response = await fetch(`${baseUrl}/api/health`, { headers: { Origin: "https://ulugbek4801741.github.io" } });
+      assert.equal(response.status, 200);
+      assert.equal(response.headers.get("access-control-allow-origin"), "https://ulugbek4801741.github.io");
+      assert.match(response.headers.get("content-security-policy") || "", /connect-src[^;]*https:\/\/ulugbek4801741\.github\.io/);
+      const denied = await fetch(`${baseUrl}/api/health`, { headers: { Origin: "https://untrusted.example" } });
+      assert.equal(denied.headers.get("access-control-allow-origin"), null);
     });
 
     await t.test("health endpoint reports the app", async () => {
