@@ -96,7 +96,7 @@ async function runModel(task) {
     return;
   }
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 45000);
+  const timeout = setTimeout(() => controller.abort(), 180000);
   try {
     addLog(task, "Modelga topshiriq yuborilmoqda.");
     if (task.role === "orchestrator") {
@@ -136,7 +136,7 @@ async function runModel(task) {
     addLog(task, "Natija taklif sifatida saqlandi; loyiha fayllari o‘zgartirilmadi.");
   } catch (error) {
     task.status = "failed";
-    task.error = error.name === "AbortError" ? "Model javobi 45 soniyada kelmadi." : String(error.message || "Model xatosi").slice(0, 300);
+    task.error = error.name === "AbortError" ? "Model javobi 3 daqiqada kelmadi." : String(error.message || "Model xatosi").slice(0, 300);
     addLog(task, "Vazifa xato bilan tugadi.");
   } finally {
     clearTimeout(timeout);
@@ -170,7 +170,7 @@ function startWorker() {
   workerReady = initialize().then(() => pump()).then(() => undefined);
   return workerReady;
 }
-function createTask({ prompt, role }) {
+async function createTask({ prompt, role }) {
   if (typeof prompt !== "string" || !prompt.trim()) {
     const error = new Error("Vazifa matni bo‘sh bo‘lmasligi kerak."); error.status = 400; throw error;
   }
@@ -191,7 +191,9 @@ function createTask({ prompt, role }) {
   };
   tasks.push(task);
   tasks = tasks.slice(-MAX_TASKS);
-  Promise.resolve(workerReady).then(() => persist()).then(pump).catch(error => console.error("Could not queue agent task:", error.message));
+  if (workerReady) await workerReady;
+  await persist();
+  queueMicrotask(pump);
   return publicTask(task);
 }
 function listTasks() { return tasks.slice().reverse().map(publicTask); }
