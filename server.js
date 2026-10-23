@@ -158,7 +158,7 @@ app.get("/api/diagnostics", (_req, res) => {
     ok: true,
     app: "ULUGBEK AI",
     backend: "running",
-    ai: process.env.OPENAI_API_KEY ? "configured" : "demo-only-no-model-key",
+    ai: process.env.OPENAI_API_KEY ? "hosted-provider-configured" : (process.env.OPENAI_BASE_URL && process.env.OPENAI_BASE_URL !== "https://api.openai.com/v1" ? "self-hosted-or-custom-endpoint-configured" : "demo-only-no-model-key"),
     publicWebResearch: "available-through-lab-route-when-server-has-internet",
     knowledgeStorage: "server-local-json-files",
     voiceInput: "browser-dependent-and-user-permission-required",
