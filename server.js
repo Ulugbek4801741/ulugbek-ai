@@ -3,6 +3,7 @@ const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const path = require("node:path");
 const crypto = require("node:crypto");
+const agentRuntime = require("./agent-runtime");
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -141,12 +142,52 @@ app.get("/api/admin/overview", requireAdmin, (_req, res) => {
     uptimeSeconds: Math.floor(process.uptime()),
     nodeVersion: process.version,
     memory: { rssBytes: process.memoryUsage().rss, heapUsedBytes: process.memoryUsage().heapUsed },
-    aiConfigured: Boolean(process.env.OPENAI_API_KEY),
-    model: process.env.OPENAI_API_KEY ? (process.env.OPENAI_MODEL || "gpt-4o-mini") : null,
+    aiConfigured: Boolean(agentRuntime.modelConfig().url),
+    model: agentRuntime.modelConfig().url ? agentRuntime.modelConfig().model : null,
+    agentWorker: "single-process-queue",
+    queuedTasks: agentRuntime.listTasks().filter(task => task.status === "queued").length,
+    runningTasks: agentRuntime.listTasks().filter(task => task.status === "running").length,
     adminAuth: "google-oauth-allowlist",
     adminEmail: (() => { const token = readCookie(_req, "ulugbek_admin"); try { return JSON.parse(Buffer.from(token.split(".")[0], "base64url").toString("utf8")).email || null; } catch (_) { return null; } })(),
     deployment: "manual-host-configuration-required"
   });
+});
+
+app.get("/api/admin/tasks", requireAdmin, (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, tasks: agentRuntime.listTasks() });
+});
+app.post("/api/admin/tasks", requireAdmin, (req, res) => {
+  try {
+    const task = agentRuntime.createTask({ prompt: req.body?.prompt, role: req.body?.role });
+    res.status(202).set("Cache-Control", "no-store").json({ ok: true, task });
+  } catch (error) {
+    res.status(error.status || 500).json({ error: error.message || "Vazifa qo‘shilmadi." });
+  }
+});
+app.get("/api/admin/tasks/:id", requireAdmin, (req, res) => {
+  const task = agentRuntime.getTask(req.params.id);
+  if (!task) return res.status(404).json({ error: "Vazifa topilmadi." });
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, task });
+});
+app.post("/api/admin/tasks/:id/cancel", requireAdmin, (req, res) => {
+  try {
+    const task = agentRuntime.cancelTask(req.params.id);
+    if (!task) return res.status(404).json({ error: "Vazifa topilmadi." });
+    res.json({ ok: true, task });
+  } catch (error) {
+    res.status(error.status || 500).json({ error: error.message || "Vazifa bekor qilinmadi." });
+  }
+});
+app.post("/api/admin/tasks/:id/review", requireAdmin, (req, res) => {
+  try {
+    const task = agentRuntime.reviewTask(req.params.id, req.body?.decision);
+    if (!task) return res.status(404).json({ error: "Vazifa topilmadi." });
+    res.json({ ok: true, task });
+  } catch (error) {
+    res.status(error.status || 500).json({ error: error.message || "Qaror saqlanmadi." });
+  }
 });
 
 app.get("/api/health", (_req, res) => {
@@ -306,6 +347,7 @@ app.use((err, _req, res, _next) => {
   console.error("Server xatosi:", err.message);
   return res.status(500).json({ error: "Ichki server xatosi." });
 });
+agentRuntime.startWorker();
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`ULUGBEK AI serveri ${PORT}-portda ishga tushdi.`);
 });
