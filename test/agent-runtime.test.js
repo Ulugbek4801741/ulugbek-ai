@@ -46,7 +46,9 @@ test("agent queue sends a task to a compatible model, records result, and suppor
     const reviewed = runtime.reviewTask(task.id, "approved");
     assert.equal(reviewed.approvalStatus, "approved");
   } finally {
+    await runtime.flush();
     await new Promise(resolve => mock.close(resolve));
+    await runtime.flush();
     await fs.rm(tempDir, { recursive: true, force: true });
   }
 });
