@@ -205,8 +205,9 @@ app.post("/api/agent/plan", async (req, res) => {
   if (task.length > MAX_TASK_LENGTH) return res.status(413).json({ error: "Vazifa 4000 belgidan oshmasligi kerak." });
 
   const fallback = createPlan(task);
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return res.json({ plan: fallback, mode: "rules", notice: "AI modeli ulanmagan; qoida asosidagi rejalashtirish ishlatildi." });
+  const apiKey = process.env.OPENAI_API_KEY || "";
+  const configuredBaseUrl = (process.env.OPENAI_BASE_URL || "").trim();
+  if (!apiKey && !configuredBaseUrl) return res.json({ plan: fallback, mode: "rules", notice: "AI modeli ulanmagan; qoida asosidagi rejalashtirish ishlatildi." });
 
   const baseUrl = (configuredBaseUrl || "https://api.openai.com/v1").replace(/\/$/, "");
   const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
@@ -262,14 +263,14 @@ app.post("/api/chat", async (req, res) => {
       receivedCharacters: message.length
     });
   }
-  const baseUrl = (process.env.OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/$/, "");
+  const baseUrl = (configuredBaseUrl || "https://api.openai.com/v1").replace(/\/$/, "");
   const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 25000);
   try {
     const response = await fetch(baseUrl + "/chat/completions", {
       method: "POST",
-      headers: { "Authorization": "Bearer " + apiKey, "Content-Type": "application/json" },
+      headers: { ...(apiKey ? { "Authorization": "Bearer " + apiKey } : {}), "Content-Type": "application/json" },
       signal: controller.signal,
       body: JSON.stringify({
         model,
