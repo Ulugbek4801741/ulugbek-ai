@@ -157,7 +157,7 @@ app.get("/api/admin/tasks", requireAdmin, (_req, res) => {
   res.set("Cache-Control", "no-store");
   res.json({ ok: true, tasks: agentRuntime.listTasks() });
 });
-app.post("/api/admin/tasks", requireAdmin, (req, res) => {
+app.post("/api/admin/tasks", requireAdmin, async (req, res) => {
   try {
     const task = await agentRuntime.createTask({ prompt: req.body?.prompt, role: req.body?.role });
     res.status(202).set("Cache-Control", "no-store").json({ ok: true, task });
