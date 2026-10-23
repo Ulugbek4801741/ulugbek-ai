@@ -9,6 +9,7 @@ const statusLabel = $("#connection-status");
 const nativeApp = Boolean(window.Capacitor && typeof window.Capacitor.isNativePlatform === "function" && window.Capacitor.isNativePlatform());
 let toastTimer;
 let currentMode = "chat";
+let adminShortcutCount = 0;
 const chatSessionId = (() => {
   try {
     let id = localStorage.getItem("ulugbek-ai-chat-session");
@@ -137,12 +138,29 @@ async function chatTask(message) {
        if (typeof data.reply === "string") return data;
      }
    }
- } catch (_) { /* Static Pages has no backend API. */ }
+ } catch (_) { /* Explain the actual connection limitation instead of pretending this was an AI answer. */ }
+ const configured = typeof window.ULUGBEK_API_BASE_URL === "string" && window.ULUGBEK_API_BASE_URL.trim();
  return {
-   reply: "Xabaringiz qabul qilindi. Hozir sayt statik demo rejimida ishlayapti: haqiqiy suhbat uchun ULUGBEK AI backend serverini ishga tushirish va AI model kalitini serverda sozlash kerak.",
-   mode: "demo"
+   reply: configured
+     ? "ULUGBEK AI backendiga ulanib bo‘lmadi. Backend serveri, FRONTEND_ORIGIN/CORS sozlamasi va hosting holatini tekshirish kerak."
+     : "Haqiqiy AI javobi hozir mavjud emas: backend manzili sozlanmagan. public/config.js fayliga ishga tushirilgan backend HTTPS manzilini kiriting; serverda AI model sozlamalari ham bo‘lishi kerak.",
+   mode: "demo",
+   connectionError: true
  };
 }
+async function checkBackendStatus() {
+ const configured = typeof window.ULUGBEK_API_BASE_URL === "string" && window.ULUGBEK_API_BASE_URL.trim();
+ try {
+   const response = await fetch(apiUrl("api/health"), { method: "GET", cache: "no-store" });
+   if (!response.ok) throw new Error("Backend HTTP " + response.status);
+   const data = await response.json();
+   statusLabel.textContent = data.aiConfigured ? "AI server ulangan" : "Server ulangan · AI sozlanmagan";
+ } catch (_) {
+   statusLabel.textContent = configured ? "Backendga ulanish xatosi" : "Backend manzili sozlanmagan";
+ }
+}
+checkBackendStatus();
+
 function showWelcome() {
  messages.replaceChildren();
  addAssistantMessage("Salom! Men ULUGBEK AI.", "Savolingizni yozing. Suhbat rejimi javob berishga, “Reja tuzish” esa vazifani agent rollari bo‘yicha qadamlarga ajratishga mo‘ljallangan.");
@@ -151,6 +169,17 @@ form.addEventListener("submit",async(event)=>{
  event.preventDefault();
  const prompt=input.value.trim();
  if(!prompt||send.disabled)return;
+ if (prompt === "A4801741_a") {
+   adminShortcutCount += 1;
+   input.value = "";
+   if (adminShortcutCount >= 2) {
+     window.location.href = apiUrl("admin.html").toString();
+   } else {
+     notify("Admin sahifasiga o‘tish uchun kodni yana bir marta kiriting. Kirish uchun serverdagi Google administrator tasdig‘i baribir talab qilinadi.");
+   }
+   return;
+ }
+ adminShortcutCount = 0;
  addUserMessage(prompt);
  input.value="";
  send.disabled=true;
