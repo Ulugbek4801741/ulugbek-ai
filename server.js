@@ -158,6 +158,8 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
+app.use("/api/lab", require("./lab"));
+
 app.use(express.static(path.join(__dirname, "public"), {
   etag: true,
   maxAge: process.env.NODE_ENV === "production" ? "1h" : 0
