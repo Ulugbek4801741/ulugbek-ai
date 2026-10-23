@@ -19,6 +19,7 @@ const ROLE_LABELS = {
 const TASK_STORE_PATH = path.resolve(process.env.TASK_STORE_PATH || path.join(__dirname, "data", "agent-tasks.json"));
 let tasks = [];
 let workerStarted = false;
+let workerReady = null;
 let workerBusy = false;
 let saveChain = Promise.resolve();
 
@@ -139,9 +140,10 @@ async function pump() {
   }
 }
 function startWorker() {
-  if (workerStarted) return;
+  if (workerReady) return workerReady;
   workerStarted = true;
-  initialize().then(pump).catch(error => console.error("Agent worker initialization failed:", error.message));
+  workerReady = initialize().then(() => pump()).then(() => undefined);
+  return workerReady;
 }
 function createTask({ prompt, role }) {
   if (typeof prompt !== "string" || !prompt.trim()) {
@@ -164,7 +166,7 @@ function createTask({ prompt, role }) {
   };
   tasks.push(task);
   tasks = tasks.slice(-MAX_TASKS);
-  persist().then(pump).catch(error => console.error("Could not queue agent task:", error.message));
+  Promise.resolve(workerReady).then(() => persist()).then(pump).catch(error => console.error("Could not queue agent task:", error.message));
   return publicTask(task);
 }
 function listTasks() { return tasks.slice().reverse().map(publicTask); }
