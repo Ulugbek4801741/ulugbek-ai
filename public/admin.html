@@ -9,10 +9,11 @@
 <main class="shell">
 <header><a href="index.html" class="brand">U <span>ULUGBEK AI <small>ADMIN CONSOLE</small></span></a><span id="status" class="status">Tekshirilmoqda…</span></header>
 <section id="login-card" class="panel">
-<p class="eyebrow">XAVFSIZ KIRISH</p><h1>Administrator paneli</h1>
-<p class="muted">Bu panel serverdagi sozlamalarni o‘qish va holatni kuzatish uchun. Kirish kodi brauzerda saqlanmaydi.</p>
-<form id="login-form"><label for="admin-code">Admin kirish kodi</label><input id="admin-code" type="password" autocomplete="current-password" required maxlength="256" placeholder="Hosting sozlamasidagi kod"><button type="submit">Xavfsiz kirish</button><p id="login-error" class="error" aria-live="polite"></p></form>
-<p class="hint">Agar himoya sozlanmagan bo‘lsa, hosting boshqaruv panelida ADMIN_ACCESS_CODE va ADMIN_SESSION_SECRET muhit o‘zgaruvchilarini kiriting. Ularni GitHub kodiga yozmang.</p>
+<p class="eyebrow">GOOGLE ORQALI XAVFSIZ KIRISH</p><h1>Administrator paneli</h1>
+<p class="muted">Faqat serverda oldindan ruxsat berilgan, tasdiqlangan Google hisobi administrator huquqini oladi. Parol ULUGBEK AI tomonidan ko‘rilmaydi.</p>
+<a class="google-button" href="/api/auth/google" id="google-login">Google hisob bilan kirish</a>
+<p id="login-error" class="error" aria-live="polite"></p>
+<p class="hint">Agar xatolik chiqsa, server hostingi va Google OAuth sozlamalari tekshirilishi kerak. GitHub Pages o‘zi backend API ishlata olmaydi.</p>
 </section>
 <section id="dashboard" hidden>
 <div class="welcome"><div><p class="eyebrow">TIZIM NAZORATI</p><h1>Holat va diagnostika</h1><p class="muted">Faqat server tasdiqlagan ma’lumotlar. Bu panel server sozlamalarini o‘zi o‘zgartirmaydi.</p></div><button id="logout" class="secondary">Chiqish</button></div>
