@@ -9,6 +9,8 @@ on:
     paths:
       - "public/**"
       - "package.json"
+      - "server.js"
+      - "test/**"
       - "capacitor.config.json"
       - ".github/workflows/build-android.yml"
 
@@ -51,6 +53,11 @@ jobs:
 
       - name: Sync web app to Android
         run: npx cap sync android
+
+      - name: Check JavaScript syntax
+        run: |
+          node --check server.js
+          node --check public/app.js
 
       - name: Run web/API tests
         run: npm test
