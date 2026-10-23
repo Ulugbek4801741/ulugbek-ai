@@ -10,6 +10,21 @@ const PORT = Number(process.env.PORT) || 3000;
 const MAX_TASK_LENGTH = 4000;
 
 app.disable("x-powered-by");
+const FRONTEND_ORIGIN = (process.env.FRONTEND_ORIGIN || "").trim().replace(/\/$/, "");
+app.use((req, res, next) => {
+  const origin = req.headers.origin || "";
+  if (origin && FRONTEND_ORIGIN && origin === FRONTEND_ORIGIN) {
+    res.setHeader("Access-Control-Allow-Origin", FRONTEND_ORIGIN);
+    res.setHeader("Vary", "Origin");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  }
+  if (req.method === "OPTIONS") {
+    if (origin && origin === FRONTEND_ORIGIN) return res.status(204).end();
+    return res.status(403).end();
+  }
+  next();
+});
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
