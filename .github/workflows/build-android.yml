@@ -58,6 +58,9 @@ jobs:
         run: |
           node --check server.js
           node --check public/app.js
+          node --check public/admin.js
+          node --check public/voice.js
+          node --check public/lab.js
 
       - name: Run web/API tests
         run: npm test
