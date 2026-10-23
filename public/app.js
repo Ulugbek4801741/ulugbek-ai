@@ -217,7 +217,8 @@ function switchView(view){
  $$(".nav-item").forEach(button=>button.classList.toggle("active",button.dataset.view===view));
  $("#sidebar").classList.remove("open");
  if(view==="overview") window.scrollTo({top:0,behavior:"smooth"});
- else if(view==="chat") $("#work-area").scrollIntoView({behavior:"smooth",block:"start"});\n else if(view==="builder"){ $("#work-area").scrollIntoView({behavior:"smooth",block:"start"}); renderBuilder(); }
+ else if(view==="chat") $("#work-area").scrollIntoView({behavior:"smooth",block:"start"});
+ else if(view==="builder"){ $("#work-area").scrollIntoView({behavior:"smooth",block:"start"}); renderBuilder(); }
  else {
    const messagesByView={
     agents:["Agentlar jamoasi","10 ta asosiy agent roli konsepsiyada belgilangan. Hozirgi MVP faqat vazifani rejalashtiradi; agentlar alohida mustaqil xizmatlar sifatida hali ishga tushirilmagan."],
