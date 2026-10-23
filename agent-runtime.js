@@ -79,6 +79,7 @@ async function runModel(task) {
     task.error = "AI modeli ulanmagan. Hostingda OPENAI_API_KEY yoki OPENAI_BASE_URL va OPENAI_MODEL sozlang.";
     addLog(task, "Vazifa bajarilmadi: model endpointi sozlanmagan.");
     task.finishedAt = new Date().toISOString();
+    await persist();
     return;
   }
   const controller = new AbortController();
