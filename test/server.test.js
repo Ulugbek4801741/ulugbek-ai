@@ -102,7 +102,7 @@ test("API smoke tests", async (t) => {
       assert.equal(overview.status, 200);
       assert.equal(data.ok, true);
       assert.equal(typeof data.uptimeSeconds, "number");
-      const logout = await fetch(`${baseUrl}/api/admin/logout`, { method: "POST" });
+      const logout = await fetch(`${baseUrl}/api/admin/logout`, { method: "POST", headers: { Cookie: cookie } });
       assert.equal(logout.status, 200);
       const deniedAfterLogout = await fetch(`${baseUrl}/api/admin/overview`, { headers: { Cookie: cookie } });
       assert.equal(deniedAfterLogout.status, 401);
