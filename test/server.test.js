@@ -105,7 +105,7 @@ test("API smoke tests", async (t) => {
       const logout = await fetch(`${baseUrl}/api/admin/logout`, { method: "POST" });
       assert.equal(logout.status, 200);
       const deniedAfterLogout = await fetch(`${baseUrl}/api/admin/overview`, { headers: { Cookie: cookie } });
-      assert.equal(deniedAfterLogout.status, 200); // Logout cookie clearing is verified by browser flow; stateless tokens remain valid until expiry.
+      assert.equal(deniedAfterLogout.status, 401);
     });
 
     await t.test("health endpoint reports the app", async () => {
