@@ -23,6 +23,11 @@ const chatSessionId = (() => {
     return "session_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 14);
   }
 })();
+function apiUrl(path) {
+ const configured = typeof window.ULUGBEK_API_BASE_URL === "string" ? window.ULUGBEK_API_BASE_URL.trim() : "";
+ const base = configured ? configured.replace(/\/+$/, "") + "/" : document.baseURI;
+ return new URL(path, base);
+}
 const views = {
  overview: "Boshqaruv paneli",
  chat: "AI Chat",
@@ -108,7 +113,7 @@ function renderPlan(plan) {
 async function planTask(message) {
  try {
    if (!nativeApp) {
-     const response=await fetch(new URL("api/agent/plan",document.baseURI),{
+     const response=await fetch(apiUrl("api/agent/plan"),{
        method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({task:message})
      });
      if(response.ok) {
@@ -122,7 +127,7 @@ async function planTask(message) {
 async function chatTask(message) {
  try {
    if (!nativeApp) {
-     const response = await fetch(new URL("api/chat", document.baseURI), {
+     const response = await fetch(apiUrl("api/chat"), {
        method: "POST",
        headers: { "Content-Type": "application/json" },
        body: JSON.stringify({ message, sessionId: chatSessionId })
@@ -259,7 +264,7 @@ input.addEventListener("keydown",event=>{
 });
 async function checkServer(){
  try{
-  const response=await fetch(new URL("api/health",document.baseURI),{cache:"no-store"});
+  const response=await fetch(apiUrl("api/health"),{cache:"no-store"});
   if(response.ok){statusLabel.textContent="Server ulangan";return;}
  }catch(_){}
  statusLabel.textContent=nativeApp?"Android demo":"Mahalliy / statik rejim";
