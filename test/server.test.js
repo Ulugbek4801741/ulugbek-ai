@@ -53,7 +53,7 @@ test("API smoke tests", async (t) => {
       const script = await fetch(`${baseUrl}/voice.js`);
       const css = await fetch(`${baseUrl}/voice.css`);
       assert.equal(page.status, 200);
-      assert.match(await page.text(), /Shaxsiy AI avatar/);
+      assert.match(await page.text(), /ULUGBEK AI — Suhbat/);
       assert.equal(script.status, 200);
       assert.match(await script.text(), /SpeechRecognition/);
       assert.equal(css.status, 200);
