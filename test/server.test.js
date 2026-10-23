@@ -78,22 +78,15 @@ test("API smoke tests", async (t) => {
       assert.equal(css.status, 200);
     });
 
-    await t.test("chat admin gate requires the correct code twice and never uses chat endpoint", async () => {
-      const first = await fetch(`${baseUrl}/api/admin/chat-gate`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: "ci-test-admin-code" }) });
-      const firstBody = await first.json();
-      assert.equal(first.status, 200);
-      assert.equal(firstBody.remaining, 1);
-      const second = await fetch(`${baseUrl}/api/admin/chat-gate`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: "ci-test-admin-code" }) });
-      const secondBody = await second.json();
-      assert.equal(second.status, 200);
-      assert.equal(secondBody.redirect, "/admin.html");
-      assert.match(second.headers.get("set-cookie"), /HttpOnly/);
-      const denied = await fetch(`${baseUrl}/api/admin/overview`);
-      assert.equal(denied.status, 401);
+    await t.test("chat page has no admin button or password gate; Google OAuth routes are present", async () => {
       const page = await fetch(`${baseUrl}/voice.html`);
       const pageText = await page.text();
-      assert.match(pageText, /type="password"/);
-      assert.match(pageText, /Himoyalangan admin kirishi/);
+      const script = await (await fetch(`${baseUrl}/voice.js`)).text();
+      assert.doesNotMatch(pageText, /admin-gate|admin-gate-open|type="password"/);
+      assert.doesNotMatch(script, /api\/admin\/chat-gate|admin-gate-open/);
+      const login = await fetch(`${baseUrl}/api/auth/google`);
+      assert.equal(login.status, 503);
+      assert.match(await login.text(), /Google kirishi sozlanmagan/);
     });
 
     await t.test("admin API denies anonymous access and protects overview", async () => {
@@ -101,29 +94,6 @@ test("API smoke tests", async (t) => {
       assert.equal(denied.status, 401);
       const status = await fetch(`${baseUrl}/api/admin/status`);
       assert.equal((await status.json()).authenticated, false);
-    });
-
-    await t.test("admin login rejects wrong code and accepts correct code", async () => {
-      const wrong = await fetch(`${baseUrl}/api/admin/login`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: "wrong" })
-      });
-      assert.equal(wrong.status, 401);
-      const login = await fetch(`${baseUrl}/api/admin/login`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: "ci-test-admin-code" })
-      });
-      assert.equal(login.status, 200);
-      const cookie = login.headers.get("set-cookie").split(";")[0];
-      const overview = await fetch(`${baseUrl}/api/admin/overview`, { headers: { Cookie: cookie } });
-      const data = await overview.json();
-      assert.equal(overview.status, 200);
-      assert.equal(data.ok, true);
-      assert.equal(typeof data.uptimeSeconds, "number");
-      const logout = await fetch(`${baseUrl}/api/admin/logout`, { method: "POST", headers: { Cookie: cookie } });
-      assert.equal(logout.status, 200);
-      const deniedAfterLogout = await fetch(`${baseUrl}/api/admin/overview`, { headers: { Cookie: cookie } });
-      assert.equal(deniedAfterLogout.status, 401);
     });
 
     await t.test("health endpoint reports the app", async () => {
