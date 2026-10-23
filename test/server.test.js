@@ -30,6 +30,32 @@ test("API smoke tests", async (t) => {
   try {
     await waitForServer();
 
+    await t.test("virtual lab status endpoint works without provider API keys", async () => {
+      const response = await fetch(`${baseUrl}/api/lab/status`);
+      const body = await response.json();
+      assert.equal(response.status, 200);
+      assert.equal(body.ok, true);
+      assert.equal(body.apiKeyRequired, false);
+      assert.equal(body.mode, "public-web-search-and-local-json");
+    });
+
+    await t.test("virtual lab rejects an empty research query", async () => {
+      const response = await fetch(`${baseUrl}/api/lab/search`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: "   " })
+      });
+      assert.equal(response.status, 400);
+    });
+
+    await t.test("virtual lab page and client script are served", async () => {
+      const page = await fetch(`${baseUrl}/lab.html`);
+      const script = await fetch(`${baseUrl}/lab.js`);
+      assert.equal(page.status, 200);
+      assert.match(await page.text(), /Virtual laboratoriya/);
+      assert.equal(script.status, 200);
+    });
+
     await t.test("health endpoint reports the app", async () => {
       const response = await fetch(`${baseUrl}/api/health`);
       const body = await response.json();
