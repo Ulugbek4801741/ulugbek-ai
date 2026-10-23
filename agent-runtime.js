@@ -66,7 +66,7 @@ function addLog(task, message) {
 function modelConfig() {
   const key = process.env.OPENAI_API_KEY || "";
   const custom = (process.env.OPENAI_BASE_URL || "").trim();
-  const url = (custom || (key ? "https://api.openai.com/v1" : "")).replace(/\\/$/, "");
+  const url = (custom || (key ? "https://api.openai.com/v1" : "")).replace(/\/$/, "");
   return { key, url, model: process.env.OPENAI_MODEL || "gpt-4o-mini" };
 }
 function systemPrompt(role) {
