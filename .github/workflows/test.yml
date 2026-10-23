@@ -46,6 +46,7 @@ jobs:
           node --check test/agent-registry.test.js
           node --check test/agent-memory-dispatcher.test.js
           node --check test/agent-runtime.test.js
+          node --check public/config.js
           node --check public/app.js
           node --check public/admin.js
           node --check public/voice.js
