@@ -217,12 +217,13 @@ app.get("/api/diagnostics", (_req, res) => {
     ai: process.env.OPENAI_API_KEY ? "hosted-provider-configured" : (process.env.OPENAI_BASE_URL && process.env.OPENAI_BASE_URL !== "https://api.openai.com/v1" ? "self-hosted-or-custom-endpoint-configured" : "demo-only-no-model-key"),
     publicWebResearch: "available-through-lab-route-when-server-has-internet",
     knowledgeStorage: "server-local-json-files",
+    agentMemory: "separate-per-agent-per-browser-session; JSON file; durable hosting storage must be configured",
     voiceInput: "browser-dependent-and-user-permission-required",
     voiceOutput: "browser-dependent",
     autonomousAgents: "single-process-queued-model-task-worker; not-independent-24-7-service",
     automaticFailover: "not-configured-requires-authorized-backup-host",
     productionDatabase: "not-configured-task-store-uses-local-json-file",
-    agentExecution: "model-generated-proposals-only-no-shell-no-file-edit-no-deploy",
+    agentExecution: "chat coordinator routes to up to three specialist model calls plus synthesis; model-generated proposals only; no shell, file edit, or deploy",
     note: "Agent navbati server jarayoni ishlayotganida bajariladi. Hosting qayta ishga tushsa yoki uxlab qolsa 24/7 kafolatlanmaydi. JSON saqlash vaqtinchalik; doimiy ishlab chiqarish uchun PostgreSQL/Redis va alohida worker kerak. Bu diagnostika end-to-end sinov o‘rnini bosmaydi."
   });
 });
