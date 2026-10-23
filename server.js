@@ -25,7 +25,7 @@ app.use(helmet({
     }
   }
 }));
-app.use(express.json({ limit: "20kb" }));
+app.use(express.json({ limit: "20kb", strict: true, type: "application/json" }));
 app.use("/api/", rateLimit({
   windowMs: 60 * 1000,
   limit: 30,
@@ -163,8 +163,11 @@ app.use(express.static(path.join(__dirname, "public"), {
   maxAge: process.env.NODE_ENV === "production" ? "1h" : 0
 }));
 app.use((err, _req, res, _next) => {
+  const status = Number(err.status || err.statusCode) || 500;
+  if (status === 413) return res.status(413).json({ error: "So‘rov hajmi ruxsat etilgan chegaradan oshdi." });
+  if (status === 400) return res.status(400).json({ error: "JSON so‘rovi noto‘g‘ri formatda." });
   console.error("Server xatosi:", err.message);
-  res.status(500).json({ error: "Ichki server xatosi." });
+  return res.status(500).json({ error: "Ichki server xatosi." });
 });
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`ULUGBEK AI serveri ${PORT}-portda ishga tushdi.`);
