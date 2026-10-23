@@ -161,7 +161,10 @@ form.addEventListener("submit",async(event)=>{
      const data = await chatTask(prompt);
      const paragraph = body.querySelector("p");
      if (paragraph) paragraph.textContent = data.reply;
-     if (data.mode === "multi-agent" && Array.isArray(data.agents) && data.agents.length) {\n       body.appendChild(textElement("small", "Chat Agent + mutaxassislar: " + data.agents.map(agent => agent.name).join(", "), "response-note"));\n     }\n     if (data.mode === "demo") {
+     if (data.mode === "multi-agent" && Array.isArray(data.agents) && data.agents.length) {
+       body.appendChild(textElement("small", "Chat Agent + mutaxassislar: " + data.agents.map(agent => agent.name).join(", "), "response-note"));
+     }
+     if (data.mode === "demo") {
        body.appendChild(textElement("small", "Demo rejim · AI backend ulanmagan", "response-note"));
      }
      messages.scrollTop=messages.scrollHeight;
