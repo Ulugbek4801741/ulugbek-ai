@@ -6,12 +6,15 @@ function chooseSpecialists(message) {
   const text = String(message || "").toLocaleLowerCase("uz");
   const selected = [];
   const add = (id) => { if (!selected.includes(id) && selected.length < 3) selected.push(id); };
-  if (/(kod|dastur|ilova|sayt|web|apk|android|frontend|backend|api|program)/i.test(text)) {
-    add("software-builder-agent"); add("backend-agent"); add("frontend-agent");
-  }
-  if (/(xavfsiz|himoya|parol|maxfiy|security|hujum|ruxsat)/i.test(text)) add("security-agent");
+  // Prioritize explicit validation and security requests before broad software routing.
   if (/(sinov|test|xato|tekshir|ishlamay|bug)/i.test(text)) add("qa-agent");
-  if (/(server|hosting|deploy|joylash|ishlash tez|tezlik|ishonchlilik)/i.test(text)) add("devops-agent");
+  if (/(xavfsiz|himoya|parol|maxfiy|security|hujum|ruxsat)/i.test(text)) add("security-agent");
+  if (/(kod|dastur|ilova|sayt|web|apk|android|frontend|backend|api|program)/i.test(text)) {
+    add("software-builder-agent");
+    if (/(backend|api|server|ma'lumotlar bazasi|database)/i.test(text)) add("backend-agent");
+    if (/(frontend|interfeys|dizayn|sahifa)/i.test(text)) add("frontend-agent");
+  }
+  if (/(server|hosting|deploy|joylash|tezlik|ishonchlilik)/i.test(text)) add("devops-agent");
   if (/(biznes|kompaniya|global|daromad|mijoz|marketing|reklama|bozor)/i.test(text)) add("product-growth-agent");
   if (/(izla|tadqiq|manba|internet|taqqosla|o‘rgan|organ)/i.test(text)) add("research-agent");
   if (selected.length === 0) add("core-architect");
