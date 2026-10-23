@@ -43,6 +43,7 @@ function safeEqual(a, b) {
   const right = Buffer.from(String(b));
   return left.length === right.length && crypto.timingSafeEqual(left, right);
 }
+const revokedAdminSessions = new Set();
 function signAdminSession(payload) {
   const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
   const signature = crypto.createHmac("sha256", ADMIN_SESSION_SECRET).update(encoded).digest("base64url");
@@ -56,7 +57,7 @@ function verifyAdminSession(token) {
   if (!safeEqual(parts[1], expected)) return false;
   try {
     const payload = JSON.parse(Buffer.from(parts[0], "base64url").toString("utf8"));
-    return payload.exp > Date.now() && payload.role === "admin";
+    return payload.exp > Date.now() && payload.role === "admin" && typeof payload.jti === "string" && !revokedAdminSessions.has(payload.jti);
   } catch (_) { return false; }
 }
 function requireAdmin(req, res, next) {
@@ -74,11 +75,14 @@ app.post("/api/admin/login", rateLimit({ windowMs: 15 * 60 * 1000, limit: 8, sta
   if (!ADMIN_ACCESS_CODE || !ADMIN_SESSION_SECRET) return res.status(503).json({ error: "Admin himoyasi sozlanmagan. Hosting muhitida ADMIN_ACCESS_CODE va ADMIN_SESSION_SECRET belgilang." });
   const code = typeof req.body?.code === "string" ? req.body.code : "";
   if (!safeEqual(code, ADMIN_ACCESS_CODE)) return res.status(401).json({ error: "Kirish kodi noto‘g‘ri." });
-  const token = signAdminSession({ role: "admin", exp: Date.now() + ADMIN_SESSION_TTL_MS });
+  const token = signAdminSession({ role: "admin", jti: crypto.randomUUID(), exp: Date.now() + ADMIN_SESSION_TTL_MS });
   res.setHeader("Set-Cookie", "ulugbek_admin=" + encodeURIComponent(token) + "; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=28800");
   res.json({ ok: true, expiresInSeconds: 28800 });
 });
-app.post("/api/admin/logout", (_req, res) => {
+app.post("/api/admin/logout", (req, res) => {
+  const cookie = (req.headers.cookie || "").split(";").map(x => x.trim()).find(x => x.startsWith("ulugbek_admin="));
+  const token = cookie ? decodeURIComponent(cookie.slice("ulugbek_admin=".length)) : "";
+  try { const payload = JSON.parse(Buffer.from(token.split(".")[0] || "", "base64url").toString("utf8")); if (payload.jti) revokedAdminSessions.add(payload.jti); } catch (_) {}
   res.setHeader("Set-Cookie", "ulugbek_admin=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0");
   res.json({ ok: true });
 });
