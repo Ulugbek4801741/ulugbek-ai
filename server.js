@@ -159,7 +159,7 @@ app.get("/api/admin/tasks", requireAdmin, (_req, res) => {
 });
 app.post("/api/admin/tasks", requireAdmin, (req, res) => {
   try {
-    const task = agentRuntime.createTask({ prompt: req.body?.prompt, role: req.body?.role });
+    const task = await agentRuntime.createTask({ prompt: req.body?.prompt, role: req.body?.role });
     res.status(202).set("Cache-Control", "no-store").json({ ok: true, task });
   } catch (error) {
     res.status(error.status || 500).json({ error: error.message || "Vazifa qo‘shilmadi." });
