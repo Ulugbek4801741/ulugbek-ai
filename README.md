@@ -36,6 +36,17 @@ Then restart the server. The chat and planner use the configured OpenAI-compatib
 
 Without a server and key, GitHub Pages runs only the local planning demo. GitHub Pages cannot run this Express backend, so real model responses require a separate backend host.
 
+## API-key-free virtual laboratory (early MVP)
+
+A separate page is available at `/lab.html`. It includes:
+
+- `POST /api/lab/search`: public web search through DuckDuckGo HTML results; no model-provider API key is required for this search path.
+- `GET /api/lab/knowledge` and `POST /api/lab/knowledge`: view and save reviewed knowledge entries.
+- `GET /api/lab/memory/:agent` and `POST /api/lab/memory/:agent`: store separate notes for each named agent.
+- `GET /api/lab/status`: show the current lab status and saved-entry counts.
+
+Knowledge and agent notes are stored as JSON files in the server's `data/` directory. For durable production storage, deploy on a host with persistent disk or replace this storage layer with a database. GitHub Pages is static hosting and cannot run these API routes; the lab UI requires the Express backend. Search snippets are not verified facts: users should open the source and review it before saving. This MVP does not retrain a language model, run an always-on autonomous agent, or connect to proprietary ChatGPT/Gemini/Claude/DeepSeek models without their supported access method. Automated tests cover the status route, input validation, and page delivery; live search depends on the external search service and still needs deployment-level verification.
+
 ## Security configuration
 
 Never put an administrator access code or model API key in HTML, browser JavaScript, public repository files, screenshots, or commit messages. Store secrets only in the backend hosting provider’s secret/environment settings. Use HTTPS in production, short-lived secure sessions, rate limiting, audit logging, least privilege, and automated tests for every authorization route. GitHub Pages is static hosting and cannot protect server-only secrets or run the Express API. The admin page shell currently added to `public/admin.html` is **not an enabled admin system** until server-side authentication and authorization routes have been implemented and tested; do not enter real credentials on a static-only deployment.
