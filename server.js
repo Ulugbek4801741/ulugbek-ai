@@ -208,14 +208,14 @@ app.post("/api/agent/plan", async (req, res) => {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return res.json({ plan: fallback, mode: "rules", notice: "AI modeli ulanmagan; qoida asosidagi rejalashtirish ishlatildi." });
 
-  const baseUrl = (process.env.OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/$/, "");
+  const baseUrl = (configuredBaseUrl || "https://api.openai.com/v1").replace(/\/$/, "");
   const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 25000);
   try {
     const response = await fetch(baseUrl + "/chat/completions", {
       method: "POST",
-      headers: { "Authorization": "Bearer " + apiKey, "Content-Type": "application/json" },
+      headers: { ...(apiKey ? { "Authorization": "Bearer " + apiKey } : {}), "Content-Type": "application/json" },
       signal: controller.signal,
       body: JSON.stringify({
         model,
@@ -253,10 +253,11 @@ app.post("/api/chat", async (req, res) => {
   const message = typeof req.body?.message === "string" ? req.body.message.trim() : "";
   if (!message) return res.status(400).json({ error: "Xabar bo‘sh bo‘lmasligi kerak." });
   if (message.length > MAX_TASK_LENGTH) return res.status(413).json({ error: "Xabar 4000 belgidan oshmasligi kerak." });
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
+  const apiKey = process.env.OPENAI_API_KEY || "";
+  const configuredBaseUrl = (process.env.OPENAI_BASE_URL || "").trim();
+  if (!apiKey && !configuredBaseUrl) {
     return res.json({
-      reply: "Xabaringiz qabul qilindi. Hozir ULUGBEK AI sinov rejimida; haqiqiy AI uchun serverda OPENAI_API_KEY sozlanishi kerak. Vazifangizni “Reja tuzish” orqali agent rejasiga aylantirishingiz mumkin.",
+      reply: "Xabaringiz qabul qilindi. Hozir ULUGBEK AI sinov rejimida; haqiqiy AI uchun o‘z serveringizdagi mos model endpointini OPENAI_BASE_URL orqali ulang yoki provayder kalitini sozlang.",
       mode: "demo",
       receivedCharacters: message.length
     });
