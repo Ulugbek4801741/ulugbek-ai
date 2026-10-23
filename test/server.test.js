@@ -78,6 +78,24 @@ test("API smoke tests", async (t) => {
       assert.equal(css.status, 200);
     });
 
+    await t.test("chat admin gate requires the correct code twice and never uses chat endpoint", async () => {
+      const first = await fetch(`${baseUrl}/api/admin/chat-gate`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: "ci-test-admin-code" }) });
+      const firstBody = await first.json();
+      assert.equal(first.status, 200);
+      assert.equal(firstBody.remaining, 1);
+      const second = await fetch(`${baseUrl}/api/admin/chat-gate`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: "ci-test-admin-code" }) });
+      const secondBody = await second.json();
+      assert.equal(second.status, 200);
+      assert.equal(secondBody.redirect, "/admin.html");
+      assert.match(second.headers.get("set-cookie"), /HttpOnly/);
+      const denied = await fetch(`${baseUrl}/api/admin/overview`);
+      assert.equal(denied.status, 401);
+      const page = await fetch(`${baseUrl}/voice.html`);
+      const pageText = await page.text();
+      assert.match(pageText, /type="password"/);
+      assert.match(pageText, /Himoyalangan admin kirishi/);
+    });
+
     await t.test("admin API denies anonymous access and protects overview", async () => {
       const denied = await fetch(`${baseUrl}/api/admin/overview`);
       assert.equal(denied.status, 401);
