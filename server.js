@@ -348,7 +348,11 @@ app.use((err, _req, res, _next) => {
   console.error("Server xatosi:", err.message);
   return res.status(500).json({ error: "Ichki server xatosi." });
 });
-agentRuntime.startWorker();
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`ULUGBEK AI serveri ${PORT}-portda ishga tushdi.`);
+agentRuntime.startWorker().then(() => {
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`ULUGBEK AI serveri ${PORT}-portda ishga tushdi.`);
+  });
+}).catch(error => {
+  console.error("Agent worker ishga tushmadi:", error.message);
+  process.exitCode = 1;
 });
