@@ -294,42 +294,45 @@ app.post("/api/agent/plan", async (req, res) => {
 
 app.post("/api/chat", async (req, res) => {
   const message = typeof req.body?.message === "string" ? req.body.message.trim() : "";
+  const sessionId = typeof req.body?.sessionId === "string" ? req.body.sessionId : "default-session";
   if (!message) return res.status(400).json({ error: "Xabar bo‘sh bo‘lmasligi kerak." });
   if (message.length > MAX_TASK_LENGTH) return res.status(413).json({ error: "Xabar 4000 belgidan oshmasligi kerak." });
   const apiKey = process.env.OPENAI_API_KEY || "";
   const configuredBaseUrl = (process.env.OPENAI_BASE_URL || "").trim();
   if (!apiKey && !configuredBaseUrl) {
     return res.json({
-      reply: "Xabaringiz qabul qilindi. Hozir ULUGBEK AI sinov rejimida; haqiqiy AI uchun o‘z serveringizdagi mos model endpointini OPENAI_BASE_URL orqali ulang yoki provayder kalitini sozlang.",
+      reply: "ULUGBEK AI hozir demo rejimida. Chat Agent va mutaxassis agentlar haqiqiy ishlashi uchun hostingda OPENAI_API_KEY yoki mos OPENAI_BASE_URL hamda OPENAI_MODEL sozlanishi kerak.",
       mode: "demo",
+      agents: [],
       receivedCharacters: message.length
     });
   }
   const baseUrl = (configuredBaseUrl || "https://api.openai.com/v1").replace(/\/$/, "");
-  const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
+  const config = { key: apiKey, url: baseUrl, model: process.env.OPENAI_MODEL || "gpt-4o-mini" };
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 25000);
-  try {
-    const response = await fetch(baseUrl + "/chat/completions", {
+  const timeout = setTimeout(() => controller.abort(), 60000);
+  const requestModel = async (modelConfig, messages, signal) => {
+    const response = await fetch(modelConfig.url + "/chat/completions", {
       method: "POST",
-      headers: { ...(apiKey ? { "Authorization": "Bearer " + apiKey } : {}), "Content-Type": "application/json" },
-      signal: controller.signal,
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: "Sen ULUGBEK AI yordamchisisan. O‘zbek tilida sodda, aniq va foydali javob ber. Bilmagan narsangni to‘qima. Tashqi harakat bajarganingni da’vo qilma. Xavfli amallar uchun inson tasdig‘ini tavsiya qil." },
-          { role: "user", content: message }
-        ],
-        temperature: 0.4
-      })
+      headers: { ...(modelConfig.key ? { Authorization: "Bearer " + modelConfig.key } : {}), "Content-Type": "application/json" },
+      signal,
+      body: JSON.stringify({ model: modelConfig.model, temperature: 0.3, messages })
     });
     if (!response.ok) throw new Error("AI provider error");
-    const data = await response.json();
-    const reply = data?.choices?.[0]?.message?.content;
-    if (typeof reply !== "string" || !reply.trim()) throw new Error("Empty model response");
-    return res.json({ reply: reply.slice(0, 12000), mode: "ai", receivedCharacters: message.length });
-  } catch (_) {
-    return res.status(502).json({ error: "AI xizmati hozir javob bermadi. Model sozlamalarini tekshiring." });
+    const payload = await response.json();
+    const output = payload?.choices?.[0]?.message?.content;
+    if (typeof output !== "string" || !output.trim()) throw new Error("Empty model response");
+    return output.slice(0, 8000);
+  };
+  try {
+    const dispatcher = require("./agents/chat-dispatcher");
+    const result = await dispatcher.runChat({ message, sessionId, config, requestModel, signal: controller.signal });
+    return res.json({ ...result, receivedCharacters: message.length });
+  } catch (error) {
+    const timedOut = error.name === "AbortError";
+    return res.status(timedOut ? 504 : 502).json({
+      error: timedOut ? "Ko‘p agentli javob 60 soniyada tugamadi. Qisqaroq vazifa bilan qayta urinib ko‘ring." : "AI agentlari javob bermadi. Model ulanishi va hosting loglarini tekshiring."
+    });
   } finally {
     clearTimeout(timeout);
   }
