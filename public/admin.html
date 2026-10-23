@@ -18,6 +18,19 @@
 <section id="dashboard" hidden>
 <div class="welcome"><div><p class="eyebrow">TIZIM NAZORATI</p><h1>Holat va diagnostika</h1><p class="muted">Faqat server tasdiqlagan ma’lumotlar. Bu panel server sozlamalarini o‘zi o‘zgartirmaydi.</p></div><button id="logout" class="secondary">Chiqish</button></div>
 <div id="cards" class="grid"></div>
+<section class="panel" id="agent-console">
+<p class="eyebrow">AGENTLAR ISH MARKAZI</p><h2>Agentlarga topshiriq berish</h2>
+<p class="muted">Vazifalar navbatda ishlaydi. Agent natijani taklif sifatida beradi; u kodni o‘zi ishga tushirmaydi, fayllarni o‘zgartirmaydi va deploy qilmaydi.</p>
+<form id="task-form" style="max-width:none">
+<label for="task-role">Mutaxassis</label>
+<select id="task-role" required><option value="orchestrator">Boshqaruvchi agent</option><option value="backend">Backend / kod agenti</option><option value="frontend">Interfeys agenti</option><option value="tester">Sinov agenti</option><option value="security">Xavfsizlik agenti</option><option value="research">Tadqiqot agenti</option><option value="product">Mahsulot agenti</option></select>
+<label for="task-prompt">Topshiriq (4000 belgigacha)</label>
+<textarea id="task-prompt" rows="5" maxlength="4000" required placeholder="Masalan: ULUGBEK AI chat API kodini ko‘rib chiq, xatarlarni top va aniq tuzatish taklifini yoz."></textarea>
+<button id="submit-task" type="submit">Vazifani navbatga qo‘shish</button><p id="task-message" class="error" aria-live="polite"></p>
+</form>
+<div class="panel-heading"><h2>Vazifalar va natijalar</h2><button id="refresh-tasks" class="secondary" type="button">Yangilash</button></div>
+<div id="task-list" class="task-list" aria-live="polite">Vazifalar yuklanmoqda…</div>
+</section>
 <section class="panel"><div class="panel-heading"><h2>Texnik tafsilotlar</h2><button id="refresh" class="secondary">Yangilash</button></div><pre id="details">Ma’lumot yuklanmoqda…</pre></section>
 <div class="notice"><b>Xavfsizlik eslatmasi</b><p>AI kaliti hech qachon bu sahifada ko‘rsatilmaydi. Hosting, to‘lovlar, foydalanuvchi ma’lumotlari va deploy amallari alohida ruxsat hamda sinovlarni talab qiladi.</p></div>
 </section>
