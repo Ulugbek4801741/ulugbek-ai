@@ -24,3 +24,55 @@
 .builder-actions button:disabled{opacity:.45;cursor:not-allowed}
 .builder-result{display:grid;gap:10px;border-top:1px solid var(--line);padding-top:15px;color:#b9c6dc;font-size:12px;overflow-wrap:anywhere}
 @media(max-width:540px){.builder-features{grid-template-columns:1fr}.builder-actions button{width:100%}}
+
+
+/* ChatGPT-style controls, themes, settings and launch animation */
+.composer-tools{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 8px}
+.tool-button{display:inline-flex;align-items:center;justify-content:center;gap:5px;border:1px solid #303d56;background:transparent;color:#b8c5dc;border-radius:9px;padding:7px 9px;font-size:11px;white-space:nowrap}
+.tool-button:hover,.tool-button[aria-pressed="true"]{background:#302a4d;border-color:#7060a5;color:#e8e0ff}
+.tool-button span{font-size:10px}
+.selected-files{font-size:10px;color:#8b99b2;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.round-tool{border-radius:50%;width:35px;height:35px;font-size:16px}
+.composer-bottom .send-button{margin-left:auto}
+.settings-backdrop{position:fixed;inset:0;z-index:60;background:#030712b8;display:grid;place-items:center;padding:16px}
+.settings-backdrop[hidden],.splash-screen[hidden]{display:none}
+.settings-panel{width:min(560px,100%);max-height:90vh;overflow:auto;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:0 25px 90px #0008}
+.settings-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}
+.settings-head h2{font:800 20px Manrope;margin:0 0 5px}
+.settings-head p,.setting-row p{font-size:11px;line-height:1.6;color:var(--muted);margin:4px 0}
+.setting-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 0;border-top:1px solid var(--line);font-size:12px}
+.setting-row:has(select){align-items:center}
+.setting-row select{background:var(--panel2);color:var(--text);border:1px solid var(--line);padding:9px;border-radius:8px}
+.setting-row small{display:block;color:var(--muted);line-height:1.5;margin-top:6px}
+.splash-setting{align-items:center}
+.splash-screen{position:fixed;inset:0;z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:radial-gradient(circle at 50% 42%,#25245a 0%,#10172c 42%,#050916 100%);color:#f4f5ff;overflow:hidden;animation:splashFadeOut .45s ease 2.55s forwards}
+.splash-screen.has-image{background-position:center;background-size:cover;background-repeat:no-repeat}
+.splash-screen.has-image:before{content:"";position:absolute;inset:0;background:#05091635;backdrop-filter:blur(1px)}
+.splash-glow{position:absolute;width:70vmin;height:70vmin;border-radius:50%;background:#6554e955;filter:blur(50px);animation:glowPulse 1.5s ease-in-out infinite alternate}
+.splash-robot{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;animation:robotFloat 1s ease-in-out infinite alternate}
+.robot-head{width:125px;height:95px;border-radius:35px 35px 28px 28px;border:4px solid #b9caff;background:linear-gradient(145deg,#f9fcff,#a5baff);display:flex;justify-content:center;align-items:center;gap:22px;position:relative;box-shadow:0 0 45px #8e9cff77}
+.robot-eye{width:13px;height:18px;border-radius:50%;background:#253c78;animation:eyeBlink 2s infinite}
+.robot-head i{position:absolute;width:32px;height:4px;border-radius:5px;background:#607bd5;bottom:17px}
+.robot-body{width:86px;height:60px;margin-top:8px;border-radius:20px;background:linear-gradient(145deg,#dbe8ff,#7f9df0);border:3px solid #b9caff;display:grid;place-items:center;color:#243d82;font:800 28px Manrope}
+.splash-screen>strong,.splash-screen>small,.splash-progress{position:relative;z-index:1}
+.splash-screen>strong{font:800 22px Manrope;letter-spacing:3px;margin-top:15px}
+.splash-screen>small{font-size:12px;color:#c6d0ef}
+.splash-progress{width:150px;height:4px;border-radius:9px;background:#ffffff30;overflow:hidden;margin-top:15px}
+.splash-progress i{display:block;height:100%;width:0;background:#b5a4ff;animation:progressFill 2.65s linear forwards}
+@keyframes robotFloat{from{transform:translateY(5px) rotate(-2deg)}to{transform:translateY(-9px) rotate(2deg)}}
+@keyframes eyeBlink{0%,44%,48%,100%{transform:scaleY(1)}46%{transform:scaleY(.12)}}
+@keyframes glowPulse{from{opacity:.45;transform:scale(.9)}to{opacity:.9;transform:scale(1.08)}}
+@keyframes progressFill{to{width:100%}}
+@keyframes splashFadeOut{to{opacity:0;visibility:hidden;pointer-events:none}}
+body.theme-light{color-scheme:light;--bg:#f4f6fb;--panel:#fff;--panel2:#f0f3fa;--line:#dce2ee;--muted:#66738c;--text:#172033;background:var(--bg);color:var(--text)}
+body.theme-light .sidebar,body.theme-light .topbar{background:#fff;border-color:#e0e5ef}
+body.theme-light .workspace,body.theme-light .stat-card,body.theme-light .quick-card,body.theme-light .work-card,body.theme-light .agent-card{background:#fff;border-color:#dfe5ef;color:#172033}
+body.theme-light .nav-item{color:#526079}body.theme-light .nav-item.active{background:#eeeaff;color:#4b3b91}
+body.theme-light .composer textarea{color:#172033}body.theme-light .composer{border-color:#e0e5ef}
+body.theme-light .message-body,body.theme-light .message-body p{color:#47536a}body.theme-light .message-body>b{color:#172033}
+body.theme-light .mode-tabs{background:#f7f8fc;border-color:#e0e5ef}body.theme-light .user-message{background:#eeeaff;color:#282047;border-color:#d9d0ff}
+body.theme-light .hero{background:radial-gradient(ellipse at 82% 42%,#d8d0ff 0%,transparent 38%),linear-gradient(115deg,#f0edff,#e9efff 62%,#f4eaff);border-color:#d9d2f3}
+body.theme-light .hero p{color:#4d5871}body.theme-light .hero h1{color:#172033}
+body.theme-light .secondary-button{background:#f0edff;color:#493a82;border-color:#d9d2f3}
+@media(max-width:520px){.composer-tools{gap:4px}.tool-button{padding:7px;font-size:10px}.tool-button span{font-size:9px}.selected-files{max-width:100px}.settings-panel{padding:15px}.splash-screen>strong{font-size:18px}}
+@media(prefers-reduced-motion:reduce){.splash-robot,.splash-glow,.splash-progress i{animation:none}.splash-screen{animation:none}}
