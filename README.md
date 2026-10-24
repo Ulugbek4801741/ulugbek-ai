@@ -15,6 +15,9 @@ ULUGBEK AI is an early web/Android MVP for an Uzbek-first AI assistant, agent ta
 ## Safe workflow planning API
 
 - `GET /api/modules` returns the capability catalogue and clearly labels planned integrations.
+- `POST /api/lab/search` searches the public web without a model API key; results must be checked against their sources.
+- `POST /api/lab/learn` searches Wikipedia's public API and stores up to three sourced summaries as `pending-review` knowledge candidates without a model API key. It is retrieval/knowledge-base growth, **not** model-weight training or unrestricted crawling.
+- `GET /api/lab/knowledge` lists locally stored knowledge candidates. The current JSON store is intended for a prototype, not multi-instance production use.
 - `GET /api/workflows/policy` returns the required review stages and high-impact actions that need human approval.
 - `POST /api/workflows` accepts JSON such as `{"task":"Prepare a report","action":"send_message"}` and returns a workflow plan. It does **not** execute external actions. Workflow approval alone never enables execution; a separately configured, permission-scoped adapter is required.
 - `npm test` includes workflow safety and module catalogue tests. GitHub Actions runs the test suite on Node.js 20 and 22.
