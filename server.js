@@ -258,6 +258,33 @@ function createPlan(task) {
 }
 
 const capabilityCatalog = require("./modules/catalog");
+const workflowGate = require("./modules/workflow-gate");
+
+app.get("/api/workflows/policy", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, policy: workflowGate.getWorkflowPolicy() });
+});
+
+app.post("/api/workflows", (req, res) => {
+  const task = typeof req.body?.task === "string" ? req.body.task.trim() : "";
+  if (!task) return res.status(400).json({ error: "Vazifa matni bo‘sh bo‘lmasligi kerak." });
+  if (task.length > MAX_TASK_LENGTH) return res.status(413).json({ error: "Vazifa 4000 belgidan oshmasligi kerak." });
+  const action = typeof req.body?.action === "string" ? req.body.action.trim().slice(0, 80) : "";
+  try {
+    const workflow = workflowGate.createWorkflow(task, {
+      action,
+      externalEffect: req.body?.externalEffect === true
+    });
+    res.status(201).set("Cache-Control", "no-store").json({
+      ok: true,
+      workflow,
+      execution: "disabled",
+      note: "Bu endpoint xavfsiz reja yaratadi. U tashqi amalni bajarmaydi."
+    });
+  } catch (error) {
+    res.status(400).json({ error: "Workflow yaratilmadi: " + (error.message || "noto‘g‘ri so‘rov.") });
+  }
+});
 
 app.get("/api/modules", (_req, res) => {
   res.set("Cache-Control", "no-store");
