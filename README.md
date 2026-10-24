@@ -12,6 +12,15 @@ ULUGBEK AI is an early web/Android MVP for an Uzbek-first AI assistant, agent ta
 - Helmet security headers, request rate limiting, input length checks, and model request timeout.
 - PWA shell, manifest, service worker, and existing Capacitor Android wrapper.
 
+## Safe workflow planning API
+
+- `GET /api/modules` returns the capability catalogue and clearly labels planned integrations.
+- `GET /api/workflows/policy` returns the required review stages and high-impact actions that need human approval.
+- `POST /api/workflows` accepts JSON such as `{"task":"Prepare a report","action":"send_message"}` and returns a workflow plan. It does **not** execute external actions. Workflow approval alone never enables execution; a separately configured, permission-scoped adapter is required.
+- `npm test` includes workflow safety and module catalogue tests. GitHub Actions runs the test suite on Node.js 20 and 22.
+
+These are planning and safety controls, not a claim that phone/computer automation, real quantum hardware, medical procedures, or autonomous production deployment are implemented.
+
 ## Run locally
 
 Requires Node.js 20 or newer.
