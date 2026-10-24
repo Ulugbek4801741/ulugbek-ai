@@ -120,6 +120,75 @@ router.post("/search", async (req, res) => {
   }
 });
 
+// Learn from public, open encyclopedia summaries without an API key.
+ // This stores sourced candidate notes; it does not retrain model weights or bypass source licences.
+router.post("/learn", async (req, res) => {
+  const topic = typeof req.body?.topic === "string" ? req.body.topic.trim() : "";
+  if (!topic) return res.status(400).json({ error: "O‘rganiladigan mavzu bo‘sh bo‘lmasin." });
+  if (topic.length > MAX_QUERY) return res.status(413).json({ error: "Mavzu 240 belgidan oshmasin." });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12000);
+  try {
+    const searchUrl = new URL("https://en.wikipedia.org/w/api.php");
+    searchUrl.search = new URLSearchParams({
+      action: "query", list: "search", srsearch: topic, srlimit: "3",
+      format: "json", origin: "*"
+    }).toString();
+    const searchResponse = await fetch(searchUrl, {
+      headers: { "User-Agent": "ULUGBEK-AI-OpenKnowledge/1.0 (public encyclopedia summaries)", "Accept": "application/json" },
+      signal: controller.signal,
+      redirect: "error"
+    });
+    if (!searchResponse.ok) return res.status(502).json({ error: "Ochiq ensiklopediya hozir javob bermadi." });
+    const searchPayload = await searchResponse.json();
+    const hits = Array.isArray(searchPayload?.query?.search) ? searchPayload.query.search.slice(0, 3) : [];
+    if (!hits.length) return res.status(404).json({ error: "Bu mavzu bo‘yicha ochiq ensiklopediya natijasi topilmadi." });
+    const candidates = [];
+    for (const hit of hits) {
+      const title = cleanText(hit.title, 240);
+      if (!title) continue;
+      const summaryUrl = "https://en.wikipedia.org/api/rest_v1/page/summary/" + encodeURIComponent(title.replace(/ /g, "_"));
+      const summaryResponse = await fetch(summaryUrl, {
+        headers: { "User-Agent": "ULUGBEK-AI-OpenKnowledge/1.0 (public encyclopedia summaries)", "Accept": "application/json" },
+        signal: controller.signal,
+        redirect: "error"
+      });
+      if (!summaryResponse.ok) continue;
+      const summary = await summaryResponse.json();
+      const content = cleanText(summary.extract, MAX_NOTE);
+      const source = publicUrl(summary.content_urls?.desktop?.page);
+      if (!content || !source) continue;
+      candidates.push({
+        title: cleanText(summary.title || title, 240),
+        content,
+        source: source.href,
+        agent: "OpenKnowledgeResearch",
+        status: "pending-review",
+        createdAt: new Date().toISOString()
+      });
+    }
+    if (!candidates.length) return res.status(502).json({ error: "Manbalar topildi, lekin xavfsiz matn olishning imkoni bo‘lmadi." });
+    const entries = await readJson(KNOWLEDGE_FILE, []);
+    const current = Array.isArray(entries) ? entries : [];
+    const knownSources = new Set(current.map((entry) => entry.source).filter(Boolean));
+    const fresh = candidates.filter((entry) => !knownSources.has(entry.source));
+    const stamped = fresh.map((entry) => ({ id: require("node:crypto").randomUUID(), ...entry }));
+    await writeJson(KNOWLEDGE_FILE, [...current, ...stamped].slice(-MAX_ITEMS));
+    return res.json({
+      ok: true,
+      topic,
+      fetched: candidates.length,
+      saved: stamped.length,
+      entries: stamped,
+      note: "Manbalar API kalitisiz olindi va tekshirilmagan nomzod sifatida saqlandi. Bu modelni qayta o‘qitmaydi; xulosani tekshirmasdan ishonchli fakt deb qabul qilmang."
+    });
+  } catch (_) {
+    return res.status(502).json({ error: "Ochiq manbadan o‘rganish amalga oshmadi. Server interneti yoki manba xizmatini tekshiring." });
+  } finally {
+    clearTimeout(timeout);
+  }
+});
+
 router.get("/knowledge", async (_req, res) => {
   try {
     const entries = await readJson(KNOWLEDGE_FILE, []);
@@ -141,7 +210,7 @@ router.post("/knowledge", async (req, res) => {
     const entry = {
       id: require("node:crypto").randomUUID(),
       title, content, source: source ? source.href : "",
-      agent, status: "human-reviewed",
+      agent, status: "pending-review",
       createdAt: new Date().toISOString()
     };
     const next = Array.isArray(entries) ? entries : [];
