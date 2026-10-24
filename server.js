@@ -257,6 +257,13 @@ function createPlan(task) {
   };
 }
 
+const capabilityCatalog = require("./modules/catalog");
+
+app.get("/api/modules", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, product: "ULUGBEK AI", note: "planned modullar hali ishlaydigan integratsiya emas.", modules: capabilityCatalog.listModules() });
+});
+
 app.post("/api/agent/plan", async (req, res) => {
   const task = typeof req.body?.task === "string" ? req.body.task.trim() : "";
   if (!task) return res.status(400).json({ error: "Vazifa matni bo‘sh bo‘lmasligi kerak." });
