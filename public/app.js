@@ -305,3 +305,73 @@ if("serviceWorker" in navigator && !nativeApp && location.protocol.startsWith("h
  window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
 }
 checkServer();
+
+
+/* User preferences and chat composer helpers */
+(function setupUserInterface(){
+ const byId=id=>document.getElementById(id);
+ const backdrop=byId("settings-backdrop");
+ const themeChoice=byId("theme-choice");
+ const splash=byId("splash-screen");
+ const splashInput=byId("splash-input");
+ let chosenFiles=[];
+ let splashImage="";
+ function applyTheme(value){
+  const theme=value==="system"?(window.matchMedia&&window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"):value;
+  document.body.classList.toggle("theme-light",theme==="light");
+  try{localStorage.setItem("ulugbek-ai-theme",value);}catch(_){}
+ }
+ try{const saved=localStorage.getItem("ulugbek-ai-theme")||"dark";themeChoice.value=saved;applyTheme(saved);}catch(_){applyTheme("dark");}
+ themeChoice.addEventListener("change",()=>applyTheme(themeChoice.value));
+ byId("settings-open").addEventListener("click",()=>{backdrop.hidden=false;});
+ byId("settings-close").addEventListener("click",()=>{backdrop.hidden=true;});
+ backdrop.addEventListener("click",e=>{if(e.target===backdrop)backdrop.hidden=true;});
+ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!backdrop.hidden)backdrop.hidden=true;});
+ // Store custom splash artwork in IndexedDB so it persists without filling localStorage.
+ const openImageDB=()=>new Promise((resolve,reject)=>{
+  if(!("indexedDB" in window)){reject(new Error("IndexedDB mavjud emas"));return;}
+  const req=indexedDB.open("ulugbek-ai-preferences",1);
+  req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains("settings"))req.result.createObjectStore("settings");};
+  req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
+ });
+ const saveImage=async data=>{const db=await openImageDB();await new Promise((resolve,reject)=>{const tx=db.transaction("settings","readwrite");tx.objectStore("settings").put(data,"splashImage");tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});db.close();};
+ const loadImage=async()=>{try{const db=await openImageDB();const value=await new Promise((resolve,reject)=>{const req=db.transaction("settings","readonly").objectStore("settings").get("splashImage");req.onsuccess=()=>resolve(req.result||"");req.onerror=()=>reject(req.error);});db.close();return value;}catch(_){return "";}};
+ const showSplash=async()=>{
+  splashImage=await loadImage();
+  if(splashImage){splash.style.backgroundImage="url('"+splashImage+"')";splash.classList.add("has-image");byId("splash-robot").style.visibility="hidden";}
+  splash.hidden=false;
+  window.setTimeout(()=>{splash.hidden=true;splash.style.backgroundImage="";},3000);
+ };
+ byId("splash-pick").addEventListener("click",()=>splashInput.click());
+ splashInput.addEventListener("change",async()=>{
+  const file=splashInput.files&&splashInput.files[0];if(!file)return;
+  if(!file.type.startsWith("image/")){notify("Iltimos, rasm faylini tanlang.");return;}
+  if(file.size>8*1024*1024){notify("Rasm 8 MB dan kichik bo‘lsin.");return;}
+  const reader=new FileReader();
+  reader.onload=async()=>{try{await saveImage(reader.result);notify("Ochilish rasmi ushbu qurilmada saqlandi.");}catch(_){notify("Rasmni saqlab bo‘lmadi. Boshqa rasm tanlang.");}};
+  reader.readAsDataURL(file);splashInput.value="";
+ });
+ byId("splash-reset").addEventListener("click",async()=>{try{const db=await openImageDB();await new Promise((resolve,reject)=>{const tx=db.transaction("settings","readwrite");tx.objectStore("settings").delete("splashImage");tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});db.close();notify("Standart animatsiyali robot qaytarildi.");}catch(_){notify("Rasm sozlamasini o‘zgartirib bo‘lmadi.");}});
+ showSplash();
+ const fileInput=byId("file-input"),photoInput=byId("photo-input"),cameraInput=byId("camera-input");
+ const refreshFiles=()=>{byId("selected-files").textContent=chosenFiles.length?chosenFiles.map(f=>f.name).join(", "):"Fayl tanlanmagan";};
+ const addFiles=files=>{chosenFiles=[...chosenFiles,...Array.from(files||[])].slice(0,10);refreshFiles();if(chosenFiles.length)notify("Fayl tanlandi. Hozircha fayllar chatga yuklanmaydi; server yuklash funksiyasi kerak.");};
+ byId("attach-open").addEventListener("click",()=>fileInput.click());
+ byId("files-open").addEventListener("click",()=>fileInput.click());
+ byId("photos-open").addEventListener("click",()=>photoInput.click());
+ byId("camera-open").addEventListener("click",()=>cameraInput.click());
+ fileInput.addEventListener("change",()=>addFiles(fileInput.files));
+ photoInput.addEventListener("change",()=>addFiles(photoInput.files));
+ cameraInput.addEventListener("change",()=>addFiles(cameraInput.files));
+ byId("plugins-open").addEventListener("click",()=>notify("Plaginlar katalogi keyingi bosqichda ulanadi."));
+ byId("think-toggle").addEventListener("click",()=>{const b=byId("think-toggle");const active=b.getAttribute("aria-pressed")!=="true";b.setAttribute("aria-pressed",String(active));notify(active?"Chuqurroq fikrlash rejimi tanlandi.":"Oddiy rejim tanlandi.");});
+ byId("avatar-button").addEventListener("click",()=>notify("Avatar sozlamasi keyingi bosqichda ulanadi."));
+ byId("mic-button").addEventListener("click",()=>{
+  const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SpeechRecognition){notify("Bu brauzerda ovozni matnga aylantirish qo‘llab-quvvatlanmaydi.");return;}
+  const rec=new SpeechRecognition();rec.lang="uz-UZ";rec.interimResults=false;rec.maxAlternatives=1;
+  rec.onresult=e=>{input.value=(input.value+" "+e.results[0][0].transcript).trim();input.focus();};
+  rec.onerror=()=>notify("Mikrofon ishlamadi. Brauzer ruxsatlarini tekshiring.");
+  try{rec.start();notify("Gapiring — ovozingiz matnga aylantiriladi.");}catch(_){notify("Mikrofonni ishga tushirib bo‘lmadi.");}
+ });
+})();
