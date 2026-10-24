@@ -51,9 +51,9 @@ function recordStageResult(workflow, stageName, passed, evidence = "") {
 
 function requestHumanApproval(workflow, decision) {
   if (!workflow || !Array.isArray(workflow.stages)) throw new TypeError("Workflow yaroqsiz.");
+  if (decision !== "approve" && decision !== "reject") throw new Error("Qaror approve yoki reject bo‘lishi kerak.");
   const allPassed = workflow.stages.length === REQUIRED_STAGES.length && workflow.stages.every((stage) => stage.status === "passed");
   if (!allPassed) throw new Error("Inson tasdig‘idan oldin uchala tekshiruv ham muvaffaqiyatli tugashi kerak.");
-  if (decision !== "approve" && decision !== "reject") throw new Error("Qaror approve yoki reject bo‘lishi kerak.");
   workflow.approval = decision === "approve" ? "approved" : "rejected";
   workflow.status = decision === "approve" ? "approved_for_adapter" : "rejected";
   // Even approval does not execute tools; a separately configured, permission-scoped adapter is required.
