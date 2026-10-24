@@ -39,6 +39,31 @@ test("API smoke tests", async (t) => {
       assert.equal(body.mode, "public-web-search-and-local-json");
     });
 
+    await t.test("open-knowledge learning rejects empty topics without an API key", async () => {
+      const response = await fetch(`${baseUrl}/api/lab/learn`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topic: "   " })
+      });
+      assert.equal(response.status, 400);
+      assert.match((await response.json()).error, /mavzu bo‘sh/);
+    });
+
+    await t.test("knowledge submissions are marked pending review, not human reviewed", async () => {
+      const response = await fetch(`${baseUrl}/api/lab/knowledge`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: "CI test knowledge entry",
+          content: "This is test-only content; it has not been independently verified.",
+          source: "https://example.org/ci-test"
+        })
+      });
+      assert.equal(response.status, 201);
+      const body = await response.json();
+      assert.equal(body.entry.status, "pending-review");
+    });
+
     await t.test("virtual lab rejects an empty research query", async () => {
       const response = await fetch(`${baseUrl}/api/lab/search`, {
         method: "POST",
