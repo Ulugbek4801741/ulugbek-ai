@@ -113,6 +113,51 @@ test("API smoke tests", async (t) => {
       assert.equal(body.app, "ULUGBEK AI");
     });
 
+    await t.test("module catalogue endpoint lists capabilities and labels planned integrations honestly", async () => {
+      const response = await fetch(`${baseUrl}/api/modules`);
+      const body = await response.json();
+      assert.equal(response.status, 200);
+      assert.equal(body.ok, true);
+      assert.ok(body.modules.length >= 10);
+      assert.equal(body.modules.find((item) => item.id === "phone-agent").status, "planned");
+    });
+
+    await t.test("workflow policy endpoint fails closed", async () => {
+      const response = await fetch(`${baseUrl}/api/workflows/policy`);
+      const body = await response.json();
+      assert.equal(response.status, 200);
+      assert.equal(body.policy.failClosed, true);
+      assert.equal(body.policy.execution, "disabled_without_explicitly-configured-adapter");
+    });
+
+    await t.test("workflow endpoint creates a plan but never enables external execution", async () => {
+      const response = await fetch(`${baseUrl}/api/workflows`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ task: "Prepare a report", action: "send_message" })
+      });
+      const body = await response.json();
+      assert.equal(response.status, 201);
+      assert.equal(body.workflow.requiresHumanApproval, true);
+      assert.equal(body.workflow.executionAllowed, false);
+      assert.equal(body.execution, "disabled");
+    });
+
+    await t.test("workflow endpoint rejects empty and oversized tasks", async () => {
+      const empty = await fetch(`${baseUrl}/api/workflows`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ task: "   " })
+      });
+      assert.equal(empty.status, 400);
+      const oversized = await fetch(`${baseUrl}/api/workflows`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ task: "x".repeat(4001) })
+      });
+      assert.equal(oversized.status, 413);
+    });
+
     await t.test("diagnostics distinguish configured AI from demo mode", async () => {
       const response = await fetch(`${baseUrl}/api/diagnostics`);
       const body = await response.json();
