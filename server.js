@@ -365,6 +365,8 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   res.set("Cache-Control", "no-store");
   if (!message) return res.status(400).json({ error: "Xabar bo‘sh bo‘lmasligi kerak." });
   if (message.length > MAX_TASK_LENGTH) return res.status(413).json({ error: "Xabar 4000 belgidan oshmasligi kerak." });
+  const inputSafety = require("./modules/input-safety").inspectUserMessage(message);
+  if (!inputSafety.allowed) return res.status(400).set("Cache-Control", "no-store").json({ error: inputSafety.message, safety: { blocked: true, category: inputSafety.reason } });
   const apiKey = process.env.OPENAI_API_KEY || "";
   const configuredBaseUrl = (process.env.OPENAI_BASE_URL || "").trim();
   if (!apiKey && !configuredBaseUrl) {
