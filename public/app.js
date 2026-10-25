@@ -28,7 +28,8 @@ function openPlugins(){pluginsModal.hidden=false;pluginsSearch.value="";renderPl
 pluginsSearch.addEventListener("input",renderPlugins);
 $("plugins-close").onclick=()=>pluginsModal.hidden=true;
 pluginsModal.addEventListener("click",e=>{if(e.target===pluginsModal)pluginsModal.hidden=true});
-\nconst attachButton=$("attach-button"),attachMenu=$("attach-menu"),thinkButton=$("think-harder"),builderModal=$("builder-modal");
+
+const attachButton=$("attach-button"),attachMenu=$("attach-menu"),thinkButton=$("think-harder"),builderModal=$("builder-modal");
 let thinkHarder=false;
 attachButton.onclick=()=>{attachMenu.hidden=!attachMenu.hidden};
 document.addEventListener("click",e=>{if(!e.target.closest(".attach-wrap"))attachMenu.hidden=true});
