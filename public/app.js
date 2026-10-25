@@ -2,28 +2,25 @@
 
 const pluginsModal=$("plugins-modal"),pluginsList=$("plugins-list"),pluginsSearch=$("plugins-search");
 const pluginServices=[
-{name:"OpenStreetMap",category:"Xarita va navigatsiya",description:"Ochiq xaritalar va marshrutlarni ko‘rish",url:"https://www.openstreetmap.org/"},
-{name:"Google Maps",category:"Xarita va navigatsiya",description:"Xarita, yo‘nalish va joy qidirish",url:"https://maps.google.com/"},
-{name:"Waze",category:"Xarita va yo‘l",description:"Yo‘l harakati va navigatsiya",url:"https://www.waze.com/"},
-{name:"VirusTotal",category:"Kiberxavfsizlik",description:"Fayl yoki havola bo‘yicha xavfsizlik tahlili; saytga qo‘lda yuborish talab qilinadi",url:"https://www.virustotal.com/"},
-{name:"Google Play",category:"Ilovalar",description:"Android ilovalar katalogi",url:"https://play.google.com/store"},
-{name:"Apple App Store",category:"Ilovalar",description:"iPhone va iPad ilovalar katalogi",url:"https://www.apple.com/app-store/"},
-{name:"GitHub",category:"Dasturlash",description:"Kod omborlari va dasturiy loyihalar",url:"https://github.com/"},
-{name:"Google Drive",category:"Fayllar",description:"Bulut fayllarini boshqarish",url:"https://drive.google.com/"},
-{name:"Dropbox",category:"Fayllar",description:"Bulut fayl saqlash xizmati",url:"https://www.dropbox.com/"},
-{name:"Telegram",category:"Ijtimoiy tarmoq",description:"Xabarlar va kanallar",url:"https://web.telegram.org/"},
-{name:"Discord",category:"Ijtimoiy tarmoq",description:"Hamjamiyat va ovozli suhbatlar",url:"https://discord.com/app"},
-{name:"YouTube",category:"Video",description:"Videolar va kanallar",url:"https://www.youtube.com/"},
-{name:"Reddit",category:"Hamjamiyat",description:"Mavzuli jamoalar va muhokamalar",url:"https://www.reddit.com/"},
-{name:"NASA Mars",category:"Mars va kosmos",description:"Mars missiyalari va kosmik ma’lumotlar",url:"https://science.nasa.gov/mars/"},
-{name:"NASA Eyes",category:"Kosmos",description:"Kosmik missiyalarni interaktiv ko‘rish",url:"https://eyes.nasa.gov/"},
-{name:"OpenAI Platform",category:"AI xizmatlari",description:"AI API hujjatlari va boshqaruv paneli",url:"https://platform.openai.com/"},
-{name:"Hugging Face",category:"AI xizmatlari",description:"Ochiq AI modellari va demolar",url:"https://huggingface.co/"},
-{name:"Google Translate",category:"Til",description:"Matn tarjimasi",url:"https://translate.google.com/"},
-{name:"Canva",category:"Dizayn",description:"Grafik dizayn va kontent yaratish",url:"https://www.canva.com/"},
-{name:"Trello",category:"Ish boshqaruvi",description:"Vazifalar va jamoa ish jarayoni",url:"https://trello.com/"}
+{id:"notes",name:"ULUGBEK Eslatmalar",category:"Shaxsiy ishlar",description:"Eslatmalarni shu qurilmada saqlash va tahrirlash",kind:"notes"},
+{id:"calculator",name:"ULUGBEK Kalkulyator",category:"Asboblar",description:"Oddiy hisob-kitoblar",kind:"calculator"},
+{id:"text",name:"ULUGBEK Matn asboblari",category:"Asboblar",description:"Matn belgisi, so‘z va qatorlar sonini hisoblash",kind:"text"},
+{id:"builder",name:"ULUGBEK No-code",category:"Yaratish",description:"G‘oyadan ilova rejasini tuzish",kind:"builder"},
+{id:"chat",name:"ULUGBEK AI Chat",category:"AI",description:"Asosiy AI suhbatiga qaytish",kind:"chat"},
+{id:"navigator",name:"ULUGBEK Navigator",category:"Xarita",description:"Navigatsiya xizmatini ochish; hozircha tashqi xarita",url:"https://www.openstreetmap.org/"},
+{id:"mars",name:"ULUGBEK Kosmos: Mars",category:"Ta’lim",description:"Mars haqidagi NASA ma’lumotlari",url:"https://science.nasa.gov/mars/"},
+{id:"security",name:"ULUGBEK Xavfsizlik",category:"Xavfsizlik",description:"Hozircha xavfsizlik bo‘yicha ko‘rsatmalar; avtomatik APK skaneri ulanmagan",kind:"security"},
+{name:"OpenStreetMap",category:"Tashqi xizmat",description:"Ochiq xaritalar",url:"https://www.openstreetmap.org/"},
+{name:"Waze",category:"Tashqi xizmat",description:"Yo‘l harakati va navigatsiya",url:"https://www.waze.com/"},
+{name:"VirusTotal",category:"Tashqi xizmat",description:"Fayl/havola tahlili; API integratsiyasi yo‘q",url:"https://www.virustotal.com/"},
+{name:"NASA Mars",category:"Tashqi xizmat",description:"Mars missiyalari",url:"https://science.nasa.gov/mars/"},
+{name:"GitHub",category:"Tashqi xizmat",description:"Kod omborlari",url:"https://github.com/"},
+{name:"Telegram Web",category:"Tashqi xizmat",description:"Xabarlar va kanallar",url:"https://web.telegram.org/"},
+{name:"YouTube",category:"Tashqi xizmat",description:"Videolar",url:"https://www.youtube.com/"},
+{name:"Google Translate",category:"Tashqi xizmat",description:"Tarjima",url:"https://translate.google.com/"}
 ];
-function renderPlugins(){const q=pluginsSearch.value.trim().toLowerCase();pluginsList.replaceChildren();const found=pluginServices.filter(p=>(p.name+" "+p.category+" "+p.description).toLowerCase().includes(q));if(!found.length){pluginsList.textContent="Mos xizmat topilmadi.";return}found.forEach(p=>{const card=el("div","plugin-card");card.appendChild(el("strong","",p.name));card.appendChild(el("span","plugin-category",p.category));card.appendChild(el("p","",p.description));const a=el("a","plugin-link","Xizmatni ochish ↗");a.href=p.url;a.target="_blank";a.rel="noopener noreferrer";card.appendChild(a);pluginsList.appendChild(card)})}
+function runBuiltin(id){if(id==="chat"){pluginsModal.hidden=true;return}if(id==="builder"){pluginsModal.hidden=true;builderModal.hidden=false;return}let content="";if(id==="notes"){content='<h3>ULUGBEK Eslatmalar</h3><textarea id="local-note" rows="7" placeholder="Eslatmangizni yozing..."></textarea><button id="save-local-note" class="primary-btn">Qurilmada saqlash</button><p class="settings-note">Eslatma faqat shu brauzer/qurilmada saqlanadi; bulutga yuborilmaydi.</p>'}else if(id==="calculator"){content='<h3>ULUGBEK Kalkulyator</h3><input id="calc-a" type="number" placeholder="Birinchi son"><select id="calc-op"><option value="+">+</option><option value="-">−</option><option value="*">×</option><option value="/">÷</option></select><input id="calc-b" type="number" placeholder="Ikkinchi son"><button id="calc-run" class="primary-btn">Hisoblash</button><p id="calc-result" aria-live="polite"></p>'}else if(id==="text"){content='<h3>ULUGBEK Matn asboblari</h3><textarea id="text-tool-input" rows="7" placeholder="Matnni kiriting..."></textarea><p id="text-tool-result">Matn kiritilmagan.</p>'}else if(id==="security"){content='<h3>ULUGBEK Xavfsizlik</h3><p>Hozirgi versiya APK faylni avtomatik skanerlamaydi. Noma’lum manbadan APK o‘rnatmang, ilova ruxsatlarini tekshiring va faylni ishonchli antivirusda tekshiring.</p><a class="plugin-link" href="https://www.virustotal.com/" target="_blank" rel="noopener noreferrer">VirusTotal saytini ochish ↗</a>'}const wrap=el("div","builtin-tool");wrap.innerHTML=content;pluginsList.replaceChildren(wrap);if(id==="notes"){const area=wrap.querySelector("#local-note");try{area.value=localStorage.getItem("ulugbek-local-note")||""}catch{}wrap.querySelector("#save-local-note").onclick=()=>{try{localStorage.setItem("ulugbek-local-note",area.value);note("Eslatma ushbu qurilmada saqlandi.")}catch{note("Brauzer xotirasiga saqlab bo‘lmadi.")}}}if(id==="calculator"){wrap.querySelector("#calc-run").onclick=()=>{const a=Number(wrap.querySelector("#calc-a").value),b=Number(wrap.querySelector("#calc-b").value),op=wrap.querySelector("#calc-op").value;let v=op==="+"?a+b:op==="-"?a-b:op==="*"?a*b:b===0?null:a/b;wrap.querySelector("#calc-result").textContent=v===null?"Nolga bo‘lish mumkin emas.":Number.isFinite(v)?String(v):"Sonlarni kiriting."}}if(id==="text"){const area=wrap.querySelector("#text-tool-input"),out=wrap.querySelector("#text-tool-result");area.addEventListener("input",()=>{const v=area.value;out.textContent="Belgilar: "+v.length+" · So‘zlar: "+(v.trim()?v.trim().split(/\\s+/).length:0)+" · Qatorlar: "+(v?v.split("\\n").length:0)})}} 
+function renderPlugins(){const q=pluginsSearch.value.trim().toLowerCase();pluginsList.replaceChildren();const found=pluginServices.filter(p=>(p.name+" "+p.category+" "+p.description).toLowerCase().includes(q));if(!found.length){pluginsList.textContent="Mos xizmat topilmadi.";return}found.forEach(p=>{const card=el("div","plugin-card");card.appendChild(el("strong","",p.name));card.appendChild(el("span","plugin-category",p.category));card.appendChild(el("p","",p.description));if(p.kind){const b=el("button","plugin-link plugin-action",p.kind==="notes"?"Ochish":p.kind==="calculator"?"Hisoblash":p.kind==="text"?"Matnni tekshirish":p.kind==="builder"?"Reja tuzish":p.kind==="chat"?"Chatga qaytish":"Ko‘rsatmalar");b.type="button";b.onclick=()=>runBuiltin(p.id);card.appendChild(b)}else{const a=el("a","plugin-link","Xizmatni ochish ↗");a.href=p.url;a.target="_blank";a.rel="noopener noreferrer";card.appendChild(a)}pluginsList.appendChild(card)})}
 function openPlugins(){pluginsModal.hidden=false;pluginsSearch.value="";renderPlugins()}
 pluginsSearch.addEventListener("input",renderPlugins);
 $("plugins-close").onclick=()=>pluginsModal.hidden=true;
