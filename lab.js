@@ -11,7 +11,27 @@ const MEMORY_FILE = path.join(DATA_DIR, "agent-memory.json");
 const MAX_QUERY = 240;
 const MAX_NOTE = 5000;
 const MAX_ITEMS = 2000;
+const LAB_ADMIN_TOKEN = process.env.LAB_ADMIN_TOKEN || "";
 let queue = Promise.resolve();
+
+function safeEqual(a, b) {
+  const left = Buffer.from(String(a));
+  const right = Buffer.from(String(b));
+  return left.length === right.length && left.length > 0 && require("node:crypto").timingSafeEqual(left, right);
+}
+function requireLabAdmin(req, res) {
+  const auth = req.headers.authorization || "";
+  const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+  if (!LAB_ADMIN_TOKEN || LAB_ADMIN_TOKEN.length < 32) {
+    res.status(503).json({ error: "Laboratoriya yozish API xavfsizligi sozlanmagan. Hostingda kamida 32 belgili LAB_ADMIN_TOKEN o‘rnating." });
+    return false;
+  }
+  if (!safeEqual(token, LAB_ADMIN_TOKEN)) {
+    res.status(401).json({ error: "Bu amal uchun laboratoriya administratori ruxsati kerak." });
+    return false;
+  }
+  return true;
+}
 
 function cleanText(value, max = 1000) {
   return String(value || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
@@ -123,6 +143,7 @@ router.post("/search", async (req, res) => {
 // Learn from public, open encyclopedia summaries without an API key.
  // This stores sourced candidate notes; it does not retrain model weights or bypass source licences.
 router.post("/learn", async (req, res) => {
+  if (!requireLabAdmin(req, res)) return;
   const topic = typeof req.body?.topic === "string" ? req.body.topic.trim() : "";
   if (!topic) return res.status(400).json({ error: "O‘rganiladigan mavzu bo‘sh bo‘lmasin." });
   if (topic.length > MAX_QUERY) return res.status(413).json({ error: "Mavzu 240 belgidan oshmasin." });
@@ -189,7 +210,9 @@ router.post("/learn", async (req, res) => {
   }
 });
 
-router.get("/knowledge", async (_req, res) => {
+router.get("/knowledge", async (req, res) => {
+  if (!requireLabAdmin(req, res)) return;
+  res.set("Cache-Control", "no-store");
   try {
     const entries = await readJson(KNOWLEDGE_FILE, []);
     res.json({ entries: Array.isArray(entries) ? entries.slice(-MAX_ITEMS).reverse() : [] });
@@ -199,6 +222,7 @@ router.get("/knowledge", async (_req, res) => {
 });
 
 router.post("/knowledge", async (req, res) => {
+  if (!requireLabAdmin(req, res)) return;
   const title = cleanText(req.body?.title, 240);
   const content = cleanText(req.body?.content, MAX_NOTE);
   const source = publicUrl(req.body?.source);
@@ -223,6 +247,8 @@ router.post("/knowledge", async (req, res) => {
 });
 
 router.get("/memory/:agent", async (req, res) => {
+  if (!requireLabAdmin(req, res)) return;
+  res.set("Cache-Control", "no-store");
   const agent = cleanText(req.params.agent, 80);
   if (!agent) return res.status(400).json({ error: "Agent nomi noto‘g‘ri." });
   try {
@@ -234,6 +260,7 @@ router.get("/memory/:agent", async (req, res) => {
 });
 
 router.post("/memory/:agent", async (req, res) => {
+  if (!requireLabAdmin(req, res)) return;
   const agent = cleanText(req.params.agent, 80);
   const content = cleanText(req.body?.content, MAX_NOTE);
   if (!agent || !content) return res.status(400).json({ error: "Agent nomi va xotira matni kerak." });
