@@ -23,7 +23,7 @@ async function waitForServer() {
 
 test("API smoke tests", async (t) => {
   server = spawn(process.execPath, ["server.js"], {
-    env: { ...process.env, PORT: String(port), FRONTEND_ORIGIN: "https://ulugbek4801741.github.io", ADMIN_ACCESS_CODE: "ci-test-admin-code", ADMIN_SESSION_SECRET: "ci-test-session-secret-long-enough" },
+    env: { ...process.env, PORT: String(port), FRONTEND_ORIGIN: "https://ulugbek4801741.github.io", ADMIN_ACCESS_CODE: "ci-test-admin-code", ADMIN_SESSION_SECRET: "ci-test-session-secret-long-enough", LAB_ADMIN_TOKEN: "ci-test-lab-admin-token-long-enough-32chars" },
     stdio: "ignore"
   });
 
@@ -42,7 +42,7 @@ test("API smoke tests", async (t) => {
     await t.test("open-knowledge learning rejects empty topics without an API key", async () => {
       const response = await fetch(`${baseUrl}/api/lab/learn`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer ci-test-lab-admin-token-long-enough-32chars" },
         body: JSON.stringify({ topic: "   " })
       });
       assert.equal(response.status, 400);
@@ -52,7 +52,7 @@ test("API smoke tests", async (t) => {
     await t.test("knowledge submissions are marked pending review, not human reviewed", async () => {
       const response = await fetch(`${baseUrl}/api/lab/knowledge`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer ci-test-lab-admin-token-long-enough-32chars" },
         body: JSON.stringify({
           title: "CI test knowledge entry",
           content: "This is test-only content; it has not been independently verified.",
@@ -62,6 +62,18 @@ test("API smoke tests", async (t) => {
       assert.equal(response.status, 201);
       const body = await response.json();
       assert.equal(body.entry.status, "pending-review");
+    });
+
+    await t.test("knowledge and agent memory endpoints deny anonymous access", async () => {
+      const knowledge = await fetch(`${baseUrl}/api/lab/knowledge`);
+      assert.equal(knowledge.status, 401);
+      const memory = await fetch(`${baseUrl}/api/lab/memory/Verifier%20Agent`);
+      assert.equal(memory.status, 401);
+      const write = await fetch(`${baseUrl}/api/lab/knowledge`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: "unauthorized", content: "should not save" })
+      });
+      assert.equal(write.status, 401);
     });
 
     await t.test("virtual lab rejects an empty research query", async () => {
@@ -196,13 +208,13 @@ test("API smoke tests", async (t) => {
       const title = "CI test knowledge " + Date.now();
       const create = await fetch(`${baseUrl}/api/lab/knowledge`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer ci-test-lab-admin-token-long-enough-32chars" },
         body: JSON.stringify({ title, content: "Test content", source: "https://example.com", agent: "Verifier Agent" })
       });
       const created = await create.json();
       assert.equal(create.status, 201);
       assert.equal(created.entry.title, title);
-      const listResponse = await fetch(`${baseUrl}/api/lab/knowledge`);
+      const listResponse = await fetch(`${baseUrl}/api/lab/knowledge`, { headers: { "Authorization": "Bearer ci-test-lab-admin-token-long-enough-32chars" } });
       const list = await listResponse.json();
       assert.ok(list.entries.some((entry) => entry.title === title));
     });
@@ -211,11 +223,11 @@ test("API smoke tests", async (t) => {
       const content = "CI test memory " + Date.now();
       const create = await fetch(`${baseUrl}/api/lab/memory/Verifier%20Agent`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer ci-test-lab-admin-token-long-enough-32chars" },
         body: JSON.stringify({ content })
       });
       assert.equal(create.status, 201);
-      const read = await fetch(`${baseUrl}/api/lab/memory/Verifier%20Agent`);
+      const read = await fetch(`${baseUrl}/api/lab/memory/Verifier%20Agent`, { headers: { "Authorization": "Bearer ci-test-lab-admin-token-long-enough-32chars" } });
       const body = await read.json();
       assert.ok(body.memory.some((item) => item.content === content));
     });
