@@ -49,6 +49,14 @@ app.use("/api/", rateLimit({
   standardHeaders: "draft-8",
   legacyHeaders: false
 }));
+const chatRateLimit = rateLimit({
+  windowMs: 60 * 1000, limit: 8, standardHeaders: "draft-8", legacyHeaders: false,
+  message: { error: "Chat so‘rovlari vaqtinchalik chegaraga yetdi. Bir daqiqadan keyin qayta urinib ko‘ring." }
+});
+const plannerRateLimit = rateLimit({
+  windowMs: 60 * 1000, limit: 10, standardHeaders: "draft-8", legacyHeaders: false,
+  message: { error: "Reja so‘rovlari vaqtinchalik chegaraga yetdi. Bir daqiqadan keyin qayta urinib ko‘ring." }
+});
 
 
 const ADMIN_GOOGLE_EMAIL = (process.env.ADMIN_GOOGLE_EMAIL || "").trim().toLowerCase();
@@ -293,7 +301,7 @@ app.get("/api/modules", (_req, res) => {
   res.json({ ok: true, product: "ULUGBEK AI", note: "planned modullar hali ishlaydigan integratsiya emas.", modules: capabilityCatalog.listModules() });
 });
 
-app.post("/api/agent/plan", async (req, res) => {
+app.post("/api/agent/plan", plannerRateLimit, async (req, res) => {
   const task = typeof req.body?.task === "string" ? req.body.task.trim() : "";
   if (!task) return res.status(400).json({ error: "Vazifa matni bo‘sh bo‘lmasligi kerak." });
   if (task.length > MAX_TASK_LENGTH) return res.status(413).json({ error: "Vazifa 4000 belgidan oshmasligi kerak." });
@@ -344,7 +352,7 @@ app.post("/api/agent/plan", async (req, res) => {
   }
 });
 
-app.post("/api/chat", async (req, res) => {
+app.post("/api/chat", chatRateLimit, async (req, res) => {
   const message = typeof req.body?.message === "string" ? req.body.message.trim() : "";
   const suppliedSessionId = typeof req.body?.sessionId === "string" ? req.body.sessionId : "";
   const sessionId = /^[a-zA-Z0-9_-]{8,80}$/.test(suppliedSessionId) ? suppliedSessionId : crypto.randomUUID().replace(/-/g, "");
