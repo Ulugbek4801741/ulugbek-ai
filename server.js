@@ -369,7 +369,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   if (!inputSafety.allowed) return res.status(400).set("Cache-Control", "no-store").json({ error: inputSafety.message, safety: { blocked: true, category: inputSafety.reason } });
   const apiKey = process.env.OPENAI_API_KEY || "";
   const configuredBaseUrl = (process.env.OPENAI_BASE_URL || "").trim();
-  if (!apiKey && !configuredBaseUrl) {
+  if (!apiKey && (!configuredBaseUrl || /(^|\.)api\.openai\.com(\/|$)/i.test(configuredBaseUrl.replace(/^https?:\/\//i, "")))) {
     return res.json({
       reply: "ULUGBEK AI hozir demo rejimida. Chat Agent va mutaxassis agentlar haqiqiy ishlashi uchun hostingda OPENAI_API_KEY yoki mos OPENAI_BASE_URL hamda OPENAI_MODEL sozlanishi kerak.",
       mode: "demo",
