@@ -53,6 +53,8 @@ test("self-hosted OpenAI-compatible model works without an API key", async (t) =
     env: {
       ...process.env,
       PORT: String(appPort),
+      TASK_STORE_PATH: require("node:path").join(require("node:os").tmpdir(), `ulugbek-tasks-${appPort}.json`),
+      AGENT_MEMORY_PATH: require("node:path").join(require("node:os").tmpdir(), `ulugbek-memory-${appPort}.json`),
       OPENAI_BASE_URL: `http://127.0.0.1:${mockPort}/v1`,
       OPENAI_MODEL: "test-local-model",
       OPENAI_API_KEY: ""
