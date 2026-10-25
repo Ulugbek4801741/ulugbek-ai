@@ -1,6 +1,7 @@
 "use strict";
 
 const express = require("express");
+const rateLimit = require("express-rate-limit");
 const fs = require("node:fs/promises");
 const path = require("node:path");
 
@@ -11,6 +12,10 @@ const MEMORY_FILE = path.join(DATA_DIR, "agent-memory.json");
 const MAX_QUERY = 240;
 const MAX_NOTE = 5000;
 const MAX_ITEMS = 2000;
+const searchRateLimit = rateLimit({
+  windowMs: 60 * 1000, limit: 10, standardHeaders: "draft-8", legacyHeaders: false,
+  message: { error: "Internet qidiruvi uchun vaqtinchalik limitga yetdingiz. Bir daqiqadan keyin qayta urinib ko‘ring." }
+});
 const LAB_ADMIN_TOKEN = process.env.LAB_ADMIN_TOKEN || "";
 let queue = Promise.resolve();
 
@@ -109,7 +114,7 @@ router.get("/status", async (_req, res) => {
   }
 });
 
-router.post("/search", async (req, res) => {
+router.post("/search", searchRateLimit, async (req, res) => {
   const query = typeof req.body?.query === "string" ? req.body.query.trim() : "";
   if (!query) return res.status(400).json({ error: "Qidiruv so‘zi bo‘sh bo‘lmasin." });
   if (query.length > MAX_QUERY) return res.status(413).json({ error: "Qidiruv 240 belgidan oshmasin." });
