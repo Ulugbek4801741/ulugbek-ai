@@ -8,7 +8,8 @@ const SAFETY_RULES = [
   "Kod, fayl, tarmoq, hisob, qurilma yoki tashqi xizmatga ta'sir qiladigan amalni faqat alohida tekshirilgan ruxsatli adapter va tegishli inson tasdig'i mavjud bo'lsa bajarish mumkin. Ushbu MVP'da haqiqiy tashqi amalni bajarilgan deb da'vo qilma.",
   "Maxfiy kalit, parol, token yoki boshqa foydalanuvchining shaxsiy ma'lumotini so'rama yoki oshkor qilma. Noaniqlik bo'lsa, xavfsizroq yo'lni tanla va cheklovni ayt."
 ].join("\\n");
-\nfunction chooseSpecialists(message) {
+
+function chooseSpecialists(message) {
   const text = String(message || "").toLocaleLowerCase("uz");
   const selected = [];
   const add = (id) => { if (!selected.includes(id) && selected.length < 3) selected.push(id); };
@@ -38,7 +39,7 @@ async function runChat({ message, sessionId, config, requestModel, signal }) {
   const coordinator = registry.getAgent("chat-coordinator");
   const coordinatorMemory = await memoryStore.getMemory(coordinator.id, session);
   const route = await requestModel(config, [
-    { role: "system", content: coordinator.systemPrompt + "\nVazifani aniqlab, mos mutaxassis agentlar bilan maslahatlash. Foydalanuvchiga yakuniy javobni faqat mutaxassislar natijasini ko‘rib chiqqach ber. Hozirgi so‘rov uchun kerakli mutaxassislar: " + chooseSpecialists(message).join(", ") },
+    { role: "system", content: coordinator.systemPrompt + "\n" + SAFETY_RULES + "\nVazifani aniqlab, mos mutaxassis agentlar bilan maslahatlash. Foydalanuvchiga yakuniy javobni faqat mutaxassislar natijasini ko‘rib chiqqach ber. Hozirgi so‘rov uchun kerakli mutaxassislar: " + chooseSpecialists(message).join(", ") },
     ...memoryMessages(coordinatorMemory),
     { role: "user", content: "Foydalanuvchi so‘rovi: " + message + "\nFaqat qisqa ichki yo‘nalish ko‘rsatmasini ber; foydalanuvchiga yakuniy javob emas." }
   ], signal);
@@ -48,7 +49,7 @@ async function runChat({ message, sessionId, config, requestModel, signal }) {
     const agent = registry.getAgent(id);
     const prior = await memoryStore.getMemory(id, session);
     const answer = await requestModel(config, [
-      { role: "system", content: agent.systemPrompt + "\nBu chatdagi o‘z oldingi xotirangdan foydalan. Aniq, amaliy va qisqa javob ber. Haqiqiy kodni o‘zgartirdim yoki sinadim deb aytma." },
+      { role: "system", content: agent.systemPrompt + "\n" + SAFETY_RULES + "\nBu chatdagi o‘z oldingi xotirangdan foydalan. Aniq, amaliy va qisqa javob ber. Haqiqiy kodni o‘zgartirdim yoki sinadim deb aytma." },
       ...memoryMessages(prior),
       { role: "user", content: "Foydalanuvchi vazifasi: " + message + "\nChat koordinatori yo‘nalishi: " + route.slice(0, 1500) + "\nFaqat o‘z mutaxassisliging bo‘yicha yechim, xavf va tekshirish mezonini ber." }
     ], signal);
@@ -56,7 +57,7 @@ async function runChat({ message, sessionId, config, requestModel, signal }) {
     await memoryStore.remember(id, session, message, answer);
   }
   const final = await requestModel(config, [
-    { role: "system", content: coordinator.systemPrompt + "\nSen yagona foydalanuvchi bilan gaplashadigan Chat Agentisan. Mutaxassislar javoblarini birlashtir, takrorlarni olib tashla, o‘zbek tilida sodda va aniq yakuniy javob ber. Bajarilmagan ish yoki testni bajarildi deb aytma." },
+    { role: "system", content: coordinator.systemPrompt + "\n" + SAFETY_RULES + "\nSen yagona foydalanuvchi bilan gaplashadigan Chat Agentisan. Mutaxassislar javoblarini birlashtir, takrorlarni olib tashla, o‘zbek tilida sodda va aniq yakuniy javob ber. Bajarilmagan ish yoki testni bajarildi deb aytma." },
     ...memoryMessages(coordinatorMemory),
     { role: "user", content: "Foydalanuvchi so‘rovi: " + message + "\n\nMutaxassislar natijalari:\n" + outputs.map(x => "## " + x.name + "\n" + x.answer).join("\n\n") }
   ], signal);
