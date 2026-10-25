@@ -48,3 +48,10 @@ Chat endpointi hozir autentifikatsiyasiz demo rejimda ham javob beradi. Ishlab c
 
 ## Halollik eslatmasi
 Ushbu hujjat kodni statik ko‘rib chiqishdan topilgan xavflarni qayd etadi. U barcha zaifliklar topildi degani emas. Topilgan har bir muammo avtomatik ravishda tuzatildi deb hisoblanmaydi; har bir tuzatish uchun alohida commit, test va deployment dalili talab etiladi.
+
+## 2026-10-26 qo‘shimcha tekshiruv
+- `modules/input-safety.js` ga ruxsatsiz yashirin kuzatuv va shaxsiy/mijoz ma’lumotlarini noqonuniy chiqarib olishga oid dastlabki filtrlash qoidalari qo‘shildi.
+- `test/input-safety.test.js` ga ushbu holatlar uchun regressiya testlari qo‘shildi.
+- **Muhim ochiq xavf:** `/api/chat` sessiya identifikatorini mijozdan oladi. Haqiqiy foydalanuvchi autentifikatsiyasi va server tomonidan boshqariladigan sessiya izolyatsiyasi bo‘lmagani sababli, hozirgi xotirani maxfiy ko‘p foydalanuvchili ishlab chiqarish muhiti sifatida ishlatmaslik kerak.
+- `OPENAI_BASE_URL` OpenAI-compatible self-hosted endpoint (masalan, Ollama) uchun ishlatilishi mumkin. Model serverda o‘rnatilmagan yoki endpoint sozlanmagan bo‘lsa, haqiqiy model javobi mavjud emas.
+- Input regex filtri mutlaq himoya emas; mustaqil pentest, sessiya/ma’lumot izolyatsiyasi, SSRF, prompt injection, fayl yuklash va production konfiguratsiyasi testlari shart.
