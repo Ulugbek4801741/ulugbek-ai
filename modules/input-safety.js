@@ -2,10 +2,11 @@
 
 // Lightweight first-line abuse filter. This is not a substitute for a full security review.
 const BLOCK_PATTERNS = [
-  { id: "credential-theft", pattern: /(?:steal|dump|harvest|exfiltrat).{0,45}(?:password|credential|session.?cookie|token)|(?:parol|akkaunt|cookie).{0,45}(?:o.g.irla|o.g.irla|o.girlash|o.girlab|o.g.irlash|o.g.irlab|o.g.irlash|o.g.irlash)/i },
-  { id: "malware-deployment", pattern: /(?:ransomware|keylogger|trojan|spyware).{0,60}(?:create|build|deploy|hide|evade|spread|yarat|yoz|tarqat|yashir|chetlab)|(?:create|build|deploy|write|make|yarat|yoz).{0,50}(?:ransomware|keylogger|trojan|spyware)/i },
-  { id: "unauthorized-intrusion", pattern: /(?:hack|break into|bypass login|exploit).{0,60}(?:someone else|without permission|unauthorized|boshqa odam|ruxsatsiz|begona tizim)|(?:ruxsatsiz|begona akkaunt|boshqa odamning).{0,60}(?:kir|buz|hujum|parol)/i },
-  { id: "service-disruption", pattern: /(?:ddos|denial.of.service).{0,50}(?:attack|target|hujum|serverni ishdan)|(?:botnet).{0,50}(?:attack|flood|hujum)/i }
+  { id: "credential-theft", pattern: /(?:steal|dump|harvest|exfiltrat|phish|o.g.irla|o.g.irlash|o.g.irlab).{0,70}(?:password|parol|credential|login|akkaunt|session.?cookie|token|cookie)|(?:password|parol|credential|login|akkaunt|session.?cookie|token|cookie).{0,70}(?:steal|dump|harvest|exfiltrat|phish|o.g.irla|o.g.irlash|o.g.irlab)/i },
+  { id: "malware-deployment", pattern: /(?:ransomware|keylogger|trojan|spyware|malware|zararli dastur|virus).{0,70}(?:create|build|deploy|hide|evade|spread|yarat|yoz|tarqat|yashir|chetlab|bypass)|(?:create|build|deploy|write|make|yarat|yoz|tarqat).{0,60}(?:ransomware|keylogger|trojan|spyware|malware|zararli dastur|virus)/i },
+  { id: "unauthorized-intrusion", pattern: /(?:hack|break into|bypass login|exploit|buzib kir|ruxsatsiz kir|himoyani chetlab).{0,80}(?:someone else|without permission|unauthorized|boshqa odam|ruxsatsiz|begona|akkaunt|tizim|server)|(?:ruxsatsiz|begona akkaunt|boshqa odamning|boshqa birovning).{0,80}(?:kir|buz|hujum|parol|akkaunt|tizim)/i },
+  { id: "service-disruption", pattern: /(?:ddos|denial.of.service|botnet|server flood).{0,70}(?:attack|target|hujum|serverni ishdan|flood|down)|(?:attack|hujum|ishdan chiqar).{0,60}(?:ddos|botnet|server)/i },
+  { id: "destructive-actions", pattern: /(?:delete|wipe|encrypt|destroy|o.chir|yo.q qil|shifrlab).{0,60}(?:logs?|backup|files?|ma.lumot|database|fayl|zaxira|server)|(?:logs?|backup|files?|database|fayl|zaxira).{0,60}(?:delete|wipe|destroy|o.chir|yo.q qil)/i }
 ];
 function inspectUserMessage(message) {
   if (typeof message !== "string") return { allowed: false, reason: "invalid_input", message: "Xabar matn bo‘lishi kerak." };
