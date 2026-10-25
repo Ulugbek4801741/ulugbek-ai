@@ -206,10 +206,12 @@ app.post("/api/admin/tasks/:id/review", requireAdmin, (req, res) => {
 });
 
 app.get("/api/health", (_req, res) => {
+  res.set("Cache-Control", "no-store");
   res.json({ ok: true, app: "ULUGBEK AI", version: "0.3.0", aiConfigured: Boolean(process.env.OPENAI_API_KEY || (process.env.OPENAI_BASE_URL && process.env.OPENAI_BASE_URL !== "https://api.openai.com/v1")) });
 });
 
 app.get("/api/diagnostics", (_req, res) => {
+  res.set("Cache-Control", "no-store");
   res.json({
     ok: true,
     app: "ULUGBEK AI",
@@ -344,7 +346,9 @@ app.post("/api/agent/plan", async (req, res) => {
 
 app.post("/api/chat", async (req, res) => {
   const message = typeof req.body?.message === "string" ? req.body.message.trim() : "";
-  const sessionId = typeof req.body?.sessionId === "string" ? req.body.sessionId : "default-session";
+  const suppliedSessionId = typeof req.body?.sessionId === "string" ? req.body.sessionId : "";
+  const sessionId = /^[a-zA-Z0-9_-]{8,80}$/.test(suppliedSessionId) ? suppliedSessionId : crypto.randomUUID().replace(/-/g, "");
+  res.set("Cache-Control", "no-store");
   if (!message) return res.status(400).json({ error: "Xabar bo‘sh bo‘lmasligi kerak." });
   if (message.length > MAX_TASK_LENGTH) return res.status(413).json({ error: "Xabar 4000 belgidan oshmasligi kerak." });
   const apiKey = process.env.OPENAI_API_KEY || "";
