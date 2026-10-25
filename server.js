@@ -269,6 +269,12 @@ function createPlan(task) {
 
 const capabilityCatalog = require("./modules/catalog");
 const workflowGate = require("./modules/workflow-gate");
+const securityPolicy = require("./modules/security-policy");
+
+app.get("/api/security/policy", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, product: "ULUGBEK AI", policy: securityPolicy.getSecurityPolicy() });
+});
 
 app.get("/api/workflows/policy", (_req, res) => {
   res.set("Cache-Control", "no-store");
