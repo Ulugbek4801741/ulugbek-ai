@@ -27,6 +27,22 @@ test("session can only be accessed by its owner", () => {
   assert.equal(policy.canAccessSession(null, "user_123456"), false);
 });
 
+test("users can only start or stop their own session when admin enables the service", () => {
+  const session = { ownerId: "user_123456", state: "stopped" };
+  assert.equal(policy.canUserControlSession({ session, authenticatedUserId: "user_123456", action: "start", adminEnabled: true }), true);
+  assert.equal(policy.canUserControlSession({ session: { ...session, state: "running" }, authenticatedUserId: "user_123456", action: "stop", adminEnabled: true }), true);
+  assert.equal(policy.canUserControlSession({ session, authenticatedUserId: "user_654321", action: "start", adminEnabled: true }), false);
+  assert.equal(policy.canUserControlSession({ session, authenticatedUserId: "user_123456", action: "start", adminEnabled: false }), false);
+  assert.equal(policy.canUserControlSession({ session, authenticatedUserId: "user_123456", action: "delete", adminEnabled: true }), false);
+  assert.equal(policy.canUserControlSession({ session: { ...session, state: "running" }, authenticatedUserId: "user_123456", action: "start", adminEnabled: true }), false);
+});
+
+test("only admins can perform administrative actions", () => {
+  assert.equal(policy.canAdminManageSession({ isAdmin: true, action: "set-quota" }), true);
+  assert.equal(policy.canAdminManageSession({ isAdmin: false, action: "set-quota" }), false);
+  assert.equal(policy.canAdminManageSession({ isAdmin: true, action: "delete-database" }), false);
+});
+
 test("only known lifecycle states are accepted", () => {
   for (const state of ["stopped", "starting", "running", "stopping", "error"]) {
     assert.equal(policy.validateSessionState(state), true);
