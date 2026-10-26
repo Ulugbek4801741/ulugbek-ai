@@ -43,3 +43,11 @@ $("builder-run").onclick=async()=>{const task=$("builder-task").value.trim(),out
 
 $("integrations-open").onclick=async()=>{const panel=$("integrations-panel"),list=$("integration-list");panel.hidden=!panel.hidden;if(panel.hidden)return;list.textContent="Modullar tekshirilmoqda…";try{const response=await fetch(api("api/modules"),{cache:"no-store"});const data=await response.json();if(!response.ok)throw Error(data.error||"Server xatosi");list.replaceChildren();const items=Array.isArray(data.modules)?data.modules:[];if(!items.length){list.textContent="Serverda modul ro‘yxati yo‘q.";return}items.forEach(m=>{const item=el("div","integration-item");item.appendChild(el("strong","",m.name||m.title||m.id||"Modul"));item.appendChild(el("span","",m.description||m.status||"Holat haqida qo‘shimcha ma’lumot yo‘q"));list.appendChild(item)});if(data.note)list.appendChild(el("p","",data.note));}catch(err){list.textContent="Integratsiya katalogi olinmadi: "+(err.message||"serverga ulanib bo‘lmadi")}};
 })();
+
+/* Startup intro is decorative and never blocks the app longer than 3 seconds. */
+(function startIntro(){
+  const screen=document.getElementById("intro-screen");
+  if(!screen)return;
+  const reduce=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  window.setTimeout(()=>{screen.classList.add("is-leaving");window.setTimeout(()=>screen.remove(),500)},reduce?900:3000);
+})();
