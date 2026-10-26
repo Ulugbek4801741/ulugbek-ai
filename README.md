@@ -43,6 +43,10 @@ Set these on the **server hosting environment**, not in browser JavaScript or Gi
 - `OPENAI_API_KEY` — private API key.
 - `OPENAI_BASE_URL` — optional, defaults to `https://api.openai.com/v1`.
 - `OPENAI_MODEL` — optional, defaults to `gpt-4o-mini`.
+- `GEMINI_API_KEY` — optional Gemini key; when set, chat uses Gemini instead of the OpenAI-compatible provider.
+- `GEMINI_MODEL` — optional, defaults to `gemini-flash-latest`.
+
+For Gemini, create a key at https://aistudio.google.com/apikey and save it only in the backend host's secret/environment settings as `GEMINI_API_KEY`. Never commit it to GitHub, put it in browser JavaScript, or paste it into chats. If a key has already been shared publicly, revoke it and create a replacement. Provider availability, quotas, and billing depend on the Google account and current terms.
 
 Then restart the server. The chat and planner use the configured OpenAI-compatible `/chat/completions` API. API usage may cost money depending on provider and model. Never commit a key to this repository.
 
