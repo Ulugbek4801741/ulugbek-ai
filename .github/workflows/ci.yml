@@ -27,5 +27,8 @@ jobs:
           node-version: ${{ matrix.node-version }}
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: Check every JavaScript file syntax
+        run: |
+          find . -path './node_modules' -prune -o -path './.git' -prune -o -name '*.js' -type f -print0 | xargs -0 -n1 node --check
       - name: Run automated tests
         run: npm test
