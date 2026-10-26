@@ -88,8 +88,7 @@ function verifyAdminSession(token) {
   } catch (_) { return false; }
 }
 function requireAdmin(req, res, next) {
-  const cookie = (req.headers.cookie || "").split(";").map(x => x.trim()).find(x => x.startsWith("ulugbek_admin="));
-  const token = cookie ? decodeURIComponent(cookie.slice("ulugbek_admin=".length)) : "";
+  const token = readCookie(req, "ulugbek_admin");
   if (!verifyAdminSession(token)) return res.status(401).json({ error: "Administrator sifatida qayta kiring." });
   next();
 }
@@ -145,15 +144,15 @@ app.get("/api/auth/google/callback", async (req, res) => {
   } catch (_) { return res.status(502).send("Google kirish serverida xatolik yuz berdi. Birozdan so‘ng qayta urinib ko‘ring."); }
 });
 app.get("/api/admin/status", (req, res) => {
-  const cookie = (req.headers.cookie || "").split(";").map(x => x.trim()).find(x => x.startsWith("ulugbek_admin="));
-  const token = cookie ? decodeURIComponent(cookie.slice("ulugbek_admin=".length)) : "";
+  const token = readCookie(req, "ulugbek_admin");
+  res.set("Cache-Control", "no-store");
   res.json({ ok: true, authenticated: verifyAdminSession(token), configured: googleOAuthReady() });
 });
 app.post("/api/admin/logout", (req, res) => {
-  const cookie = (req.headers.cookie || "").split(";").map(x => x.trim()).find(x => x.startsWith("ulugbek_admin="));
-  const token = cookie ? decodeURIComponent(cookie.slice("ulugbek_admin=".length)) : "";
+  const token = readCookie(req, "ulugbek_admin");
   try { const payload = JSON.parse(Buffer.from(token.split(".")[0] || "", "base64url").toString("utf8")); if (payload.jti) revokedAdminSessions.add(payload.jti); } catch (_) {}
   res.setHeader("Set-Cookie", "ulugbek_admin=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0");
+  res.set("Cache-Control", "no-store");
   res.json({ ok: true });
 });
 app.get("/api/admin/overview", requireAdmin, (_req, res) => {

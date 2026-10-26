@@ -25,35 +25,9 @@ jobs:
           node-version: "22"
       - name: Install dependencies
         run: npm install --no-audit --no-fund
-      - name: Check JavaScript syntax
+      - name: Check every JavaScript file syntax
         run: |
-          node --check server.js
-          node --check modules/catalog.js
-          node --check modules/workflow-gate.js
-          node --check test/workflow-gate.test.js
-          node --check agent-runtime.js
-          node --check agents/agent-contract.js
-          node --check agents/registry.js
-          node --check agents/memory-store.js
-          node --check agents/chat-dispatcher.js
-          node --check agents/chat-coordinator.js
-          node --check agents/core-architect.js
-          node --check agents/research-agent.js
-          node --check agents/software-builder-agent.js
-          node --check agents/frontend-agent.js
-          node --check agents/backend-agent.js
-          node --check agents/qa-agent.js
-          node --check agents/security-agent.js
-          node --check agents/devops-agent.js
-          node --check agents/product-growth-agent.js
-          node --check test/agent-registry.test.js
-          node --check test/agent-memory-dispatcher.test.js
-          node --check test/agent-runtime.test.js
-          node --check public/config.js
-          node --check public/app.js
-          node --check public/admin.js
-          node --check public/voice.js
-          node --check public/lab.js
+          find . -path './node_modules' -prune -o -path './.git' -prune -o -name '*.js' -type f -print0 | xargs -0 -n1 node --check
       - name: Run API smoke tests
         run: npm test
       - name: Run specialist agent registry and memory tests
