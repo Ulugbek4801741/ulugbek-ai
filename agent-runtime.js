@@ -86,6 +86,7 @@ async function requestModel(config, messages, signal) {
   if (!endpointCheck.allowed) throw new Error("AI endpoint blocked by outbound allowlist: " + endpointCheck.reason);
   const response = await fetch(endpointCheck.url + "/chat/completions", {
     method: "POST",
+    redirect: "error",
     headers: { ...(config.key ? { Authorization: "Bearer " + config.key } : {}), "Content-Type": "application/json" },
     signal, body: JSON.stringify({ model: config.model, temperature: 0.2, messages })
   });
