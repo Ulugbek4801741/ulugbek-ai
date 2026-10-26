@@ -26,7 +26,47 @@ async function loadOverview() {
   $("details").textContent = JSON.stringify(data, null, 2);
 }
 async function loadSafety() {
-  const data = await request("/api/security/policy");
+  const [policyData, runtimeData, eventData] = await Promise.all([
+    request("/api/security/policy"),
+    request("/api/admin/safety/status"),
+    request("/api/admin/safety/events?limit=50")
+  ]);
+  const runtime = runtimeData.shield || {};
+  $("safety-runtime").replaceChildren(
+    metric("Qayd etilgan hodisalar (xotirada)", runtime.eventCount ?? 0),
+    metric("Karantindagi sessiyalar", runtime.quarantinedSessions ?? 0),
+    metric("Shubhali so‘rov chegarasi", runtime.suspiciousRequestThreshold ?? 3),
+    metric("Kuzatuv oynasi", (runtime.windowMinutes ?? 10) + " daqiqa")
+  );
+  const quarantineList = $("safety-quarantines");
+  quarantineList.replaceChildren();
+  const quarantines = runtimeData.quarantines || [];
+  if (!quarantines.length) quarantineList.textContent = "Faol karantin yo‘q.";
+  for (const item of quarantines) {
+    const card = document.createElement("article"); card.className = "task-card";
+    addText(card, "strong", "Sessiya: " + item.sessionHash);
+    addText(card, "p", "Vaqt: " + item.at + " · Sabab: " + (item.reason || "aniqlanmagan"));
+    const release = document.createElement("button"); release.className = "secondary"; release.textContent = "Karantinni bekor qilish";
+    release.addEventListener("click", async () => {
+      const reason = window.prompt("Tekshiruv sababi (majburiy emas):", "admin_review") || "admin_review";
+      release.disabled = true;
+      try { await request("/api/admin/safety/quarantines/" + encodeURIComponent(item.sessionHash) + "/release", { method: "POST", body: JSON.stringify({ reason }) }); await loadSafety(); }
+      catch (error) { $("safety-summary").textContent = error.message; release.disabled = false; }
+    });
+    card.append(release); quarantineList.append(card);
+  }
+  const eventList = $("safety-events");
+  eventList.replaceChildren();
+  const events = eventData.events || [];
+  if (!events.length) eventList.textContent = "Hozircha xavfsizlik hodisasi qayd etilmagan.";
+  for (const event of events) {
+    const card = document.createElement("article"); card.className = "task-card";
+    addText(card, "strong", (event.severity || "info").toUpperCase() + " · " + (event.type || "event"));
+    addText(card, "p", event.at + " · " + (event.reason || "unspecified"));
+    addText(card, "small", "Sessiya: " + (event.sessionHash || "—") + " · IP izi: " + (event.ipHash || "—") + " · Matn uzunligi: " + (event.messageLength ?? 0));
+    eventList.append(card);
+  }
+  const data = policyData;
   const policy = data.policy || {};
   const summary = $("safety-summary");
   summary.replaceChildren();
