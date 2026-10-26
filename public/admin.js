@@ -25,6 +25,24 @@ async function loadOverview() {
   );
   $("details").textContent = JSON.stringify(data, null, 2);
 }
+async function loadSafety() {
+  const data = await request("/api/security/policy");
+  const policy = data.policy || {};
+  const summary = $("safety-summary");
+  summary.replaceChildren();
+  addText(summary, "strong", "Siyosat v" + (policy.version || "noma’lum"));
+  addText(summary, "p", "Bajarish holati: " + (policy.executionEnabled ? "yoqilgan" : "tashqi bajarish o‘chiq"));
+  addText(summary, "p", policy.note || "Izoh mavjud emas.");
+  const list = $("safety-rules");
+  list.replaceChildren();
+  for (const rule of (Array.isArray(policy.rules) ? policy.rules : [])) {
+    const card = document.createElement("article"); card.className = "task-card";
+    addText(card, "strong", (rule.severity || "info").toUpperCase() + " · " + (rule.id || "qoida"));
+    addText(card, "p", rule.rule || "");
+    list.append(card);
+  }
+  if (!list.childElementCount) list.textContent = "Qoidalar ro‘yxati mavjud emas.";
+}
 function addText(parent, tag, value, cls) {
   const node = document.createElement(tag); node.textContent = value || "";
   if (cls) node.className = cls;
@@ -74,7 +92,7 @@ async function loadTasks() {
 async function checkSession() {
   try {
     const status = await request("/api/admin/status");
-    if (status.authenticated) { showDashboard(true); await Promise.all([loadOverview(), loadTasks()]); }
+    if (status.authenticated) { showDashboard(true); await Promise.all([loadOverview(), loadTasks(), loadSafety()]); }
     else showDashboard(false);
   } catch (_) { showDashboard(false); $("status").textContent = "Backend server talab qilinadi"; }
 }
@@ -92,5 +110,6 @@ $("task-form").addEventListener("submit", async (event) => {
   } catch (error) { $("task-message").textContent = error.message; }
   finally { button.disabled = false; }
 });
+$("refresh-safety").addEventListener("click", async () => { try { await loadSafety(); } catch (error) { $("safety-summary").textContent = error.message; } });
 checkSession();
 setInterval(() => { if (!$("dashboard").hidden) { loadTasks().catch(() => {}); loadOverview().catch(() => {}); } }, 10000);
