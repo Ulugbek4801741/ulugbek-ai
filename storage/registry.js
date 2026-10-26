@@ -3,81 +3,50 @@
 const { createStorageProvider } = require("./providers");
 
 function getConfiguredProviders(env = process.env) {
-  const providers = [];
   const candidates = [
-    {
-      name: "cloudflare-r2",
-      endpoint: env.R2_ENDPOINT,
-      region: env.R2_REGION || "auto",
-      bucket: env.R2_BUCKET,
-      accessKeyId: env.R2_ACCESS_KEY_ID,
-      secretAccessKey: env.R2_SECRET_ACCESS_KEY,
-      forcePathStyle: false,
-    },
-    {
-      name: "amazon-s3",
-      endpoint: env.S3_ENDPOINT,
-      region: env.S3_REGION,
-      bucket: env.S3_BUCKET,
-      accessKeyId: env.S3_ACCESS_KEY_ID,
-      secretAccessKey: env.S3_SECRET_ACCESS_KEY,
-      forcePathStyle: false,
-    },
-    {
-      name: "backblaze-b2",
-      endpoint: env.B2_ENDPOINT,
-      region: env.B2_REGION,
-      bucket: env.B2_BUCKET,
-      accessKeyId: env.B2_ACCESS_KEY_ID,
-      secretAccessKey: env.B2_SECRET_ACCESS_KEY,
-      forcePathStyle: false,
-    },
-    {
-      name: "wasabi",
-      endpoint: env.WASABI_ENDPOINT,
-      region: env.WASABI_REGION,
-      bucket: env.WASABI_BUCKET,
-      accessKeyId: env.WASABI_ACCESS_KEY_ID,
-      secretAccessKey: env.WASABI_SECRET_ACCESS_KEY,
-      forcePathStyle: false,
-    },
-    {
-      name: "digitalocean-spaces",
-      endpoint: env.SPACES_ENDPOINT,
-      region: env.SPACES_REGION,
-      bucket: env.SPACES_BUCKET,
-      accessKeyId: env.SPACES_ACCESS_KEY_ID,
-      secretAccessKey: env.SPACES_SECRET_ACCESS_KEY,
-      forcePathStyle: false,
-    },
-    {
-      name: "minio",
-      endpoint: env.MINIO_ENDPOINT,
-      region: env.MINIO_REGION || "us-east-1",
-      bucket: env.MINIO_BUCKET,
-      accessKeyId: env.MINIO_ACCESS_KEY_ID,
-      secretAccessKey: env.MINIO_SECRET_ACCESS_KEY,
-      forcePathStyle: true,
-    },
+    { name: "cloudflare-r2", prefix: "R2", regionDefault: "auto" },
+    { name: "amazon-s3", prefix: "S3" },
+    { name: "backblaze-b2", prefix: "B2" },
+    { name: "wasabi", prefix: "WASABI" },
+    { name: "digitalocean-spaces", prefix: "SPACES" },
+    { name: "minio", prefix: "MINIO", regionDefault: "us-east-1", forcePathStyle: true },
+    { name: "tigris", prefix: "TIGRIS", regionDefault: "auto" },
+    { name: "hetzner-object-storage", prefix: "HETZNER" },
+    { name: "vultr-object-storage", prefix: "VULTR" },
+    { name: "akamai-object-storage", prefix: "AKAMAI" },
+    { name: "scaleway-object-storage", prefix: "SCALEWAY" },
+    { name: "storj", prefix: "STORJ" },
+    { name: "idrive-e2", prefix: "IDRIVE_E2" },
+    { name: "oracle-object-storage-s3", prefix: "ORACLE_S3" },
   ];
 
+  const providers = [];
   for (const item of candidates) {
-    const fields = [item.endpoint, item.bucket, item.accessKeyId, item.secretAccessKey];
-    if (fields.every(Boolean) && item.region) {
+    const read = (suffix) => env[item.prefix + "_" + suffix];
+    const endpoint = read("ENDPOINT");
+    const bucket = read("BUCKET");
+    const accessKeyId = read("ACCESS_KEY_ID");
+    const secretAccessKey = read("SECRET_ACCESS_KEY");
+    const region = read("REGION") || item.regionDefault;
+    if ([endpoint, bucket, accessKeyId, secretAccessKey, region].every(Boolean)) {
       providers.push(createStorageProvider({
-        ...item,
+        name: item.name,
+        endpoint,
+        bucket,
+        accessKeyId,
+        secretAccessKey,
+        region,
+        forcePathStyle: Boolean(item.forcePathStyle),
         serverSideEncryption: env.STORAGE_SERVER_SIDE_ENCRYPTION || undefined,
       }));
     }
   }
-
   return providers;
 }
 
 function createStorageRegistry(env = process.env) {
   const providers = getConfiguredProviders(env);
   const byName = new Map(providers.map((provider) => [provider.name, provider]));
-
   return Object.freeze({
     list() {
       return providers.map((provider) => ({ name: provider.name, ready: true }));
