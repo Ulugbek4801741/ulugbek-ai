@@ -176,6 +176,26 @@ app.get("/api/admin/overview", requireAdmin, (_req, res) => {
   });
 });
 
+app.get("/api/admin/safety/status", requireAdmin, (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, shield: globalSafetyShield.getStatus(), quarantines: globalSafetyShield.listQuarantines() });
+});
+app.get("/api/admin/safety/events", requireAdmin, (req, res) => {
+  res.set("Cache-Control", "no-store");
+  const limit = Number.parseInt(req.query.limit, 10);
+  res.json({ ok: true, events: globalSafetyShield.listEvents(Number.isFinite(limit) ? limit : 100) });
+});
+app.post("/api/admin/safety/quarantines/:hash/release", requireAdmin, (req, res) => {
+  try {
+    const result = globalSafetyShield.releaseQuarantine(req.params.hash, String(req.body?.reason || "admin_review").slice(0, 80));
+    globalSafetyShield.auditAdminAction("release_quarantine", req.params.hash);
+    res.set("Cache-Control", "no-store");
+    res.json({ ok: true, result });
+  } catch (error) {
+    res.status(error.status || 400).json({ error: error.message || "Karantin holati o‘zgartirilmadi." });
+  }
+});
+
 app.get("/api/admin/tasks", requireAdmin, (_req, res) => {
   res.set("Cache-Control", "no-store");
   res.json({ ok: true, tasks: agentRuntime.listTasks() });
@@ -270,6 +290,7 @@ function createPlan(task) {
 const capabilityCatalog = require("./modules/catalog");
 const workflowGate = require("./modules/workflow-gate");
 const securityPolicy = require("./modules/security-policy");
+const globalSafetyShield = require("./modules/global-safety-shield");
 
 app.get("/api/security/policy", (_req, res) => {
   res.set("Cache-Control", "no-store");
@@ -366,7 +387,13 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   if (!message) return res.status(400).json({ error: "Xabar bo‘sh bo‘lmasligi kerak." });
   if (message.length > MAX_TASK_LENGTH) return res.status(413).json({ error: "Xabar 4000 belgidan oshmasligi kerak." });
   const inputSafety = require("./modules/input-safety").inspectUserMessage(message);
-  if (!inputSafety.allowed) return res.status(400).set("Cache-Control", "no-store").json({ error: inputSafety.message, safety: { blocked: true, category: inputSafety.reason } });
+  const shieldDecision = globalSafetyShield.inspectChat({ message, sessionId, ip: req.ip, inputSafety });
+  if (!shieldDecision.allowed) {
+    return res.status(400).set("Cache-Control", "no-store").json({
+      error: shieldDecision.message || inputSafety.message,
+      safety: { blocked: true, category: shieldDecision.reason, quarantined: shieldDecision.quarantined === true }
+    });
+  }
   const apiKey = process.env.OPENAI_API_KEY || "";
   const configuredBaseUrl = (process.env.OPENAI_BASE_URL || "").trim();
   if (!apiKey && (!configuredBaseUrl || /(^|\.)api\.openai\.com(\/|$)/i.test(configuredBaseUrl.replace(/^https?:\/\//i, "")))) {
