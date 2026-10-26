@@ -45,8 +45,11 @@ Set these on the **server hosting environment**, not in browser JavaScript or Gi
 - `OPENAI_MODEL` — optional, defaults to `gpt-4o-mini`.
 - `GEMINI_API_KEY` — optional Gemini key; when set, chat uses Gemini instead of the OpenAI-compatible provider.
 - `GEMINI_MODEL` — optional, defaults to `gemini-flash-latest`.
+- `GEMINI_ALLOW_CHAT_CONTENT` — defaults to `false`; Gemini chat is blocked until the owner explicitly sets this to `true` after reviewing the privacy implications.
 
 For Gemini, create a key at https://aistudio.google.com/apikey and save it only in the backend host's secret/environment settings as `GEMINI_API_KEY`. Never commit it to GitHub, put it in browser JavaScript, or paste it into chats. If a key has already been shared publicly, revoke it and create a replacement. Provider availability, quotas, and billing depend on the Google account and current terms.
+
+Privacy mode for Gemini is deliberately single-turn: when enabled, only the current user message and a fixed system prompt are sent to Gemini. Local chat history, agent memories, coordinator routing output, and other agent responses are not sent. The current message is still sent to Google, so do not enable Gemini if no chat text may leave your server. This is data minimization, not a guarantee against every third-party disclosure; hosting, logs, browser, network, and account security still matter.
 
 Then restart the server. The chat and planner use the configured OpenAI-compatible `/chat/completions` API. API usage may cost money depending on provider and model. Never commit a key to this repository.
 
