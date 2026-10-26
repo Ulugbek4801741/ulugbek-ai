@@ -28,7 +28,7 @@ services:
       - key: GEMINI_MODEL
         value: gemini-flash-latest
       - key: GEMINI_ALLOW_CHAT_CONTENT
-        value: "false"
+        value: "true"
       - key: OPENAI_BASE_URL
         value: https://api.openai.com/v1
       - key: OPENAI_MODEL
