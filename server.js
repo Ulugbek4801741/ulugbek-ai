@@ -387,7 +387,8 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       receivedCharacters: message.length
     });
   }
-  const baseUrl = (configuredBaseUrl || "https://api.openai.com/v1").replace(/\\/$/, "");
+  const rawBaseUrl = configuredBaseUrl || "https://api.openai.com/v1";
+  const baseUrl = rawBaseUrl.endsWith("/") ? rawBaseUrl.slice(0, -1) : rawBaseUrl;
   const config = geminiApiKey
     ? { provider: "gemini", key: geminiApiKey, model: process.env.GEMINI_MODEL || "gemini-flash-latest" }
     : { provider: "openai-compatible", key: apiKey, url: baseUrl, model: process.env.OPENAI_MODEL || "gpt-4o-mini" };
