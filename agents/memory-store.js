@@ -10,7 +10,7 @@ let cache = null;
 let writeChain = Promise.resolve();
 
 function validSession(value) {
-  return typeof value === "string" && /^[a-zA-Z0-9_-]{8,80}$/.test(value) ? value : "default-session";
+  return typeof value === "string" && /^[a-zA-Z0-9_-]{8,80}$/.test(value) ? value : null;
 }
 async function load() {
   if (cache) return cache;
@@ -24,15 +24,18 @@ async function load() {
   return cache;
 }
 async function getMemory(agentId, sessionId) {
+  const session = validSession(sessionId);
+  if (!session) return [];
   const all = await load();
-  const key = validSession(sessionId) + ":" + String(agentId).replace(/[^a-z0-9_-]/gi, "").slice(0, 64);
+  const key = session + ":" + String(agentId).replace(/[^a-z0-9_-]/gi, "").slice(0, 64);
   const entry = all[key];
   if (!entry || !Array.isArray(entry.turns)) return [];
   return entry.turns.slice(-MAX_TURNS);
 }
 async function remember(agentId, sessionId, userText, assistantText) {
-  const all = await load();
   const session = validSession(sessionId);
+  if (!session) throw new TypeError("Valid session ID is required for memory storage.");
+  const all = await load();
   const agent = String(agentId).replace(/[^a-z0-9_-]/gi, "").slice(0, 64);
   const key = session + ":" + agent;
   const entry = all[key] || { agentId: agent, sessionId: session, updatedAt: null, turns: [] };
