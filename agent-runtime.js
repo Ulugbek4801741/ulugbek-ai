@@ -4,6 +4,7 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const agentRegistry = require("./agents/registry");
+const egressPolicy = require("./modules/egress-policy");
 
 const MAX_TASKS = 200;
 const MAX_PROMPT_LENGTH = 4000;
@@ -70,8 +71,9 @@ function addLog(task, message) {
 function modelConfig() {
   const key = process.env.OPENAI_API_KEY || "";
   const custom = (process.env.OPENAI_BASE_URL || "").trim();
-  const url = (custom || (key ? "https://api.openai.com/v1" : "")).replace(/\/$/, "");
-  return { key, url, model: process.env.OPENAI_MODEL || "gpt-4o-mini" };
+  const rawUrl = custom || (key ? "https://api.openai.com/v1" : "");
+  const checked = rawUrl ? egressPolicy.validateModelEndpoint(rawUrl) : { allowed: false, reason: "missing_endpoint" };
+  return { key, url: checked.allowed ? checked.url : "", endpointError: checked.reason, model: process.env.OPENAI_MODEL || "gpt-4o-mini" };
 }
 function systemPrompt(role) {
   const registered = agentRegistry.getAgent(role);
@@ -80,7 +82,9 @@ function systemPrompt(role) {
   return `Sen ULUGBEK AI loyihasidagi ${label}san. Faqat tahlil, reja, kod taklifi yoki tekshiruv natijasi tayyorla. O‘zbek tilida javob ber. Fayllarni o‘zgartirish, shell buyruqlarini bajarish, deploy qilish, pul sarflash yoki tashqi hisoblarda harakat qilish imkoning yo‘q. Bajarilmagan ishni bajarildi deb aytma. Kod taklifida fayl yo‘li, aniq o‘zgarish, xavf va sinov qadamlarini ko‘rsat. Inson ko‘rigi va testdan o‘tmaguncha o‘zgarish tasdiqlangan deb aytma.`;
 }
 async function requestModel(config, messages, signal) {
-  const response = await fetch(config.url + "/chat/completions", {
+  const endpointCheck = egressPolicy.validateModelEndpoint(config.url);
+  if (!endpointCheck.allowed) throw new Error("AI endpoint blocked by outbound allowlist: " + endpointCheck.reason);
+  const response = await fetch(endpointCheck.url + "/chat/completions", {
     method: "POST",
     headers: { ...(config.key ? { Authorization: "Bearer " + config.key } : {}), "Content-Type": "application/json" },
     signal, body: JSON.stringify({ model: config.model, temperature: 0.2, messages })
