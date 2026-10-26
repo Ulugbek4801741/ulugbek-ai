@@ -368,11 +368,18 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   const inputSafety = require("./modules/input-safety").inspectUserMessage(message);
   if (!inputSafety.allowed) return res.status(400).set("Cache-Control", "no-store").json({ error: inputSafety.message, safety: { blocked: true, category: inputSafety.reason } });
   const geminiApiKey = process.env.GEMINI_API_KEY || "";
+  const geminiChatConsent = process.env.GEMINI_ALLOW_CHAT_CONTENT === "true";
   const apiKey = process.env.OPENAI_API_KEY || "";
   const configuredBaseUrl = (process.env.OPENAI_BASE_URL || "").trim();
+  if (geminiApiKey && !geminiChatConsent) {
+    return res.status(403).set("Cache-Control", "no-store").json({
+      error: "Maxfiylik himoyasi: Gemini chatga ulanishi o‘chirib qo‘yilgan. Foydalanuvchi matnini Google Gemini’ga yuborishga ongli ravishda ruxsat berilmaguncha so‘rov yuborilmaydi.",
+      mode: "privacy-blocked"
+    });
+  }
   if (!geminiApiKey && !apiKey && (!configuredBaseUrl || /(^|\\.)api\\.openai\\.com(\\/|$)/i.test(configuredBaseUrl.replace(/^https?:\\/\\//i, "")))) {
     return res.json({
-      reply: "ULUGBEK AI hozir demo rejimida. Haqiqiy AI javoblari uchun serverda GEMINI_API_KEY yoki OPENAI_API_KEY / mos OPENAI_BASE_URL sozlanishi kerak.",
+      reply: "ULUGBEK AI hozir demo rejimida. Haqiqiy AI javoblari uchun serverda GEMINI_API_KEY va GEMINI_ALLOW_CHAT_CONTENT=true (Gemini'ga matn yuborishga rozilik), yoki OPENAI_API_KEY / mos OPENAI_BASE_URL sozlanishi kerak.",
       mode: "demo",
       agents: [],
       receivedCharacters: message.length
@@ -420,6 +427,15 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     return output.slice(0, 8000);
   };
   try {
+    if (config.provider === "gemini") {
+      // Privacy-minimized mode: send only this current message and a fixed system prompt.
+      // Do not send local conversation history, per-agent memories, routing output, or agent responses to Gemini.
+      const reply = await requestModel(config, [
+        { role: "system", content: "Sen ULUGBEK AI yordamchisisan. O‘zbek tilida sodda va xavfsiz javob ber. Maxfiy kalit yoki parol so‘rama. Tashqi amallarni bajarilgan deb da’vo qilma." },
+        { role: "user", content: message }
+      ], controller.signal);
+      return res.json({ reply, mode: "gemini-current-message-only", agents: [], privacy: "Only the current message and fixed system prompt are sent to Gemini; local chat history and agent memory are not sent." });
+    }
     const dispatcher = require("./agents/chat-dispatcher");
     const result = await dispatcher.runChat({ message, sessionId, config, requestModel, signal: controller.signal });
     return res.json({ ...result, receivedCharacters: message.length });
