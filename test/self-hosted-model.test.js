@@ -8,6 +8,7 @@ const mockPort = 32198;
 const appUrl = `http://127.0.0.1:${appPort}`;
 let appProcess;
 let mockServer;
+let appStderr = "";
 
 function waitFor(url, processRef) {
   const deadline = Date.now() + 10000;
@@ -59,11 +60,13 @@ test("self-hosted OpenAI-compatible model works without an API key", async (t) =
       OPENAI_MODEL: "test-local-model",
       OPENAI_API_KEY: ""
     },
-    stdio: "ignore"
+    stdio: ["ignore", "ignore", "pipe"]
   });
 
+  appProcess.stderr.on("data", chunk => { appStderr += chunk.toString(); });
+
   try {
-    await waitFor(`${appUrl}/api/health`, appProcess);
+    await waitFor(`${appUrl}/api/health`, appProcess).catch(error => { throw new Error(error.message + " stderr: " + appStderr); });
 
     await t.test("chat uses the configured local endpoint without Authorization", async () => {
       const response = await fetch(`${appUrl}/api/chat`, {
