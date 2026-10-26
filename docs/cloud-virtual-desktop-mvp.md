@@ -6,6 +6,14 @@ Provide each signed-in user a private remote desktop through the ULUGBEK AI web/
 ## Current status
 This branch adds a policy-only foundation and unit tests. It does **not** create cloud machines, connect a desktop stream, or establish authentication. Do not present the Windows desktop as available until an actual provider and session broker are configured.
 
+## Product rules confirmed
+- End users get one personal virtual desktop each.
+- The service is intended to be free at launch.
+- A signed-in user may only start and stop their own desktop, and only when the administrator has enabled the service for them.
+- The admin panel controls global enable/disable, per-user access, quotas, session limits, idle-stop policy, storage limits, status, and audited emergency stop.
+- Users cannot delete their VM or another user's data through the start/stop controls.
+- "Free" is a pricing choice, not zero infrastructure cost. Limit capacity until funding and real per-session costs are known.
+
 ## Safe implementation order
 1. Confirm the app's real authentication/session mechanism and use its server-verified user ID. Never accept owner IDs from request JSON.
 2. Add a database table for desktop sessions: owner ID, provider instance ID, lifecycle state, storage reference, timestamps, and quota counters. Enforce owner checks on every read/write.
