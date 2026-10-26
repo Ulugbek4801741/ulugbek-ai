@@ -339,7 +339,9 @@ app.post("/api/agent/plan", plannerRateLimit, async (req, res) => {
   const configuredBaseUrl = (process.env.OPENAI_BASE_URL || "").trim();
   if (!apiKey && !configuredBaseUrl) return res.json({ plan: fallback, mode: "rules", notice: "AI modeli ulanmagan; qoida asosidagi rejalashtirish ishlatildi." });
 
-  const baseUrl = (configuredBaseUrl || "https://api.openai.com/v1").replace(/\/$/, "");
+  const endpointCheck = egressPolicy.validateModelEndpoint(configuredBaseUrl || "https://api.openai.com/v1");
+  if (!endpointCheck.allowed) return res.json({ plan: fallback, mode: "rules", notice: "AI manzili xavfsizlik ruxsat ro‘yxatidan o‘tmadi; tashqi so‘rov bloklandi." });
+  const baseUrl = endpointCheck.url;
   const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 25000);
