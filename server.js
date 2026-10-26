@@ -348,6 +348,7 @@ app.post("/api/agent/plan", plannerRateLimit, async (req, res) => {
   try {
     const response = await fetch(baseUrl + "/chat/completions", {
       method: "POST",
+      redirect: "error",
       headers: { ...(apiKey ? { "Authorization": "Bearer " + apiKey } : {}), "Content-Type": "application/json" },
       signal: controller.signal,
       body: JSON.stringify({
@@ -416,6 +417,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   const requestModel = async (modelConfig, messages, signal) => {
     const response = await fetch(modelConfig.url + "/chat/completions", {
       method: "POST",
+      redirect: "error",
       headers: { ...(modelConfig.key ? { Authorization: "Bearer " + modelConfig.key } : {}), "Content-Type": "application/json" },
       signal,
       body: JSON.stringify({ model: modelConfig.model, temperature: 0.3, messages })
