@@ -287,6 +287,13 @@ function createPlan(task) {
   };
 }
 
+const appIntegrationPolicy = require("./modules/app-integration-policy");
+
+app.get("/api/integrations/app-stores", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json(appIntegrationPolicy.getIntegrationCatalog());
+});
+
 const capabilityCatalog = require("./modules/catalog");
 const egressPolicy = require("./modules/egress-policy");
 const workflowGate = require("./modules/workflow-gate");
