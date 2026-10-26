@@ -317,7 +317,8 @@ app.post("/api/agent/plan", plannerRateLimit, async (req, res) => {
   const configuredBaseUrl = (process.env.OPENAI_BASE_URL || "").trim();
   if (!apiKey && !configuredBaseUrl) return res.json({ plan: fallback, mode: "rules", notice: "AI modeli ulanmagan; qoida asosidagi rejalashtirish ishlatildi." });
 
-  const baseUrl = (configuredBaseUrl || "https://api.openai.com/v1").replace(/\/$/, "");
+  const rawBaseUrl = configuredBaseUrl || "https://api.openai.com/v1";
+  const baseUrl = rawBaseUrl.endsWith("/") ? rawBaseUrl.slice(0, -1) : rawBaseUrl;
   const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 25000);
@@ -377,7 +378,8 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       mode: "privacy-blocked"
     });
   }
-  if (!geminiApiKey && !apiKey && (!configuredBaseUrl || /(^|\\.)api\\.openai\\.com(\\/|$)/i.test(configuredBaseUrl.replace(/^https?:\\/\\//i, "")))) {
+  const providerHost = configuredBaseUrl.replace("https://", "").replace("http://", "").split("/")[0].toLowerCase();
+  if (!geminiApiKey && !apiKey && (!configuredBaseUrl || providerHost === "api.openai.com")) {
     return res.json({
       reply: "ULUGBEK AI hozir demo rejimida. Haqiqiy AI javoblari uchun serverda GEMINI_API_KEY va GEMINI_ALLOW_CHAT_CONTENT=true (Gemini'ga matn yuborishga rozilik), yoki OPENAI_API_KEY / mos OPENAI_BASE_URL sozlanishi kerak.",
       mode: "demo",
@@ -393,7 +395,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   const timeout = setTimeout(() => controller.abort(), 60000);
   const requestModel = async (modelConfig, messages, signal) => {
     if (modelConfig.provider === "gemini") {
-      const systemText = messages.filter(item => item.role === "system").map(item => item.content).join("\\n\\n");
+      const systemText = messages.filter(item => item.role === "system").map(item => item.content).join("\n\n");
       const contents = messages.filter(item => item.role !== "system").map(item => ({
         role: item.role === "assistant" ? "model" : "user",
         parts: [{ text: String(item.content || "") }]
