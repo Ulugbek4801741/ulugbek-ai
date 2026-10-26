@@ -177,34 +177,10 @@ function startWorker() {
   workerReady = initialize().then(() => undefined);
   return workerReady;
 }
-async function createTask({ prompt, role }) {
+async function createTask() {
   const error = new Error("Xavfsizlik rejimi yoqilgan: Chat Agentdan boshqa agentlar vaqtincha o‘chirilgan.");
   error.status = 503;
   throw error;
-  if (typeof prompt !== "string" || !prompt.trim()) {
-    const error = new Error("Vazifa matni bo‘sh bo‘lmasligi kerak."); error.status = 400; throw error;
-  }
-  if (prompt.trim().length > MAX_PROMPT_LENGTH) {
-    const error = new Error("Vazifa 4000 belgidan oshmasligi kerak."); error.status = 413; throw error;
-  }
-  if (!ROLES.has(role)) {
-    const error = new Error("Agent turi noto‘g‘ri tanlangan."); error.status = 400; throw error;
-  }
-  if (tasks.filter(item => ["queued", "running"].includes(item.status)).length >= 20) {
-    const error = new Error("Navbatda 20 ta faol vazifa bor. Keyinroq urinib ko‘ring."); error.status = 429; throw error;
-  }
-  const now = new Date().toISOString();
-  const task = {
-    id: crypto.randomUUID(), prompt: prompt.trim(), role, roleLabel: ROLE_LABELS[role],
-    status: "queued", createdAt: now, updatedAt: now, approvalStatus: "not_reviewed",
-    output: "", error: null, logs: [{ at: now, message: "Vazifa administrator tomonidan navbatga qo‘shildi." }], tests: null
-  };
-  tasks.push(task);
-  tasks = tasks.slice(-MAX_TASKS);
-  if (workerReady) await workerReady;
-  await persist();
-  queueMicrotask(pump);
-  return publicTask(task);
 }
 function listTasks() { return tasks.slice().reverse().map(publicTask); }
 function getTask(id) { const task = tasks.find(item => item.id === id); return task ? publicTask(task) : null; }
