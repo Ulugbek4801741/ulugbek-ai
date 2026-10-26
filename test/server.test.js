@@ -23,7 +23,7 @@ async function waitForServer() {
 
 test("API smoke tests", async (t) => {
   server = spawn(process.execPath, ["server.js"], {
-    env: { ...process.env, PORT: String(port), TASK_STORE_PATH: require("node:path").join(require("node:os").tmpdir(), `ulugbek-tasks-${port}.json`), AGENT_MEMORY_PATH: require("node:path").join(require("node:os").tmpdir(), `ulugbek-memory-${port}.json`), FRONTEND_ORIGIN: "https://ulugbek4801741.github.io", ADMIN_ACCESS_CODE: "ci-test-admin-code", ADMIN_SESSION_SECRET: "ci-test-session-secret-long-enough", LAB_ADMIN_TOKEN: "ci-test-lab-admin-token-long-enough-32chars" },
+    env: { ...process.env, OPENAI_API_KEY: "", OPENAI_BASE_URL: "", OPENAI_MODEL: "", PORT: String(port), TASK_STORE_PATH: require("node:path").join(require("node:os").tmpdir(), `ulugbek-tasks-${port}.json`), AGENT_MEMORY_PATH: require("node:path").join(require("node:os").tmpdir(), `ulugbek-memory-${port}.json`), FRONTEND_ORIGIN: "https://ulugbek4801741.github.io", ADMIN_ACCESS_CODE: "ci-test-admin-code", ADMIN_SESSION_SECRET: "ci-test-session-secret-long-enough", LAB_ADMIN_TOKEN: "ci-test-lab-admin-token-long-enough-32chars" },
     stdio: "ignore"
   });
 
