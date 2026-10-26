@@ -1,4 +1,5 @@
 "use strict";
+const net = require("node:net");
 
 // Application-layer guard for outbound AI-provider requests.
 // The host/container firewall must independently enforce the same egress allowlist.
@@ -19,11 +20,10 @@ function validateModelEndpoint(value) {
     return { allowed: false, reason: "url_credentials_or_extras_forbidden" };
   }
   if (url.port && url.port !== "443") return { allowed: false, reason: "nonstandard_port_forbidden" };
-  const host = url.hostname.toLowerCase().replace(/\.$/, "");
+  const host = url.hostname.toLowerCase().replace(/\.$/, "").replace(/^\[|\]$/g, "");
+  if (!host || net.isIP(host)) return { allowed: false, reason: "ip_literal_forbidden" };
   if (!allowedHosts().has(host)) return { allowed: false, reason: "host_not_allowlisted" };
-  if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") ||
-      /^127\./.test(host) || /^10\./.test(host) || /^192\.168\./.test(host) ||
-      /^172\.(1[6-9]|2\d|3[01])\./.test(host) || host === "169.254.169.254" || host === "::1") {
+  if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local")) {
     return { allowed: false, reason: "private_or_metadata_address_forbidden" };
   }
   return { allowed: true, url: url.toString().replace(/\/$/, ""), host };
