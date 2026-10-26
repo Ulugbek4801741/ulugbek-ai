@@ -15,6 +15,12 @@ function validateModelEndpoint(value) {
   try { url = new URL(value); } catch (_) {
     return { allowed: false, reason: "invalid_url" };
   }
+  // Explicit loopback-only HTTP exception for local automated tests; never enabled in production.
+  const loopback = url.hostname === "127.0.0.1" || url.hostname === "[::1]" || url.hostname === "::1";
+  if (process.env.NODE_ENV === "test" && process.env.ULUGBEK_TEST_ALLOW_LOOPBACK === "true" &&
+      loopback && url.protocol === "http:" && !url.username && !url.password && !url.search && !url.hash) {
+    return { allowed: true, url: url.toString().replace(/\\/$/, ""), host: url.hostname };
+  }
   if (url.protocol !== "https:") return { allowed: false, reason: "https_required" };
   if (url.username || url.password || url.search || url.hash) {
     return { allowed: false, reason: "url_credentials_or_extras_forbidden" };
