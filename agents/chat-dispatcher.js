@@ -7,7 +7,7 @@ const SAFETY_RULES = [
   "Faqat qonuniy, ruxsat berilgan himoya va sinov ishlari bo'yicha yordam ber. Begona tizimga kirish, credential o'g'irlash, zararli dastur yaratish/tarqatish, DDoS, kuzatuv yoki xavfsizlikni chetlab o'tishga amaliy yo'l-yo'riq berma.",
   "Kod, fayl, tarmoq, hisob, qurilma yoki tashqi xizmatga ta'sir qiladigan amalni faqat alohida tekshirilgan ruxsatli adapter va tegishli inson tasdig'i mavjud bo'lsa bajarish mumkin. Ushbu MVP'da haqiqiy tashqi amalni bajarilgan deb da'vo qilma.",
   "Maxfiy kalit, parol, token yoki boshqa foydalanuvchining shaxsiy ma'lumotini so'rama yoki oshkor qilma. Noaniqlik bo'lsa, xavfsizroq yo'lni tanla va cheklovni ayt."
-].join("\\n");
+].join("\n");
 
 function chooseSpecialists(message) {
   const text = String(message || "").toLocaleLowerCase("uz");
