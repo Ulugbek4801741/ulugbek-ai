@@ -288,6 +288,7 @@ function createPlan(task) {
 }
 
 const capabilityCatalog = require("./modules/catalog");
+const egressPolicy = require("./modules/egress-policy");
 const workflowGate = require("./modules/workflow-gate");
 const securityPolicy = require("./modules/security-policy");
 const globalSafetyShield = require("./modules/global-safety-shield");
@@ -404,7 +405,9 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       receivedCharacters: message.length
     });
   }
-  const baseUrl = (configuredBaseUrl || "https://api.openai.com/v1").replace(/\/$/, "");
+  const endpointCheck = egressPolicy.validateModelEndpoint(configuredBaseUrl || "https://api.openai.com/v1");
+  if (!endpointCheck.allowed) return res.status(503).json({ error: "AI manzili xavfsizlik ruxsat ro‘yxatida yo‘q; AI_ALLOWED_HOSTS sozlamasini tekshiring.", safety: { blocked: true, reason: endpointCheck.reason } });
+  const baseUrl = endpointCheck.url;
   const config = { key: apiKey, url: baseUrl, model: process.env.OPENAI_MODEL || "gpt-4o-mini" };
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 60000);
