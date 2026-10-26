@@ -52,11 +52,13 @@ async function initialize() {
   } catch (error) {
     if (error.code !== "ENOENT") console.error("Agent task store could not be loaded:", error.message);
   }
-  // Tasks interrupted by a restart are safely re-queued; no code is executed.
+  // Fail closed: non-chat agent tasks are never resumed or executed by default.
   for (const task of tasks) {
-    if (task.status === "running") {
-      task.status = "queued";
-      task.logs = [...(task.logs || []), { at: new Date().toISOString(), message: "Server qayta ishga tushdi; vazifa xavfsiz navbatga qaytarildi." }];
+    if (["queued", "running"].includes(task.status)) {
+      task.status = "blocked";
+      task.error = "Xavfsizlik sababli Chat Agentdan boshqa agentlar vaqtincha o‘chirilgan.";
+      task.finishedAt = new Date().toISOString();
+      task.logs = [...(task.logs || []), { at: new Date().toISOString(), message: "Izolyatsiya rejimi: vazifa ishga tushirilmadi." }].slice(-30);
     }
   }
   await persist();
@@ -170,11 +172,15 @@ async function pump() {
 }
 function startWorker() {
   if (workerReady) return workerReady;
-  workerStarted = true;
-  workerReady = initialize().then(() => pump()).then(() => undefined);
+  workerStarted = false;
+  // Only the chat endpoint is active. Background agent workers remain disabled.
+  workerReady = initialize().then(() => undefined);
   return workerReady;
 }
 async function createTask({ prompt, role }) {
+  const error = new Error("Xavfsizlik rejimi yoqilgan: Chat Agentdan boshqa agentlar vaqtincha o‘chirilgan.");
+  error.status = 503;
+  throw error;
   if (typeof prompt !== "string" || !prompt.trim()) {
     const error = new Error("Vazifa matni bo‘sh bo‘lmasligi kerak."); error.status = 400; throw error;
   }
