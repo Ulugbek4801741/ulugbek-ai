@@ -1,8 +1,8 @@
 {
   "id": "./",
-  "name": "ULUGBEK AI",
-  "short_name": "ULUGBEK AI",
-  "description": "ULUGBEK AI — web va Android sinov ilovasi",
+  "name": "Ulugbek AI",
+  "short_name": "Ulugbek AI",
+  "description": "Ulugbek AI — web va Android sinov ilovasi",
   "lang": "uz",
   "start_url": "./",
   "scope": "./",
