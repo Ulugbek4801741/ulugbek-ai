@@ -19,7 +19,7 @@ function validateModelEndpoint(value) {
   const loopback = url.hostname === "127.0.0.1" || url.hostname === "[::1]" || url.hostname === "::1";
   if (process.env.NODE_ENV === "test" && process.env.ULUGBEK_TEST_ALLOW_LOOPBACK === "true" &&
       loopback && url.protocol === "http:" && !url.username && !url.password && !url.search && !url.hash) {
-    return { allowed: true, url: url.toString().replace(/\\/$/, ""), host: url.hostname };
+    return { allowed: true, url: url.toString().endsWith("/") ? url.toString().slice(0, -1) : url.toString(), host: url.hostname };
   }
   if (url.protocol !== "https:") return { allowed: false, reason: "https_required" };
   if (url.username || url.password || url.search || url.hash) {
