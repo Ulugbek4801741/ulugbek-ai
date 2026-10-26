@@ -367,21 +367,46 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   if (message.length > MAX_TASK_LENGTH) return res.status(413).json({ error: "Xabar 4000 belgidan oshmasligi kerak." });
   const inputSafety = require("./modules/input-safety").inspectUserMessage(message);
   if (!inputSafety.allowed) return res.status(400).set("Cache-Control", "no-store").json({ error: inputSafety.message, safety: { blocked: true, category: inputSafety.reason } });
+  const geminiApiKey = process.env.GEMINI_API_KEY || "";
   const apiKey = process.env.OPENAI_API_KEY || "";
   const configuredBaseUrl = (process.env.OPENAI_BASE_URL || "").trim();
-  if (!apiKey && (!configuredBaseUrl || /(^|\.)api\.openai\.com(\/|$)/i.test(configuredBaseUrl.replace(/^https?:\/\//i, "")))) {
+  if (!geminiApiKey && !apiKey && (!configuredBaseUrl || /(^|\\.)api\\.openai\\.com(\\/|$)/i.test(configuredBaseUrl.replace(/^https?:\\/\\//i, "")))) {
     return res.json({
-      reply: "ULUGBEK AI hozir demo rejimida. Chat Agent va mutaxassis agentlar haqiqiy ishlashi uchun hostingda OPENAI_API_KEY yoki mos OPENAI_BASE_URL hamda OPENAI_MODEL sozlanishi kerak.",
+      reply: "ULUGBEK AI hozir demo rejimida. Haqiqiy AI javoblari uchun serverda GEMINI_API_KEY yoki OPENAI_API_KEY / mos OPENAI_BASE_URL sozlanishi kerak.",
       mode: "demo",
       agents: [],
       receivedCharacters: message.length
     });
   }
-  const baseUrl = (configuredBaseUrl || "https://api.openai.com/v1").replace(/\/$/, "");
-  const config = { key: apiKey, url: baseUrl, model: process.env.OPENAI_MODEL || "gpt-4o-mini" };
+  const baseUrl = (configuredBaseUrl || "https://api.openai.com/v1").replace(/\\/$/, "");
+  const config = geminiApiKey
+    ? { provider: "gemini", key: geminiApiKey, model: process.env.GEMINI_MODEL || "gemini-flash-latest" }
+    : { provider: "openai-compatible", key: apiKey, url: baseUrl, model: process.env.OPENAI_MODEL || "gpt-4o-mini" };
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 60000);
   const requestModel = async (modelConfig, messages, signal) => {
+    if (modelConfig.provider === "gemini") {
+      const systemText = messages.filter(item => item.role === "system").map(item => item.content).join("\\n\\n");
+      const contents = messages.filter(item => item.role !== "system").map(item => ({
+        role: item.role === "assistant" ? "model" : "user",
+        parts: [{ text: String(item.content || "") }]
+      }));
+      const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(modelConfig.model) + ":generateContent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-goog-api-key": modelConfig.key },
+        signal,
+        body: JSON.stringify({
+          ...(systemText ? { systemInstruction: { parts: [{ text: systemText }] } } : {}),
+          contents,
+          generationConfig: { temperature: 0.3, maxOutputTokens: 2048 }
+        })
+      });
+      if (!response.ok) throw new Error("Gemini provider error");
+      const payload = await response.json();
+      const output = payload?.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("");
+      if (typeof output !== "string" || !output.trim()) throw new Error("Empty Gemini response");
+      return output.slice(0, 8000);
+    }
     const response = await fetch(modelConfig.url + "/chat/completions", {
       method: "POST",
       headers: { ...(modelConfig.key ? { Authorization: "Bearer " + modelConfig.key } : {}), "Content-Type": "application/json" },
