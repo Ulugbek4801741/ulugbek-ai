@@ -52,6 +52,8 @@ test("self-hosted OpenAI-compatible model works without an API key", async (t) =
   appProcess = spawn(process.execPath, ["server.js"], {
     env: {
       ...process.env,
+      NODE_ENV: "test",
+      ULUGBEK_TEST_ALLOW_LOOPBACK: "true",
       PORT: String(appPort),
       TASK_STORE_PATH: require("node:path").join(require("node:os").tmpdir(), `ulugbek-tasks-${appPort}.json`),
       AGENT_MEMORY_PATH: require("node:path").join(require("node:os").tmpdir(), `ulugbek-memory-${appPort}.json`),
