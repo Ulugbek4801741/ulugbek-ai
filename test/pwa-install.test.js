@@ -59,3 +59,8 @@ test("Global Inqiroz modulida ruxsatli joylashuv, ochiq ob-havo va zilzila manba
   assert.match(crisis, /Zilzilani aniq sana\/joy bilan oldindan aytishning ishonchli usuli/);
   assert.match(worker, /"global-crisis\.html"/);
 });
+
+test("Chat oynasida AI adashishi mumkinligi haqidagi kichik eslatma ko‘rinadi", () => {
+  assert.match(html, /ULUGBEK AI ham adashishi mumkin/);
+  assert.match(html, /ai-accuracy-note/);
+});
