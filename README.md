@@ -43,6 +43,11 @@ Set these on the **server hosting environment**, not in browser JavaScript or Gi
 - `OPENAI_API_KEY` — private API key.
 - `OPENAI_BASE_URL` — optional, defaults to `https://api.openai.com/v1`.
 - `OPENAI_MODEL` — optional, defaults to `gpt-4o-mini`.
+- `GEMINI_API_KEY` — optional Gemini key; store only in the backend host's secret settings.
+- `GEMINI_MODEL` — optional, defaults to `gemini-flash-latest`.
+- `GEMINI_ALLOW_CHAT_CONTENT` — defaults to `false`; set to `true` only after explicitly accepting that the current chat message is sent to Google.
+
+Gemini privacy mode is single-turn: only the current message and a fixed system prompt are sent. Local chat history, agent memory, routing output, and other agent responses are not sent to Gemini. This reduces data sharing but does not guarantee zero third-party disclosure. If the consent flag is false, Gemini requests are blocked.
 
 Then restart the server. The chat and planner use the configured OpenAI-compatible `/chat/completions` API. API usage may cost money depending on provider and model. Never commit a key to this repository.
 
