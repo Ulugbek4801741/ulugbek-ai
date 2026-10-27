@@ -235,7 +235,7 @@ app.post("/api/admin/tasks/:id/review", requireAdmin, (req, res) => {
 
 app.get("/api/health", (_req, res) => {
   res.set("Cache-Control", "no-store");
-  res.json({ ok: true, app: "ULUGBEK AI", version: "0.3.0", aiConfigured: Boolean(process.env.OPENAI_API_KEY || (process.env.OPENAI_BASE_URL && process.env.OPENAI_BASE_URL !== "https://api.openai.com/v1")) });
+  res.json({ ok: true, app: "ULUGBEK AI", version: "0.3.0", aiConfigured: Boolean((process.env.GEMINI_API_KEY && process.env.GEMINI_ALLOW_CHAT_CONTENT === "true") || process.env.OPENAI_API_KEY || (process.env.OPENAI_BASE_URL && process.env.OPENAI_BASE_URL !== "https://api.openai.com/v1")) });
 });
 
 app.get("/api/diagnostics", (_req, res) => {
@@ -244,7 +244,7 @@ app.get("/api/diagnostics", (_req, res) => {
     ok: true,
     app: "ULUGBEK AI",
     backend: "running",
-    ai: process.env.OPENAI_API_KEY ? "hosted-provider-configured" : (process.env.OPENAI_BASE_URL && process.env.OPENAI_BASE_URL !== "https://api.openai.com/v1" ? "self-hosted-or-custom-endpoint-configured" : "demo-only-no-model-key"),
+    ai: process.env.GEMINI_API_KEY && process.env.GEMINI_ALLOW_CHAT_CONTENT === "true" ? "gemini-enabled-with-explicit-consent" : (process.env.OPENAI_API_KEY ? "hosted-provider-configured" : (process.env.OPENAI_BASE_URL && process.env.OPENAI_BASE_URL !== "https://api.openai.com/v1" ? "self-hosted-or-custom-endpoint-configured" : "demo-only-no-model-key")),
     publicWebResearch: "available-through-lab-route-when-server-has-internet",
     knowledgeStorage: "server-local-json-files",
     agentMemory: "separate-per-agent-per-browser-session; JSON file; durable hosting storage must be configured",
@@ -405,23 +405,56 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       safety: { blocked: true, category: shieldDecision.reason, quarantined: shieldDecision.quarantined === true }
     });
   }
+  const geminiApiKey = process.env.GEMINI_API_KEY || "";
+  const geminiChatConsent = process.env.GEMINI_ALLOW_CHAT_CONTENT === "true";
   const apiKey = process.env.OPENAI_API_KEY || "";
   const configuredBaseUrl = (process.env.OPENAI_BASE_URL || "").trim();
-  if (!apiKey && (!configuredBaseUrl || /(^|\.)api\.openai\.com(\/|$)/i.test(configuredBaseUrl.replace(/^https?:\/\//i, "")))) {
+  if (geminiApiKey && !geminiChatConsent) {
+    return res.status(403).set("Cache-Control", "no-store").json({
+      error: "Maxfiylik himoyasi: Gemini chatga ulanishi o‘chirib qo‘yilgan. Foydalanuvchi xabarini Google Gemini’ga yuborishga aniq rozilik berilmaguncha so‘rov yuborilmaydi.",
+      mode: "privacy-blocked"
+    });
+  }
+  if (!geminiApiKey && !apiKey && (!configuredBaseUrl || /(^|\\.)api\\.openai\\.com(\\/|$)/i.test(configuredBaseUrl.replace(/^https?:\\/\\//i, "")))) {
     return res.json({
-      reply: "ULUGBEK AI hozir demo rejimida. Chat Agent va mutaxassis agentlar haqiqiy ishlashi uchun hostingda OPENAI_API_KEY yoki mos OPENAI_BASE_URL hamda OPENAI_MODEL sozlanishi kerak.",
+      reply: "ULUGBEK AI hozir demo rejimida. Haqiqiy AI javoblari uchun serverda GEMINI_API_KEY va GEMINI_ALLOW_CHAT_CONTENT=true (Gemini’ga xabar yuborishga rozilik), yoki OPENAI_API_KEY / mos OPENAI_BASE_URL sozlanishi kerak.",
       mode: "demo",
       agents: [],
       receivedCharacters: message.length
     });
   }
-  const endpointCheck = egressPolicy.validateModelEndpoint(configuredBaseUrl || "https://api.openai.com/v1");
-  if (!endpointCheck.allowed) return res.status(503).json({ error: "AI manzili xavfsizlik ruxsat ro‘yxatida yo‘q; AI_ALLOWED_HOSTS sozlamasini tekshiring.", safety: { blocked: true, reason: endpointCheck.reason } });
-  const baseUrl = endpointCheck.url;
-  const config = { key: apiKey, url: baseUrl, model: process.env.OPENAI_MODEL || "gpt-4o-mini" };
+  const endpointCheck = geminiApiKey ? null : egressPolicy.validateModelEndpoint(configuredBaseUrl || "https://api.openai.com/v1");
+  if (endpointCheck && !endpointCheck.allowed) return res.status(503).json({ error: "AI manzili xavfsizlik ruxsat ro‘yxatida yo‘q; AI_ALLOWED_HOSTS sozlamasini tekshiring.", safety: { blocked: true, reason: endpointCheck.reason } });
+  const baseUrl = endpointCheck ? endpointCheck.url : "";
+  const config = geminiApiKey
+    ? { provider: "gemini", key: geminiApiKey, model: process.env.GEMINI_MODEL || "gemini-flash-latest" }
+    : { provider: "openai-compatible", key: apiKey, url: baseUrl, model: process.env.OPENAI_MODEL || "gpt-4o-mini" };
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 60000);
   const requestModel = async (modelConfig, messages, signal) => {
+    if (modelConfig.provider === "gemini") {
+      const systemText = messages.filter(item => item.role === "system").map(item => item.content).join("\n\n");
+      const contents = messages.filter(item => item.role !== "system").map(item => ({
+        role: item.role === "assistant" ? "model" : "user",
+        parts: [{ text: String(item.content || "") }]
+      }));
+      const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(modelConfig.model) + ":generateContent", {
+        method: "POST",
+        redirect: "error",
+        headers: { "Content-Type": "application/json", "X-goog-api-key": modelConfig.key },
+        signal,
+        body: JSON.stringify({
+          ...(systemText ? { systemInstruction: { parts: [{ text: systemText }] } } : {}),
+          contents,
+          generationConfig: { temperature: 0.3, maxOutputTokens: 2048 }
+        })
+      });
+      if (!response.ok) throw new Error("Gemini provider error");
+      const payload = await response.json();
+      const output = payload?.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("");
+      if (typeof output !== "string" || !output.trim()) throw new Error("Empty Gemini response");
+      return output.slice(0, 8000);
+    }
     const response = await fetch(modelConfig.url + "/chat/completions", {
       method: "POST",
       redirect: "error",
@@ -436,6 +469,15 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     return output.slice(0, 8000);
   };
   try {
+    if (config.provider === "gemini") {
+      // Explicit-consent privacy mode: send only the current message and fixed system prompt.
+      // Do not send local chat history, agent memory, routing output, or other agent responses.
+      const reply = await requestModel(config, [
+        { role: "system", content: "Sen ULUGBEK AI yordamchisisan. O‘zbek tilida sodda va xavfsiz javob ber. Maxfiy kalit yoki parol so‘rama. Tashqi amallarni bajarilgan deb da’vo qilma." },
+        { role: "user", content: message }
+      ], controller.signal);
+      return res.json({ reply, mode: "gemini-current-message-only", agents: [], privacy: "Only the current message and a fixed system prompt are sent to Gemini; local chat history and agent memory are not sent." });
+    }
     const dispatcher = require("./agents/chat-dispatcher");
     const result = await dispatcher.runChat({ message, sessionId, config, requestModel, signal: controller.signal });
     return res.json({ ...result, receivedCharacters: message.length });
