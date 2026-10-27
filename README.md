@@ -2,6 +2,13 @@
 
 ULUGBEK AI is an early web/Android MVP for an Uzbek-first AI assistant, agent task planner, and future No-Code app-building platform.
 
+## Windows and iPhone app builds
+
+- **Windows desktop:** an Electron shell opens the hosted web app. It has Node.js integration disabled in the page, context isolation enabled, sandbox enabled, and same-origin navigation restrictions. It requires internet and is not a standalone/offline backend.
+- **iPhone/iOS:** the existing Capacitor app can be generated and synced with `npm run ios:add` and `npm run ios:sync`. The iOS GitHub Actions workflow builds an **unsigned iOS Simulator app** for technical validation. It is not an installable iPhone IPA.
+- GitHub Actions builds a Windows NSIS installer artifact. It is an unsigned development installer, not a signed commercial release.
+- Installing on a real iPhone requires Apple signing/provisioning and usually an Apple Developer account. These steps must be configured separately; do not place Apple certificates or secrets in the repository.
+
 ## What is implemented now
 
 - Responsive dashboard interface for mobile and desktop.
@@ -63,7 +70,6 @@ Without a server and key, GitHub Pages runs only the local planning demo. GitHub
 
 The repository does not know the real backend hostname until you deploy it, so the public config intentionally remains empty rather than guessing a URL. The chat's `A4801741_a` shortcut opens the admin page after two entries; it does **not** grant administrator access. Server-side Google sign-in and the allowlisted administrator email are still required.
 
-
 ## API-key-free virtual laboratory (early MVP)
 
 A separate page is available at `/lab.html`. It includes:
@@ -93,32 +99,4 @@ Never put an administrator access code or model API key in HTML, browser JavaScr
 
 ## What “autonomous” means in this MVP
 
-The planner can select a task category, create a step-by-step plan, and suggest agent roles. If a model is configured, it can use the model to generate a more tailored plan. It does **not** yet run persistent background agents, freely browse the internet, edit/deploy code, operate user accounts, or complete real-world actions. Those require separately implemented tools, permissions, durable job storage, logging, and human approval for risky actions.
-
-The global goal of serving billions of people is a long-term product vision, not a current capacity guarantee. Before a public production launch, implement user authentication, database persistence, authorization, privacy controls, monitoring, abuse protection, and a security review.
-
-## Android
-
-Use **Actions → Build Android APK → Run workflow** in GitHub. Download the artifact after a successful run. This is a test/debug APK, not a signed Play Store release.
-
-## Roadmap
-
-1. Verify current UI and API tests.
-2. Add authentication and persistent database.
-3. Build a permission-controlled tool registry for agent execution.
-4. Add a real No-Code visual workflow/app builder.
-5. Add background jobs, observability, and human approval gates.
-6. Run a security review and staged user testing before production.
-
-
-## ULUGBEK AI 0.1 — self-hosted model support
-
-The backend now supports an OpenAI-compatible model endpoint without sending an API key when `OPENAI_API_KEY` is empty and `OPENAI_BASE_URL` points to a self-hosted or otherwise keyless compatible server. Chat and agent planning use the same configured endpoint.
-
-- Set `OPENAI_BASE_URL` to the model server's API base URL (the server must be reachable from the backend host).
-- Set `OPENAI_MODEL` to the exact model name served by that endpoint.
-- Keep `OPENAI_API_KEY` empty only if that endpoint does not require authentication. If it requires a token, configure it privately in the hosting environment.
-- Do not put real keys or private server credentials in GitHub.
-- Without a model endpoint, the app still uses demo chat and rule-based planning; it is not an autonomous AI model.
-
-The automated test suite includes a local mock OpenAI-compatible endpoint test for chat and planning without an API key. This verifies the integration contract, not the performance of a real model or production deployment.
+The planner can select a task category, create a workflow plan, and return suggested agent roles. It does not mean agents are free to execute external actions, modify production, or learn model weights without limits and review.
