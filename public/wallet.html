@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#0b1020">
+<link rel="stylesheet" href="wallet.css"><title>ULUGBEK AI — Hamyonlar va to‘lovlar</title>
+</head>
+<body>
+<main class="shell">
+<header><a class="brand" href="index.html">U <span>ULUGBEK AI<small>HAMYONLAR VA TO‘LOVLAR</small></span></a><span class="pill">PROTOTIP · REAL PUL EMAS</span></header>
+<section class="hero">
+<p class="eyebrow">MOLIYAVIY MARKAZ</p><h1>Hamyonlar va to‘lovlarni boshqarish</h1>
+<p class="muted">Bank kartalari, Visa/Mastercard, kriptovalyuta va davlat xizmatlari to‘lovlari uchun rejalashtirilgan yagona boshqaruv oynasi.</p>
+<div class="warning"><strong>Hozircha sinov interfeysi.</strong> Bu sahifa haqiqiy karta yoki bank hisobini ulamaydi, kriptovalyuta saqlamaydi va pul o‘tkazmaydi. Real to‘lovlar uchun litsenziyalangan provayderlar, server integratsiyasi va xavfsizlik tekshiruvi kerak.</div>
+</section>
+<section class="grid">
+<article class="card balance"><p class="eyebrow">UMUMIY BALANS</p><h2>— UZS</h2><p class="muted">Balans serverdan tasdiqlangan ma’lumot bilan keyin ko‘rsatiladi.</p><span class="pill">Hali ulanmagan</span></article>
+<article class="card"><div class="card-head"><span class="symbol">💳</span><span class="pill">Rejalashtirilgan</span></div><h2>Bank kartalari</h2><p>Visa, Mastercard va mahalliy plastik kartalarni xavfsiz provayder orqali ulash.</p><ul><li>Kartani ulash / uzish</li><li>Asosiy kartani tanlash</li><li>To‘lovlar tarixi</li></ul><button type="button" data-info="card">Karta ulash imkoniyatini ko‘rish</button></article>
+<article class="card"><div class="card-head"><span class="symbol">₿</span><span class="pill">Rejalashtirilgan</span></div><h2>Kripto hamyonlar</h2><p>Qo‘llab-quvvatlanadigan tarmoq va aktivlar bo‘yicha balanslarni ko‘rish.</p><ul><li>Tashqi hamyon ulash</li><li>Tarmoq va manzil tekshiruvi</li><li>Kiritish/chiqarish tarixi</li></ul><button type="button" data-info="crypto">Kripto xavfsizligi</button></article>
+<article class="card"><div class="card-head"><span class="symbol">🏦</span><span class="pill">Rejalashtirilgan</span></div><h2>Ichki hisob-kitob</h2><p>Foydalanuvchi to‘lovlari provayder tasdig‘idan so‘ng hisob-kitob reyestrida aks etadi.</p><ul><li>To‘lov holati</li><li>Qaytarish / nizolar</li><li>Komissiya va hisobot</li></ul><button type="button" data-info="ledger">Hisob-kitob tartibi</button></article>
+<article class="card wide"><div class="card-head"><div><p class="eyebrow">DASTURCHILAR VA XIZMATLAR</p><h2>Ruxsat bilan avtomatik to‘lovlar</h2></div><span class="pill">Himoyalangan tasdiq</span></div>
+<p>Dasturchi yoki agent davlat xizmati uchun to‘lov so‘rovini yaratadi. To‘lov avtomatik bajarilmaydi: avval xizmat nomi, oluvchi, summa, valyuta va muddat ko‘rsatiladi; foydalanuvchi tasdiqlaydi.</p>
+<div class="steps"><div><b>1. So‘rov</b><small>Xizmat va summa</small></div><div><b>2. Tekshiruv</b><small>Oluvchi va provayder</small></div><div><b>3. Tasdiq</b><small>Parol/biometrika/2FA</small></div><div><b>4. Kvitansiya</b><small>Natija va audit izi</small></div></div>
+<form id="demo-form">
+<label for="service">Sinov so‘rovi — xizmat nomi</label><input id="service" maxlength="100" required placeholder="Masalan: davlat boji (demo)">
+<div class="two"><div><label for="amount">Summa (UZS)</label><input id="amount" type="number" min="1" max="100000000" step="1" required placeholder="10000"></div><div><label for="reason">Izoh / ariza raqami</label><input id="reason" maxlength="120" placeholder="Ixtiyoriy"></div></div>
+<label class="check"><input id="consent" type="checkbox" required> Bu faqat demo ekanini tushundim; haqiqiy to‘lov amalga oshmaydi.</label>
+<button type="submit">Demo so‘rovni ro‘yxatga qo‘shish</button>
+</form><div id="demo-result" class="notice" aria-live="polite">Hali demo so‘rov yaratilmagan.</div>
+</article>
+<article class="card wide"><div class="card-head"><div><p class="eyebrow">AUDIT VA RUXSATLAR</p><h2>To‘lov xavfsizligi</h2></div></div>
+<ul><li>To‘liq karta raqami, CVV yoki PIN ULUGBEK AI serverida saqlanmaydi.</li><li>Karta ma’lumoti faqat PCI DSS talablariga mos to‘lov provayderining tokenlashtirilgan oynasida kiritiladi.</li><li>Kripto maxfiy kalit yoki seed phrase hech qachon chatga yoki server loglariga yozilmaydi.</li><li>Avtomatik to‘lovlar uchun alohida, cheklangan ruxsat, summa limiti, oluvchi allowlist, muddati va bekor qilish tugmasi bo‘ladi.</li><li>Davlat xizmatlariga to‘lov faqat rasmiy API yoki ruxsat etilgan to‘lov provayderi orqali amalga oshiriladi.</li></ul>
+</article>
+</section>
+<footer>ULUGBEK AI · Hamyon va to‘lovlar · Sinov interfeysi</footer>
+</main><script src="wallet.js" defer></script>
+</body></html>
