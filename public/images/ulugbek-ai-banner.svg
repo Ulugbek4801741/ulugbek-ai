@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" role="img" aria-labelledby="title desc">
+<title id="title">ULUGBEK AI robot</title><desc id="desc">Ko‘k rangli, do‘stona tabassum qilayotgan robot.</desc>
+<defs><linearGradient id="body" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#93c5fd"/><stop offset="1" stop-color="#2563eb"/></linearGradient><linearGradient id="face" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#f8fbff"/><stop offset="1" stop-color="#dbeafe"/></linearGradient><filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="7"/></filter></defs>
+<ellipse cx="160" cy="274" rx="86" ry="17" fill="#60a5fa" opacity=".28" filter="url(#shadow)"/>
+<path d="M160 35v23" stroke="#bfdbfe" stroke-width="9" stroke-linecap="round"/><circle cx="160" cy="25" r="12" fill="#60a5fa"/><circle cx="160" cy="25" r="5" fill="#eff6ff"/>
+<rect x="72" y="68" width="176" height="145" rx="48" fill="url(#body)" stroke="#bfdbfe" stroke-width="4"/>
+<rect x="87" y="84" width="146" height="112" rx="36" fill="url(#face)"/>
+<ellipse cx="126" cy="128" rx="10" ry="15" fill="#1d4ed8"/><ellipse cx="194" cy="128" rx="10" ry="15" fill="#1d4ed8"/><circle cx="129" cy="123" r="3" fill="#fff"/><circle cx="197" cy="123" r="3" fill="#fff"/>
+<path d="M127 151q33 35 66 0" fill="none" stroke="#2563eb" stroke-width="7" stroke-linecap="round"/>
+<rect x="42" y="109" width="24" height="54" rx="12" fill="#60a5fa"/><rect x="254" y="109" width="24" height="54" rx="12" fill="#60a5fa"/>
+<path d="M112 212v20q0 15 15 15h66q15 0 15-15v-20" fill="url(#body)" stroke="#bfdbfe" stroke-width="4"/>
+<rect x="112" y="236" width="96" height="34" rx="17" fill="#2563eb" stroke="#bfdbfe" stroke-width="4"/><circle cx="145" cy="253" r="5" fill="#bfdbfe"/><circle cx="160" cy="253" r="5" fill="#dbeafe"/><circle cx="175" cy="253" r="5" fill="#bfdbfe"/>
+<path d="M55 65l7 14m-14-7 14-7M257 61l-6 14m13-7-14-7" stroke="#bfdbfe" stroke-width="4" stroke-linecap="round" opacity=".85"/>
+</svg>
