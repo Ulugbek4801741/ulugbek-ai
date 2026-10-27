@@ -64,7 +64,17 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "";
 const PUBLIC_BASE_URL = (process.env.PUBLIC_BASE_URL || "").replace(/\/$/, "");
 const ADMIN_SESSION_SECRET = process.env.ADMIN_SESSION_SECRET || "";
-const ADMIN_SESSION_TTL_MS = 30 * 60 * 1000; // 30 daqiqa; brauzer yopilganda ham client logout qiladi\nconst ADMIN_PASSWORD_HASH = (process.env.ADMIN_PASSWORD_HASH || "").trim();\nconst adminLoginFailures = new Map();\nconst ADMIN_LOCKOUT_MS = 15 * 60 * 1000;\nfunction passwordHashMatches(password) {\n  const [salt, expectedHex, extra] = ADMIN_PASSWORD_HASH.split(":");\n  if (!salt || !expectedHex || extra !== undefined || !/^[a-f0-9]{128}$/i.test(expectedHex)) return false;\n  const actual = crypto.scryptSync(password, salt, 64);\n  const expected = Buffer.from(expectedHex, "hex");\n  return expected.length === actual.length && crypto.timingSafeEqual(actual, expected);\n}
+const ADMIN_SESSION_TTL_MS = 30 * 60 * 1000; // 30 daqiqa
+const ADMIN_PASSWORD_HASH = (process.env.ADMIN_PASSWORD_HASH || "").trim();
+const adminLoginFailures = new Map();
+const ADMIN_LOCKOUT_MS = 15 * 60 * 1000;
+function passwordHashMatches(password) {
+  const [salt, expectedHex, extra] = ADMIN_PASSWORD_HASH.split(":");
+  if (!salt || !expectedHex || extra !== undefined || !/^[a-f0-9]{128}$/i.test(expectedHex)) return false;
+  const actual = crypto.scryptSync(password, salt, 64);
+  const expected = Buffer.from(expectedHex, "hex");
+  return expected.length === actual.length && crypto.timingSafeEqual(actual, expected);
+}
 function safeEqual(a, b) {
   const left = Buffer.from(String(a));
   const right = Buffer.from(String(b));
