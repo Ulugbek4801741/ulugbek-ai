@@ -1,0 +1,47 @@
+name: Build Windows desktop app
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - apps/windows-ios-builds
+    paths:
+      - "desktop/**"
+      - "package.json"
+      - "public/**"
+      - ".github/workflows/build-windows-desktop.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-desktop-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Check desktop JavaScript
+        run: |
+          node --check desktop/main.cjs
+          node --check desktop/preload.cjs
+      - name: Run tests
+        run: npm test
+      - name: Build Windows installer
+        run: npx electron-builder --win nsis --x64
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: ulugbek-ai-windows-installer
+          path: dist/*.exe
+          if-no-files-found: error
+          retention-days: 14
