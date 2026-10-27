@@ -49,7 +49,7 @@ Set these on the **server hosting environment**, not in browser JavaScript or Gi
 
 Gemini privacy mode is single-turn: only the current message and a fixed system prompt are sent. Local chat history, agent memory, routing output, and other agent responses are not sent to Gemini. This reduces data sharing but does not guarantee zero third-party disclosure. If the consent flag is false, Gemini requests are blocked.
 
-Then restart the server. The chat and planner use the configured OpenAI-compatible `/chat/completions` API. API usage may cost money depending on provider and model. Never commit a key to this repository.
+Then restart the server. The planner uses the configured OpenAI-compatible `/chat/completions` API. Chat uses that provider by default; if `GEMINI_API_KEY` is present, Gemini chat remains blocked until `GEMINI_ALLOW_CHAT_CONTENT=true` is explicitly set. API usage may cost money depending on provider and model. Never commit a key to this repository.
 
 Without a server and key, GitHub Pages runs only the local planning demo. GitHub Pages cannot run this Express backend, so real model responses require a separate backend host.
 
