@@ -26,3 +26,18 @@ test("Integratsiyalar foydalanuvchiga haqiqiy o‘rnatish taklifi yo‘q bo‘lg
   assert.match(app, /Install app/);
   assert.match(app, /Bosh ekranga qo‘shish/);
 });
+
+test("Server bo‘lmaganda mahalliy demo chat, reja va modullar ishlash yo‘li mavjud", () => {
+  assert.match(app, /function localDemoReply\(prompt\)/);
+  assert.match(app, /if\(!base\)return localDemoReply\(prompt\)/);
+  assert.match(app, /MAHALLIY DEMO REJA/);
+  assert.match(app, /Mahalliy demo katalog — server ulanmagan/);
+});
+
+test("Server talab qilmaydigan admin sinov paneli navigatsiyada mavjud", () => {
+  const admin = fs.readFileSync(path.join(__dirname, "..", "public", "admin-demo.html"), "utf8");
+  assert.match(html, /href="\.\/admin-demo\.html"/);
+  assert.match(admin, /Admin panel — sinov rejimi/);
+  assert.match(admin, /Mahalliy testlarni bajarish/);
+  assert.match(admin, /LocalStorage/);
+});
