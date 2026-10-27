@@ -4,7 +4,7 @@ async function request(prompt){const base=typeof window.ULUGBEK_API_BASE_URL==="
 const pluginsModal=$("plugins-modal"),pluginsList=$("plugins-list"),pluginsSearch=$("plugins-search");
 let deferredInstallPrompt=null;window.addEventListener("beforeinstallprompt",event=>{event.preventDefault();deferredInstallPrompt=event});window.addEventListener("appinstalled",()=>{deferredInstallPrompt=null;note("ULUGBEK AI bosh ekranga qo‘shildi.")});if("serviceWorker"in navigator&&location.protocol!=="file:"){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}))}
 const pluginServices=[
-{id:"crisis",name:"ULUG‘BEK GLOBAL INQIROZ",category:"Xavfsizlik",description:"Tabiiy ofat ma’lumotlari, oflayn yo‘riqnoma va yordam xabarini tayyorlash",kind:"crisis"},
+{id:"crisis",name:"ULUG‘BEK GLOBAL INQIROZ",category:"Xavfsizlik",description:"Tabiiy ofat ma’lumotlari va oflayn yo‘riqnoma. Ma’lumot xato yoki kechikkan bo‘lishi mumkin — rasmiy manbani tekshiring.",kind:"crisis"},
 {id:"install",name:"ULUGBEK AI — bosh ekranga qo‘shish",category:"Ilova",description:"APK yoki ZIP yuklamasdan, qo‘llab-quvvatlanadigan brauzerdan ULUGBEK AI’ni ilova kabi oching",kind:"install"},
 {id:"notes",name:"ULUGBEK Eslatmalar",category:"Shaxsiy ishlar",description:"Eslatmalarni shu qurilmada saqlash va tahrirlash",kind:"notes"},
 {id:"calculator",name:"ULUGBEK Kalkulyator",category:"Asboblar",description:"Oddiy hisob-kitoblar",kind:"calculator"},
