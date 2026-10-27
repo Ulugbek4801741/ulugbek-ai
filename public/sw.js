@@ -1,6 +1,6 @@
-const CACHE_NAME = "ulugbek-ai-shell-v2";
+const CACHE_NAME = "ulugbek-ai-shell-v3";
 const base = new URL("./", self.registration.scope);
-const APP_SHELL = ["", "index.html", "styles.css", "app.js", "manifest.webmanifest", "icon.svg"].map((path) => new URL(path, base).toString());
+const APP_SHELL = ["", "index.html", "styles.css", "app.js", "manifest.webmanifest", "icon.svg", "global-crisis.html", "admin-demo.html"].map((path) => new URL(path, base).toString());
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
