@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "product": "ULUGBEK Virtual Computer",
+  "releaseChannel": "staging",
+  "defaultPolicy": "deny",
+  "executionEnabled": false,
+  "provider": "not-configured",
+  "userIsolation": {
+    "required": true,
+    "ownerFromVerifiedSession": true,
+    "allowClientSuppliedOwnerId": false
+  },
+  "limits": {
+    "cpu": "provider-required",
+    "memory": "provider-required",
+    "disk": "provider-required",
+    "processes": "provider-required",
+    "runtimeSeconds": "provider-required",
+    "network": "deny-by-default"
+  },
+  "updates": {
+    "requireSignedManifest": true,
+    "requireDigestVerification": true,
+    "requireStagingChecks": true,
+    "requireHealthCheck": true,
+    "automaticRollbackOnFailure": true,
+    "allowWorkspaceToUpdateItself": false
+  },
+  "note": "Configuration template only; no workspace provider is wired up by this file."
+}
