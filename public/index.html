@@ -7,6 +7,15 @@
 <title>ULUGBEK AI — Chat</title>
 </head>
 <body>
+<div class="startup-splash" id="startup-splash" role="status" aria-label="ULUGBEK AI ishga tushmoqda">
+  <div class="startup-card">
+    <img class="startup-robot" src="images/ulugbek-ai-banner.svg" width="220" height="220" alt="ULUGBEK AI tabassumli robot tasviri">
+    <div class="startup-orbit startup-orbit-one" aria-hidden="true"></div><div class="startup-orbit startup-orbit-two" aria-hidden="true"></div>
+    <div class="startup-brand">ULUGBEK AI</div><p class="startup-caption">Yangi imkoniyatlar sari</p>
+    <div class="startup-progress" aria-hidden="true"><span></span></div>
+    <button class="startup-skip" id="startup-skip" type="button">O‘tkazib yuborish</button>
+  </div>
+</div>
 <div class="app">
 <header class="topbar">
 <button class="icon-btn" id="menu-toggle" aria-label="Menyuni ochish" title="Menyu"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
@@ -30,4 +39,18 @@
 <p class="settings-note">Sozlamalar ushbu brauzer/qurilmada saqlanadi. Ovoz va nutq tillari qurilma hamda brauzer imkoniyatlariga bog‘liq.</p></section></div>
 <div class="modal-backdrop" id="plugins-modal" hidden><section class="settings builder-panel" role="dialog" aria-modal="true" aria-labelledby="plugins-title"><div class="settings-header"><div><h2 id="plugins-title">@Plugins — xizmatlar</h2><p>Haqiqiy saytlar va xizmatlarga tezkor havolalar. Bu havolalar OAuth/API integratsiyasi degani emas.</p></div><button class="icon-btn" id="plugins-close" aria-label="Yopish">×</button></div><input id="plugins-search" type="search" placeholder="Xizmat qidirish..." aria-label="Xizmat qidirish"><div id="plugins-list" class="plugins-list"></div><p class="settings-note">Hozircha katalogda tekshirilgan asosiy xizmatlar bor. 14 000 ta xizmat deb soxta raqam ko‘rsatilmaydi; har bir API uchun alohida ruxsat va ulanish talab etiladi.</p></section></div><div class="modal-backdrop" id="builder-modal" hidden><section class="settings builder-panel" role="dialog" aria-modal="true" aria-labelledby="builder-title"><div class="settings-header"><div><h2 id="builder-title">No-code platforma</h2><p>G‘oyangizni yozing — agent loyiha rejasini tuzadi.</p></div><button class="icon-btn" id="builder-close" aria-label="Yopish">×</button></div><label class="builder-label" for="builder-task">Qanday ilova yoki sayt yaratmoqchisiz?</label><textarea id="builder-task" maxlength="4000" placeholder="Masalan: kichik biznes uchun buyurtma qabul qiluvchi sayt..." rows="4"></textarea><button class="primary-btn" id="builder-run">Reja tuzish</button><div id="builder-result" class="builder-result" aria-live="polite"></div><p class="settings-note">Bu versiya reja yaratadi; tayyor ilovani avtomatik qurish, joylash yoki 14 000 xizmatga ulanish funksiyasi hali tasdiqlanmagan.</p></section></div><div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="config.js"></script><script src="app.js"></script>
+<script>
+(()=> {
+ const splash=document.getElementById('startup-splash');
+ const skip=document.getElementById('startup-skip');
+ if(!splash)return;
+ let seen=false;
+ try{seen=localStorage.getItem('ulugbek-startup-seen-v1')==='1';}catch(_){}
+ const finish=()=>{splash.classList.add('startup-splash-hide');window.setTimeout(()=>splash.remove(),350);};
+ if(seen){splash.remove();return;}
+ try{localStorage.setItem('ulugbek-startup-seen-v1','1');}catch(_){}
+ const timer=window.setTimeout(finish,3000);
+ skip.addEventListener('click',()=>{window.clearTimeout(timer);finish();},{once:true});
+})();
+</script>
 </body></html>
