@@ -415,7 +415,8 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       mode: "privacy-blocked"
     });
   }
-  if (!geminiApiKey && !apiKey && (!configuredBaseUrl || /(^|\\.)api\\.openai\\.com(\\/|$)/i.test(configuredBaseUrl.replace(/^https?:\\/\\//i, "")))) {
+  const providerHost = configuredBaseUrl.replace(/^https?:\/\//i, "").split("/")[0].toLowerCase();
+  if (!geminiApiKey && !apiKey && (!configuredBaseUrl || providerHost === "api.openai.com")) {
     return res.json({
       reply: "ULUGBEK AI hozir demo rejimida. Haqiqiy AI javoblari uchun serverda GEMINI_API_KEY va GEMINI_ALLOW_CHAT_CONTENT=true (Gemini’ga xabar yuborishga rozilik), yoki OPENAI_API_KEY / mos OPENAI_BASE_URL sozlanishi kerak.",
       mode: "demo",
