@@ -5,6 +5,10 @@ const { app, BrowserWindow, shell } = require("electron");
 const DEFAULT_WEB_URL = "https://ulugbek4801741.github.io/ulugbek-ai-web/";
 const APP_URL = process.env.ULUGBEK_WEB_URL || DEFAULT_WEB_URL;
 
+if (!/^https:\/\//i.test(APP_URL)) {
+  throw new Error("ULUGBEK_WEB_URL must use HTTPS.");
+}
+
 function isAllowedAppUrl(rawUrl) {
   try {
     const url = new URL(rawUrl);
