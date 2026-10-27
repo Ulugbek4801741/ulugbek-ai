@@ -4,6 +4,7 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const agentRegistry = require("./agents/registry");
+const egressPolicy = require("./modules/egress-policy");
 
 const MAX_TASKS = 200;
 const MAX_PROMPT_LENGTH = 4000;
@@ -52,11 +53,13 @@ async function initialize() {
   } catch (error) {
     if (error.code !== "ENOENT") console.error("Agent task store could not be loaded:", error.message);
   }
-  // Tasks interrupted by a restart are safely re-queued; no code is executed.
+  // Fail closed: non-chat agent tasks are never resumed or executed by default.
   for (const task of tasks) {
-    if (task.status === "running") {
-      task.status = "queued";
-      task.logs = [...(task.logs || []), { at: new Date().toISOString(), message: "Server qayta ishga tushdi; vazifa xavfsiz navbatga qaytarildi." }];
+    if (["queued", "running"].includes(task.status)) {
+      task.status = "blocked";
+      task.error = "Xavfsizlik sababli Chat Agentdan boshqa agentlar vaqtincha o‘chirilgan.";
+      task.finishedAt = new Date().toISOString();
+      task.logs = [...(task.logs || []), { at: new Date().toISOString(), message: "Izolyatsiya rejimi: vazifa ishga tushirilmadi." }].slice(-30);
     }
   }
   await persist();
@@ -68,8 +71,9 @@ function addLog(task, message) {
 function modelConfig() {
   const key = process.env.OPENAI_API_KEY || "";
   const custom = (process.env.OPENAI_BASE_URL || "").trim();
-  const url = (custom || (key ? "https://api.openai.com/v1" : "")).replace(/\/$/, "");
-  return { key, url, model: process.env.OPENAI_MODEL || "gpt-4o-mini" };
+  const rawUrl = custom || (key ? "https://api.openai.com/v1" : "");
+  const checked = rawUrl ? egressPolicy.validateModelEndpoint(rawUrl) : { allowed: false, reason: "missing_endpoint" };
+  return { key, url: checked.allowed ? checked.url : "", endpointError: checked.reason, model: process.env.OPENAI_MODEL || "gpt-4o-mini" };
 }
 function systemPrompt(role) {
   const registered = agentRegistry.getAgent(role);
@@ -78,8 +82,11 @@ function systemPrompt(role) {
   return `Sen ULUGBEK AI loyihasidagi ${label}san. Faqat tahlil, reja, kod taklifi yoki tekshiruv natijasi tayyorla. O‘zbek tilida javob ber. Fayllarni o‘zgartirish, shell buyruqlarini bajarish, deploy qilish, pul sarflash yoki tashqi hisoblarda harakat qilish imkoning yo‘q. Bajarilmagan ishni bajarildi deb aytma. Kod taklifida fayl yo‘li, aniq o‘zgarish, xavf va sinov qadamlarini ko‘rsat. Inson ko‘rigi va testdan o‘tmaguncha o‘zgarish tasdiqlangan deb aytma.`;
 }
 async function requestModel(config, messages, signal) {
-  const response = await fetch(config.url + "/chat/completions", {
+  const endpointCheck = egressPolicy.validateModelEndpoint(config.url);
+  if (!endpointCheck.allowed) throw new Error("AI endpoint blocked by outbound allowlist: " + endpointCheck.reason);
+  const response = await fetch(endpointCheck.url + "/chat/completions", {
     method: "POST",
+    redirect: "error",
     headers: { ...(config.key ? { Authorization: "Bearer " + config.key } : {}), "Content-Type": "application/json" },
     signal, body: JSON.stringify({ model: config.model, temperature: 0.2, messages })
   });
@@ -170,35 +177,15 @@ async function pump() {
 }
 function startWorker() {
   if (workerReady) return workerReady;
-  workerStarted = true;
-  workerReady = initialize().then(() => pump()).then(() => undefined);
+  workerStarted = false;
+  // Only the chat endpoint is active. Background agent workers remain disabled.
+  workerReady = initialize().then(() => undefined);
   return workerReady;
 }
-async function createTask({ prompt, role }) {
-  if (typeof prompt !== "string" || !prompt.trim()) {
-    const error = new Error("Vazifa matni bo‘sh bo‘lmasligi kerak."); error.status = 400; throw error;
-  }
-  if (prompt.trim().length > MAX_PROMPT_LENGTH) {
-    const error = new Error("Vazifa 4000 belgidan oshmasligi kerak."); error.status = 413; throw error;
-  }
-  if (!ROLES.has(role)) {
-    const error = new Error("Agent turi noto‘g‘ri tanlangan."); error.status = 400; throw error;
-  }
-  if (tasks.filter(item => ["queued", "running"].includes(item.status)).length >= 20) {
-    const error = new Error("Navbatda 20 ta faol vazifa bor. Keyinroq urinib ko‘ring."); error.status = 429; throw error;
-  }
-  const now = new Date().toISOString();
-  const task = {
-    id: crypto.randomUUID(), prompt: prompt.trim(), role, roleLabel: ROLE_LABELS[role],
-    status: "queued", createdAt: now, updatedAt: now, approvalStatus: "not_reviewed",
-    output: "", error: null, logs: [{ at: now, message: "Vazifa administrator tomonidan navbatga qo‘shildi." }], tests: null
-  };
-  tasks.push(task);
-  tasks = tasks.slice(-MAX_TASKS);
-  if (workerReady) await workerReady;
-  await persist();
-  queueMicrotask(pump);
-  return publicTask(task);
+async function createTask() {
+  const error = new Error("Xavfsizlik rejimi yoqilgan: Chat Agentdan boshqa agentlar vaqtincha o‘chirilgan.");
+  error.status = 503;
+  throw error;
 }
 function listTasks() { return tasks.slice().reverse().map(publicTask); }
 function getTask(id) { const task = tasks.find(item => item.id === id); return task ? publicTask(task) : null; }

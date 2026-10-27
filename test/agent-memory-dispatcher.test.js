@@ -31,7 +31,7 @@ test("memory keeps separate agent histories per session", async () => {
     memory._resetForTests();
   }
 });
-test("chat coordinator calls specialist models and returns specialist names", async () => {
+test("chat dispatcher uses only the isolated Chat Agent", async () => {
   memory._resetForTests();
   const calls = [];
   const fakeRequest = async (_config, messages) => {
@@ -46,11 +46,10 @@ test("chat coordinator calls specialist models and returns specialist names", as
       requestModel: fakeRequest,
       signal: new AbortController().signal
     });
-    assert.equal(result.mode, "multi-agent");
-    assert.ok(result.agents.some(agent => agent.id === "chat-coordinator") === false);
-    assert.ok(result.agents.some(agent => agent.id === "qa-agent"));
-    assert.ok(result.agents.some(agent => agent.id === "software-builder-agent"));
-    assert.ok(calls.length >= 4);
+    assert.equal(result.mode, "single-chat-agent-isolated");
+    assert.deepEqual(result.agents.map(agent => agent.id), ["chat-coordinator"]);
+    assert.equal(calls.length, 1);
+    assert.equal(result.safety.nonChatAgentsEnabled, false);
     assert.equal((await memory.getMemory("chat-coordinator", "session_C123")).length, 1);
   } finally {
     await fs.rm(tempDir, { recursive: true, force: true });

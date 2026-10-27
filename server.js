@@ -176,6 +176,26 @@ app.get("/api/admin/overview", requireAdmin, (_req, res) => {
   });
 });
 
+app.get("/api/admin/safety/status", requireAdmin, (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, shield: globalSafetyShield.getStatus(), quarantines: globalSafetyShield.listQuarantines() });
+});
+app.get("/api/admin/safety/events", requireAdmin, (req, res) => {
+  res.set("Cache-Control", "no-store");
+  const limit = Number.parseInt(req.query.limit, 10);
+  res.json({ ok: true, events: globalSafetyShield.listEvents(Number.isFinite(limit) ? limit : 100) });
+});
+app.post("/api/admin/safety/quarantines/:hash/release", requireAdmin, (req, res) => {
+  try {
+    const result = globalSafetyShield.releaseQuarantine(req.params.hash, String(req.body?.reason || "admin_review").slice(0, 80));
+    globalSafetyShield.auditAdminAction("release_quarantine", req.params.hash);
+    res.set("Cache-Control", "no-store");
+    res.json({ ok: true, result });
+  } catch (error) {
+    res.status(error.status || 400).json({ error: error.message || "Karantin holati o‘zgartirilmadi." });
+  }
+});
+
 app.get("/api/admin/tasks", requireAdmin, (_req, res) => {
   res.set("Cache-Control", "no-store");
   res.json({ ok: true, tasks: agentRuntime.listTasks() });
@@ -215,7 +235,7 @@ app.post("/api/admin/tasks/:id/review", requireAdmin, (req, res) => {
 
 app.get("/api/health", (_req, res) => {
   res.set("Cache-Control", "no-store");
-  res.json({ ok: true, app: "ULUGBEK AI", version: "0.3.0", aiConfigured: Boolean(process.env.OPENAI_API_KEY || (process.env.OPENAI_BASE_URL && process.env.OPENAI_BASE_URL !== "https://api.openai.com/v1")) });
+  res.json({ ok: true, app: "ULUGBEK AI", version: "0.3.0", aiConfigured: Boolean((process.env.GEMINI_API_KEY && process.env.GEMINI_ALLOW_CHAT_CONTENT === "true") || process.env.OPENAI_API_KEY || (process.env.OPENAI_BASE_URL && process.env.OPENAI_BASE_URL !== "https://api.openai.com/v1")) });
 });
 
 app.get("/api/diagnostics", (_req, res) => {
@@ -224,7 +244,7 @@ app.get("/api/diagnostics", (_req, res) => {
     ok: true,
     app: "ULUGBEK AI",
     backend: "running",
-    ai: process.env.OPENAI_API_KEY ? "hosted-provider-configured" : (process.env.OPENAI_BASE_URL && process.env.OPENAI_BASE_URL !== "https://api.openai.com/v1" ? "self-hosted-or-custom-endpoint-configured" : "demo-only-no-model-key"),
+    ai: process.env.GEMINI_API_KEY && process.env.GEMINI_ALLOW_CHAT_CONTENT === "true" ? "gemini-enabled-with-explicit-consent" : (process.env.OPENAI_API_KEY ? "hosted-provider-configured" : (process.env.OPENAI_BASE_URL && process.env.OPENAI_BASE_URL !== "https://api.openai.com/v1" ? "self-hosted-or-custom-endpoint-configured" : "demo-only-no-model-key")),
     publicWebResearch: "available-through-lab-route-when-server-has-internet",
     knowledgeStorage: "server-local-json-files",
     agentMemory: "separate-per-agent-per-browser-session; JSON file; durable hosting storage must be configured",
@@ -267,9 +287,18 @@ function createPlan(task) {
   };
 }
 
+const appIntegrationPolicy = require("./modules/app-integration-policy");
+
+app.get("/api/integrations/app-stores", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json(appIntegrationPolicy.getIntegrationCatalog());
+});
+
 const capabilityCatalog = require("./modules/catalog");
+const egressPolicy = require("./modules/egress-policy");
 const workflowGate = require("./modules/workflow-gate");
 const securityPolicy = require("./modules/security-policy");
+const globalSafetyShield = require("./modules/global-safety-shield");
 
 app.get("/api/security/policy", (_req, res) => {
   res.set("Cache-Control", "no-store");
@@ -317,13 +346,16 @@ app.post("/api/agent/plan", plannerRateLimit, async (req, res) => {
   const configuredBaseUrl = (process.env.OPENAI_BASE_URL || "").trim();
   if (!apiKey && !configuredBaseUrl) return res.json({ plan: fallback, mode: "rules", notice: "AI modeli ulanmagan; qoida asosidagi rejalashtirish ishlatildi." });
 
-  const baseUrl = (configuredBaseUrl || "https://api.openai.com/v1").replace(/\/$/, "");
+  const endpointCheck = egressPolicy.validateModelEndpoint(configuredBaseUrl || "https://api.openai.com/v1");
+  if (!endpointCheck.allowed) return res.json({ plan: fallback, mode: "rules", notice: "AI manzili xavfsizlik ruxsat ro‘yxatidan o‘tmadi; tashqi so‘rov bloklandi." });
+  const baseUrl = endpointCheck.url;
   const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 25000);
   try {
     const response = await fetch(baseUrl + "/chat/completions", {
       method: "POST",
+      redirect: "error",
       headers: { ...(apiKey ? { "Authorization": "Bearer " + apiKey } : {}), "Content-Type": "application/json" },
       signal: controller.signal,
       body: JSON.stringify({
@@ -366,24 +398,67 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   if (!message) return res.status(400).json({ error: "Xabar bo‘sh bo‘lmasligi kerak." });
   if (message.length > MAX_TASK_LENGTH) return res.status(413).json({ error: "Xabar 4000 belgidan oshmasligi kerak." });
   const inputSafety = require("./modules/input-safety").inspectUserMessage(message);
-  if (!inputSafety.allowed) return res.status(400).set("Cache-Control", "no-store").json({ error: inputSafety.message, safety: { blocked: true, category: inputSafety.reason } });
+  const shieldDecision = globalSafetyShield.inspectChat({ message, sessionId, ip: req.ip, inputSafety });
+  if (!shieldDecision.allowed) {
+    return res.status(400).set("Cache-Control", "no-store").json({
+      error: shieldDecision.message || inputSafety.message,
+      safety: { blocked: true, category: shieldDecision.reason, quarantined: shieldDecision.quarantined === true }
+    });
+  }
+  const geminiApiKey = process.env.GEMINI_API_KEY || "";
+  const geminiChatConsent = process.env.GEMINI_ALLOW_CHAT_CONTENT === "true";
   const apiKey = process.env.OPENAI_API_KEY || "";
   const configuredBaseUrl = (process.env.OPENAI_BASE_URL || "").trim();
-  if (!apiKey && (!configuredBaseUrl || /(^|\.)api\.openai\.com(\/|$)/i.test(configuredBaseUrl.replace(/^https?:\/\//i, "")))) {
+  if (geminiApiKey && !geminiChatConsent) {
+    return res.status(403).set("Cache-Control", "no-store").json({
+      error: "Maxfiylik himoyasi: Gemini chatga ulanishi o‘chirib qo‘yilgan. Foydalanuvchi xabarini Google Gemini’ga yuborishga aniq rozilik berilmaguncha so‘rov yuborilmaydi.",
+      mode: "privacy-blocked"
+    });
+  }
+  const providerHost = configuredBaseUrl.replace(/^https?:\/\//i, "").split("/")[0].toLowerCase();
+  if (!geminiApiKey && !apiKey && (!configuredBaseUrl || providerHost === "api.openai.com")) {
     return res.json({
-      reply: "ULUGBEK AI hozir demo rejimida. Chat Agent va mutaxassis agentlar haqiqiy ishlashi uchun hostingda OPENAI_API_KEY yoki mos OPENAI_BASE_URL hamda OPENAI_MODEL sozlanishi kerak.",
+      reply: "ULUGBEK AI hozir demo rejimida. Haqiqiy AI javoblari uchun serverda GEMINI_API_KEY va GEMINI_ALLOW_CHAT_CONTENT=true (Gemini’ga xabar yuborishga rozilik), yoki OPENAI_API_KEY / mos OPENAI_BASE_URL sozlanishi kerak.",
       mode: "demo",
       agents: [],
       receivedCharacters: message.length
     });
   }
-  const baseUrl = (configuredBaseUrl || "https://api.openai.com/v1").replace(/\/$/, "");
-  const config = { key: apiKey, url: baseUrl, model: process.env.OPENAI_MODEL || "gpt-4o-mini" };
+  const endpointCheck = geminiApiKey ? null : egressPolicy.validateModelEndpoint(configuredBaseUrl || "https://api.openai.com/v1");
+  if (endpointCheck && !endpointCheck.allowed) return res.status(503).json({ error: "AI manzili xavfsizlik ruxsat ro‘yxatida yo‘q; AI_ALLOWED_HOSTS sozlamasini tekshiring.", safety: { blocked: true, reason: endpointCheck.reason } });
+  const baseUrl = endpointCheck ? endpointCheck.url : "";
+  const config = geminiApiKey
+    ? { provider: "gemini", key: geminiApiKey, model: process.env.GEMINI_MODEL || "gemini-flash-latest" }
+    : { provider: "openai-compatible", key: apiKey, url: baseUrl, model: process.env.OPENAI_MODEL || "gpt-4o-mini" };
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 60000);
   const requestModel = async (modelConfig, messages, signal) => {
+    if (modelConfig.provider === "gemini") {
+      const systemText = messages.filter(item => item.role === "system").map(item => item.content).join("\n\n");
+      const contents = messages.filter(item => item.role !== "system").map(item => ({
+        role: item.role === "assistant" ? "model" : "user",
+        parts: [{ text: String(item.content || "") }]
+      }));
+      const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(modelConfig.model) + ":generateContent", {
+        method: "POST",
+        redirect: "error",
+        headers: { "Content-Type": "application/json", "X-goog-api-key": modelConfig.key },
+        signal,
+        body: JSON.stringify({
+          ...(systemText ? { systemInstruction: { parts: [{ text: systemText }] } } : {}),
+          contents,
+          generationConfig: { temperature: 0.3, maxOutputTokens: 2048 }
+        })
+      });
+      if (!response.ok) throw new Error("Gemini provider error");
+      const payload = await response.json();
+      const output = payload?.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("");
+      if (typeof output !== "string" || !output.trim()) throw new Error("Empty Gemini response");
+      return output.slice(0, 8000);
+    }
     const response = await fetch(modelConfig.url + "/chat/completions", {
       method: "POST",
+      redirect: "error",
       headers: { ...(modelConfig.key ? { Authorization: "Bearer " + modelConfig.key } : {}), "Content-Type": "application/json" },
       signal,
       body: JSON.stringify({ model: modelConfig.model, temperature: 0.3, messages })
@@ -395,6 +470,15 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     return output.slice(0, 8000);
   };
   try {
+    if (config.provider === "gemini") {
+      // Explicit-consent privacy mode: send only the current message and fixed system prompt.
+      // Do not send local chat history, agent memory, routing output, or other agent responses.
+      const reply = await requestModel(config, [
+        { role: "system", content: "Sen ULUGBEK AI yordamchisisan. O‘zbek tilida sodda va xavfsiz javob ber. Maxfiy kalit yoki parol so‘rama. Tashqi amallarni bajarilgan deb da’vo qilma." },
+        { role: "user", content: message }
+      ], controller.signal);
+      return res.json({ reply, mode: "gemini-current-message-only", agents: [], privacy: "Only the current message and a fixed system prompt are sent to Gemini; local chat history and agent memory are not sent." });
+    }
     const dispatcher = require("./agents/chat-dispatcher");
     const result = await dispatcher.runChat({ message, sessionId, config, requestModel, signal: controller.signal });
     return res.json({ ...result, receivedCharacters: message.length });

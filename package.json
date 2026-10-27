@@ -2,14 +2,18 @@
   "name": "ulugbek-ai-web",
   "version": "0.2.0",
   "private": true,
-  "description": "ULUGBEK AI web MVP and Android wrapper",
+  "description": "ULUGBEK AI web MVP with Android, Windows desktop, and iOS wrappers",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
     "test": "node --test",
+    "desktop": "electron desktop/main.cjs",
+    "desktop:build:win": "electron-builder --win nsis --x64",
     "android:add": "cap add android",
-    "android:sync": "cap sync android"
+    "android:sync": "cap sync android",
+    "ios:add": "cap add ios",
+    "ios:sync": "cap sync ios"
   },
   "engines": {
     "node": ">=20"
@@ -17,11 +21,43 @@
   "dependencies": {
     "@capacitor/android": "^7.4.3",
     "@capacitor/core": "^7.4.3",
+    "@capacitor/ios": "^7.4.3",
     "express": "^5.1.0",
     "express-rate-limit": "^8.1.0",
     "helmet": "^8.1.0"
   },
   "devDependencies": {
-    "@capacitor/cli": "^7.4.3"
+    "@capacitor/cli": "^7.4.3",
+    "electron": "^37.2.6",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.ulugbekai.desktop",
+    "productName": "ULUGBEK AI",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "desktop/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "extraMetadata": {
+      "main": "desktop/main.cjs"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   }
 }

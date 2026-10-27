@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - mvp/initial-scaffold
+      - security/chat-agent-isolation
     paths:
       - "public/**"
       - "package.json"
@@ -61,6 +62,8 @@ jobs:
           node --check public/admin.js
           node --check public/voice.js
           node --check public/lab.js
+          node --check test/gemini-privacy.test.js
+          node --check test-support/mock-gemini-fetch.cjs
 
       - name: Run web/API tests
         run: npm test

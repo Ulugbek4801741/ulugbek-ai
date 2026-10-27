@@ -25,6 +25,64 @@ async function loadOverview() {
   );
   $("details").textContent = JSON.stringify(data, null, 2);
 }
+async function loadSafety() {
+  const [policyData, runtimeData, eventData] = await Promise.all([
+    request("/api/security/policy"),
+    request("/api/admin/safety/status"),
+    request("/api/admin/safety/events?limit=50")
+  ]);
+  const runtime = runtimeData.shield || {};
+  $("safety-runtime").replaceChildren(
+    metric("Qayd etilgan hodisalar (xotirada)", runtime.eventCount ?? 0),
+    metric("Karantindagi sessiyalar", runtime.quarantinedSessions ?? 0),
+    metric("Shubhali so‘rov chegarasi", runtime.suspiciousRequestThreshold ?? 3),
+    metric("Kuzatuv oynasi", (runtime.windowMinutes ?? 10) + " daqiqa")
+  );
+  const quarantineList = $("safety-quarantines");
+  quarantineList.replaceChildren();
+  const quarantines = runtimeData.quarantines || [];
+  if (!quarantines.length) quarantineList.textContent = "Faol karantin yo‘q.";
+  for (const item of quarantines) {
+    const card = document.createElement("article"); card.className = "task-card";
+    addText(card, "strong", "Sessiya: " + item.sessionHash);
+    addText(card, "p", "Vaqt: " + item.at + " · Sabab: " + (item.reason || "aniqlanmagan"));
+    const release = document.createElement("button"); release.className = "secondary"; release.textContent = "Karantinni bekor qilish";
+    release.addEventListener("click", async () => {
+      const reason = window.prompt("Tekshiruv sababi (majburiy emas):", "admin_review") || "admin_review";
+      release.disabled = true;
+      try { await request("/api/admin/safety/quarantines/" + encodeURIComponent(item.sessionHash) + "/release", { method: "POST", body: JSON.stringify({ reason }) }); await loadSafety(); }
+      catch (error) { $("safety-summary").textContent = error.message; release.disabled = false; }
+    });
+    card.append(release); quarantineList.append(card);
+  }
+  const eventList = $("safety-events");
+  eventList.replaceChildren();
+  const events = eventData.events || [];
+  if (!events.length) eventList.textContent = "Hozircha xavfsizlik hodisasi qayd etilmagan.";
+  for (const event of events) {
+    const card = document.createElement("article"); card.className = "task-card";
+    addText(card, "strong", (event.severity || "info").toUpperCase() + " · " + (event.type || "event"));
+    addText(card, "p", event.at + " · " + (event.reason || "unspecified"));
+    addText(card, "small", "Sessiya: " + (event.sessionHash || "—") + " · IP izi: " + (event.ipHash || "—") + " · Matn uzunligi: " + (event.messageLength ?? 0));
+    eventList.append(card);
+  }
+  const data = policyData;
+  const policy = data.policy || {};
+  const summary = $("safety-summary");
+  summary.replaceChildren();
+  addText(summary, "strong", "Siyosat v" + (policy.version || "noma’lum"));
+  addText(summary, "p", "Bajarish holati: " + (policy.executionEnabled ? "yoqilgan" : "tashqi bajarish o‘chiq"));
+  addText(summary, "p", policy.note || "Izoh mavjud emas.");
+  const list = $("safety-rules");
+  list.replaceChildren();
+  for (const rule of (Array.isArray(policy.rules) ? policy.rules : [])) {
+    const card = document.createElement("article"); card.className = "task-card";
+    addText(card, "strong", (rule.severity || "info").toUpperCase() + " · " + (rule.id || "qoida"));
+    addText(card, "p", rule.rule || "");
+    list.append(card);
+  }
+  if (!list.childElementCount) list.textContent = "Qoidalar ro‘yxati mavjud emas.";
+}
 function addText(parent, tag, value, cls) {
   const node = document.createElement(tag); node.textContent = value || "";
   if (cls) node.className = cls;
@@ -74,7 +132,7 @@ async function loadTasks() {
 async function checkSession() {
   try {
     const status = await request("/api/admin/status");
-    if (status.authenticated) { showDashboard(true); await Promise.all([loadOverview(), loadTasks()]); }
+    if (status.authenticated) { showDashboard(true); await Promise.all([loadOverview(), loadTasks(), loadSafety()]); }
     else showDashboard(false);
   } catch (_) { showDashboard(false); $("status").textContent = "Backend server talab qilinadi"; }
 }
@@ -92,5 +150,6 @@ $("task-form").addEventListener("submit", async (event) => {
   } catch (error) { $("task-message").textContent = error.message; }
   finally { button.disabled = false; }
 });
+$("refresh-safety").addEventListener("click", async () => { try { await loadSafety(); } catch (error) { $("safety-summary").textContent = error.message; } });
 checkSession();
 setInterval(() => { if (!$("dashboard").hidden) { loadTasks().catch(() => {}); loadOverview().catch(() => {}); } }, 10000);

@@ -1,0 +1,64 @@
+name: Build iOS simulator app
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - apps/windows-ios-builds
+    paths:
+      - "public/**"
+      - "package.json"
+      - "capacitor.config.json"
+      - ".github/workflows/build-ios-simulator.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-simulator-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Check JavaScript syntax
+        run: |
+          node --check server.js
+          node --check public/app.js
+          node --check desktop/main.cjs
+      - name: Run tests
+        run: npm test
+      - name: Add iOS platform
+        run: npx cap add ios
+      - name: Sync iOS project
+        run: npx cap sync ios
+      - name: Build unsigned iOS simulator app
+        run: |
+          xcodebuild \
+            -workspace ios/App/App.xcworkspace \
+            -scheme App \
+            -sdk iphonesimulator \
+            -configuration Debug \
+            -derivedDataPath build/ios-derived \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+      - name: Package simulator app
+        run: |
+          cd build/ios-derived/Build/Products/Debug-iphonesimulator
+          ditto -c -k --sequesterRsrc --keepParent App.app "$GITHUB_WORKSPACE/ulugbek-ai-ios-simulator.zip"
+      - name: Upload iOS simulator artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ulugbek-ai-ios-simulator
+          path: ulugbek-ai-ios-simulator.zip
+          if-no-files-found: error
+          retention-days: 14
