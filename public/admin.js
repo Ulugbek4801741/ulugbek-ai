@@ -147,6 +147,24 @@ async function loadTasks() {
   if (!data.tasks.length) { list.textContent = "Hozircha topshiriq yo‘q."; return; }
   for (const task of data.tasks) list.append(renderTask(task));
 }
+async function loginWithPassword(event) {
+  event.preventDefault();
+  const button = $("admin-login-button");
+  const password = $("admin-password").value;
+  button.disabled = true;
+  $("login-error").textContent = "Tekshirilmoqda…";
+  try {
+    await request("/api/auth/admin/login", { method: "POST", body: JSON.stringify({ password }) });
+    $("admin-password").value = "";
+    $("login-error").textContent = "";
+    showDashboard(true);
+    await Promise.all([loadOverview(), loadTasks(), loadSafety()]);
+  } catch (error) {
+    $("login-error").textContent = error.message;
+  } finally {
+    button.disabled = false;
+  }
+}
 async function checkSession() {
   try {
     const status = await request("/api/admin/status");
@@ -154,7 +172,20 @@ async function checkSession() {
     else showDashboard(false);
   } catch (_) { showDashboard(false); $("status").textContent = "Backend server talab qilinadi"; }
 }
-$("logout").addEventListener("click", async () => { try { await request("/api/admin/logout", { method: "POST", body: "{}" }); } finally { showDashboard(false); } });
+async function logoutAdmin() {
+  try { await fetch("/api/admin/logout", { method: "POST", credentials: "same-origin", cache: "no-store", keepalive: true, headers: { "Content-Type": "application/json" }, body: "{}" }); } catch (_) {}
+  showDashboard(false);
+  if ($("admin-password")) $("admin-password").value = "";
+}
+$("logout").addEventListener("click", logoutAdmin);
+$("admin-login-form").addEventListener("submit", loginWithPassword);
+// Hide admin UI and request server-side logout when the app/tab is backgrounded or closed.
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden" && !$("dashboard").hidden) logoutAdmin();
+});
+window.addEventListener("pagehide", () => {
+  if (!$("dashboard").hidden) logoutAdmin();
+});
 $("refresh").addEventListener("click", async () => { try { await loadOverview(); $("status").textContent = "Yangilandi"; } catch (error) { $("details").textContent = error.message; } });
 $("refresh-tasks").addEventListener("click", async () => { try { await loadTasks(); $("task-message").textContent = ""; } catch (error) { $("task-message").textContent = error.message; } });
 $("task-form").addEventListener("submit", async (event) => {
