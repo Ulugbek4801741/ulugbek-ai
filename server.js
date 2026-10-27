@@ -64,7 +64,7 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "";
 const PUBLIC_BASE_URL = (process.env.PUBLIC_BASE_URL || "").replace(/\/$/, "");
 const ADMIN_SESSION_SECRET = process.env.ADMIN_SESSION_SECRET || "";
-const ADMIN_SESSION_TTL_MS = 8 * 60 * 60 * 1000;
+const ADMIN_SESSION_TTL_MS = 30 * 60 * 1000; // 30 daqiqa; brauzer yopilganda ham client logout qiladi\nconst ADMIN_PASSWORD_HASH = (process.env.ADMIN_PASSWORD_HASH || "").trim();\nconst adminLoginFailures = new Map();\nconst ADMIN_LOCKOUT_MS = 15 * 60 * 1000;\nfunction passwordHashMatches(password) {\n  const [salt, expectedHex, extra] = ADMIN_PASSWORD_HASH.split(":");\n  if (!salt || !expectedHex || extra !== undefined || !/^[a-f0-9]{128}$/i.test(expectedHex)) return false;\n  const actual = crypto.scryptSync(password, salt, 64);\n  const expected = Buffer.from(expectedHex, "hex");\n  return expected.length === actual.length && crypto.timingSafeEqual(actual, expected);\n}
 function safeEqual(a, b) {
   const left = Buffer.from(String(a));
   const right = Buffer.from(String(b));
@@ -101,6 +101,24 @@ function readCookie(req, name) {
 function googleOAuthReady() {
   return Boolean(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET && ADMIN_GOOGLE_EMAIL && PUBLIC_BASE_URL.startsWith("https://") && ADMIN_SESSION_SECRET);
 }
+app.post("/api/auth/admin/login", (req, res) => {
+  res.set("Cache-Control", "no-store");
+  if (!ADMIN_SESSION_SECRET || !ADMIN_PASSWORD_HASH) return res.status(503).json({ error: "Admin paroli serverda sozlanmagan. ADMIN_PASSWORD_HASH va ADMIN_SESSION_SECRET kerak." });
+  const ip = crypto.createHash("sha256").update(String(req.ip || req.socket.remoteAddress || "unknown")).digest("hex");
+  const now = Date.now();
+  const record = adminLoginFailures.get(ip);
+  if (record?.lockedUntil > now) return res.status(429).json({ error: "Kirish vaqtincha bloklangan. 15 daqiqadan keyin urinib ko‘ring." });
+  const password = typeof req.body?.password === "string" ? req.body.password : "";
+  if (!password || password.length > 1024 || !passwordHashMatches(password)) {
+    const failures = (record?.lockedUntil > now ? 5 : (record?.count || 0)) + 1;
+    adminLoginFailures.set(ip, { count: failures, lockedUntil: failures >= 5 ? now + ADMIN_LOCKOUT_MS : 0 });
+    return res.status(failures >= 5 ? 429 : 401).json({ error: failures >= 5 ? "5 marta xato urinish. Kirish 15 daqiqaga bloklandi." : "Parol noto‘g‘ri." });
+  }
+  adminLoginFailures.delete(ip);
+  const token = signAdminSession({ role: "admin", email: "local-admin", jti: crypto.randomUUID(), exp: now + ADMIN_SESSION_TTL_MS });
+  res.setHeader("Set-Cookie", "ulugbek_admin=" + encodeURIComponent(token) + "; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=1800");
+  res.json({ ok: true, authenticated: true });
+});
 app.get("/api/auth/google", (req, res) => {
   if (!googleOAuthReady()) return res.status(503).send("Google kirishi sozlanmagan. Hostingda GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, ADMIN_GOOGLE_EMAIL, ADMIN_SESSION_SECRET va PUBLIC_BASE_URL sozlang.");
   const state = crypto.randomBytes(32).toString("base64url");
