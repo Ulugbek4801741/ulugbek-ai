@@ -13,8 +13,26 @@ function metric(label, value) {
   card.append(title, val); return card;
 }
 function showDashboard(show) { $("login-card").hidden = show; $("dashboard").hidden = !show; $("status").textContent = show ? "Himoyalangan sessiya" : "Kirish talab qilinadi"; }
+function enforceAgentIsolation(data) {
+  const isolation = data?.agentIsolation || {};
+  const locked = isolation.enabled === true && isolation.specialistAgentsEnabled === false && isolation.taskExecutionEnabled === false;
+  $("submit-task").disabled = true;
+  $("task-role").disabled = true;
+  $("task-prompt").disabled = true;
+  $("task-message").textContent = locked
+    ? "Izolyatsiya faol: Chat Agentdan boshqa agentlarni ishga tushirish server tomonidan bloklangan."
+    : "Agent ruxsat holati aniq tasdiqlanmadi. Xavfsizlik uchun topshiriq berish o‘chirilgan.";
+  $("agent-isolation-banner").classList.add("agent-lock-active");
+  const strong = $("agent-isolation-banner").querySelector("strong");
+  const paragraph = $("agent-isolation-banner").querySelector("p");
+  strong.textContent = locked ? "Izolyatsiya yoqilgan — faqat Chat Agent faol" : "Agent holati tasdiqlanmadi — barcha agentlar bloklangan";
+  paragraph.textContent = locked
+    ? "Backend, frontend, tadqiqot, sinov va boshqa mutaxassis agentlar server tomonidan bloklangan. Ular o‘zicha ishga tushmaydi, navbatga vazifa qo‘sha olmaydi va tashqi amal bajara olmaydi."
+    : "Server aniq xavfsiz holatni tasdiqlamadi. Ehtiyot chorasi sifatida mutaxassis agentlarni ishga tushirish bloklangan.";
+}
 async function loadOverview() {
   const data = await request("/api/admin/overview");
+  enforceAgentIsolation(data);
   $("cards").replaceChildren(
     metric("Server ishlash vaqti", Math.floor(data.uptimeSeconds / 60) + " daqiqa"),
     metric("Node.js", data.nodeVersion),
