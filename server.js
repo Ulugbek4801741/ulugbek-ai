@@ -4,6 +4,7 @@ const rateLimit = require("express-rate-limit");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const agentRuntime = require("./agent-runtime");
+const adminWorkspace = require("./modules/admin-workspace");
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -64,7 +65,7 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "";
 const PUBLIC_BASE_URL = (process.env.PUBLIC_BASE_URL || "").replace(/\/$/, "");
 const ADMIN_SESSION_SECRET = process.env.ADMIN_SESSION_SECRET || "";
-const ADMIN_SESSION_TTL_MS = 8 * 60 * 60 * 1000;
+const ADMIN_SESSION_TTL_MS = 60 * 60 * 1000;
 function safeEqual(a, b) {
   const left = Buffer.from(String(a));
   const right = Buffer.from(String(b));
@@ -194,6 +195,51 @@ app.post("/api/admin/safety/quarantines/:hash/release", requireAdmin, (req, res)
   } catch (error) {
     res.status(error.status || 400).json({ error: error.message || "Karantin holati o‘zgartirilmadi." });
   }
+});
+
+app.get("/api/admin/services", requireAdmin, async (_req, res) => {
+  try {
+    res.set("Cache-Control", "no-store");
+    res.json({ ok: true, services: await adminWorkspace.listServices() });
+  } catch (_) { res.status(500).json({ error: "Xizmatlar ro‘yxatini yuklab bo‘lmadi." }); }
+});
+app.post("/api/admin/services", requireAdmin, async (req, res) => {
+  try {
+    const token = readCookie(req, "ulugbek_admin");
+    let email = "";
+    try { email = JSON.parse(Buffer.from(token.split(".")[0], "base64url").toString("utf8")).email || ""; } catch (_) {}
+    const service = await adminWorkspace.createService(req.body, email);
+    globalSafetyShield.auditAdminAction("create_service_proposal", service.id);
+    res.status(201).set("Cache-Control", "no-store").json({ ok: true, service, note: "Taklif yaratildi. U hali foydalanuvchilarga chiqarilmagan." });
+  } catch (error) { res.status(error.status || 500).json({ error: error.message || "Xizmat taklifi yaratilmadi." }); }
+});
+app.post("/api/admin/services/:id/review", requireAdmin, async (req, res) => {
+  try {
+    const service = await adminWorkspace.reviewService(req.params.id, req.body?.decision, req.body?.note);
+    if (!service) return res.status(404).json({ error: "Xizmat taklifi topilmadi." });
+    globalSafetyShield.auditAdminAction("review_service_proposal", service.id + ":" + service.approvalStatus);
+    res.set("Cache-Control", "no-store").json({ ok: true, service, note: service.approvalStatus === "approved" ? "Taklif qurish uchun tasdiqlandi, ammo avtomatik deploy qilinmadi." : "Qaror saqlandi." });
+  } catch (error) { res.status(error.status || 500).json({ error: error.message || "Qaror saqlanmadi." }); }
+});
+app.post("/api/company/contract-requests", async (req, res) => {
+  try {
+    const result = await adminWorkspace.createContract(req.body);
+    res.status(201).set("Cache-Control", "no-store").json({ ok: true, request: result, message: "Taklif bosh admin ko‘rib chiqishi uchun yuborildi." });
+  } catch (error) { res.status(error.status || 500).json({ error: error.message || "So‘rov yuborilmadi." }); }
+});
+app.get("/api/admin/company/contract-requests", requireAdmin, async (_req, res) => {
+  try {
+    res.set("Cache-Control", "no-store");
+    res.json({ ok: true, requests: await adminWorkspace.listContracts() });
+  } catch (_) { res.status(500).json({ error: "Kompaniya so‘rovlarini yuklab bo‘lmadi." }); }
+});
+app.post("/api/admin/company/contract-requests/:id/review", requireAdmin, async (req, res) => {
+  try {
+    const item = await adminWorkspace.reviewContract(req.params.id, req.body?.decision, req.body?.note);
+    if (!item) return res.status(404).json({ error: "Kompaniya so‘rovi topilmadi." });
+    globalSafetyShield.auditAdminAction("review_company_contract_request", item.id + ":" + item.status);
+    res.set("Cache-Control", "no-store").json({ ok: true, request: item, note: "Bu faqat ko‘rib chiqish holati; yuridik shartnoma tuzilgan hisoblanmaydi." });
+  } catch (error) { res.status(error.status || 500).json({ error: error.message || "Qaror saqlanmadi." }); }
 });
 
 app.get("/api/admin/tasks", requireAdmin, (_req, res) => {
