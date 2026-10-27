@@ -141,7 +141,7 @@ app.get("/api/auth/google/callback", async (req, res) => {
     if (profile.email_verified !== true || !email || email !== ADMIN_GOOGLE_EMAIL) return res.status(403).send("Bu Google hisobi administrator sifatida ruxsat etilmagan.");
     const token = signAdminSession({ role: "admin", email, jti: crypto.randomUUID(), exp: Date.now() + ADMIN_SESSION_TTL_MS });
     res.setHeader("Cache-Control", "no-store");
-    res.setHeader("Set-Cookie", "ulugbek_admin=" + encodeURIComponent(token) + "; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=28800");
+    res.setHeader("Set-Cookie", "ulugbek_admin=" + encodeURIComponent(token) + "; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=3600");
     return res.redirect(303, "/admin.html");
   } catch (_) { return res.status(502).send("Google kirish serverida xatolik yuz berdi. Birozdan so‘ng qayta urinib ko‘ring."); }
 });
