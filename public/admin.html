@@ -31,6 +31,21 @@
 <div class="panel-heading"><h2>Vazifalar va natijalar</h2><button id="refresh-tasks" class="secondary" type="button">Yangilash</button></div>
 <div id="task-list" class="task-list" aria-live="polite">Vazifalar yuklanmoqda…</div>
 </section>
+<section class="panel" id="service-factory">
+<p class="eyebrow">SERVICE FACTORY</p><h2>Yangi xizmat loyihalash</h2>
+<p class="muted">Matn yoki ovozdan olingan buyruqni kiriting. Agent topshiriqni ishlab chiqadi; xizmat alohida taklif sifatida saqlanadi va tasdiqsiz ommaga chiqarilmaydi.</p>
+<form id="service-form" style="max-width:none">
+<label for="service-title">Xizmat nomi</label><input id="service-title" maxlength="120" placeholder="Masalan: ULUGBEK Logistika">
+<label for="service-prompt">Buyruq va talablar</label><textarea id="service-prompt" rows="4" maxlength="4000" required placeholder="Masalan: mijoz, haydovchi, buyurtma va yetkazib berish kuzatuvi bo‘lgan logistika xizmatini rejalashtir."></textarea>
+<label for="service-platforms">Platformalar</label><select id="service-platforms" multiple size="4"><option value="web" selected>Web sayt</option><option value="android">Android</option><option value="windows">Windows</option><option value="ios">iPhone / iOS</option></select>
+<button id="service-submit" type="submit">Xizmat taklifini yaratish</button><p id="service-message" class="error" aria-live="polite"></p>
+</form>
+<div class="panel-heading"><h2>Xizmat takliflari</h2><button id="refresh-services" class="secondary" type="button">Yangilash</button></div><div id="service-list" class="task-list">Yuklanmoqda…</div>
+</section>
+<section class="panel" id="company-requests">
+<div class="panel-heading"><h2>Kompaniya so‘rovlari</h2><button id="refresh-contracts" class="secondary" type="button">Yangilash</button></div>
+<p class="muted">Kompaniyalar maxsus xizmat bo‘yicha taklif yuborishi mumkin. “Muzokaraga ruxsat” yuridik shartnoma imzolanganini anglatmaydi.</p><div id="contract-list" class="task-list">Yuklanmoqda…</div>
+</section>
 <section class="panel" id="safety-shield"><div class="panel-heading"><h2>Global Safety Shield</h2><button id="refresh-safety" class="secondary" type="button">Holatni yangilash</button></div><p class="muted">Xavfsizlik qoidalari va faol cheklovlar. Bu ko‘rsatkichlar faqat serverdan kelgan ma’lumotni aks ettiradi; siyosat ro‘yxati o‘zi barcha tashqi harakatlarni texnik bloklamaydi.</p><div id="safety-summary" class="notice">Xavfsizlik holati yuklanmoqda…</div><div id="safety-rules" class="task-list"></div><div id="safety-runtime" class="grid"></div><h3>Vaqtinchalik karantindagi sessiyalar</h3><div id="safety-quarantines" class="task-list">Yuklanmoqda…</div><h3>So‘nggi xavfsizlik hodisalari</h3><div id="safety-events" class="task-list">Yuklanmoqda…</div></section>
 <section class="panel"><div class="panel-heading"><h2>Texnik tafsilotlar</h2><button id="refresh" class="secondary">Yangilash</button></div><pre id="details">Ma’lumot yuklanmoqda…</pre></section>
 <div class="notice"><b>Xavfsizlik eslatmasi</b><p>AI kaliti hech qachon bu sahifada ko‘rsatilmaydi. Hosting, to‘lovlar, foydalanuvchi ma’lumotlari va deploy amallari alohida ruxsat hamda sinovlarni talab qiladi.</p></div>
