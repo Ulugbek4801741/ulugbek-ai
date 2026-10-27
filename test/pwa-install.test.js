@@ -52,6 +52,8 @@ test("Global Inqiroz modulida ruxsatli joylashuv, ochiq ob-havo va zilzila manba
   assert.match(crisis, /navigator\.geolocation\.getCurrentPosition/);
   assert.match(crisis, /api\.open-meteo\.com/);
   assert.match(crisis, /earthquake\.usgs\.gov/);
+  assert.match(crisis, /fdsnws\/event\/1\/query/);
+  assert.match(crisis, /starttime=2000-01-01/);
   assert.match(crisis, /localStorage\.setItem\(key/);
   assert.match(crisis, /Yordam xabarini tayyorlash/);
   assert.match(crisis, /Zilzilani aniq sana\/joy bilan oldindan aytishning ishonchli usuli/);
