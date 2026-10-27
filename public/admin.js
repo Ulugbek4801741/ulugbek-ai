@@ -129,10 +129,84 @@ async function loadTasks() {
   if (!data.tasks.length) { list.textContent = "Hozircha topshiriq yo‘q."; return; }
   for (const task of data.tasks) list.append(renderTask(task));
 }
+async function loadServices() {
+  const data = await request("/api/admin/services");
+  const list = $("service-list");
+  list.replaceChildren();
+  if (!data.services.length) { list.textContent = "Hozircha xizmat taklifi yo‘q."; return; }
+  for (const item of data.services) {
+    const card = document.createElement("article"); card.className = "task-card";
+    addText(card, "strong", item.title + " · " + item.approvalStatus);
+    addText(card, "p", item.prompt, "task-prompt-text");
+    addText(card, "small", "Platformalar: " + (item.platforms || []).join(", ") + " · " + new Date(item.createdAt).toLocaleString());
+    if (item.reviewNote) addText(card, "p", "Bosh admin izohi: " + item.reviewNote);
+    if (item.approvalStatus === "pending") {
+      const actions = document.createElement("div"); actions.className = "task-actions";
+      for (const [decision, label] of [["approved", "Qurish uchun tasdiqlash"], ["changes_requested", "Tuzatishga qaytarish"], ["rejected", "Rad etish"]]) {
+        const button = document.createElement("button"); button.className = "secondary"; button.textContent = label;
+        button.addEventListener("click", async () => {
+          const note = window.prompt("Izoh (ixtiyoriy):", "") || "";
+          button.disabled = true;
+          try { await request("/api/admin/services/" + encodeURIComponent(item.id) + "/review", { method: "POST", body: JSON.stringify({ decision, note }) }); await loadServices(); }
+          catch (error) { $("service-message").textContent = error.message; button.disabled = false; }
+        });
+        actions.append(button);
+      }
+      card.append(actions);
+    }
+    list.append(card);
+  }
+}
+async function loadContracts() {
+  const data = await request("/api/admin/company/contract-requests");
+  const list = $("contract-list"); list.replaceChildren();
+  if (!data.requests.length) { list.textContent = "Hozircha kompaniya so‘rovi yo‘q."; return; }
+  for (const item of data.requests) {
+    const card = document.createElement("article"); card.className = "task-card";
+    addText(card, "strong", item.company + " · " + item.status);
+    addText(card, "p", "Mas’ul: " + item.contactName + " · " + item.email + (item.phone ? " · " + item.phone : ""));
+    addText(card, "p", item.description, "task-prompt-text");
+    addText(card, "small", new Date(item.createdAt).toLocaleString());
+    if (item.reviewNote) addText(card, "p", "Izoh: " + item.reviewNote);
+    if (item.status === "pending_review") {
+      const actions = document.createElement("div"); actions.className = "task-actions";
+      for (const [decision, label] of [["approved_for_negotiation", "Muzokaraga ruxsat"], ["needs_information", "Qo‘shimcha ma’lumot so‘rash"], ["rejected", "Rad etish"]]) {
+        const button = document.createElement("button"); button.className = "secondary"; button.textContent = label;
+        button.addEventListener("click", async () => {
+          const note = window.prompt("Izoh (ixtiyoriy):", "") || "";
+          button.disabled = true;
+          try { await request("/api/admin/company/contract-requests/" + encodeURIComponent(item.id) + "/review", { method: "POST", body: JSON.stringify({ decision, note }) }); await loadContracts(); }
+          catch (error) { card.append(document.createTextNode(error.message)); button.disabled = false; }
+        });
+        actions.append(button);
+      }
+      card.append(actions);
+    }
+    list.append(card);
+  }
+}
+$("service-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const button = $("service-submit"); button.disabled = true; $("service-message").textContent = "AI vazifasi va xizmat taklifi yaratilmoqda…";
+  const prompt = $("service-prompt").value.trim();
+  const title = $("service-title").value.trim();
+  const platforms = Array.from($("service-platforms").selectedOptions).map(option => option.value);
+  try {
+    await request("/api/admin/tasks", { method: "POST", body: JSON.stringify({ role: "orchestrator", prompt: "Xizmat loyihasi uchun reja, arxitektura, UI, backend, xavfsizlik va test mezonlarini tayyorla. Hozircha kodni deploy qilma. Platformalar: " + platforms.join(", ") + ". Talab: " + prompt }) });
+    await request("/api/admin/services", { method: "POST", body: JSON.stringify({ title, prompt, platforms }) });
+    $("service-prompt").value = ""; $("service-title").value = "";
+    $("service-message").textContent = "Taklif saqlandi va AI navbatiga qo‘shildi. Bosh admin tasdig‘isiz ommaga chiqarilmaydi.";
+    await Promise.all([loadServices(), loadTasks(), loadOverview()]);
+  } catch (error) { $("service-message").textContent = error.message; }
+  finally { button.disabled = false; }
+});
+$("refresh-services").addEventListener("click", () => loadServices().catch(error => { $("service-message").textContent = error.message; }));
+$("refresh-contracts").addEventListener("click", () => loadContracts().catch(error => { $("contract-list").textContent = error.message; }));
+
 async function checkSession() {
   try {
     const status = await request("/api/admin/status");
-    if (status.authenticated) { showDashboard(true); await Promise.all([loadOverview(), loadTasks(), loadSafety()]); }
+    if (status.authenticated) { showDashboard(true); await Promise.all([loadOverview(), loadTasks(), loadSafety(), loadServices(), loadContracts()]); }
     else showDashboard(false);
   } catch (_) { showDashboard(false); $("status").textContent = "Backend server talab qilinadi"; }
 }
@@ -152,4 +226,4 @@ $("task-form").addEventListener("submit", async (event) => {
 });
 $("refresh-safety").addEventListener("click", async () => { try { await loadSafety(); } catch (error) { $("safety-summary").textContent = error.message; } });
 checkSession();
-setInterval(() => { if (!$("dashboard").hidden) { loadTasks().catch(() => {}); loadOverview().catch(() => {}); } }, 10000);
+setInterval(() => { if (!$("dashboard").hidden) { loadTasks().catch(() => {}); loadOverview().catch(() => {}); loadServices().catch(() => {}); loadContracts().catch(() => {}); } }, 10000);
