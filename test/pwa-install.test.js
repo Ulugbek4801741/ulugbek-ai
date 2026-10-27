@@ -41,3 +41,19 @@ test("Server talab qilmaydigan admin sinov paneli navigatsiyada mavjud", () => {
   assert.match(admin, /Mahalliy testlarni bajarish/);
   assert.match(admin, /LocalStorage/);
 });
+
+test("ULUG‘BEK GLOBAL INQIROZ Integratsiyalar katalogining birinchi elementi", () => {
+  assert.ok(app.indexOf('id:"crisis",name:"ULUG‘BEK GLOBAL INQIROZ"') < app.indexOf('id:"install",name:"ULUGBEK AI — bosh ekranga qo‘shish"'));
+  assert.match(app, /location\.href="\.\/global-crisis\.html"/);
+});
+
+test("Global Inqiroz modulida ruxsatli joylashuv, ochiq ob-havo va zilzila manbalari bor", () => {
+  const crisis = fs.readFileSync(path.join(__dirname, "..", "public", "global-crisis.html"), "utf8");
+  assert.match(crisis, /navigator\.geolocation\.getCurrentPosition/);
+  assert.match(crisis, /api\.open-meteo\.com/);
+  assert.match(crisis, /earthquake\.usgs\.gov/);
+  assert.match(crisis, /localStorage\.setItem\(key/);
+  assert.match(crisis, /Yordam xabarini tayyorlash/);
+  assert.match(crisis, /Zilzilani aniq sana\/joy bilan oldindan aytishning ishonchli usuli/);
+  assert.match(worker, /"global-crisis\.html"/);
+});
