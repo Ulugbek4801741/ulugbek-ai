@@ -3,8 +3,9 @@
 const express = require("express");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
+const { createAgentRouter } = require("./agents/router");
 
-function createApp({ db, redis, startedAt = Date.now() } = {}) {
+function createApp({ db, redis, authenticate, startedAt = Date.now() } = {}) {
   const app = express();
   app.disable("x-powered-by");
   app.set("trust proxy", Number(process.env.TRUST_PROXY_HOPS || 0));
@@ -44,6 +45,10 @@ function createApp({ db, redis, startedAt = Date.now() } = {}) {
       return res.status(503).json({ status: "not_ready", checks });
     }
   });
+
+  // Authentication is injected by the future account/session layer.
+  // The router denies access by default until that layer is implemented.
+  if (db) app.use("/api/agents", createAgentRouter({ db, authenticate }));
 
   app.use((_req, res) => {
     res.status(404).json({ error: "not_found" });
