@@ -13,7 +13,7 @@
     settings:['sozlamalarni och','sozlamalar'],
     stopSpeech:['ovozni to‘xtat','ovozni toxtat','o‘qishni to‘xtat','oqishni toxtat']
   });
-  function normalizeTranscript(value){return String(value||'').normalize('NFC').toLocaleLowerCase('uz-UZ').replace(/[.!?,;:]+$/u,'').replace(/\s+/gu,' ').trim();}
+  function normalizeTranscript(value){return String(value||'').normalize('NFC').toLocaleLowerCase('uz-UZ').replace(/\s+/gu,' ').trim().replace(/[.!?,;:]+$/u,'').trim();}
   function classifyCommand(value){const text=normalizeTranscript(value);for(const [command,phrases] of Object.entries(COMMANDS)){if(phrases.some(p=>normalizeTranscript(p)===text))return command;}return 'dictation';}
   function normalizeLanguage(tag){if(typeof tag!=='string'||!tag.trim())return null;try{return Intl.getCanonicalLocales(tag.trim())[0]||null;}catch(_){return null;}}
   function getCapabilities(){return {languages:LANGUAGES.map(x=>({...x})),onlineSpeechRecognition:!!(root.SpeechRecognition||root.webkitSpeechRecognition),onDeviceSpeechRecognition:false,offlineSpeechRecognition:false,textToSpeech:!!root.speechSynthesis,notes:'Offline model not installed by this module; do not silently fall back to a network engine.'};}
