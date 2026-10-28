@@ -6,10 +6,14 @@ on:
     branches:
       - main
       - apps/windows-ios-builds
+      - feature/video-community-course-marketplace
     paths:
       - "desktop/**"
       - "package.json"
       - "public/**"
+      - "server.js"
+      - "tests/**"
+      - "test/**"
       - ".github/workflows/build-windows-desktop.yml"
 
 permissions:
