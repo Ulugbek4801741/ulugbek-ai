@@ -22,6 +22,10 @@ For a test run without Docker: run `npm install`, `npm run check`, and `npm test
 - `GET /health/live`: confirms the Node process is responding.
 - `GET /health/ready`: returns 200 only when PostgreSQL and Redis respond; otherwise 503.
 
+## No-Code deployment design
+
+See [NO-CODE-DEPLOYMENT-SPEC.md](./NO-CODE-DEPLOYMENT-SPEC.md) for user-owned projects, shared vs dedicated hosting, regional price comparisons, chat/voice changes, approval controls, and the proposed 70/30 revenue model. This is a specification; these features are not implemented by the current backend foundation.
+
 ## Privacy requirements
 
 See [PRIVACY-AND-OPERATIONS.md](./PRIVACY-AND-OPERATIONS.md) for the privacy-first data-flow rules, self-hosted AI defaults, email/SMS limitations, and release gates. These are requirements, not a claim that the controls are all implemented yet.
