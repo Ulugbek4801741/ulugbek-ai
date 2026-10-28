@@ -22,6 +22,10 @@ For a test run without Docker: run `npm install`, `npm run check`, and `npm test
 - `GET /health/live`: confirms the Node process is responding.
 - `GET /health/ready`: returns 200 only when PostgreSQL and Redis respond; otherwise 503.
 
+## Privacy requirements
+
+See [PRIVACY-AND-OPERATIONS.md](./PRIVACY-AND-OPERATIONS.md) for the privacy-first data-flow rules, self-hosted AI defaults, email/SMS limitations, and release gates. These are requirements, not a claim that the controls are all implemented yet.
+
 ## Security and production gates
 - Do not expose PostgreSQL or Redis directly to the public internet.
 - Use TLS, managed secrets, firewall restrictions, encrypted backups and tested restore procedures in production.
