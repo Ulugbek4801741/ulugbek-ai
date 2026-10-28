@@ -7,11 +7,13 @@ on:
       - main
       - mvp/initial-scaffold
       - security/chat-agent-isolation
+      - feature/video-community-course-marketplace
     paths:
       - "public/**"
       - "package.json"
       - "server.js"
       - "test/**"
+      - "tests/**"
       - "capacitor.config.json"
       - ".github/workflows/build-android.yml"
 
