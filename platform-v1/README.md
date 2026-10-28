@@ -1,0 +1,32 @@
+# ULUGBEK AI Platform v1 — backend foundation
+
+This directory is a clean, separately testable backend foundation. It does not replace the current application and is not production-ready merely because it builds.
+
+## Included
+- Node.js 22 + Express API shell with security headers, bounded JSON requests and rate limiting.
+- PostgreSQL connection pool and Redis client.
+- Separate liveness and dependency-aware readiness endpoints.
+- Graceful shutdown and fail-closed startup when required dependencies are unavailable.
+- Docker image and local Docker Compose stack.
+- Automated HTTP tests and GitHub Actions CI.
+
+## Local run
+1. Copy `.env.example` to `.env`.
+2. Set a long random `POSTGRES_PASSWORD` in `.env`.
+3. Run `docker compose up --build` from this directory.
+4. Check `http://127.0.0.1:8080/health/live` and `/health/ready`.
+
+For a test run without Docker: run `npm install`, `npm run check`, and `npm test`.
+
+## Endpoints
+- `GET /health/live`: confirms the Node process is responding.
+- `GET /health/ready`: returns 200 only when PostgreSQL and Redis respond; otherwise 503.
+
+## Security and production gates
+- Do not expose PostgreSQL or Redis directly to the public internet.
+- Use TLS, managed secrets, firewall restrictions, encrypted backups and tested restore procedures in production.
+- `TRUST_PROXY_HOPS` must match the actual trusted proxy chain; do not set it blindly.
+- Configure database TLS according to the selected provider. The example's `PG_SSL=false` is for local Docker only.
+- This foundation does not yet implement user registration, authentication, authorization, billing, social networking, AI providers, media uploads, WebRTC, course delivery or multi-region failover.
+- Do not advertise a user capacity until realistic load tests, security review, backup/restore tests and operational monitoring pass.
+- Deployments and paid infrastructure must be configured and approved by the owner. No server has been purchased or deployed by this change.
