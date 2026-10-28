@@ -1,0 +1,32 @@
+name: Platform v1 CI
+
+on:
+  pull_request:
+    paths:
+      - "platform-v1/**"
+      - ".github/workflows/platform-v1-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "platform-v1/**"
+      - ".github/workflows/platform-v1-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: platform-v1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: platform-v1/package.json
+      - run: npm install --no-audit --no-fund
+      - run: npm run check
+      - run: npm test
