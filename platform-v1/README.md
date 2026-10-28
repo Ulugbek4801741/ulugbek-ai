@@ -7,7 +7,8 @@ This directory is a clean, separately testable backend foundation. It does not r
 - PostgreSQL connection pool and Redis client.
 - Separate liveness and dependency-aware readiness endpoints.
 - Graceful shutdown and fail-closed startup when required dependencies are unavailable.
-- Docker image and local Docker Compose stack.
+- Personal-agent API foundation with tenant-scoped database queries, task proposals, approval decisions, audit events, and central-agent status for platform admins.
+- PostgreSQL migration for per-user agent profiles, tasks, central-agent state, and audit records.
 - Automated HTTP tests and GitHub Actions CI.
 
 ## Local run
@@ -21,6 +22,15 @@ For a test run without Docker: run `npm install`, `npm run check`, and `npm test
 ## Endpoints
 - `GET /health/live`: confirms the Node process is responding.
 - `GET /health/ready`: returns 200 only when PostgreSQL and Redis respond; otherwise 503.
+- `GET /api/agents/me`: get or create the authenticated user's personal agent profile.
+- `PATCH /api/agents/me/status`: pause, resume, or revoke the caller's own agent.
+- `POST /api/agents/me/tasks`: submit a task proposal; sensitive task categories wait for approval.
+- `GET /api/agents/me/tasks`: list only the caller's tasks.
+- `POST /api/agents/me/tasks/:taskId/decision`: approve, reject, or cancel the caller's own task proposal.
+- `GET /api/agents/platform/status`: central-agent status, restricted to a platform-admin role.
+
+### Critical authentication limitation
+The routes intentionally fail closed until a real, trusted account/session authentication middleware is connected. The current repository foundation does **not** yet implement registration, login, sessions, or a production authentication provider. Do not accept user IDs or roles from request bodies or arbitrary headers. The router records proposals only: it does not execute Windows commands, access files, run shell commands, or change production systems. The migration `migrations/001_user_agents.sql` must be applied through a controlled migration process before these database-backed routes can run.
 
 ## No-Code deployment design
 
@@ -35,6 +45,6 @@ See [PRIVACY-AND-OPERATIONS.md](./PRIVACY-AND-OPERATIONS.md) for the privacy-fir
 - Use TLS, managed secrets, firewall restrictions, encrypted backups and tested restore procedures in production.
 - `TRUST_PROXY_HOPS` must match the actual trusted proxy chain; do not set it blindly.
 - Configure database TLS according to the selected provider. The example's `PG_SSL=false` is for local Docker only.
-- This foundation does not yet implement user registration, authentication, authorization, billing, social networking, AI providers, media uploads, WebRTC, course delivery or multi-region failover.
+- AI-generated task proposals are not execution permission. Implement a separate allowlisted executor/sandbox only after authentication, authorization, consent UX, and security review are in place.
 - Do not advertise a user capacity until realistic load tests, security review, backup/restore tests and operational monitoring pass.
 - Deployments and paid infrastructure must be configured and approved by the owner. No server has been purchased or deployed by this change.
