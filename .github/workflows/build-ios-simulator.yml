@@ -6,8 +6,12 @@ on:
     branches:
       - main
       - apps/windows-ios-builds
+      - feature/video-community-course-marketplace
     paths:
       - "public/**"
+      - "server.js"
+      - "tests/**"
+      - "test/**"
       - "package.json"
       - "capacitor.config.json"
       - ".github/workflows/build-ios-simulator.yml"

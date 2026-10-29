@@ -262,6 +262,40 @@ app.post("/api/admin/tasks/:id/review", requireAdmin, (req, res) => {
   }
 });
 
+app.post("/api/translate", async (req, res) => {
+  res.set("Cache-Control", "no-store");
+  const text = typeof req.body?.text === "string" ? req.body.text.trim() : "";
+  const sourceLanguage = typeof req.body?.sourceLanguage === "string" ? req.body.sourceLanguage.trim().slice(0, 40) : "";
+  const targetLanguage = typeof req.body?.targetLanguage === "string" ? req.body.targetLanguage.trim().slice(0, 40) : "";
+  if (!text || text.length > 3000) return res.status(400).json({ error: "Tarjima matni 1–3000 belgi bo‘lishi kerak." });
+  if (!sourceLanguage || !targetLanguage || sourceLanguage === targetLanguage) return res.status(400).json({ error: "Manba va tarjima tillarini tanlang; ular bir xil bo‘lmasin." });
+  const config = agentRuntime.modelConfig();
+  if (!config.url) return res.status(503).json({ error: "Tarjima AI modeli ulanmagan. Hostingda OPENAI_API_KEY yoki ruxsat etilgan OPENAI_BASE_URL va OPENAI_MODEL sozlang." });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 25000);
+  try {
+    const response = await fetch(config.url + "/chat/completions", {
+      method: "POST", redirect: "error",
+      headers: { ...(config.key ? { Authorization: "Bearer " + config.key } : {}), "Content-Type": "application/json" },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model: config.model, temperature: 0.1,
+        messages: [
+          { role: "system", content: "You are a precise speech translator. Translate the user's text from the stated source language into the stated target language. Return ONLY the translation, preserving meaning, names, tone, and spoken conversational style. Do not answer questions, add explanations, or invent content. If the source language is unclear, make the best careful translation." },
+          { role: "user", content: "Source language: " + sourceLanguage + "\nTarget language: " + targetLanguage + "\nText to translate:\n" + text }
+        ]
+      })
+    });
+    if (!response.ok) return res.status(502).json({ error: "Tarjima modeli HTTP " + response.status + " xatosini qaytardi." });
+    const data = await response.json();
+    const translation = data?.choices?.[0]?.message?.content;
+    if (typeof translation !== "string" || !translation.trim()) return res.status(502).json({ error: "Tarjima modeli bo‘sh javob qaytardi." });
+    return res.json({ ok: true, translation: translation.trim().slice(0, 6000), sourceLanguage, targetLanguage, mode: "ai" });
+  } catch (error) {
+    return res.status(error.name === "AbortError" ? 504 : 502).json({ error: error.name === "AbortError" ? "Tarjima 25 soniyada tugamadi. Qayta urinib ko‘ring." : "Tarjima serveriga ulanib bo‘lmadi." });
+  } finally { clearTimeout(timeout); }
+});
+
 app.get("/api/health", (_req, res) => {
   res.set("Cache-Control", "no-store");
   res.json({ ok: true, app: "ULUGBEK AI", version: "0.3.0", aiConfigured: Boolean((process.env.GEMINI_API_KEY && process.env.GEMINI_ALLOW_CHAT_CONTENT === "true") || process.env.OPENAI_API_KEY || (process.env.OPENAI_BASE_URL && process.env.OPENAI_BASE_URL !== "https://api.openai.com/v1")) });
