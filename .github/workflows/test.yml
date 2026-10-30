@@ -28,6 +28,8 @@ jobs:
       - name: Check JavaScript syntax
         run: |
           node --check server.js
+          node --check developer-agent.js
+          node --check test/developer-agent.test.js
           node --check modules/catalog.js
           node --check modules/workflow-gate.js
           node --check test/workflow-gate.test.js
