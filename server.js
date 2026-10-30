@@ -485,8 +485,8 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     const localKnowledge = require("./lab-learning-worker");
     const learnedNotes = await localKnowledge.searchKnowledge(message, 5);
     const knowledgeContext = learnedNotes.length
-      ? "\\n\\nULUGBEK AI bilimlar bazasidan olingan manbali kontekst (fakt sifatida faqat savolga aloqador qismini ishlat; manbalarni ko‘rsat):\\n" +
-        learnedNotes.map((item, index) => (index + 1) + ". " + item.title + ": " + item.content.slice(0, 1400) + " [Manba: " + item.source + "]").join("\\n")
+      ? "\n\nULUGBEK AI bilimlar bazasidan olingan manbali kontekst (fakt sifatida faqat savolga aloqador qismini ishlat; manbalarni ko‘rsat):\\n" +
+        learnedNotes.map((item, index) => (index + 1) + ". " + item.title + ": " + item.content.slice(0, 1400) + " [Manba: " + item.source + "]").join("\n")
       : "";
     if (config.provider === "gemini") {
       // Explicit-consent privacy mode: send only the current message and fixed system prompt.
