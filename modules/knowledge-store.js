@@ -36,7 +36,7 @@ async function add(item) {
   return true;
 }
 function terms(text) {
-  return String(text || "").toLocaleLowerCase().match(/[\\p{L}\\p{N}]{3,}/gu) || [];
+  return String(text || "").toLocaleLowerCase().match(/[a-z0-9\u00c0-\u024f\u0400-\u04ff]{3,}/gi) || [];
 }
 async function search(query, limit = 5) {
   const q = [...new Set(terms(query))];
