@@ -4,6 +4,7 @@ const rateLimit = require("express-rate-limit");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const agentRuntime = require("./agent-runtime");
+const developerAgent = require("./developer-agent");
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -194,6 +195,25 @@ app.post("/api/admin/safety/quarantines/:hash/release", requireAdmin, (req, res)
     res.json({ ok: true, result });
   } catch (error) {
     res.status(error.status || 400).json({ error: error.message || "Karantin holati o‘zgartirilmadi." });
+  }
+});
+
+app.get("/api/admin/developer-agent/status", requireAdmin, (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, agent: developerAgent.status() });
+});
+app.get("/api/admin/developer-agent/proposals", requireAdmin, (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, proposals: developerAgent.listProposals() });
+});
+app.post("/api/admin/developer-agent/proposals/:id/review", requireAdmin, (req, res) => {
+  try {
+    const proposal = developerAgent.reviewProposal(req.params.id, req.body?.decision, req.body?.note);
+    if (!proposal) return res.status(404).json({ error: "Taklif topilmadi." });
+    res.set("Cache-Control", "no-store");
+    return res.json({ ok: true, proposal, note: "Tasdiqlash taklifni chiqarishga ruxsat beradi, lekin kodni avtomatik o‘zgartirmaydi yoki deploy qilmaydi." });
+  } catch (error) {
+    return res.status(error.status || 500).json({ error: error.message || "Taklif holati saqlanmadi." });
   }
 });
 
@@ -402,9 +422,11 @@ app.use((err, _req, res, _next) => {
 });
 learningWorker.start();
 agentRuntime.startWorker().then(() => {
-  app.listen(PORT, "0.0.0.0", () => {
+  const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`ULUGBEK AI serveri ${PORT}-portda ishga tushdi.`);
+    developerAgent.start().catch(error => console.error("Developer Agent ishga tushmadi:", error.message));
   });
+  server.on("error", error => console.error("HTTP server xatosi:", error.message));
 }).catch(error => {
   console.error("Agent worker ishga tushmadi:", error.message);
   process.exitCode = 1;
