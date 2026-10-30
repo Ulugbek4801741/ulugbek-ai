@@ -33,8 +33,8 @@ test("native reasoning never claims code tests were executed", () => {
 
 test("native reasoning routes a specialist role and rejects unknown roles", () => {
   const result = engine.runTask("Backend serverni rejalashtir", "backend");
-  assert.ok(result.output.includes("Backend Engineer"));
-  assert.ok(!result.output.includes("Frontend Engineer"));
+  assert.ok(result.output.includes("Backend & API Engineer"));
+  assert.ok(!result.output.includes("Frontend & UI Engineer"));
   assert.throws(() => engine.runTask("Vazifa", "not-a-real-agent"), /Noma’lum agent roli/);
 });
 
