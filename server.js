@@ -165,8 +165,9 @@ app.get("/api/admin/overview", requireAdmin, (_req, res) => {
     uptimeSeconds: Math.floor(process.uptime()),
     nodeVersion: process.version,
     memory: { rssBytes: process.memoryUsage().rss, heapUsedBytes: process.memoryUsage().heapUsed },
-    aiConfigured: Boolean(agentRuntime.modelConfig().url),
-    model: agentRuntime.modelConfig().url ? agentRuntime.modelConfig().model : null,
+    aiConfigured: false,
+    model: null,
+    cognition: "native-symbolic-no-external-ai",
     agentWorker: "single-process-queue",
     queuedTasks: agentRuntime.listTasks().filter(task => task.status === "queued").length,
     runningTasks: agentRuntime.listTasks().filter(task => task.status === "running").length,
@@ -235,7 +236,7 @@ app.post("/api/admin/tasks/:id/review", requireAdmin, (req, res) => {
 
 app.get("/api/health", (_req, res) => {
   res.set("Cache-Control", "no-store");
-  res.json({ ok: true, app: "ULUGBEK AI", version: "0.3.0", aiConfigured: Boolean((process.env.GEMINI_API_KEY && process.env.GEMINI_ALLOW_CHAT_CONTENT === "true") || process.env.OPENAI_API_KEY || (process.env.OPENAI_BASE_URL && process.env.OPENAI_BASE_URL !== "https://api.openai.com/v1")) });
+  res.json({ ok: true, app: "ULUGBEK AI", version: "0.3.1", aiConfigured: false, mode: "native-symbolic-no-external-ai" });
 });
 
 app.get("/api/diagnostics", (_req, res) => {
@@ -244,7 +245,7 @@ app.get("/api/diagnostics", (_req, res) => {
     ok: true,
     app: "ULUGBEK AI",
     backend: "running",
-    ai: process.env.GEMINI_API_KEY && process.env.GEMINI_ALLOW_CHAT_CONTENT === "true" ? "gemini-enabled-with-explicit-consent" : (process.env.OPENAI_API_KEY ? "hosted-provider-configured" : (process.env.OPENAI_BASE_URL && process.env.OPENAI_BASE_URL !== "https://api.openai.com/v1" ? "self-hosted-or-custom-endpoint-configured" : "demo-only-no-model-key")),
+    ai: "native-symbolic-no-external-ai",
     publicWebResearch: "available-through-lab-route-when-server-has-internet",
     knowledgeStorage: "server-local-json-files",
     agentMemory: "separate-per-agent-per-browser-session; JSON file; durable hosting storage must be configured",
@@ -253,7 +254,7 @@ app.get("/api/diagnostics", (_req, res) => {
     autonomousAgents: "single-process-queued-model-task-worker; not-independent-24-7-service",
     automaticFailover: "not-configured-requires-authorized-backup-host",
     productionDatabase: "not-configured-task-store-uses-local-json-file",
-    agentExecution: "chat coordinator routes to up to three specialist model calls plus synthesis; model-generated proposals only; no shell, file edit, or deploy",
+    agentExecution: "native rule-based retrieval and evidence ranking; no hosted model calls, shell, file edit, or deploy",
     note: "Agent navbati server jarayoni ishlayotganida bajariladi. Hosting qayta ishga tushsa yoki uxlab qolsa 24/7 kafolatlanmaydi. JSON saqlash vaqtinchalik; doimiy ishlab chiqarish uchun PostgreSQL/Redis va alohida worker kerak. Bu diagnostika end-to-end sinov o‘rnini bosmaydi."
   });
 });
@@ -295,7 +296,6 @@ app.get("/api/integrations/app-stores", (_req, res) => {
 });
 
 const capabilityCatalog = require("./modules/catalog");
-const egressPolicy = require("./modules/egress-policy");
 const workflowGate = require("./modules/workflow-gate");
 const securityPolicy = require("./modules/security-policy");
 const globalSafetyShield = require("./modules/global-safety-shield");
@@ -341,53 +341,7 @@ app.post("/api/agent/plan", plannerRateLimit, async (req, res) => {
   if (!task) return res.status(400).json({ error: "Vazifa matni bo‘sh bo‘lmasligi kerak." });
   if (task.length > MAX_TASK_LENGTH) return res.status(413).json({ error: "Vazifa 4000 belgidan oshmasligi kerak." });
 
-  const fallback = createPlan(task);
-  const apiKey = process.env.OPENAI_API_KEY || "";
-  const configuredBaseUrl = (process.env.OPENAI_BASE_URL || "").trim();
-  if (!apiKey && !configuredBaseUrl) return res.json({ plan: fallback, mode: "rules", notice: "AI modeli ulanmagan; qoida asosidagi rejalashtirish ishlatildi." });
-
-  const endpointCheck = egressPolicy.validateModelEndpoint(configuredBaseUrl || "https://api.openai.com/v1");
-  if (!endpointCheck.allowed) return res.json({ plan: fallback, mode: "rules", notice: "AI manzili xavfsizlik ruxsat ro‘yxatidan o‘tmadi; tashqi so‘rov bloklandi." });
-  const baseUrl = endpointCheck.url;
-  const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 25000);
-  try {
-    const response = await fetch(baseUrl + "/chat/completions", {
-      method: "POST",
-      redirect: "error",
-      headers: { ...(apiKey ? { "Authorization": "Bearer " + apiKey } : {}), "Content-Type": "application/json" },
-      signal: controller.signal,
-      body: JSON.stringify({
-        model,
-        temperature: 0.2,
-        messages: [
-          { role: "system", content: "Sen ULUGBEK AI rejalashtiruvchi agentisan. Foydalanuvchi vazifasini o‘zbek tilida aniq va xavfsiz rejalashtir. Hech qachon ish bajarildi deb yolg‘on aytma. Tashqi internet, fayllar, hisoblar yoki pulga kirish imkoning yo‘q. Xavfli yoki qaytarib bo‘lmaydigan harakatlar uchun inson tasdig‘ini talab qil. Faqat JSON qaytar: {title:string,steps:[{title:string,detail:string,role:string}],note:string}. 3-6 ta qadam." },
-          { role: "user", content: task }
-        ],
-        response_format: { type: "json_object" }
-      })
-    });
-    if (!response.ok) throw new Error("AI provider error");
-    const payload = await response.json();
-    const content = payload?.choices?.[0]?.message?.content;
-    const plan = JSON.parse(content);
-    if (!plan || typeof plan.title !== "string" || !Array.isArray(plan.steps) || plan.steps.length < 1 || plan.steps.length > 8) throw new Error("Invalid plan schema");
-    const safePlan = {
-      title: plan.title.slice(0, 120),
-      steps: plan.steps.map((step) => ({
-        title: String(step.title || "Vazifa qadami").slice(0, 160),
-        detail: String(step.detail || "").slice(0, 500),
-        role: String(step.role || "Core Coordinator").slice(0, 80)
-      })),
-      note: String(plan.note || "Reja avtomatik tuzildi. Tashqi amallar alohida ruxsat va tekshiruvni talab qiladi.").slice(0, 800)
-    };
-    return res.json({ plan: safePlan, mode: "ai" });
-  } catch (error) {
-    return res.json({ plan: fallback, mode: "rules", notice: "AI xizmati hozir ishlamadi; xavfsiz zaxira reja ishlatildi." });
-  } finally {
-    clearTimeout(timeout);
-  }
+  return res.json({ plan: createPlan(task), mode: "native-rules", notice: "Reja tashqi AI modelisiz, mahalliy qoidalar asosida tuzildi." });
 });
 
 app.post("/api/chat", chatRateLimit, async (req, res) => {
@@ -425,109 +379,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       mode: "native-only-error"
     });
   }
-  const geminiApiKey = process.env.GEMINI_API_KEY || "";
-  const geminiChatConsent = process.env.GEMINI_ALLOW_CHAT_CONTENT === "true";
-  const apiKey = process.env.OPENAI_API_KEY || "";
-  const configuredBaseUrl = (process.env.OPENAI_BASE_URL || "").trim();
-  if (geminiApiKey && !geminiChatConsent) {
-    return res.status(403).set("Cache-Control", "no-store").json({
-      error: "Maxfiylik himoyasi: Gemini chatga ulanishi o‘chirib qo‘yilgan. Foydalanuvchi xabarini Google Gemini’ga yuborishga aniq rozilik berilmaguncha so‘rov yuborilmaydi.",
-      mode: "privacy-blocked"
-    });
-  }
-  const providerHost = configuredBaseUrl.replace(/^https?:\/\//i, "").split("/")[0].toLowerCase();
-  if (!geminiApiKey && !apiKey && (!configuredBaseUrl || providerHost === "api.openai.com")) {
-    try {
-      const localBrain = require("./lab-learning-worker");
-      const knowledge = await localBrain.searchKnowledge(message, 5);
-      return res.json({
-        reply: localBrain.buildLocalReply(message, knowledge),
-        mode: "local-knowledge",
-        agents: ["LocalKnowledgeReasoner"],
-        knowledgeUsed: knowledge.length,
-        sources: knowledge.map(item => ({ title:item.title, url:item.source })),
-        learning: localBrain.status(),
-        receivedCharacters: message.length
-      });
-    } catch (_) {
-      return res.json({
-        reply: "ULUGBEK AI hozir API kalitisiz mahalliy bilim rejimida. Bilimlar bazasini o‘qishda xatolik yuz berdi; keyinroq qayta urinib ko‘ring.",
-        mode: "local-knowledge-error", agents: [], receivedCharacters: message.length
-      });
-    }
-  }
-  const endpointCheck = geminiApiKey ? null : egressPolicy.validateModelEndpoint(configuredBaseUrl || "https://api.openai.com/v1");
-  if (endpointCheck && !endpointCheck.allowed) return res.status(503).json({ error: "AI manzili xavfsizlik ruxsat ro‘yxatida yo‘q; AI_ALLOWED_HOSTS sozlamasini tekshiring.", safety: { blocked: true, reason: endpointCheck.reason } });
-  const baseUrl = endpointCheck ? endpointCheck.url : "";
-  const config = geminiApiKey
-    ? { provider: "gemini", key: geminiApiKey, model: process.env.GEMINI_MODEL || "gemini-flash-latest" }
-    : { provider: "openai-compatible", key: apiKey, url: baseUrl, model: process.env.OPENAI_MODEL || "gpt-4o-mini" };
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 60000);
-  const requestModel = async (modelConfig, messages, signal) => {
-    if (modelConfig.provider === "gemini") {
-      const systemText = messages.filter(item => item.role === "system").map(item => item.content).join("\n\n");
-      const contents = messages.filter(item => item.role !== "system").map(item => ({
-        role: item.role === "assistant" ? "model" : "user",
-        parts: [{ text: String(item.content || "") }]
-      }));
-      const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(modelConfig.model) + ":generateContent", {
-        method: "POST",
-        redirect: "error",
-        headers: { "Content-Type": "application/json", "X-goog-api-key": modelConfig.key },
-        signal,
-        body: JSON.stringify({
-          ...(systemText ? { systemInstruction: { parts: [{ text: systemText }] } } : {}),
-          contents,
-          generationConfig: { temperature: 0.3, maxOutputTokens: 2048 }
-        })
-      });
-      if (!response.ok) throw new Error("Gemini provider error");
-      const payload = await response.json();
-      const output = payload?.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("");
-      if (typeof output !== "string" || !output.trim()) throw new Error("Empty Gemini response");
-      return output.slice(0, 8000);
-    }
-    const response = await fetch(modelConfig.url + "/chat/completions", {
-      method: "POST",
-      redirect: "error",
-      headers: { ...(modelConfig.key ? { Authorization: "Bearer " + modelConfig.key } : {}), "Content-Type": "application/json" },
-      signal,
-      body: JSON.stringify({ model: modelConfig.model, temperature: 0.3, messages })
-    });
-    if (!response.ok) throw new Error("AI provider error");
-    const payload = await response.json();
-    const output = payload?.choices?.[0]?.message?.content;
-    if (typeof output !== "string" || !output.trim()) throw new Error("Empty model response");
-    return output.slice(0, 8000);
-  };
-  try {
-    const localKnowledge = require("./lab-learning-worker");
-    const learnedNotes = await localKnowledge.searchKnowledge(message, 5);
-    const knowledgeContext = learnedNotes.length
-      ? "\n\nULUGBEK AI bilimlar bazasidan olingan manbali kontekst (fakt sifatida faqat savolga aloqador qismini ishlat; manbalarni ko‘rsat):\\n" +
-        learnedNotes.map((item, index) => (index + 1) + ". " + item.title + ": " + item.content.slice(0, 1400) + " [Manba: " + item.source + "]").join("\n")
-      : "";
-    if (config.provider === "gemini") {
-      // Explicit-consent privacy mode: send only the current message and fixed system prompt.
-      // Do not send local chat history, agent memory, routing output, or other agent responses.
-      const reply = await requestModel(config, [
-        { role: "system", content: "Sen ULUGBEK AI yordamchisisan. O‘zbek tilida sodda va xavfsiz javob ber. Maxfiy kalit yoki parol so‘rama. Tashqi amallarni bajarilgan deb da’vo qilma." + knowledgeContext },
-        { role: "user", content: message }
-      ], controller.signal);
-      return res.json({ reply, mode: "gemini-current-message-only", agents: [], privacy: "Only the current message and a fixed system prompt are sent to Gemini; local chat history and agent memory are not sent." });
-    }
-    const dispatcher = require("./agents/chat-dispatcher");
-    const result = await dispatcher.runChat({ message: message + knowledgeContext, sessionId, config, requestModel, signal: controller.signal });
-    return res.json({ ...result, receivedCharacters: message.length });
-  } catch (error) {
-    const timedOut = error.name === "AbortError";
-    return res.status(timedOut ? 504 : 502).json({
-      error: timedOut ? "Ko‘p agentli javob 60 soniyada tugamadi. Qisqaroq vazifa bilan qayta urinib ko‘ring." : "AI agentlari javob bermadi. Model ulanishi va hosting loglarini tekshiring."
-    });
-  } finally {
-    clearTimeout(timeout);
-  }
+
 });
 
 app.use("/api/lab", require("./lab"));
@@ -548,7 +400,8 @@ app.use((err, _req, res, _next) => {
   console.error("Server xatosi:", err.message);
   return res.status(500).json({ error: "Ichki server xatosi." });
 });
-learningWorker.start();\nagentRuntime.startWorker().then(() => {
+learningWorker.start();
+agentRuntime.startWorker().then(() => {
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`ULUGBEK AI serveri ${PORT}-portda ishga tushdi.`);
   });
