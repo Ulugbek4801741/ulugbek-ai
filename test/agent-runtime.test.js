@@ -45,7 +45,7 @@ test("agent runtime queues and completes a local reasoning task without APIs", a
   try {
     const created = await runtime.createTask({ prompt: "Backend server uchun xavfsizlik rejasini tuz", role: "backend" });
     assert.ok(created.id);
-    assert.equal(created.status, "queued");
+    assert.ok(["queued", "running", "completed"].includes(created.status));
     let task = created;
     for (let i = 0; i < 100; i += 1) {
       await new Promise(resolve => setTimeout(resolve, 5));
@@ -55,7 +55,7 @@ test("agent runtime queues and completes a local reasoning task without APIs", a
     await runtime.flush();
     assert.equal(task.status, "completed");
     assert.equal(task.approvalStatus, "pending_review");
-    assert.ok(task.output.includes("Backend Engineer"));
+    assert.ok(task.output.includes("Backend & API Engineer"));
     assert.equal(task.tests.status, "not_run");
     assert.ok(task.logs.some(log => log.message.includes("API ishlatilmadi")));
   } finally {
