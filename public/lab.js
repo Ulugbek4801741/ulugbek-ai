@@ -1,6 +1,11 @@
 "use strict";
 const byId = (id) => document.getElementById(id);
 const toast = byId("lab-toast");
+function apiUrl(path) {
+  const base = typeof window.ULUGBEK_API_BASE_URL === "string" ? window.ULUGBEK_API_BASE_URL.trim().replace(/\/$/, "") : "";
+  if (!base) throw new Error("Backend manzili public/config.js faylida sozlanmagan.");
+  return base + "/api/lab" + path;
+}
 let toastTimer;
 function notify(message) {
   toast.textContent = message;
@@ -15,7 +20,7 @@ function node(tag, text, className) {
   return element;
 }
 async function api(path, options = {}) {
-  const response = await fetch("/api/lab" + path, {
+  const response = await fetch(apiUrl(path), {
     ...options,
     headers: { "Content-Type": "application/json", ...(options.headers || {}) }
   });
