@@ -251,6 +251,33 @@ router.post("/knowledge", async (req, res) => {
   }
 });
 
+router.post("/knowledge/:id/review", async (req, res) => {
+  if (!requireLabAdmin(req, res)) return;
+  const decision = req.body?.decision;
+  if (!["approved", "rejected"].includes(decision)) {
+    return res.status(400).json({ error: "Qaror approved yoki rejected bo‘lishi kerak." });
+  }
+  try {
+    const entries = await readJson(KNOWLEDGE_FILE, []);
+    const list = Array.isArray(entries) ? entries : [];
+    const index = list.findIndex((entry) => entry.id === req.params.id);
+    if (index < 0) return res.status(404).json({ error: "Bilim yozuvi topilmadi." });
+    if (list[index].status !== "pending-review") {
+      return res.status(409).json({ error: "Faqat tekshirilmagan yozuvni ko‘rib chiqish mumkin." });
+    }
+    list[index] = {
+      ...list[index],
+      status: decision,
+      reviewedAt: new Date().toISOString(),
+      reviewNote: cleanText(req.body?.note || "", 500)
+    };
+    await writeJson(KNOWLEDGE_FILE, list);
+    return res.json({ ok: true, entry: list[index] });
+  } catch (_) {
+    return res.status(500).json({ error: "Bilim yozuvining ko‘rib chiqish holati saqlanmadi." });
+  }
+});
+
 router.get("/memory/:agent", async (req, res) => {
   if (!requireLabAdmin(req, res)) return;
   res.set("Cache-Control", "no-store");
