@@ -4,7 +4,6 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const agentRegistry = require("./agents/registry");
-const egressPolicy = require("./modules/egress-policy");
 
 const MAX_TASKS = 200;
 const MAX_PROMPT_LENGTH = 4000;
@@ -69,91 +68,25 @@ function addLog(task, message) {
   task.updatedAt = new Date().toISOString();
 }
 function modelConfig() {
-  const key = process.env.OPENAI_API_KEY || "";
-  const custom = (process.env.OPENAI_BASE_URL || "").trim();
-  const rawUrl = custom || (key ? "https://api.openai.com/v1" : "");
-  const checked = rawUrl ? egressPolicy.validateModelEndpoint(rawUrl) : { allowed: false, reason: "missing_endpoint" };
-  return { key, url: checked.allowed ? checked.url : "", endpointError: checked.reason, model: process.env.OPENAI_MODEL || "gpt-4o-mini" };
-}
-function systemPrompt(role) {
-  const registered = agentRegistry.getAgent(role);
-  if (registered) return registered.systemPrompt;
-  const label = ROLE_LABELS[role] || ROLE_LABELS.orchestrator;
-  return `Sen ULUGBEK AI loyihasidagi ${label}san. Faqat tahlil, reja, kod taklifi yoki tekshiruv natijasi tayyorla. O‘zbek tilida javob ber. Fayllarni o‘zgartirish, shell buyruqlarini bajarish, deploy qilish, pul sarflash yoki tashqi hisoblarda harakat qilish imkoning yo‘q. Bajarilmagan ishni bajarildi deb aytma. Kod taklifida fayl yo‘li, aniq o‘zgarish, xavf va sinov qadamlarini ko‘rsat. Inson ko‘rigi va testdan o‘tmaguncha o‘zgarish tasdiqlangan deb aytma.`;
-}
-async function requestModel(config, messages, signal) {
-  const endpointCheck = egressPolicy.validateModelEndpoint(config.url);
-  if (!endpointCheck.allowed) throw new Error("AI endpoint blocked by outbound allowlist: " + endpointCheck.reason);
-  const response = await fetch(endpointCheck.url + "/chat/completions", {
-    method: "POST",
-    redirect: "error",
-    headers: { ...(config.key ? { Authorization: "Bearer " + config.key } : {}), "Content-Type": "application/json" },
-    signal, body: JSON.stringify({ model: config.model, temperature: 0.2, messages })
-  });
-  if (!response.ok) throw new Error("Model serveri HTTP " + response.status + " javob berdi.");
-  const data = await response.json();
-  const output = data?.choices?.[0]?.message?.content;
-  if (typeof output !== "string" || !output.trim()) throw new Error("Model bo‘sh javob qaytardi.");
-  return output.slice(0, 12000);
+  return { configured: false, mode: "native-rule-based-reasoning", apiUsed: false, trainedLanguageModel: false };
 }
 async function runModel(task) {
-  const config = modelConfig();
-  if (!config.url) {
-    task.status = "blocked";
-    task.error = "AI modeli ulanmagan. Hostingda OPENAI_API_KEY yoki OPENAI_BASE_URL va OPENAI_MODEL sozlang.";
-    addLog(task, "Vazifa bajarilmadi: model endpointi sozlanmagan.");
-    task.finishedAt = new Date().toISOString();
-    await persist();
-    return;
-  }
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 180000);
   try {
-    addLog(task, "Modelga topshiriq yuborilmoqda.");
-    if (task.role === "orchestrator") {
-      const specialists = [
-        { role: "research-agent", title: "Research Agent" },
-        { role: "software-builder-agent", title: "Software Builder Agent" },
-        { role: "frontend-agent", title: "Frontend Agent" },
-        { role: "backend-agent", title: "Backend Agent" },
-        { role: "qa-agent", title: "QA Agent" },
-        { role: "security-agent", title: "Security Agent" },
-        { role: "devops-agent", title: "DevOps Agent" },
-        { role: "product-growth-agent", title: "Product Growth Agent" }
-      ];
-      const results = [];
-      for (const specialist of specialists) {
-        addLog(task, specialist.title + " vazifani tahlil qilmoqda.");
-        results.push("## " + specialist.title + "\n" + await requestModel(config, [
-          { role: "system", content: systemPrompt(specialist.role) + " Faqat o‘z sohang bo‘yicha amaliy taklif yoz. Bajarilmagan testni bajarildi deb ko‘rsatma." },
-          { role: "user", content: "Asosiy vazifa:\n" + task.prompt + "\nSohang: " + specialist.title + ". Kodni o‘zgartirma va tashqi harakat bajarma. Taklif, xavf va tekshirish usulini yoz." }
-        ], controller.signal));
-      }
-      addLog(task, "Tekshiruvchi agent takliflarni jamlamoqda.");
-      const verified = await requestModel(config, [
-        { role: "system", content: systemPrompt("orchestrator") + " Mutaxassislar javoblarini solishtir, qarama-qarshilik va xavflarni ko‘rsat, aniq ustuvor reja ber. Haqiqiy testlar bajarilmaganini ayt." },
-        { role: "user", content: "Asosiy vazifa:\n" + task.prompt + "\n\nTakliflar:\n" + results.join("\n\n") }
-      ], controller.signal);
-      task.output = (results.join("\n\n") + "\n\n## Yakuniy tekshiruv\n" + verified).slice(0, 24000);
-      task.tests = { status: "not_run", note: "QA Agent test rejasini berdi; kod sandboxda bajarilmadi." };
-      addLog(task, "8 ta mutaxassis tahlili va yakuniy tekshiruv tugadi. Kod takliflari tayyorlandi, loyiha fayllari o‘zgartirilmadi.");
-    } else {
-      task.output = await requestModel(config, [
-        { role: "system", content: systemPrompt(task.role) },
-        { role: "user", content: task.prompt }
-      ], controller.signal);
-      task.tests = { status: "not_run", note: "Model taklifi haqiqiy kod sinovi emas." };
-      addLog(task, "Tanlangan mutaxassisning javobi olindi.");
-    }
+    addLog(task, "ULUGBEK AI mahalliy fikrlash mexanizmi vazifani tahlil qilmoqda.");
+    const engine = require("./native-reasoning-engine");
+    const result = engine.runTask(task.prompt);
+    task.output = result.output.slice(0, 24000);
+    task.analysis = result.analysis;
+    task.tests = { status: "not_run", note: "Mahalliy reja tayyorlandi; kod ishga tushirilmadi va avtomatik test bajarilmadi." };
     task.status = "completed";
     task.approvalStatus = "pending_review";
-    addLog(task, "Natija taklif sifatida saqlandi; loyiha fayllari o‘zgartirilmadi.");
+    addLog(task, "Mahalliy qoidaviy tahlil tugadi. API ishlatilmadi; loyiha fayllari o‘zgartirilmadi.");
+    addLog(task, "Natija neyron model javobi emas, qoidalar asosidagi reja va agent rollari hisobotidir.");
   } catch (error) {
     task.status = "failed";
-    task.error = error.name === "AbortError" ? "Model javobi 3 daqiqada kelmadi." : String(error.message || "Model xatosi").slice(0, 300);
-    addLog(task, "Vazifa xato bilan tugadi.");
+    task.error = String(error.message || "Mahalliy fikrlash xatosi").slice(0, 300);
+    addLog(task, "Mahalliy tahlil xato bilan tugadi.");
   } finally {
-    clearTimeout(timeout);
     task.updatedAt = new Date().toISOString();
     task.finishedAt = new Date().toISOString();
     await persist();
