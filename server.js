@@ -173,7 +173,7 @@ app.get("/api/admin/overview", requireAdmin, (_req, res) => {
     externalAiApiEnabled: false,
     model: null,
     cognition: "native-rule-based-reasoning",
-    agentWorker: "single-process-queue"
+    agentWorker: "single-process-queue",
     queuedTasks: agentRuntime.listTasks().filter(task => task.status === "queued").length,
     runningTasks: agentRuntime.listTasks().filter(task => task.status === "running").length,
     adminAuth: "google-oauth-allowlist",
