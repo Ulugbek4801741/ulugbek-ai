@@ -200,7 +200,7 @@ test("API smoke tests", async (t) => {
       const body = await response.json();
       assert.equal(response.status, 200);
       assert.equal(body.backend, "running");
-      assert.equal(body.ai, "demo-only-no-model-key");
+      assert.equal(body.ai, "native-symbolic-no-external-ai");
       assert.equal(body.automaticFailover, "not-configured-requires-authorized-backup-host");
     });
 
@@ -241,7 +241,7 @@ test("API smoke tests", async (t) => {
       assert.equal(response.status, 400);
     });
 
-    await t.test("chat accepts a message in demo mode", async () => {
+    await t.test("chat accepts a message using native-only reasoning", async () => {
       const response = await fetch(`${baseUrl}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -249,7 +249,7 @@ test("API smoke tests", async (t) => {
       });
       const body = await response.json();
       assert.equal(response.status, 200);
-      assert.equal(body.mode, "demo");
+      assert.equal(body.mode, "native-symbolic-no-external-ai");
       assert.equal(body.receivedCharacters, 5);
     });
 
