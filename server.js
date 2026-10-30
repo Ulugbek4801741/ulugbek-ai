@@ -427,7 +427,8 @@ app.use((err, _req, res, _next) => {
   console.error("Server xatosi:", err.message);
   return res.status(500).json({ error: "Ichki server xatosi." });
 });
-learningWorker.start();
+// Keep automated tests isolated from background network learning and shared file writes.
+if (process.env.NODE_ENV !== "test") learningWorker.start();
 agentRuntime.startWorker().then(() => {
   const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`ULUGBEK AI serveri ${PORT}-portda ishga tushdi.`);
