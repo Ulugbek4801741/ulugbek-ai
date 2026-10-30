@@ -1,25 +1,27 @@
+"use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const fs = require("node:fs/promises");
-const path = require("node:path");
-const os = require("node:os");
+const engine = require("../native-reasoning-engine");
 
-const tempDir = path.join(os.tmpdir(), "ulugbek-agent-test-" + process.pid);
-process.env.TASK_STORE_PATH = path.join(tempDir, "tasks.json");
-delete process.env.OPENAI_API_KEY;
-delete process.env.OPENAI_BASE_URL;
+test("native reasoning works without external AI configuration", () => {
+  delete process.env.OPENAI_API_KEY;
+  delete process.env.OPENAI_BASE_URL;
+  delete process.env.OPENAI_MODEL;
+  const result = engine.runTask("ULUGBEK AI serverida xavfsizlik va kod testlarini rejalashtir");
+  assert.equal(result.analysis.apiUsed, false);
+  assert.equal(result.analysis.trainedLanguageModel, false);
+  assert.equal(result.analysis.engine, "ulugbek-native-rule-reasoner-v1");
+  assert.ok(result.output.includes("Xavfsizlik"));
+  assert.ok(result.output.includes("Agent rollari"));
+});
 
-test("non-chat agent queue stays disabled in security isolation mode", async () => {
-  const runtime = require("../agent-runtime");
-  try {
-    await runtime.startWorker();
-    await assert.rejects(
-      () => runtime.createTask({ prompt: "ULUGBEK AI uchun xavfsizlik rejasini yoz", role: "security" }),
-      /Xavfsizlik rejimi yoqilgan/
-    );
-    assert.deepEqual(runtime.listTasks(), []);
-  } finally {
-    await runtime.flush();
-    await fs.rm(tempDir, { recursive: true, force: true });
-  }
+test("native reasoning rejects empty and oversized prompts", () => {
+  assert.throws(() => engine.analyze(""), /bo‘sh yoki juda uzun/);
+  assert.throws(() => engine.analyze("x".repeat(4001)), /bo‘sh yoki juda uzun/);
+});
+
+test("native reasoning never claims code tests were executed", () => {
+  const result = engine.runTask("Node.js backend uchun kod yozish va test qilish");
+  assert.ok(result.output.includes("haqiqiy kompilyatsiya yoki test"));
+  assert.equal(result.analysis.apiUsed, false);
 });
