@@ -56,9 +56,9 @@ async function initialize() {
   for (const task of tasks) {
     if (["queued", "running"].includes(task.status)) {
       task.status = "blocked";
-      task.error = "Xavfsizlik sababli Chat Agentdan boshqa agentlar vaqtincha o‘chirilgan.";
+      task.error = "Server qayta ishga tushgani sababli bajarilmay qolgan vazifa xavfsizlik uchun to‘xtatildi; uni qayta yuboring.";
       task.finishedAt = new Date().toISOString();
-      task.logs = [...(task.logs || []), { at: new Date().toISOString(), message: "Izolyatsiya rejimi: vazifa ishga tushirilmadi." }].slice(-30);
+      task.logs = [...(task.logs || []), { at: new Date().toISOString(), message: "Restart recovery: takroriy yoki yarim bajarilgan ishning oldini olish uchun vazifa to‘xtatildi." }].slice(-30);
     }
   }
   await persist();
@@ -74,7 +74,7 @@ async function runModel(task) {
   try {
     addLog(task, "ULUGBEK AI mahalliy fikrlash mexanizmi vazifani tahlil qilmoqda.");
     const engine = require("./native-reasoning-engine");
-    const result = engine.runTask(task.prompt);
+    const result = engine.runTask(task.prompt, task.role);
     task.output = result.output.slice(0, 24000);
     task.analysis = result.analysis;
     task.tests = { status: "not_run", note: "Mahalliy reja tayyorlandi; kod ishga tushirilmadi va avtomatik test bajarilmadi." };
