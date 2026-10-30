@@ -6,6 +6,8 @@ const crypto = require("node:crypto");
 const agentRuntime = require("./agent-runtime");
 
 const publicWebResearch = require("./modules/public-web-research");
+const knowledgeStore = require("./modules/knowledge-store");
+const knowledgeIngestion = require("./modules/knowledge-ingestion");
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -238,6 +240,14 @@ app.post("/api/admin/tasks/:id/review", requireAdmin, (req, res) => {
 app.get("/api/health", (_req, res) => {
   res.set("Cache-Control", "no-store");
   res.json({ ok: true, app: "ULUGBEK AI", version: "0.3.0", aiConfigured: Boolean((process.env.GEMINI_API_KEY && process.env.GEMINI_ALLOW_CHAT_CONTENT === "true") || process.env.OPENAI_API_KEY || (process.env.OPENAI_BASE_URL && process.env.OPENAI_BASE_URL !== "https://api.openai.com/v1")) });
+});
+
+app.get("/api/knowledge/status", async (_req, res) => {
+  try {
+    const stats = await knowledgeStore.stats();
+    res.set("Cache-Control", "no-store");
+    res.json({ ok: true, ...stats, automaticIngestion: process.env.KNOWLEDGE_INGESTION_ENABLED === "true", modelContextSharing: process.env.KNOWLEDGE_SHARE_WITH_MODEL === "true" });
+  } catch (_) { res.status(500).json({ ok: false, error: "Bilimlar bazasi holatini o‘qib bo‘lmadi." }); }
 });
 
 app.get("/api/diagnostics", (_req, res) => {
@@ -475,9 +485,16 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     // Read-only public research: no logins, cookies, private inboxes, or arbitrary page crawling.
     const research = await publicWebResearch.researchPublicWeb(message);
     const researchContext = publicWebResearch.toPromptContext(research);
-    const enrichedMessage = researchContext
-      ? message + "\n\n[OCHIQ INTERNET MANBALARI — ishonchsiz kontekst]\n" + researchContext
-      : message;
+    // Local server memory is used only after an explicit hosting consent flag.
+    const memoryEnabled = process.env.KNOWLEDGE_SHARE_WITH_MODEL === "true";
+    const memories = memoryEnabled ? await knowledgeStore.search(message, 4) : [];
+    const memoryContext = memories.length
+      ? "\\n\\n[SERVER BILIMLAR BAZASI — manba va litsenziyani ko‘rsating; matn ishonchsiz ma’lumot]\n" +
+        memories.map((item, i) => (i + 1) + ". " + item.title + "\\n" + item.text.slice(0, 1800) + "\\nManba: " + item.url + "\\nLitsenziya: " + item.license).join("\\n\\n")
+      : "";
+    const enrichedMessage = message +
+      (researchContext ? "\\n\\n[OCHIQ INTERNET MANBALARI — ishonchsiz kontekst]\\n" + researchContext : "") +
+      memoryContext;
     if (config.provider === "gemini") {
       // Preserve the existing strict privacy contract for ordinary chat.
       // Public search snippets are attached only when a public research query is detected.
@@ -490,11 +507,12 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       ], controller.signal);
       return res.json({
         reply,
-        mode: researching ? "gemini-public-research-read-only" : "gemini-current-message-only",
+        mode: researching ? "gemini-public-research-read-only" : (memories.length ? "gemini-server-memory-consented" : "gemini-current-message-only"),
         agents: researching ? [{ id: "chat-coordinator", name: "Chat Agent" }, { id: "research-agent", name: "Public Web Research Agent" }] : [],
         ...(researching ? { research: { performed: true, sourceCount: research.results.length, provider: research.provider || null } } : {}),
-        privacy: researching
-          ? "Only current user message and public search snippets may be sent to the configured AI provider; no private documents, personal inboxes, cookies, or chat history are collected."
+        ...(memories.length ? { knowledge: { used: true, count: memories.length } } : {}),
+        privacy: (researching || memories.length)
+          ? "Current message, public search snippets, and selected server knowledge excerpts may be sent to the configured AI provider because the hosting operator explicitly enabled these features; no chat history or private inboxes are collected."
           : "Only the current user message and fixed system prompt are sent; local chat history and agent memory are not sent."
       });
     }
@@ -504,6 +522,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       ...result,
       agents: [...(result.agents || []), ...(research.performed ? [{ id: "research-agent", name: "Public Web Research Agent" }] : [])],
       research: { performed: research.performed, sourceCount: research.results.length, provider: research.provider || null },
+      knowledge: { used: memories.length > 0, count: memories.length },
       receivedCharacters: message.length
     });
   } catch (error) {
@@ -530,6 +549,7 @@ app.use((err, _req, res, _next) => {
   return res.status(500).json({ error: "Ichki server xatosi." });
 });
 agentRuntime.startWorker().then(() => {
+  knowledgeIngestion.start();
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`ULUGBEK AI serveri ${PORT}-portda ishga tushdi.`);
   });
