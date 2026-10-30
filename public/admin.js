@@ -173,7 +173,8 @@ async function loadDeveloperAgent() {
   }
   if (agent.lastError) $("developer-message").textContent = "Oxirgi xato: " + agent.lastError;
 }
-\nasync function checkSession() {
+
+async function checkSession() {
   try {
     const status = await request("/api/admin/status");
     if (status.authenticated) { showDashboard(true); await Promise.all([loadOverview(), loadTasks(), loadSafety(), loadDeveloperAgent()]); }
