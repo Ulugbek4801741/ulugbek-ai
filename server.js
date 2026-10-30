@@ -11,7 +11,8 @@ const PORT = Number(process.env.PORT) || 3000;
 const MAX_TASK_LENGTH = 4000;
 
 app.disable("x-powered-by");
-const FRONTEND_ORIGIN = (process.env.FRONTEND_ORIGIN || "").trim().replace(/\/$/, "");
+// Allow the published GitHub Pages frontend by default; a host env var may override it.
+const FRONTEND_ORIGIN = (process.env.FRONTEND_ORIGIN || "https://ulugbek4801741.github.io").trim().replace(/\/$/, "");
 app.use((req, res, next) => {
   const origin = req.headers.origin || "";
   if (origin && FRONTEND_ORIGIN && origin === FRONTEND_ORIGIN) {
