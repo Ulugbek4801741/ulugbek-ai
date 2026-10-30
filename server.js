@@ -405,6 +405,26 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       safety: { blocked: true, category: shieldDecision.reason, quarantined: shieldDecision.quarantined === true }
     });
   }
+  // Native-only chat mode: never call hosted/open-weight AI providers.
+  try {
+    const nativeBrain = require("./lab-learning-worker");
+    const learned = await nativeBrain.searchKnowledge(message, 5);
+    const result = nativeBrain.buildLocalReply(message, learned);
+    return res.json({
+      reply: result.reply,
+      mode: "native-symbolic-no-external-ai",
+      agents: ["NativeResearch", "NativeReasoner"],
+      reasoning: result.reasoning,
+      knowledgeUsed: learned.length,
+      learning: nativeBrain.status(),
+      receivedCharacters: message.length
+    });
+  } catch (error) {
+    return res.status(503).json({
+      error: "Mahalliy mantiqiy mexanizm ishlamadi; tashqi AI xizmatiga avtomatik o‘tilmadi.",
+      mode: "native-only-error"
+    });
+  }
   const geminiApiKey = process.env.GEMINI_API_KEY || "";
   const geminiChatConsent = process.env.GEMINI_ALLOW_CHAT_CONTENT === "true";
   const apiKey = process.env.OPENAI_API_KEY || "";
