@@ -69,7 +69,7 @@ function runTask(prompt, role = "orchestrator") {
   const lines = [
     "# ULUGBEK AI — mahalliy fikrlash hisoboti",
     "",
-    "Dvigatel: " + result.engine,
+        "Dvigatel: " + result.engine,
     "Tanlangan rol: " + role,
     "Tashqi API ishlatildi: yo‘q",
     "O‘qitilgan neyron til modeli: mavjud emas",
