@@ -202,6 +202,11 @@ app.get("/api/admin/developer-agent/status", requireAdmin, (_req, res) => {
   res.set("Cache-Control", "no-store");
   res.json({ ok: true, agent: developerAgent.status() });
 });
+app.post("/api/admin/developer-agent/run", requireAdmin, async (_req, res) => {
+  const agent = await developerAgent.auditOnce();
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, agent });
+});
 app.get("/api/admin/developer-agent/proposals", requireAdmin, (_req, res) => {
   res.set("Cache-Control", "no-store");
   res.json({ ok: true, proposals: developerAgent.listProposals() });
