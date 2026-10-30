@@ -23,7 +23,7 @@ let chain = Promise.resolve();
 let state = {
   enabled: true, running: false, startedAt: null, lastRunAt: null,
   nextRunAt: null, lastSuccessAt: null, lastError: null, cycles: 0,
-  scannedFiles: 0, proposalsCreated: 0, proposals: []
+  scannedFiles: 0, scanCursor: 0, proposalsCreated: 0, proposals: []
 };
 
 function clean(value, max = 500) {
@@ -103,7 +103,15 @@ async function auditOnce() {
     const branch = await githubJson(base + "/branches/" + encodeURIComponent(BRANCH), controller.signal);
     const tree = await githubJson(base + "/git/trees/" + encodeURIComponent(branch.commit.sha) + "?recursive=1", controller.signal);
     if (!Array.isArray(tree.tree)) throw new Error("GitHub fayllar ro‘yxati noto‘g‘ri.");
-    const files = tree.tree.filter(item => item.type === "blob" && ALLOWED_EXT.test(item.path) && item.size <= MAX_FILE_BYTES).slice(0, MAX_FILES);
+    const eligible = tree.tree
+      .filter(item => item.type === "blob" && ALLOWED_EXT.test(item.path) && item.size <= MAX_FILE_BYTES)
+      .sort((a, b) => {
+        const rank = item => /\\.(?:js|cjs|mjs)$/i.test(item.path) ? 0 : /\\.json$/i.test(item.path) ? 1 : /\\.(?:yml|yaml)$/i.test(item.path) ? 2 : 3;
+        return rank(a) - rank(b) || a.path.localeCompare(b.path);
+      });
+    const startAt = eligible.length ? state.scanCursor % eligible.length : 0;
+    const files = Array.from({ length: Math.min(MAX_FILES, eligible.length) }, (_, index) => eligible[(startAt + index) % eligible.length]);
+    state.scanCursor = eligible.length ? (startAt + files.length) % eligible.length : 0;
     let scanned = 0;
     for (const item of files) {
       if (controller.signal.aborted) throw new Error("Tekshiruv vaqti tugadi.");
