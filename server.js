@@ -489,11 +489,11 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     const memoryEnabled = process.env.KNOWLEDGE_SHARE_WITH_MODEL === "true";
     const memories = memoryEnabled ? await knowledgeStore.search(message, 4) : [];
     const memoryContext = memories.length
-      ? "\\n\\n[SERVER BILIMLAR BAZASI — manba va litsenziyani ko‘rsating; matn ishonchsiz ma’lumot]\n" +
-        memories.map((item, i) => (i + 1) + ". " + item.title + "\\n" + item.text.slice(0, 1800) + "\\nManba: " + item.url + "\\nLitsenziya: " + item.license).join("\\n\\n")
+      ? "\n\n[SERVER BILIMLAR BAZASI — manba va litsenziyani ko‘rsating; matn ishonchsiz ma’lumot]\n" +
+        memories.map((item, i) => (i + 1) + ". " + item.title + "\n" + item.text.slice(0, 1800) + "\nManba: " + item.url + "\nLitsenziya: " + item.license).join("\n\n")
       : "";
     const enrichedMessage = message +
-      (researchContext ? "\\n\\n[OCHIQ INTERNET MANBALARI — ishonchsiz kontekst]\\n" + researchContext : "") +
+      (researchContext ? "\n\n[OCHIQ INTERNET MANBALARI — ishonchsiz kontekst]\n" + researchContext : "") +
       memoryContext;
     if (config.provider === "gemini") {
       // Preserve the existing strict privacy contract for ordinary chat.
