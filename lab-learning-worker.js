@@ -67,7 +67,7 @@ async function learnTopic(topic) {
       known.add(source);
       additions.push({
         id: crypto.randomUUID(), title: clean(item.title || title,180), content, source,
-        agent:"AutonomousOpenKnowledge", status:"approved", quality:"public-encyclopedia-summary",
+        agent:"AutonomousOpenKnowledge", status:"pending-review", quality:"public-encyclopedia-summary", licenseNote:"Wikipedia matni CC BY-SA shartlariga bog‘liq; qayta ishlatishdan oldin litsenziya va attribution tekshirilsin",
         createdAt:new Date().toISOString()
       });
     }
@@ -114,7 +114,7 @@ function searchKnowledge(query, limit=5) {
     const text = (item.title+" "+item.content).toLocaleLowerCase();
     const score = terms.reduce((n,term)=>n+(text.includes(term)?1:0),0);
     return { ...item, score };
-  }).filter(x=>x.score>0 && x.status==="approved").sort((a,b)=>b.score-a.score).slice(0,limit));
+  }).filter(x=>x.score>0 && ["pending-review","approved"].includes(x.status)).sort((a,b)=>b.score-a.score).slice(0,limit));
 }
 function buildLocalReply(query, hits) {
   return require("./native-cognition").respond(query, hits);
