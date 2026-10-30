@@ -49,9 +49,9 @@ function analyze(prompt) {
     limitations: "Bu tizim qoidalar, kalit so‘zlar va tasdiqlangan bilimlarni qidirishga asoslanadi. U mustaqil neyron til modeli emas va ChatGPT darajasidagi erkin kod generatsiyasini bajarmaydi."
   };
 }
-function runTask(prompt) {
+function runTask(prompt, role = "orchestrator") {
   const result = analyze(prompt);
-  const agents = registry.listAgents().map(agent => {
+  const aliases = { backend: "backend-agent", frontend: "frontend-agent", tester: "qa-agent", security: "security-agent", research: "research-agent", product: "product-growth-agent" };\n  const selectedId = aliases[role] || role;\n  const selectedAgents = role === "orchestrator" ? registry.listAgents() : registry.listAgents().filter(agent => agent.id === selectedId);\n  if (!selectedAgents.length) throw new TypeError("Noma’lum agent roli: " + role);\n  const agents = selectedAgents.map(agent => {
     const detail = registry.getAgent(agent.id);
     const instruction = detail.systemPrompt.split("\n").slice(-1)[0];
     return [
@@ -65,7 +65,7 @@ function runTask(prompt) {
   const lines = [
     "# ULUGBEK AI — mahalliy fikrlash hisoboti",
     "",
-    "Dvigatel: " + result.engine,
+    "Dvigatel: " + result.engine,\n    "Tanlangan rol: " + role,
     "Tashqi API ishlatildi: yo‘q",
     "O‘qitilgan neyron til modeli: mavjud emas",
     "",
