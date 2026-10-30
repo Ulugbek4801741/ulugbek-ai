@@ -114,7 +114,7 @@ function searchKnowledge(query, limit=5) {
     const text = (item.title+" "+item.content).toLocaleLowerCase();
     const score = terms.reduce((n,term)=>n+(text.includes(term)?1:0),0);
     return { ...item, score };
-  }).filter(x=>x.score>0 && ["pending-review","approved"].includes(x.status)).sort((a,b)=>b.score-a.score).slice(0,limit));
+  }).filter(x=>x.score>0 && x.status==="approved").sort((a,b)=>b.score-a.score).slice(0,limit));
 }
 function buildLocalReply(query, hits) {
   return require("./native-cognition").respond(query, hits);
