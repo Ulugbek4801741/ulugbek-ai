@@ -482,17 +482,23 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     return output.slice(0, 8000);
   };
   try {
+    const localKnowledge = require("./lab-learning-worker");
+    const learnedNotes = await localKnowledge.searchKnowledge(message, 5);
+    const knowledgeContext = learnedNotes.length
+      ? "\\n\\nULUGBEK AI bilimlar bazasidan olingan manbali kontekst (fakt sifatida faqat savolga aloqador qismini ishlat; manbalarni ko‘rsat):\\n" +
+        learnedNotes.map((item, index) => (index + 1) + ". " + item.title + ": " + item.content.slice(0, 1400) + " [Manba: " + item.source + "]").join("\\n")
+      : "";
     if (config.provider === "gemini") {
       // Explicit-consent privacy mode: send only the current message and fixed system prompt.
       // Do not send local chat history, agent memory, routing output, or other agent responses.
       const reply = await requestModel(config, [
-        { role: "system", content: "Sen ULUGBEK AI yordamchisisan. O‘zbek tilida sodda va xavfsiz javob ber. Maxfiy kalit yoki parol so‘rama. Tashqi amallarni bajarilgan deb da’vo qilma." },
+        { role: "system", content: "Sen ULUGBEK AI yordamchisisan. O‘zbek tilida sodda va xavfsiz javob ber. Maxfiy kalit yoki parol so‘rama. Tashqi amallarni bajarilgan deb da’vo qilma." + knowledgeContext },
         { role: "user", content: message }
       ], controller.signal);
       return res.json({ reply, mode: "gemini-current-message-only", agents: [], privacy: "Only the current message and a fixed system prompt are sent to Gemini; local chat history and agent memory are not sent." });
     }
     const dispatcher = require("./agents/chat-dispatcher");
-    const result = await dispatcher.runChat({ message, sessionId, config, requestModel, signal: controller.signal });
+    const result = await dispatcher.runChat({ message: message + knowledgeContext, sessionId, config, requestModel, signal: controller.signal });
     return res.json({ ...result, receivedCharacters: message.length });
   } catch (error) {
     const timedOut = error.name === "AbortError";
