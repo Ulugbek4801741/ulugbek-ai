@@ -2,7 +2,7 @@
 const byId = (id) => document.getElementById(id);
 const toast = byId("lab-toast");
 function apiUrl(path) {
-  const base = typeof window.ULUGBEK_API_BASE_URL === "string" ? window.ULUGBEK_API_BASE_URL.trim().replace(/\\/$/, "") : "";
+  const base = typeof window.ULUGBEK_API_BASE_URL === "string" ? window.ULUGBEK_API_BASE_URL.trim().replace(/\/$/, "") : "";
   if (!base) throw new Error("Backend manzili public/config.js faylida sozlanmagan.");
   return base + "/api/lab" + path;
 }
