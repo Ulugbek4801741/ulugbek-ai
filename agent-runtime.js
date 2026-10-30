@@ -112,11 +112,14 @@ async function runModel(task) {
     addLog(task, "Modelga topshiriq yuborilmoqda.");
     if (task.role === "orchestrator") {
       const specialists = [
-        { role: "research", title: "Tahlil agenti" },
-        { role: "backend", title: "Backend agenti" },
-        { role: "frontend", title: "Interfeys agenti" },
-        { role: "tester", title: "Sinov agenti" },
-        { role: "security", title: "Xavfsizlik agenti" }
+        { role: "research-agent", title: "Research Agent" },
+        { role: "software-builder-agent", title: "Software Builder Agent" },
+        { role: "frontend-agent", title: "Frontend Agent" },
+        { role: "backend-agent", title: "Backend Agent" },
+        { role: "qa-agent", title: "QA Agent" },
+        { role: "security-agent", title: "Security Agent" },
+        { role: "devops-agent", title: "DevOps Agent" },
+        { role: "product-growth-agent", title: "Product Growth Agent" }
       ];
       const results = [];
       for (const specialist of specialists) {
@@ -131,9 +134,9 @@ async function runModel(task) {
         { role: "system", content: systemPrompt("orchestrator") + " Mutaxassislar javoblarini solishtir, qarama-qarshilik va xavflarni ko‘rsat, aniq ustuvor reja ber. Haqiqiy testlar bajarilmaganini ayt." },
         { role: "user", content: "Asosiy vazifa:\n" + task.prompt + "\n\nTakliflar:\n" + results.join("\n\n") }
       ], controller.signal);
-      task.output = (results.join("\n\n") + "\n\n## Yakuniy tekshiruv\n" + verified).slice(0, 20000);
-      task.tests = { status: "not_run", note: "Sinov agenti test rejasini taklif qildi; kod testlari avtomatik bajarilmadi." };
-      addLog(task, "5 ta mutaxassis tahlili va yakuniy tekshiruv tugadi. Kod o‘zgartirilmadi.");
+      task.output = (results.join("\n\n") + "\n\n## Yakuniy tekshiruv\n" + verified).slice(0, 24000);
+      task.tests = { status: "not_run", note: "QA Agent test rejasini berdi; kod sandboxda bajarilmadi." };
+      addLog(task, "8 ta mutaxassis tahlili va yakuniy tekshiruv tugadi. Kod takliflari tayyorlandi, loyiha fayllari o‘zgartirilmadi.");
     } else {
       task.output = await requestModel(config, [
         { role: "system", content: systemPrompt(task.role) },
@@ -177,15 +180,32 @@ async function pump() {
 }
 function startWorker() {
   if (workerReady) return workerReady;
-  workerStarted = false;
-  // Only the chat endpoint is active. Background agent workers remain disabled.
-  workerReady = initialize().then(() => undefined);
+  workerReady = initialize().then(() => {
+    workerStarted = true;
+    // Sequential worker. Outputs are proposals only; no source writes, shell, or deploy.
+    queueMicrotask(pump);
+  });
   return workerReady;
 }
-async function createTask() {
-  const error = new Error("Xavfsizlik rejimi yoqilgan: Chat Agentdan boshqa agentlar vaqtincha o‘chirilgan.");
-  error.status = 503;
-  throw error;
+async function createTask(input = {}) {
+  await startWorker();
+  const prompt = typeof input.prompt === "string" ? input.prompt.trim() : "";
+  const role = typeof input.role === "string" ? input.role : "orchestrator";
+  if (!prompt) { const error = new Error("Vazifa matni bo‘sh bo‘lmasligi kerak."); error.status = 400; throw error; }
+  if (prompt.length > MAX_PROMPT_LENGTH) { const error = new Error("Vazifa 4000 belgidan oshmasligi kerak."); error.status = 413; throw error; }
+  if (!ROLES.has(role)) { const error = new Error("Noma’lum agent roli."); error.status = 400; throw error; }
+  if (!workerStarted) { const error = new Error("Agent ishchi jarayoni tayyor emas."); error.status = 503; throw error; }
+  const task = {
+    id: crypto.randomUUID(), prompt, role, roleLabel: ROLE_LABELS[role] || role,
+    status: "queued", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    approvalStatus: "not_reviewed", output: "", error: null, logs: [], tests: null
+  };
+  tasks.push(task);
+  tasks = tasks.slice(-MAX_TASKS);
+  addLog(task, "Vazifa navbatga qo‘shildi. Natija kod taklifi; avtomatik fayl yozish va deploy o‘chiq.");
+  await persist();
+  queueMicrotask(pump);
+  return publicTask(task);
 }
 function listTasks() { return tasks.slice().reverse().map(publicTask); }
 function getTask(id) { const task = tasks.find(item => item.id === id); return task ? publicTask(task) : null; }
