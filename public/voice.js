@@ -5,6 +5,11 @@ const STORE = "ulugbek_voice_profile_v1", CHAT = "ulugbek_voice_chat_v1";
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognizer = null, lastReply = "", objectUrl = "", micStream = null;
 function setStatus(text){status.textContent=text;}
+function apiUrl(path){
+ const base=typeof window.ULUGBEK_API_BASE_URL==="string"?window.ULUGBEK_API_BASE_URL.trim().replace(/\\/$/,""):"";
+ if(!base)throw new Error("Backend manzili public/config.js faylida sozlanmagan.");
+ return base+path;
+}
 function addMessage(text, role, save=true){
   const p=document.createElement("p"); p.className="bubble "+role; p.textContent=text; messages.append(p);
   if(save){try{const items=JSON.parse(localStorage.getItem(CHAT)||"[]");items.push({text,role});localStorage.setItem(CHAT,JSON.stringify(items.slice(-80)));}catch(_){}}
@@ -35,7 +40,7 @@ function speak(text){
 function tokens(s){return String(s||"").toLocaleLowerCase("uz").normalize("NFD").replace(/[\u0300-\u036f]/g,"").split(/[^\p{L}\p{N}]+/u).filter(w=>w.length>2);}
 async function knowledgeReply(question){
   try{
-    const response=await fetch("/api/lab/knowledge");
+    const response=await fetch(apiUrl("/api/lab/knowledge"));
     if(!response.ok)return null;
     const data=await response.json();const entries=Array.isArray(data.entries)?data.entries:[];
     const q=tokens(question);if(!q.length)return null;
@@ -58,9 +63,9 @@ async function send(text){
  $("welcome").hidden=true;addMessage(clean,"user");$("message").value="";setStatus("Javob izlanmoqda…");
  let reply=null;
  try{
-  const response=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:clean})});
+  const response=await fetch(apiUrl("/api/chat"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:clean})});
   const data=await response.json();
-  if(response.ok&&data.mode==="ai"&&typeof data.reply==="string"&&data.reply.trim())reply=data.reply.trim();
+  if(response.ok&&data.mode!=="demo"&&typeof data.reply==="string"&&data.reply.trim())reply=data.reply.trim();
  }catch(_){}
  if(!reply)reply=await knowledgeReply(clean);
  if(!reply)reply=localReply(clean);
