@@ -1,3 +1,4 @@
+"use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { spawn } = require("node:child_process");
@@ -8,44 +9,13 @@ const mockPort = 32198;
 const appUrl = `http://127.0.0.1:${appPort}`;
 let appProcess;
 let mockServer;
+let providerRequests = 0;
 
-function waitFor(url, processRef) {
-  const deadline = Date.now() + 10000;
-  return new Promise((resolve, reject) => {
-    const attempt = async () => {
-      if (processRef?.exitCode !== null && processRef?.exitCode !== undefined) {
-        return reject(new Error("ULUGBEK AI server exited before becoming ready."));
-      }
-      try {
-        const response = await fetch(url);
-        if (response.ok) return resolve();
-      } catch {}
-      if (Date.now() >= deadline) return reject(new Error("Server readiness timed out."));
-      setTimeout(attempt, 150);
-    };
-    attempt();
-  });
-}
-
-test("self-hosted OpenAI-compatible model works without an API key", async (t) => {
-  mockServer = http.createServer(async (req, res) => {
-    if (req.method !== "POST" || req.url !== "/v1/chat/completions") {
-      res.writeHead(404).end();
-      return;
-    }
-    let raw = "";
-    for await (const chunk of req) raw += chunk;
-    const body = JSON.parse(raw);
-    const isPlan = body.response_format?.type === "json_object";
-    const content = isPlan
-      ? JSON.stringify({
-          title: "Mahalliy model rejasi",
-          steps: [{ title: "Tekshiruv", detail: "Mahalliy endpoint javobi tekshirildi.", role: "Verifier Agent" }],
-          note: "Sinov modeli javobi."
-        })
-      : "Salom, bu o‘z serveridagi sinov modeli.";
+test("native-only mode ignores configured external AI endpoints", async (t) => {
+  mockServer = http.createServer((_req, res) => {
+    providerRequests++;
     res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ choices: [{ message: { content } }] }));
+    res.end(JSON.stringify({ choices: [{ message: { content: "This must never be used." } }] }));
   });
   await new Promise(resolve => mockServer.listen(mockPort, "127.0.0.1", resolve));
 
@@ -53,21 +23,28 @@ test("self-hosted OpenAI-compatible model works without an API key", async (t) =
     env: {
       ...process.env,
       NODE_ENV: "test",
-      ULUGBEK_TEST_ALLOW_LOOPBACK: "true",
       PORT: String(appPort),
       TASK_STORE_PATH: require("node:path").join(require("node:os").tmpdir(), `ulugbek-tasks-${appPort}.json`),
       AGENT_MEMORY_PATH: require("node:path").join(require("node:os").tmpdir(), `ulugbek-memory-${appPort}.json`),
       OPENAI_BASE_URL: `http://127.0.0.1:${mockPort}/v1`,
       OPENAI_MODEL: "test-local-model",
-      OPENAI_API_KEY: ""
+      OPENAI_API_KEY: "intentionally-unused"
     },
     stdio: "ignore"
   });
 
   try {
-    await waitFor(`${appUrl}/api/health`, appProcess);
+    const deadline = Date.now() + 10000;
+    while (Date.now() < deadline) {
+      if (appProcess.exitCode !== null) throw new Error("ULUGBEK AI server exited before becoming ready.");
+      try {
+        const ready = await fetch(`${appUrl}/api/health`);
+        if (ready.ok) break;
+      } catch {}
+      await new Promise(resolve => setTimeout(resolve, 150));
+    }
 
-    await t.test("chat uses the configured local endpoint without Authorization", async () => {
+    await t.test("chat never calls the configured provider", async () => {
       const response = await fetch(`${appUrl}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -75,13 +52,12 @@ test("self-hosted OpenAI-compatible model works without an API key", async (t) =
       });
       assert.equal(response.status, 200);
       const data = await response.json();
-      assert.equal(data.mode, "single-chat-agent-isolated");
-      assert.ok(Array.isArray(data.agents));
-      assert.deepEqual(data.agents.map(agent => agent.id), ["chat-coordinator"]);
-      assert.match(data.reply, /sinov modeli/);
+      assert.equal(data.mode, "native-symbolic-no-external-ai");
+      assert.match(data.reply, /yetarli dalil topilmadi|Salom/i);
+      assert.equal(providerRequests, 0);
     });
 
-    await t.test("agent planner uses the configured local endpoint without an API key", async () => {
+    await t.test("planner stays on native rules even when a model endpoint exists", async () => {
       const response = await fetch(`${appUrl}/api/agent/plan`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -89,8 +65,8 @@ test("self-hosted OpenAI-compatible model works without an API key", async (t) =
       });
       assert.equal(response.status, 200);
       const data = await response.json();
-      assert.equal(data.mode, "ai");
-      assert.equal(data.plan.title, "Mahalliy model rejasi");
+      assert.equal(data.mode, "native-rules");
+      assert.equal(providerRequests, 0);
     });
   } finally {
     appProcess?.kill("SIGTERM");
