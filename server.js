@@ -282,7 +282,9 @@ app.get("/api/diagnostics", (_req, res) => {
     automaticFailover: "not-configured-requires-authorized-backup-host",
     productionDatabase: "not-configured-task-store-uses-local-json-file",
     agentExecution: "native rule-based task planner plus registered role modules; no hosted model API, no trained language model, no source writes or deploy",
-    nativeReasoning: "ulugbek-native-rule-reasoner-v1; deterministic symbolic planning; not a trained neural language model",\n    externalAiApiEnabled: false,\n    trainedLanguageModelReady: false,
+    nativeReasoning: "ulugbek-native-rule-reasoner-v1; deterministic symbolic planning; not a trained neural language model",
+    externalAiApiEnabled: false,
+    trainedLanguageModelReady: false,
     note: "Agent navbati server jarayoni ishlayotganida bajariladi. Hosting qayta ishga tushsa yoki uxlab qolsa 24/7 kafolatlanmaydi. JSON saqlash vaqtinchalik; doimiy ishlab chiqarish uchun PostgreSQL/Redis va alohida worker kerak. Bu diagnostika end-to-end sinov o‘rnini bosmaydi."
   });
 });
