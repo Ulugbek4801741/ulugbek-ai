@@ -117,11 +117,6 @@ function searchKnowledge(query, limit=5) {
   }).filter(x=>x.score>0 && x.status==="approved").sort((a,b)=>b.score-a.score).slice(0,limit));
 }
 function buildLocalReply(query, hits) {
-  if (!hits.length) return "Hozircha ULUGBEK AI bilimlar bazasida bu savolga mos tasdiqlangan ma’lumot topilmadi. Ochiq internet o‘rganish jarayoni davom etadi. Savolni aniqroq yozing yoki keyinroq qayta so‘rang.";
-  const lines = hits.slice(0,3).map((x,i)=>`${i+1}. ${x.title}: ${x.content.slice(0,1100)}`);
-  const sources = hits.slice(0,3).map(x=>x.source).filter(Boolean);
-  return "ULUGBEK AI mahalliy bilimlar bazasidan topilgan ma’lumotlar asosida javob:\n\n"+lines.join("\n\n")+
-    (sources.length?"\n\nManbalar:\n"+sources.join("\n"):"")+
-    "\n\nEslatma: bu API kalitisiz qidirish va manbaga tayangan xulosa; katta til modelining erkin fikrlashi yoki vaznlarini qayta o‘qitish emas.";
+  return require("./native-cognition").respond(query, hits);
 }
 module.exports = { start, stop, status, searchKnowledge, buildLocalReply };
