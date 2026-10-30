@@ -51,7 +51,11 @@ function analyze(prompt) {
 }
 function runTask(prompt, role = "orchestrator") {
   const result = analyze(prompt);
-  const aliases = { backend: "backend-agent", frontend: "frontend-agent", tester: "qa-agent", security: "security-agent", research: "research-agent", product: "product-growth-agent" };\n  const selectedId = aliases[role] || role;\n  const selectedAgents = role === "orchestrator" ? registry.listAgents() : registry.listAgents().filter(agent => agent.id === selectedId);\n  if (!selectedAgents.length) throw new TypeError("Noma’lum agent roli: " + role);\n  const agents = selectedAgents.map(agent => {
+  const aliases = { backend: "backend-agent", frontend: "frontend-agent", tester: "qa-agent", security: "security-agent", research: "research-agent", product: "product-growth-agent" };
+  const selectedId = aliases[role] || role;
+  const selectedAgents = role === "orchestrator" ? registry.listAgents() : registry.listAgents().filter(agent => agent.id === selectedId);
+  if (!selectedAgents.length) throw new TypeError("Noma’lum agent roli: " + role);
+  const agents = selectedAgents.map(agent => {
     const detail = registry.getAgent(agent.id);
     const instruction = detail.systemPrompt.split("\n").slice(-1)[0];
     return [
