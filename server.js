@@ -271,10 +271,11 @@ app.get("/api/diagnostics", (_req, res) => {
     agentMemory: "separate-per-agent-per-browser-session; JSON file; durable hosting storage must be configured",
     voiceInput: "browser-dependent-and-user-permission-required",
     voiceOutput: "browser-dependent",
-    autonomousAgents: "single-process-queued-model-task-worker; not-independent-24-7-service",
+    autonomousAgents: "one continuous read-only Developer Agent; process-and-host-dependent 24/7 loop",
+    developerAgent: developerAgent.status(),
     automaticFailover: "not-configured-requires-authorized-backup-host",
     productionDatabase: "not-configured-task-store-uses-local-json-file",
-    agentExecution: "native rule-based retrieval and evidence ranking; no hosted model calls, shell, file edit, or deploy",
+    agentExecution: "native chat plus one read-only repository Developer Agent; proposals only; no source writes or deploy",
     note: "Agent navbati server jarayoni ishlayotganida bajariladi. Hosting qayta ishga tushsa yoki uxlab qolsa 24/7 kafolatlanmaydi. JSON saqlash vaqtinchalik; doimiy ishlab chiqarish uchun PostgreSQL/Redis va alohida worker kerak. Bu diagnostika end-to-end sinov o‘rnini bosmaydi."
   });
 });
