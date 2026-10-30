@@ -417,12 +417,24 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   }
   const providerHost = configuredBaseUrl.replace(/^https?:\/\//i, "").split("/")[0].toLowerCase();
   if (!geminiApiKey && !apiKey && (!configuredBaseUrl || providerHost === "api.openai.com")) {
-    return res.json({
-      reply: "ULUGBEK AI hozir demo rejimida. Haqiqiy AI javoblari uchun serverda GEMINI_API_KEY va GEMINI_ALLOW_CHAT_CONTENT=true (Gemini’ga xabar yuborishga rozilik), yoki OPENAI_API_KEY / mos OPENAI_BASE_URL sozlanishi kerak.",
-      mode: "demo",
-      agents: [],
-      receivedCharacters: message.length
-    });
+    try {
+      const localBrain = require("./lab-learning-worker");
+      const knowledge = await localBrain.searchKnowledge(message, 5);
+      return res.json({
+        reply: localBrain.buildLocalReply(message, knowledge),
+        mode: "local-knowledge",
+        agents: ["LocalKnowledgeReasoner"],
+        knowledgeUsed: knowledge.length,
+        sources: knowledge.map(item => ({ title:item.title, url:item.source })),
+        learning: localBrain.status(),
+        receivedCharacters: message.length
+      });
+    } catch (_) {
+      return res.json({
+        reply: "ULUGBEK AI hozir API kalitisiz mahalliy bilim rejimida. Bilimlar bazasini o‘qishda xatolik yuz berdi; keyinroq qayta urinib ko‘ring.",
+        mode: "local-knowledge-error", agents: [], receivedCharacters: message.length
+      });
+    }
   }
   const endpointCheck = geminiApiKey ? null : egressPolicy.validateModelEndpoint(configuredBaseUrl || "https://api.openai.com/v1");
   if (endpointCheck && !endpointCheck.allowed) return res.status(503).json({ error: "AI manzili xavfsizlik ruxsat ro‘yxatida yo‘q; AI_ALLOWED_HOSTS sozlamasini tekshiring.", safety: { blocked: true, reason: endpointCheck.reason } });
@@ -493,6 +505,11 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
 });
 
 app.use("/api/lab", require("./lab"));
+const learningWorker = require("./lab-learning-worker");
+app.get("/api/lab/learning/status", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ ok:true, learning:learningWorker.status() });
+});
 
 app.use(express.static(path.join(__dirname, "public"), {
   etag: true,
@@ -505,7 +522,7 @@ app.use((err, _req, res, _next) => {
   console.error("Server xatosi:", err.message);
   return res.status(500).json({ error: "Ichki server xatosi." });
 });
-agentRuntime.startWorker().then(() => {
+learningWorker.start();\nagentRuntime.startWorker().then(() => {
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`ULUGBEK AI serveri ${PORT}-portda ishga tushdi.`);
   });
