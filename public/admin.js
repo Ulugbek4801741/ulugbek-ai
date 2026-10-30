@@ -129,10 +129,54 @@ async function loadTasks() {
   if (!data.tasks.length) { list.textContent = "Hozircha topshiriq yo‘q."; return; }
   for (const task of data.tasks) list.append(renderTask(task));
 }
-async function checkSession() {
+
+async function loadDeveloperAgent() {
+  const [statusData, proposalData] = await Promise.all([
+    request("/api/admin/developer-agent/status"),
+    request("/api/admin/developer-agent/proposals")
+  ]);
+  const agent = statusData.agent || {};
+  $("developer-status").replaceChildren(
+    metric("Holat", agent.running ? "Tekshiryapti" : (agent.enabled ? "Faol" : "To‘xtagan")),
+    metric("Tekshiruvlar", agent.cycles ?? 0),
+    metric("Tekshirilgan fayllar", agent.scannedFiles ?? 0),
+    metric("Admin ko‘rigidagi takliflar", agent.pendingApprovals ?? 0),
+    metric("Keyingi tekshiruv", agent.nextRunAt ? new Date(agent.nextRunAt).toLocaleString() : "—")
+  );
+  const list = $("developer-proposals");
+  list.replaceChildren();
+  const proposals = proposalData.proposals || [];
+  if (!proposals.length) list.textContent = "Hozircha taklif yo‘q. Agent navbatdagi tekshiruvda repozitoriydagi fayllarni tahlil qiladi.";
+  for (const proposal of proposals) {
+    const card = document.createElement("article"); card.className = "task-card";
+    addText(card, "strong", proposal.severity.toUpperCase() + " · " + proposal.title);
+    addText(card, "p", proposal.detail);
+    addText(card, "small", "Fayl: " + (proposal.file || "—") + " · Holat: " + proposal.status);
+    if (proposal.status === "pending_admin_review") {
+      const actions = document.createElement("div"); actions.className = "task-actions";
+      for (const [decision, label] of [["approved_for_release", "Chiqarishga ruxsat"], ["rejected", "Rad etish"]]) {
+        const button = document.createElement("button"); button.className = "secondary"; button.textContent = label;
+        button.addEventListener("click", async () => {
+          button.disabled = true;
+          try {
+            await request("/api/admin/developer-agent/proposals/" + encodeURIComponent(proposal.id) + "/review", {
+              method: "POST", body: JSON.stringify({ decision })
+            });
+            await loadDeveloperAgent();
+          } catch (error) { $("developer-message").textContent = error.message; button.disabled = false; }
+        });
+        actions.append(button);
+      }
+      card.append(actions);
+    }
+    list.append(card);
+  }
+  if (agent.lastError) $("developer-message").textContent = "Oxirgi xato: " + agent.lastError;
+}
+\nasync function checkSession() {
   try {
     const status = await request("/api/admin/status");
-    if (status.authenticated) { showDashboard(true); await Promise.all([loadOverview(), loadTasks(), loadSafety()]); }
+    if (status.authenticated) { showDashboard(true); await Promise.all([loadOverview(), loadTasks(), loadSafety(), loadDeveloperAgent()]); }
     else showDashboard(false);
   } catch (_) { showDashboard(false); $("status").textContent = "Backend server talab qilinadi"; }
 }
@@ -150,6 +194,15 @@ $("task-form").addEventListener("submit", async (event) => {
   } catch (error) { $("task-message").textContent = error.message; }
   finally { button.disabled = false; }
 });
+$("developer-run").addEventListener("click", async () => {
+  const button = $("developer-run"); button.disabled = true; $("developer-message").textContent = "Agent tekshiruvni bajaryapti…";
+  try {
+    await request("/api/admin/developer-agent/run", { method: "POST", body: "{}" });
+    await loadDeveloperAgent();
+    $("developer-message").textContent = "Tekshiruv yakunlandi yoki hozir davom etmoqda.";
+  } catch (error) { $("developer-message").textContent = error.message; }
+  finally { button.disabled = false; }
+});
 $("refresh-safety").addEventListener("click", async () => { try { await loadSafety(); } catch (error) { $("safety-summary").textContent = error.message; } });
 checkSession();
-setInterval(() => { if (!$("dashboard").hidden) { loadTasks().catch(() => {}); loadOverview().catch(() => {}); } }, 10000);
+setInterval(() => { if (!$("dashboard").hidden) { loadTasks().catch(() => {}); loadOverview().catch(() => {}); loadDeveloperAgent().catch(() => {}); } }, 10000);
