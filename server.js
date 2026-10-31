@@ -176,12 +176,12 @@ app.get("/api/admin/overview", requireAdmin, (_req, res) => {
     uptimeSeconds: Math.floor(process.uptime()),
     nodeVersion: process.version,
     memory: { rssBytes: process.memoryUsage().rss, heapUsedBytes: process.memoryUsage().heapUsed },
-    aiConfigured: false,
+    aiConfigured: Boolean(process.env.OPENAI_API_KEY),
     nativeReasoningReady: true,
     trainedLanguageModelReady: false,
-    externalAiApiEnabled: false,
-    model: null,
-    cognition: "native-rule-based-reasoning",
+    externalAiApiEnabled: Boolean(process.env.OPENAI_API_KEY),
+    model: process.env.OPENAI_API_KEY ? (process.env.OPENAI_MODEL || "gpt-5.5") : null,
+    cognition: process.env.OPENAI_API_KEY ? "openai-responses-api" : "native-rule-based-reasoning",
     agentWorker: "single-process-queue",
     queuedTasks: agentRuntime.listTasks().filter(task => task.status === "queued").length,
     runningTasks: agentRuntime.listTasks().filter(task => task.status === "running").length,
@@ -316,7 +316,8 @@ app.post("/api/admin/tasks/:id/review", requireAdmin, (req, res) => {
 
 app.get("/api/health", (_req, res) => {
   res.set("Cache-Control", "no-store");
-  res.json({ ok: true, app: "ULUGBEK AI", version: "0.3.1", aiConfigured: false, nativeReasoningReady: true, trainedLanguageModelReady: false, externalAiApiEnabled: false, mode: "native-rule-based-reasoning" });
+  const aiConfigured = Boolean(process.env.OPENAI_API_KEY);
+  res.json({ ok: true, app: "ULUGBEK AI", version: "0.3.2", aiConfigured, nativeReasoningReady: true, trainedLanguageModelReady: false, externalAiApiEnabled: aiConfigured, model: aiConfigured ? (process.env.OPENAI_MODEL || "gpt-5.5") : null, mode: aiConfigured ? "openai-responses-api" : "native-rule-based-reasoning" });
 });
 
 app.get("/api/diagnostics", (_req, res) => {
@@ -325,7 +326,7 @@ app.get("/api/diagnostics", (_req, res) => {
     ok: true,
     app: "ULUGBEK AI",
     backend: "running",
-    ai: "native-symbolic-no-external-ai",
+    ai: process.env.OPENAI_API_KEY ? "openai-responses-api" : "native-symbolic-no-external-ai",
     publicWebResearch: "available-through-lab-route-when-server-has-internet",
     knowledgeStorage: "server-local-json-files",
     agentMemory: "separate-per-agent-per-browser-session; JSON file; durable hosting storage must be configured",
@@ -337,9 +338,10 @@ app.get("/api/diagnostics", (_req, res) => {
     productionDatabase: "not-configured-task-store-uses-local-json-file",
     agentExecution: "native rule-based task planner plus registered role modules; no hosted model API, no trained language model, no source writes or deploy",
     nativeReasoning: "ulugbek-native-rule-reasoner-v1; deterministic symbolic planning; not a trained neural language model",
-    externalAiApiEnabled: false,
+    externalAiApiEnabled: Boolean(process.env.OPENAI_API_KEY),
     trainedLanguageModelReady: false,
-    note: "Agent navbati server jarayoni ishlayotganida bajariladi. Hosting qayta ishga tushsa yoki uxlab qolsa 24/7 kafolatlanmaydi. JSON saqlash vaqtinchalik; doimiy ishlab chiqarish uchun PostgreSQL/Redis va alohida worker kerak. Bu diagnostika end-to-end sinov o‘rnini bosmaydi."
+    model: process.env.OPENAI_API_KEY ? (process.env.OPENAI_MODEL || "gpt-5.5") : null,
+    note: "Chat API kaliti server muhit o‘zgaruvchisida bo‘lsa OpenAI Responses API ishlaydi. Kalit bo‘lmasa mahalliy qoidaviy javob ishlaydi. Agent navbati server jarayoni ishlayotganida bajariladi; JSON saqlash vaqtinchalik."
   });
 });
 
@@ -443,7 +445,52 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       safety: { blocked: true, category: shieldDecision.reason, quarantined: shieldDecision.quarantined === true }
     });
   }
-  // Native-only chat mode: never call hosted/open-weight AI providers.
+  // OpenAI kaliti faqat serverda saqlanadi; hech qachon brauzerga yuborilmaydi.
+  if (process.env.OPENAI_API_KEY) {
+    const model = (process.env.OPENAI_MODEL || "gpt-5.5").trim();
+    try {
+      const aiResponse = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + process.env.OPENAI_API_KEY,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model,
+          input: message,
+          store: false,
+          max_output_tokens: 1200
+        }),
+        signal: AbortSignal.timeout(30000)
+      });
+      const data = await aiResponse.json().catch(() => ({}));
+      if (!aiResponse.ok) {
+        console.error("OpenAI API xatosi:", aiResponse.status, data?.error?.code || "api_error");
+        return res.status(502).json({
+          error: "AI xizmatidan javob olinmadi. Render sozlamalari, model nomi va API billing holatini tekshiring.",
+          mode: "openai-api-error"
+        });
+      }
+      const reply = typeof data.output_text === "string" ? data.output_text.trim() :
+        (Array.isArray(data.output) ? data.output.flatMap(item => Array.isArray(item.content) ? item.content : []).filter(item => item.type === "output_text" && typeof item.text === "string").map(item => item.text).join("\n").trim() : "");
+      if (!reply) return res.status(502).json({ error: "AI bo‘sh javob qaytardi. Qayta urinib ko‘ring.", mode: "openai-empty-response" });
+      return res.json({
+        reply,
+        mode: "openai-responses-api",
+        model,
+        sessionId,
+        privacy: "store_false_requested"
+      });
+    } catch (error) {
+      console.error("OpenAI ulanish xatosi:", error.name || "network_error");
+      return res.status(502).json({
+        error: "AI serveriga ulanib bo‘lmadi. Birozdan so‘ng qayta urinib ko‘ring.",
+        mode: "openai-connection-error"
+      });
+    }
+  }
+
+  // API kaliti sozlanmagan bo‘lsa, mavjud mahalliy javob mexanizmi saqlanadi.
   try {
     const nativeBrain = require("./lab-learning-worker");
     const learned = await nativeBrain.searchKnowledge(message, 5);
@@ -459,7 +506,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     });
   } catch (error) {
     return res.status(503).json({
-      error: "Mahalliy mantiqiy mexanizm ishlamadi; tashqi AI xizmatiga avtomatik o‘tilmadi.",
+      error: "Mahalliy mantiqiy mexanizm ishlamadi; AI kaliti sozlanmagan.",
       mode: "native-only-error"
     });
   }
