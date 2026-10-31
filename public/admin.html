@@ -18,6 +18,14 @@
 <section id="dashboard" hidden>
 <div class="welcome"><div><p class="eyebrow">TIZIM NAZORATI</p><h1>Holat va diagnostika</h1><p class="muted">Faqat server tasdiqlagan ma’lumotlar. Bu panel server sozlamalarini o‘zi o‘zgartirmaydi.</p></div><button id="logout" class="secondary">Chiqish</button></div>
 <div id="cards" class="grid"></div>
+<section class="panel" id="agent-permissions">
+<div class="panel-heading"><div><p class="eyebrow">VAKOLATLAR BOSHQARUVI</p><h2>Agent ruxsatlari</h2></div><button id="permissions-refresh" class="secondary" type="button">Yangilash</button></div>
+<p class="muted">Bu yerda yoqilgan vakolatlar siyosati saqlanadi. Hozirgi versiyada asosiy kodga bevosita yozish, maxfiy kalitlarni o‘qish, foydalanuvchi ma’lumotlarini o‘chirish va production deploy qat’iy bloklangan.</p>
+<div id="permission-controls" class="task-list">Ruxsatlar yuklanmoqda…</div>
+<button id="permissions-save" type="button">Ruxsatlarni saqlash</button><p id="permissions-message" class="error" aria-live="polite"></p>
+<h3>Doimiy bloklangan amallar</h3><div id="permission-locks" class="task-list"></div>
+<h3>Ruxsatlar tarixi</h3><div id="permission-audit" class="task-list"></div>
+</section>
 <section class="panel" id="developer-agent">
 <div class="panel-heading"><div><p class="eyebrow">ULUGBEK AI ICHKI DASTURCHISI</p><h2>Professional Developer Agent</h2></div><button id="developer-run" class="secondary" type="button">Hozir tekshirish</button></div>
 <p class="muted">Bitta agent repozitoriyni muntazam tahlil qiladi, xatolar va yaxshilash takliflarini tayyorlaydi. U asosiy kodni o‘zgartirmaydi; chiqarish alohida administrator ruxsati va sinovlardan keyin amalga oshiriladi.</p>
