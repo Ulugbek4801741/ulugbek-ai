@@ -66,9 +66,7 @@ Without a server and key, GitHub Pages runs only the local planning demo. GitHub
 2. In the backend host, set `FRONTEND_ORIGIN=https://ulugbek4801741.github.io`. This enables the intended GitHub Pages origin in both CORS and the Content Security Policy. Other frontend origins must be configured explicitly.
 3. Set `OPENAI_API_KEY` on the backend only, or configure an OpenAI-compatible `OPENAI_BASE_URL` and `OPENAI_MODEL`. Never add a provider secret to browser files.
 4. Copy the deployed backend's HTTPS origin into `public/config.js` as `window.ULUGBEK_API_BASE_URL = "https://YOUR-BACKEND-HOST";` (replace the example with the actual host, no trailing slash), then commit and wait for the Pages deployment to succeed.
-5. Open the website and check the connection label. A green-looking UI alone is not proof: verify `/api/health`, send a real chat prompt, and inspect the GitHub Actions test run.
-
-The repository does not know the real backend hostname until you deploy it, so the public config intentionally remains empty rather than guessing a URL. The chat's `A4801741_a` shortcut opens the admin page after two entries; it does **not** grant administrator access. Server-side Google sign-in and the allowlisted administrator email are still required.
+5. The current `public/config.js` contains the backend hostname configured for this repository. Confirm that it matches the actual Render service URL in the Render Dashboard before relying on it. Verify the backend's `/api/health` endpoint, send a real chat prompt, and inspect the GitHub Actions test run. A successful GitHub Pages deployment alone does not prove that the backend is reachable. The chat's `A4801741_a` shortcut opens the admin page after two entries; it does **not** grant administrator access. Server-side Google sign-in and the allowlisted administrator email are still required.
 
 ## API-key-free virtual laboratory (early MVP)
 
