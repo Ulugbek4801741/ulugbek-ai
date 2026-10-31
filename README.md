@@ -68,6 +68,16 @@ Without a server and key, GitHub Pages runs only the local planning demo. GitHub
 4. Copy the deployed backend's HTTPS origin into `public/config.js` as `window.ULUGBEK_API_BASE_URL = "https://YOUR-BACKEND-HOST";` (replace the example with the actual host, no trailing slash), then commit and wait for the Pages deployment to succeed.
 5. The current `public/config.js` contains the backend hostname configured for this repository. Confirm that it matches the actual Render service URL in the Render Dashboard before relying on it. Verify the backend's `/api/health` endpoint, send a real chat prompt, and inspect the GitHub Actions test run. A successful GitHub Pages deployment alone does not prove that the backend is reachable. The admin page is intentionally not linked from the public chat menu. Open `/admin.html` on the deployed backend and use the server-only administrator PIN. A successful login creates a one-hour session; five incorrect attempts from the same client identifier trigger a one-hour lockout.
 
+## Private voice engine (self-hosted adapter)
+
+- `GET /api/voice/status` reports whether a private TTS service is configured.
+- `POST /api/voice/speech` proxies speech requests to the administrator-configured TTS server. It never falls back to a public voice API.
+- Configure `ULUGBEK_TTS_URL` and `ULUGBEK_TTS_TOKEN` only in the backend host's secret/environment settings. The token must be at least 24 characters. The URL must use HTTPS, or HTTP on loopback for a same-machine service.
+- The private engine contract is `POST /v1/audio/speech` with JSON `{ "text", "language", "voice", "emotion" }`, Bearer authentication, and an audio response (`audio/wav`, `audio/mpeg`, `audio/ogg`, `audio/webm`, or `application/octet-stream`). Maximum text is 4,000 characters and maximum audio response is 10 MB.
+- The main chat and avatar page try this private endpoint for Uzbek speech first. If it is unavailable, they use an installed Uzbek device voice; they do not send text to a third-party TTS provider.
+- This repository contains the secure adapter and tests, **not** a trained TTS model or GPU runtime. A separate private TTS service must be installed and tested before natural neural speech is available. Qwen3-TTS currently documents 10 major languages and does not list Uzbek; it cannot be claimed as a 200-language solution. See [official Qwen3-TTS model documentation](https://github.com/QwenLM/Qwen3-TTS).
+- No 200+ language quality claim is made. Each engine/language/voice must pass pronunciation and audio-quality tests before being advertised as supported.
+
 ## API-key-free virtual laboratory (early MVP)
 
 A separate page is available at `/lab.html`. It includes:

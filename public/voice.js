@@ -29,13 +29,25 @@ async function requestMicPermission(){
   $("permission-status").textContent="Mikrofonga ruxsat berildi. Gapirish tugmasini bosing.";
   return true;
 }
+let activeVoiceAudio=null;
 function speak(text){
   if(!("speechSynthesis" in window)){setStatus("Brauzer ovoz chiqarishni qo‘llamaydi.");return;}
-  window.speechSynthesis.cancel();
-  const u=new SpeechSynthesisUtterance(text);u.lang=$("lang").value;u.rate=1;
+  const lang=$("lang").value;
+  if(lang.toLowerCase().startsWith("uz")){
+    if(activeVoiceAudio){activeVoiceAudio.pause();activeVoiceAudio=null;}
+    fetch(apiUrl("/api/voice/speech"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text,language:lang,voice:"female",emotion:"neutral"})})
+      .then(async response=>{if(!response.ok)throw new Error("private voice unavailable");if(!(response.headers.get("content-type")||"").startsWith("audio/"))throw new Error("invalid audio");return response.blob();})
+      .then(blob=>{const url=URL.createObjectURL(blob),audio=new Audio(url);activeVoiceAudio=audio;audio.onended=()=>{URL.revokeObjectURL(url);if(activeVoiceAudio===audio)activeVoiceAudio=null;};audio.onerror=()=>{URL.revokeObjectURL(url);if(activeVoiceAudio===audio)activeVoiceAudio=null;setStatus("Ovoz faylini ijro qilib bo‘lmadi.");};return audio.play();})
+      .catch(()=>{const voices=speechSynthesis.getVoices(),voice=voices.find(v=>v.lang.toLowerCase()==="uz-uz")||voices.find(v=>v.lang.toLowerCase().startsWith("uz-"));if(!voice){setStatus("O‘zbekcha ovoz serveri ulanmagan va qurilmada o‘zbekcha ovoz topilmadi.");return;}speakWithVoice(text,lang,voice);});
+    return;
+  }
+  const voices=speechSynthesis.getVoices(),voice=voices.find(v=>v.lang.toLowerCase()===lang.toLowerCase())||voices.find(v=>v.lang.toLowerCase().startsWith(lang.toLowerCase().split("-")[0]));
+  speakWithVoice(text,lang,voice);
+}
+function speakWithVoice(text,lang,voice){
+  speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang=lang;u.rate=1;if(voice)u.voice=voice;
   u.onstart=()=>orb.classList.add("speaking");u.onend=()=>orb.classList.remove("speaking");
-  u.onerror=()=>{orb.classList.remove("speaking");setStatus("Ovoz chiqarilmadi; matn javobi mavjud.");};
-  window.speechSynthesis.speak(u);
+  u.onerror=()=>{orb.classList.remove("speaking");setStatus("Ovoz chiqarilmadi; matn javobi mavjud.");};speechSynthesis.speak(u);
 }
 function tokens(s){return String(s||"").toLocaleLowerCase("uz").normalize("NFD").replace(/[\u0300-\u036f]/g,"").split(/[^\p{L}\p{N}]+/u).filter(w=>w.length>2);}
 async function knowledgeReply(question){

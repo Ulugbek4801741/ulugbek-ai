@@ -10,6 +10,8 @@ const learningWorkerForAdmin = require("./lab-learning-worker");
 const { createAdminAutopilot } = require("./admin-autopilot");
 const adminAutopilot = createAdminAutopilot({ developerAgent, learningWorker: learningWorkerForAdmin, agentRuntime });
 
+const voiceEngine = require("./modules/voice-engine").createVoiceEngine();
+
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 const MAX_TASK_LENGTH = 4000;
@@ -280,6 +282,28 @@ app.post("/api/admin/tasks/:id/review", requireAdmin, (req, res) => {
     res.json({ ok: true, task });
   } catch (error) {
     res.status(error.status || 500).json({ error: error.message || "Qaror saqlanmadi." });
+  }
+});
+
+app.get("/api/voice/status", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, voice: voiceEngine.status() });
+});
+
+app.post("/api/voice/speech", chatRateLimit, async (req, res) => {
+  try {
+    const result = await voiceEngine.synthesize({
+      text: req.body?.text,
+      language: req.body?.language || "uz-UZ",
+      voice: req.body?.voice || "female",
+      emotion: req.body?.emotion || "neutral"
+    });
+    res.set("Cache-Control", "no-store");
+    res.set("X-Content-Type-Options", "nosniff");
+    res.type(result.contentType).send(result.audio);
+  } catch (error) {
+    res.set("Cache-Control", "no-store");
+    res.status(error.status || 500).json({ error: error.message || "Ovoz yaratilmadi." });
   }
 });
 
