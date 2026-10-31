@@ -50,11 +50,10 @@ nano .env
 ```
 
 Set the required private values in `.env` on the server only. At minimum:
-- `PUBLIC_BASE_URL`: the final HTTPS backend origin.
 - `FRONTEND_ORIGIN=https://ulugbek4801741.github.io`.
-- `ADMIN_SESSION_SECRET`: a unique random secret of at least 32 characters.
 - `LAB_ADMIN_TOKEN`: a different random secret of at least 32 characters.
-- Google OAuth values only if administrator Google sign-in is being enabled.
+- `ADMIN_ACCESS_CODE`: a private administrator PIN/passphrase; set it only in the server `.env` file (never in GitHub or chat).
+- `ADMIN_SESSION_SECRET`: a unique random secret of at least 32 characters.
 - AI provider key only if a paid/hosted model is intentionally enabled. Keep `GEMINI_ALLOW_CHAT_CONTENT=false` unless the owner explicitly approves sending chat content to Google.
 
 Do not paste secrets into GitHub, source files, public issue comments, or this chat. Do not set a billing method or create paid resources as part of this procedure.
