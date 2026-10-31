@@ -264,6 +264,20 @@ test("API smoke tests", async (t) => {
       assert.equal(body.receivedCharacters, 5);
     });
 
+    await t.test("project builder rejects empty tasks before local model access", async () => {
+      const response = await fetch(`${baseUrl}/api/agent/build`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ task: "   " })
+      });
+      assert.equal(response.status, 400);
+    });
+
+    await t.test("project workspace lookup rejects unknown build IDs", async () => {
+      const response = await fetch(`${baseUrl}/api/agent/build/not-a-build-id`);
+      assert.equal(response.status, 404);
+    });
+
     await t.test("agent planner creates a structured plan", async () => {
       const response = await fetch(`${baseUrl}/api/agent/plan`, {
         method: "POST",
