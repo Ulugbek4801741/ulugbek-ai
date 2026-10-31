@@ -7,9 +7,10 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 
 const CHECK_INTERVAL_MS = Math.max(15_000, Number(process.env.ADMIN_AUTOPILOT_INTERVAL_MS) || 60_000);
+const DATA_DIR = path.resolve(process.env.ULUGBEK_DATA_DIR || path.join(__dirname, "data"));
 const MAX_RESTARTS = 2;
 const ERROR_LIMIT = 3;
-function createAdminAutopilot({ developerAgent, learningWorker, agentRuntime, now = () => Date.now(), storePath = process.env.ADMIN_AUTOPILOT_STORE || path.join(__dirname, "data", "admin-autopilot.json") }) {
+function createAdminAutopilot({ developerAgent, learningWorker, agentRuntime, now = () => Date.now(), storePath = process.env.ADMIN_AUTOPILOT_STORE || path.join(DATA_DIR, "admin-autopilot.json") }) {
   if (!developerAgent || !learningWorker || !agentRuntime) throw new TypeError("Watchdog uchun agent modullari kerak.");
   const STORE = path.resolve(storePath);
   let timer = null;
