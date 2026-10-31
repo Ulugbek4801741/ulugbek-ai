@@ -278,6 +278,36 @@ $("login-form").addEventListener("submit", async (event) => {
     button.disabled = false;
   }
 });
+$("change-code-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const currentCode = $("current-admin-code").value;
+  const newCode = $("new-admin-code").value;
+  const confirmCode = $("confirm-admin-code").value;
+  const button = $("change-code-submit");
+  if (newCode !== confirmCode) {
+    $("change-code-message").textContent = "Yangi kodlar bir xil emas.";
+    return;
+  }
+  button.disabled = true;
+  $("change-code-message").textContent = "Kod xavfsiz saqlanmoqda…";
+  try {
+    const result = await request("/api/admin/change-code", {
+      method: "POST",
+      body: JSON.stringify({ currentCode, newCode })
+    });
+    $("change-code-message").textContent = result.note || "Administrator kodi almashtirildi.";
+    $("current-admin-code").value = "";
+    $("new-admin-code").value = "";
+    $("confirm-admin-code").value = "";
+  } catch (error) {
+    $("change-code-message").textContent = error.message;
+    $("current-admin-code").value = "";
+    $("new-admin-code").value = "";
+    $("confirm-admin-code").value = "";
+  } finally {
+    button.disabled = false;
+  }
+});
 $("permissions-refresh").addEventListener("click", () => loadAgentPermissions().catch(error => { $("permissions-message").textContent = error.message; }));
 $("permissions-save").addEventListener("click", saveAgentPermissions);
 $("logout").addEventListener("click", async () => { try { await request("/api/admin/logout", { method: "POST", body: "{}" }); } finally { showDashboard(false); } });
