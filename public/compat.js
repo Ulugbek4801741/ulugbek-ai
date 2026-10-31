@@ -9,6 +9,10 @@
     }
     if (root.document && result.profile === "lite") {
       root.document.documentElement.className += " ulugbek-lite";
+      var style = root.document.createElement("style");
+      style.type = "text/css";
+      style.appendChild(root.document.createTextNode("*{animation:none!important;transition:none!important;scroll-behavior:auto!important}")); 
+      (root.document.head || root.document.documentElement).appendChild(style);
     }
   }
 }(typeof window !== "undefined" ? window : null, function () {
@@ -18,7 +22,7 @@
     var nav = env.navigator || {};
     var doc = env.document || {};
     var hasFetch = typeof env.fetch === "function";
-    var hasPromise = typeof env.Promise === "function" || typeof Promise === "function";
+    var hasPromise = typeof env.Promise === "function";
     var hasXHR = typeof env.XMLHttpRequest === "function";
     var hasDOM = !!(doc.createElement && doc.getElementById);
     var memory = typeof nav.deviceMemory === "number" ? nav.deviceMemory : null;
