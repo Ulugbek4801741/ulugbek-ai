@@ -158,6 +158,45 @@ async function loadTasks() {
   for (const task of data.tasks) list.append(renderTask(task));
 }
 
+async function loadAgentPermissions() {
+  const data = await request("/api/admin/agent-permissions");
+  const policy = data.policy || {};
+  const controls = $("permission-controls");
+  controls.replaceChildren();
+  for (const [key, item] of Object.entries(policy.capabilities || {})) {
+    const card = document.createElement("label"); card.className = "task-card";
+    const line = document.createElement("span");
+    const input = document.createElement("input");
+    input.type = "checkbox"; input.dataset.permission = key; input.checked = item.enabled === true;
+    input.style.marginRight = "12px";
+    line.append(input, document.createTextNode(item.label + (item.enabled ? " — yoqilgan" : " — o‘chirilgan")));
+    input.addEventListener("change", () => { line.lastChild.textContent = item.label + (input.checked ? " — yoqilgan" : " — o‘chirilgan"); });
+    card.append(line); controls.append(card);
+  }
+  const locks = $("permission-locks"); locks.replaceChildren();
+  for (const label of Object.values(policy.locked || {})) addText(locks, "p", "🔒 " + label);
+  const audit = $("permission-audit"); audit.replaceChildren();
+  for (const entry of (policy.audit || [])) {
+    const card = document.createElement("article"); card.className = "task-card";
+    addText(card, "strong", new Date(entry.at).toLocaleString() + " · " + entry.by);
+    addText(card, "p", Object.entries(entry.changes || {}).map(([key, value]) => key + ": " + (value ? "yoqildi" : "o‘chirildi")).join(" | "));
+    audit.append(card);
+  }
+  if (!audit.childElementCount) audit.textContent = "Hali o‘zgarishlar yo‘q.";
+  $("permissions-message").textContent = "Siyosat v" + (policy.version || 1) + " yuklandi.";
+}
+async function saveAgentPermissions() {
+  const capabilities = {};
+  document.querySelectorAll("[data-permission]").forEach(input => { capabilities[input.dataset.permission] = input.checked; });
+  const button = $("permissions-save"); button.disabled = true;
+  try {
+    await request("/api/admin/agent-permissions", { method: "PUT", body: JSON.stringify({ capabilities }) });
+    await loadAgentPermissions();
+    $("permissions-message").textContent = "Ruxsatlar saqlandi. Agentlarning barcha amallari hali tegishli bajaruvchi modulda alohida tekshirilishi kerak.";
+  } catch (error) { $("permissions-message").textContent = error.message; }
+  finally { button.disabled = false; }
+}
+
 async function loadDeveloperAgent() {
   const [statusData, proposalData] = await Promise.all([
     request("/api/admin/developer-agent/status"),
@@ -205,10 +244,12 @@ async function loadDeveloperAgent() {
 async function checkSession() {
   try {
     const status = await request("/api/admin/status");
-    if (status.authenticated) { showDashboard(true); await Promise.all([loadOverview(), loadTasks(), loadSafety(), loadDeveloperAgent(), loadAutopilot()]); }
+    if (status.authenticated) { showDashboard(true); await Promise.all([loadOverview(), loadTasks(), loadSafety(), loadAgentPermissions(), loadDeveloperAgent(), loadAutopilot()]); }
     else showDashboard(false);
   } catch (_) { showDashboard(false); $("status").textContent = "Backend server talab qilinadi"; }
 }
+$("permissions-refresh").addEventListener("click", () => loadAgentPermissions().catch(error => { $("permissions-message").textContent = error.message; }));
+$("permissions-save").addEventListener("click", saveAgentPermissions);
 $("logout").addEventListener("click", async () => { try { await request("/api/admin/logout", { method: "POST", body: "{}" }); } finally { showDashboard(false); } });
 $("refresh").addEventListener("click", async () => { try { await loadOverview(); $("status").textContent = "Yangilandi"; } catch (error) { $("details").textContent = error.message; } });
 $("refresh-tasks").addEventListener("click", async () => { try { await loadTasks(); $("task-message").textContent = ""; } catch (error) { $("task-message").textContent = error.message; } });
