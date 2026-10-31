@@ -12,6 +12,15 @@ test("builder accepts only safe relative source paths", () => {
   assert.equal(builder.validateRelativePath(".env"), false);
 });
 
+test("workspace ownership is bound to a valid browser session", () => {
+  const owner = "session-id-123456";
+  const manifest = { ownerHash: builder.ownerFingerprint(owner) };
+  assert.equal(builder.ownsBuild(manifest, owner), true);
+  assert.equal(builder.ownsBuild(manifest, "another-session-123"), false);
+  assert.equal(builder.ownsBuild(manifest, "short"), false);
+  assert.throws(() => builder.ownerFingerprint(""), { status: 400 });
+});
+
 test("builder validates project JSON and file limits", () => {
   const parsed = builder.parseGeneratedProject(JSON.stringify({
     title: "Demo",
