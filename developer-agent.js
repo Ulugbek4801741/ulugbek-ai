@@ -6,6 +6,7 @@
 const fs = require("node:fs/promises");
 const path = require("node:path");
 const crypto = require("node:crypto");
+const agentPermissions = require("./agent-permissions");
 
 const OWNER = process.env.DEVELOPER_AGENT_REPO_OWNER || "Ulugbek4801741";
 const REPO = process.env.DEVELOPER_AGENT_REPO_NAME || "ulugbek-ai";
@@ -99,6 +100,9 @@ async function auditOnce() {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 45_000);
   try {
+    await agentPermissions.load();
+    const permissions = agentPermissions.snapshot().capabilities;
+    if (!permissions.repository_read.enabled) throw new Error("Administrator repository_read ruxsatini o‘chirgan; tekshiruv to‘xtatildi.");
     const base = "https://api.github.com/repos/" + encodeURIComponent(OWNER) + "/" + encodeURIComponent(REPO);
     const repo = await githubJson(base, controller.signal);
     const branch = await githubJson(base + "/branches/" + encodeURIComponent(BRANCH), controller.signal);
@@ -120,7 +124,9 @@ async function auditOnce() {
       const blob = await githubJson(item.url, controller.signal);
       if (blob.encoding !== "base64" || typeof blob.content !== "string") continue;
       const source = Buffer.from(blob.content.replace(/\n/g, ""), "base64").toString("utf8");
-      for (const finding of inspectFile(item.path, source)) addProposal(...finding);
+      if (permissions.code_proposals.enabled) {
+        for (const finding of inspectFile(item.path, source)) addProposal(...finding);
+      }
       scanned++;
     }
     state.scannedFiles = scanned;
@@ -201,6 +207,7 @@ function status() {
     branch: state.branch || BRANCH,
     headCommit: state.headCommit || null,
     executionMode: "read-only-repository-audit",
+    permissionGates: "repository_read-and-code_proposals",
     codeChanges: "disabled",
     deployment: "admin-approval-required",
     uptimeGuarantee: "process-and-host-dependent"
