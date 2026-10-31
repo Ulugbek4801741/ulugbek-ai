@@ -3,6 +3,8 @@ services:
     name: ulugbek-ai-web
     runtime: node
     plan: free
+    branch: main
+    autoDeployTrigger: checksPass
     buildCommand: npm install --omit=dev
     startCommand: npm start
     healthCheckPath: /api/health
