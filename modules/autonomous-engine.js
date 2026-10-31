@@ -5,6 +5,7 @@
 // call hosted models, execute shell commands, write source files, or deploy.
 const nativeReasoning = require("../native-reasoning-engine");
 const learningWorker = require("../lab-learning-worker");
+const autonomyPolicy = require("./autonomy-policy");
 
 const AGENTS = Object.freeze([
   { id: "supervisor", name: "Boshqaruvchi agent", purpose: "Vazifani qismlarga ajratish va yakuniy natijani jamlash." },
@@ -35,6 +36,7 @@ async function executeTask(input = {}) {
   const risks = [...analysis.risks];
   if (!knowledge.length) risks.push("Mos tasdiqlangan ichki bilim yozuvi topilmadi; javob umumiy mahalliy qoidalarga tayanadi.");
   risks.push("Hozirgi MVP neyron til modelidan foydalanmaydi; natija ChatGPT/Claude/Gemini darajasidagi model javobi deb hisoblanmasin.");
+  risks.push("Uch darajali mustaqillik siyosati ulandi, ammo internet qidiruvi, sandbox ijrosi va doimiy avtonom rejalashtirish hali ulanmagan.");
   return {
     ok: true,
     engine: "ulugbek-safe-agent-orchestrator-v1",
@@ -43,6 +45,7 @@ async function executeTask(input = {}) {
     reasoning: analysis,
     agents: AGENTS.map(agent => ({ ...agent, status: "completed", execution: "local-read-only" })),
     knowledge: { count: knowledge.length, sources: knowledge.map(item => item.source) },
+    autonomyPolicy: autonomyPolicy.policyStatus(),
     safety: {
       externalNetworkAccess: false,
       hostedModelCalls: false,
@@ -61,10 +64,11 @@ function status() {
   return {
     ready: true,
     mode: "local-rule-based-agent-orchestration",
+    autonomyPolicy: autonomyPolicy.policyStatus(),
     agents: AGENTS.map(agent => agent.id),
     modelConfigured: false,
     externalActionsEnabled: false,
-    note: "Agentlar hozircha mahalliy tahlil va reja bajaradi. Tashqi amallar va kodni avtomatik chiqarish yoqilmagan."
+    note: "Uchala mustaqillik darajasi siyosatda belgilangan. Hozir agentlar mahalliy tahlil va reja bajaradi; internet, sandbox va haqiqiy model hali ulanmagan."
   };
 }
 
