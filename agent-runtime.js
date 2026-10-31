@@ -18,7 +18,8 @@ const ROLE_LABELS = {
   product: "Mahsulot agenti",
   ...Object.fromEntries(agentRegistry.listAgents().map(agent => [agent.id, agent.name]))
 };
-const TASK_STORE_PATH = path.resolve(process.env.TASK_STORE_PATH || path.join(__dirname, "data", "agent-tasks.json"));
+const DATA_DIR = path.resolve(process.env.ULUGBEK_DATA_DIR || path.join(__dirname, "data"));
+const TASK_STORE_PATH = path.resolve(process.env.TASK_STORE_PATH || path.join(DATA_DIR, "agent-tasks.json"));
 let tasks = [];
 let workerStarted = false;
 let workerReady = null;
