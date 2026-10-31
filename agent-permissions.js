@@ -11,10 +11,15 @@ const DEFINITIONS = Object.freeze({
   internet_research: { label: "Ochiq internet manbalarini izlash", default: true },
   knowledge_save: { label: "Tekshirilgan bilimlarni xotiraga saqlash", default: false },
   code_proposals: { label: "Kod o‘zgarishi uchun taklif tayyorlash", default: true },
+  file_create: { label: "GitHub ishchi tarmog‘ida yangi fayl yaratish", default: false },
+  file_update: { label: "GitHub ishchi tarmog‘ida fayl tahrirlash", default: false },
+  file_delete: { label: "GitHub ishchi tarmog‘ida fayl o‘chirish", default: false },
+  branch_write: { label: "Alohida ishchi tarmoqqa commit yozish", default: false },
+  pull_request_create: { label: "Tayyor o‘zgarishlardan Pull Request ochish", default: false },
   automated_tests: { label: "Xavfsiz, cheklangan avtomatik testlar", default: false }
 });
 const LOCKED = Object.freeze({
-  direct_source_write: "Asosiy kodga bevosita yozish — hozircha bloklangan",
+  main_branch_write: "Asosiy main tarmog‘iga to‘g‘ridan-to‘g‘ri yozish — bloklangan",
   production_deploy: "Serverga avtomatik chiqarish — hozircha bloklangan",
   secret_access: "Maxfiy kalit va parollarni o‘qish — bloklangan",
   user_data_delete: "Foydalanuvchi ma’lumotlarini o‘chirish — bloklangan"
