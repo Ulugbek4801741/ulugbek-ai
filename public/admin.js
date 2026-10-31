@@ -244,10 +244,70 @@ async function loadDeveloperAgent() {
 async function checkSession() {
   try {
     const status = await request("/api/admin/status");
-    if (status.authenticated) { showDashboard(true); await Promise.all([loadOverview(), loadTasks(), loadSafety(), loadAgentPermissions(), loadDeveloperAgent(), loadAutopilot()]); }
-    else showDashboard(false);
-  } catch (_) { showDashboard(false); $("status").textContent = "Backend server talab qilinadi"; }
+    if (!status.configured) {
+      showDashboard(false);
+      $("login-error").textContent = "Serverda ADMIN_ACCESS_CODE va ADMIN_SESSION_SECRET maxfiy sozlamalari kiritilmagan.";
+      return;
+    }
+    if (status.authenticated) {
+      showDashboard(true);
+      await Promise.all([loadOverview(), loadTasks(), loadSafety(), loadAgentPermissions(), loadDeveloperAgent(), loadAutopilot()]);
+    } else {
+      showDashboard(false);
+    }
+  } catch (_) {
+    showDashboard(false);
+    $("status").textContent = "Backend server talab qilinadi";
+  }
 }
+$("login-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const button = $("login-submit");
+  const input = $("admin-code");
+  button.disabled = true;
+  $("login-error").textContent = "Kod tekshirilmoqda…";
+  try {
+    await request("/api/admin/login", { method: "POST", body: JSON.stringify({ code: input.value }) });
+    input.value = "";
+    $("login-error").textContent = "";
+    await checkSession();
+  } catch (error) {
+    input.value = "";
+    $("login-error").textContent = error.message;
+  } finally {
+    button.disabled = false;
+  }
+});
+$("change-code-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const currentCode = $("current-admin-code").value;
+  const newCode = $("new-admin-code").value;
+  const confirmCode = $("confirm-admin-code").value;
+  const button = $("change-code-submit");
+  if (newCode !== confirmCode) {
+    $("change-code-message").textContent = "Yangi kodlar bir xil emas.";
+    return;
+  }
+  button.disabled = true;
+  $("change-code-message").textContent = "Kod xavfsiz saqlanmoqda…";
+  try {
+    const result = await request("/api/admin/change-code", {
+      method: "POST",
+      body: JSON.stringify({ currentCode, newCode })
+    });
+    $("change-code-message").textContent = result.note || "Administrator kodi almashtirildi.";
+    $("current-admin-code").value = "";
+    $("new-admin-code").value = "";
+    $("confirm-admin-code").value = "";
+  } catch (error) {
+    $("change-code-message").textContent = error.message;
+    $("current-admin-code").value = "";
+    $("new-admin-code").value = "";
+    $("confirm-admin-code").value = "";
+  } finally {
+    button.disabled = false;
+  }
+});
 $("permissions-refresh").addEventListener("click", () => loadAgentPermissions().catch(error => { $("permissions-message").textContent = error.message; }));
 $("permissions-save").addEventListener("click", saveAgentPermissions);
 $("logout").addEventListener("click", async () => { try { await request("/api/admin/logout", { method: "POST", body: "{}" }); } finally { showDashboard(false); } });
@@ -293,4 +353,9 @@ $("autopilot-stop").addEventListener("click", async () => {
 });
 $("refresh-safety").addEventListener("click", async () => { try { await loadSafety(); } catch (error) { $("safety-summary").textContent = error.message; } });
 checkSession();
-setInterval(() => { if (!$("dashboard").hidden) { loadTasks().catch(() => {}); loadOverview().catch(() => {}); loadDeveloperAgent().catch(() => {}); loadAutopilot().catch(() => {}); } }, 10000);
+setInterval(() => {
+  if (!$("dashboard").hidden) {
+    request("/api/admin/status").then(data => { if (!data.authenticated) { showDashboard(false); $("login-error").textContent = "Administrator sessiyasi tugadi. Qayta kiring."; } }).catch(() => showDashboard(false));
+    loadTasks().catch(() => {}); loadOverview().catch(() => {}); loadDeveloperAgent().catch(() => {}); loadAutopilot().catch(() => {});
+  }
+}, 10000);

@@ -9,15 +9,33 @@
 <main class="shell">
 <header><a href="index.html" class="brand">U <span>ULUGBEK AI <small>ADMIN CONSOLE</small></span></a><span id="status" class="status">Tekshirilmoqda…</span></header>
 <section id="login-card" class="panel">
-<p class="eyebrow">GOOGLE ORQALI XAVFSIZ KIRISH</p><h1>Administrator paneli</h1>
-<p class="muted">Faqat serverda oldindan ruxsat berilgan, tasdiqlangan Google hisobi administrator huquqini oladi. Parol ULUGBEK AI tomonidan ko‘rilmaydi.</p>
-<a class="google-button" href="/api/auth/google" id="google-login">Google hisob bilan kirish</a>
+<p class="eyebrow">MAXFIY ADMINISTRATOR KIRISHI</p><h1>Administrator paneli</h1>
+<p class="muted">Maxfiy kod serverda tekshiriladi. Kod sahifada ko‘rsatilmaydi va chatga yuborilmaydi. 5 ta noto‘g‘ri urinishdan keyin kirish 1 soatga bloklanadi.</p>
+<form id="login-form" autocomplete="on">
+<label for="admin-code">Administrator kodi</label>
+<input id="admin-code" name="code" type="password" maxlength="256" autocomplete="current-password" required>
+<button id="login-submit" type="submit">Xavfsiz kirish</button>
+</form>
 <p id="login-error" class="error" aria-live="polite"></p>
-<p class="hint">Agar xatolik chiqsa, server hostingi va Google OAuth sozlamalari tekshirilishi kerak. GitHub Pages o‘zi backend API ishlata olmaydi.</p>
+<p class="hint">Kirish muvaffaqiyatli bo‘lsa, administrator sessiyasi 1 soat davom etadi. Server HTTPS orqali ishlashi kerak.</p>
 </section>
 <section id="dashboard" hidden>
 <div class="welcome"><div><p class="eyebrow">TIZIM NAZORATI</p><h1>Holat va diagnostika</h1><p class="muted">Faqat server tasdiqlagan ma’lumotlar. Bu panel server sozlamalarini o‘zi o‘zgartirmaydi.</p></div><button id="logout" class="secondary">Chiqish</button></div>
 <div id="cards" class="grid"></div>
+<section class="panel" id="admin-code-panel">
+<h2>Maxfiy administrator kodini almashtirish</h2>
+<p class="muted">Yangi kod kamida 12 ta belgidan iborat bo‘lsin. Kod serverda scrypt xeshi ko‘rinishida saqlanadi.</p>
+<form id="change-code-form">
+<label for="current-admin-code">Joriy kod</label>
+<input id="current-admin-code" type="password" autocomplete="current-password" required maxlength="256">
+<label for="new-admin-code">Yangi kod</label>
+<input id="new-admin-code" type="password" autocomplete="new-password" minlength="12" required maxlength="256">
+<label for="confirm-admin-code">Yangi kodni takrorlang</label>
+<input id="confirm-admin-code" type="password" autocomplete="new-password" minlength="12" required maxlength="256">
+<button id="change-code-submit" type="submit">Kodni almashtirish</button>
+<p id="change-code-message" class="error" aria-live="polite"></p>
+</form>
+</section>
 <section class="panel" id="agent-permissions">
 <div class="panel-heading"><div><p class="eyebrow">VAKOLATLAR BOSHQARUVI</p><h2>Agent ruxsatlari</h2></div><button id="permissions-refresh" class="secondary" type="button">Yangilash</button></div>
 <p class="muted">Bu yerda yoqilgan vakolatlar siyosati saqlanadi. Hozirgi versiyada asosiy kodga bevosita yozish, maxfiy kalitlarni o‘qish, foydalanuvchi ma’lumotlarini o‘chirish va production deploy qat’iy bloklangan.</p>

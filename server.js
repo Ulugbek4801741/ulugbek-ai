@@ -56,7 +56,7 @@ app.use(helmet({
 app.use(express.json({ limit: "20kb", strict: true, type: "application/json" }));
 app.use("/api/", rateLimit({
   windowMs: 60 * 1000,
-  limit: 30,
+  limit: 120,
   standardHeaders: "draft-8",
   legacyHeaders: false
 }));
@@ -70,103 +70,72 @@ const plannerRateLimit = rateLimit({
 });
 
 
-const ADMIN_GOOGLE_EMAIL = (process.env.ADMIN_GOOGLE_EMAIL || "").trim().toLowerCase();
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "";
-const PUBLIC_BASE_URL = (process.env.PUBLIC_BASE_URL || "").replace(/\/$/, "");
 const ADMIN_SESSION_SECRET = process.env.ADMIN_SESSION_SECRET || "";
-const ADMIN_SESSION_TTL_MS = 8 * 60 * 60 * 1000;
-function safeEqual(a, b) {
-  const left = Buffer.from(String(a));
-  const right = Buffer.from(String(b));
-  return left.length === right.length && crypto.timingSafeEqual(left, right);
-}
-const revokedAdminSessions = new Set();
-function signAdminSession(payload) {
-  const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
-  const signature = crypto.createHmac("sha256", ADMIN_SESSION_SECRET).update(encoded).digest("base64url");
-  return encoded + "." + signature;
-}
-function verifyAdminSession(token) {
-  if (!token || !ADMIN_SESSION_SECRET) return false;
-  const parts = token.split(".");
-  if (parts.length !== 2) return false;
-  const expected = crypto.createHmac("sha256", ADMIN_SESSION_SECRET).update(parts[0]).digest("base64url");
-  if (!safeEqual(parts[1], expected)) return false;
-  try {
-    const payload = JSON.parse(Buffer.from(parts[0], "base64url").toString("utf8"));
-    return payload.exp > Date.now() && payload.role === "admin" && typeof payload.jti === "string" && !revokedAdminSessions.has(payload.jti);
-  } catch (_) { return false; }
-}
-function requireAdmin(req, res, next) {
-  const cookie = (req.headers.cookie || "").split(";").map(x => x.trim()).find(x => x.startsWith("ulugbek_admin="));
-  const token = cookie ? decodeURIComponent(cookie.slice("ulugbek_admin=".length)) : "";
-  if (!verifyAdminSession(token)) return res.status(401).json({ error: "Administrator sifatida qayta kiring." });
-  next();
-}
+const ADMIN_DATA_DIR = path.resolve(process.env.ULUGBEK_DATA_DIR || path.join(__dirname, "data"));
+const adminAuth = require("./modules/admin-auth").createAdminAuth({
+  accessCode: process.env.ADMIN_ACCESS_CODE,
+  sessionSecret: ADMIN_SESSION_SECRET,
+  storePath: path.join(ADMIN_DATA_DIR, "admin-auth-lockouts.json")
+});
 function readCookie(req, name) {
   const item = (req.headers.cookie || "").split(";").map(x => x.trim()).find(x => x.startsWith(name + "="));
   if (!item) return "";
   try { return decodeURIComponent(item.slice(name.length + 1)); } catch (_) { return ""; }
 }
-function googleOAuthReady() {
-  return Boolean(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET && ADMIN_GOOGLE_EMAIL && PUBLIC_BASE_URL.startsWith("https://") && ADMIN_SESSION_SECRET);
-}
-app.get("/api/auth/google", (req, res) => {
-  if (!googleOAuthReady()) return res.status(503).send("Google kirishi sozlanmagan. Hostingda GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, ADMIN_GOOGLE_EMAIL, ADMIN_SESSION_SECRET va PUBLIC_BASE_URL sozlang.");
-  const state = crypto.randomBytes(32).toString("base64url");
-  res.setHeader("Cache-Control", "no-store");
-  res.setHeader("Set-Cookie", "ulugbek_oauth_state=" + state + "; HttpOnly; Secure; SameSite=Lax; Path=/api/auth/google/callback; Max-Age=600");
-  const callback = PUBLIC_BASE_URL + "/api/auth/google/callback";
-  const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
-  url.searchParams.set("client_id", GOOGLE_CLIENT_ID);
-  url.searchParams.set("redirect_uri", callback);
-  url.searchParams.set("response_type", "code");
-  url.searchParams.set("scope", "openid email profile");
-  url.searchParams.set("state", state);
-  url.searchParams.set("prompt", "select_account");
-  res.redirect(302, url.toString());
-});
-app.get("/api/auth/google/callback", async (req, res) => {
-  if (!googleOAuthReady()) return res.status(503).send("Google kirishi sozlanmagan.");
-  const stateCookie = readCookie(req, "ulugbek_oauth_state");
-  res.setHeader("Set-Cookie", "ulugbek_oauth_state=; HttpOnly; Secure; SameSite=Lax; Path=/api/auth/google/callback; Max-Age=0");
-  if (!req.query.code || typeof req.query.code !== "string" || !req.query.state || typeof req.query.state !== "string" || !stateCookie || !safeEqual(req.query.state, stateCookie)) {
-    return res.status(400).send("Google kirish tasdig‘i yaroqsiz yoki muddati tugagan. Qayta urinib ko‘ring.");
+function requireAdmin(req, res, next) {
+  if (!adminAuth.verifySession(readCookie(req, "ulugbek_admin"))) {
+    return res.status(401).json({ error: "Administrator sifatida qayta kiring." });
   }
+  next();
+}
+app.post("/api/admin/login", async (req, res) => {
   try {
-    const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ code: req.query.code, client_id: GOOGLE_CLIENT_ID, client_secret: GOOGLE_CLIENT_SECRET, redirect_uri: PUBLIC_BASE_URL + "/api/auth/google/callback", grant_type: "authorization_code" }),
-      signal: AbortSignal.timeout(10000)
+    const result = await adminAuth.login({ code: req.body?.code, identifier: req.ip });
+    res.set("Cache-Control", "no-store");
+    if (!result.ok) {
+      return res.status(result.status).json({
+        error: result.error,
+        remainingAttempts: result.remainingAttempts,
+        lockedUntil: result.lockedUntil
+      });
+    }
+    res.setHeader("Set-Cookie", "ulugbek_admin=" + encodeURIComponent(result.token) + "; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=3600");
+    return res.json({ ok: true, expiresAt: result.expiresAt, sessionMinutes: 60 });
+  } catch (error) {
+    return res.status(503).json({ error: "Administrator kirish holatini saqlab bo‘lmadi." });
+  }
+});
+app.post("/api/admin/change-code", requireAdmin, async (req, res) => {
+  try {
+    const result = await adminAuth.changeCode({
+      currentCode: req.body?.currentCode,
+      newCode: req.body?.newCode
     });
-    if (!tokenResponse.ok) return res.status(401).send("Google kirishini tasdiqlab bo‘lmadi. OAuth sozlamalarini tekshiring.");
-    const tokenData = await tokenResponse.json();
-    if (typeof tokenData.access_token !== "string") return res.status(401).send("Google kirish tokeni olinmadi.");
-    const profileResponse = await fetch("https://openidconnect.googleapis.com/v1/userinfo", { headers: { Authorization: "Bearer " + tokenData.access_token }, signal: AbortSignal.timeout(10000) });
-    if (!profileResponse.ok) return res.status(401).send("Google hisob ma’lumotlarini tekshirib bo‘lmadi.");
-    const profile = await profileResponse.json();
-    const email = typeof profile.email === "string" ? profile.email.trim().toLowerCase() : "";
-    if (profile.email_verified !== true || !email || email !== ADMIN_GOOGLE_EMAIL) return res.status(403).send("Bu Google hisobi administrator sifatida ruxsat etilmagan.");
-    const token = signAdminSession({ role: "admin", email, jti: crypto.randomUUID(), exp: Date.now() + ADMIN_SESSION_TTL_MS });
-    res.setHeader("Cache-Control", "no-store");
-    res.setHeader("Set-Cookie", "ulugbek_admin=" + encodeURIComponent(token) + "; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=28800");
-    return res.redirect(303, "/admin.html");
-  } catch (_) { return res.status(502).send("Google kirish serverida xatolik yuz berdi. Birozdan so‘ng qayta urinib ko‘ring."); }
+    res.set("Cache-Control", "no-store");
+    if (!result.ok) return res.status(result.status).json({ error: result.error });
+    return res.json({ ok: true, note: "Administrator kodi xavfsiz xesh ko‘rinishida saqlandi." });
+  } catch (_) {
+    return res.status(503).json({ error: "Yangi administrator kodi saqlanmadi." });
+  }
 });
 app.get("/api/admin/status", (req, res) => {
-  const cookie = (req.headers.cookie || "").split(";").map(x => x.trim()).find(x => x.startsWith("ulugbek_admin="));
-  const token = cookie ? decodeURIComponent(cookie.slice("ulugbek_admin=".length)) : "";
-  res.json({ ok: true, authenticated: verifyAdminSession(token), configured: googleOAuthReady() });
+  res.set("Cache-Control", "no-store");
+  res.json({
+    ok: true,
+    authenticated: adminAuth.verifySession(readCookie(req, "ulugbek_admin")),
+    configured: adminAuth.configured(),
+    sessionMinutes: 60,
+    maxAttempts: 5,
+    lockoutMinutes: 60
+  });
 });
 app.post("/api/admin/logout", (req, res) => {
-  const cookie = (req.headers.cookie || "").split(";").map(x => x.trim()).find(x => x.startsWith("ulugbek_admin="));
-  const token = cookie ? decodeURIComponent(cookie.slice("ulugbek_admin=".length)) : "";
-  try { const payload = JSON.parse(Buffer.from(token.split(".")[0] || "", "base64url").toString("utf8")); if (payload.jti) revokedAdminSessions.add(payload.jti); } catch (_) {}
+  adminAuth.revoke(readCookie(req, "ulugbek_admin"));
   res.setHeader("Set-Cookie", "ulugbek_admin=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0");
+  res.set("Cache-Control", "no-store");
   res.json({ ok: true });
 });
+
 app.get("/api/admin/overview", requireAdmin, (_req, res) => {
   res.set("Cache-Control", "no-store");
   res.json({
@@ -185,8 +154,8 @@ app.get("/api/admin/overview", requireAdmin, (_req, res) => {
     agentWorker: "single-process-queue",
     queuedTasks: agentRuntime.listTasks().filter(task => task.status === "queued").length,
     runningTasks: agentRuntime.listTasks().filter(task => task.status === "running").length,
-    adminAuth: "google-oauth-allowlist",
-    adminEmail: (() => { const token = readCookie(_req, "ulugbek_admin"); try { return JSON.parse(Buffer.from(token.split(".")[0], "base64url").toString("utf8")).email || null; } catch (_) { return null; } })(),
+    adminAuth: "local-pin-one-hour-session",
+    adminEmail: "local-admin",
     deployment: "manual-host-configuration-required"
   });
 });
