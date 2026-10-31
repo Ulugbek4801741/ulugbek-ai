@@ -324,15 +324,16 @@ app.get("/api/agents/status", async (_req, res) => {
 
 app.get("/api/health", async (_req, res) => {
   res.set("Cache-Control", "no-store");
+  const modelStatus = await localModel.status();
   res.json({
     ok: true,
     app: "ULUGBEK AI",
     version: "0.3.1",
     processUptimeSeconds: Math.floor(process.uptime()),
-    aiConfigured: (await localModel.status()).available,
-    localModel: await localModel.status(),
+    aiConfigured: modelStatus.available,
+    localModel: modelStatus,
     nativeReasoningReady: true,
-    trainedLanguageModelReady: (await localModel.status()).available,
+    trainedLanguageModelReady: modelStatus.available,
     externalAiApiEnabled: false,
     mode: "local-ollama-with-native-fallback",
     storageMode: "local-json",
