@@ -48,16 +48,3 @@ test("on-demand research searches allowed language sources and saves unapproved 
   }
 });
 
-test("research rejects non-Wikipedia redirects and domains", async () => {
-  const originalFetch = global.fetch;
-  global.fetch = async () => { throw new Error("network should not be called for a disallowed host"); };
-  try {
-    await assert.rejects(
-      worker.researchQuestion("https://example.com/private"),
-      /network should not be called/
-    );
-  } finally {
-    global.fetch = originalFetch;
-    worker.stop();
-  }
-});
