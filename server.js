@@ -322,18 +322,19 @@ app.get("/api/agents/status", async (_req, res) => {
   });
 });
 
-app.get("/api/health", (_req, res) => {
+app.get("/api/health", async (_req, res) => {
   res.set("Cache-Control", "no-store");
   res.json({
     ok: true,
     app: "ULUGBEK AI",
     version: "0.3.1",
     processUptimeSeconds: Math.floor(process.uptime()),
-    aiConfigured: false,
+    aiConfigured: (await localModel.status()).available,
+    localModel: await localModel.status(),
     nativeReasoningReady: true,
-    trainedLanguageModelReady: false,
+    trainedLanguageModelReady: (await localModel.status()).available,
     externalAiApiEnabled: false,
-    mode: "native-rule-based-reasoning",
+    mode: "local-ollama-with-native-fallback",
     storageMode: "local-json",
     workerConcurrency: 1,
     multiInstanceSafe: false,
@@ -347,8 +348,9 @@ app.get("/api/diagnostics", (_req, res) => {
     ok: true,
     app: "ULUGBEK AI",
     backend: "running",
-    ai: "native-symbolic-no-external-ai",
-    publicWebResearch: "available-through-lab-route-when-server-has-internet",
+    ai: "local-ollama-when-installed-with-native-fallback",
+    localModel: await localModel.status(),
+    publicWebResearch: "keyless-wikipedia-api-and-lab-search-when-server-has-internet",
     knowledgeStorage: "server-local-json-files",
     agentMemory: "separate-per-agent-per-browser-session; JSON file; durable hosting storage must be configured",
     voiceInput: "browser-dependent-and-user-permission-required",
@@ -357,7 +359,7 @@ app.get("/api/diagnostics", (_req, res) => {
     developerAgent: developerAgent.status(),
     automaticFailover: "not-configured-requires-authorized-backup-host",
     productionDatabase: "not-configured-task-store-uses-local-json-file",
-    agentExecution: "native rule-based task planner plus registered role modules; no hosted model API, no trained language model, no source writes or deploy",
+    agentExecution: "local Ollama model when installed; registered specialist agents; no hosted model API, no source writes or production deploy",
     nativeReasoning: "ulugbek-native-rule-reasoner-v1; deterministic symbolic planning; not a trained neural language model",
     externalAiApiEnabled: false,
     trainedLanguageModelReady: false,
