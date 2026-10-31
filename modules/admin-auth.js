@@ -78,7 +78,7 @@ function createAdminAuth(options = {}) {
       return false;
     }
   }
-  async function login({ code, identifier } = {}) {
+  async function loginInternal({ code, identifier } = {}) {
     if (!configured()) return { ok: false, status: 503, error: "Administrator kirish kodi serverda xavfsiz sozlanmagan." };
     if (typeof code !== "string" || code.length < 1 || code.length > 256) {
       return { ok: false, status: 400, error: "Kirish kodi noto‘g‘ri formatda." };
@@ -111,6 +111,12 @@ function createAdminAuth(options = {}) {
     const issuedAt = now();
     const token = sign({ role: "admin", jti: crypto.randomUUID(), iat: issuedAt, exp: issuedAt + sessionTtlMs });
     return { ok: true, token, expiresAt: issuedAt + sessionTtlMs };
+  }
+  let loginQueue = Promise.resolve();
+  function login(input) {
+    const operation = loginQueue.then(() => loginInternal(input));
+    loginQueue = operation.then(() => undefined, () => undefined);
+    return operation;
   }
   function revoke(token) {
     if (typeof token !== "string") return false;
