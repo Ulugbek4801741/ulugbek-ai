@@ -56,6 +56,21 @@ test("lockout survives auth-module restart and expires after one hour", async ()
   }
 });
 
+test("administrator can change the PIN and the scrypt hash survives restart", async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "ulugbek-admin-pin-change-"));
+  const storePath = path.join(dir, "lockouts.json");
+  try {
+    const auth = createAdminAuth({ accessCode: "test-admin-pin-123", sessionSecret: secret, storePath });
+    const changed = await auth.changeCode({ currentCode: "test-admin-pin-123", newCode: "new-private-admin-code-123" });
+    assert.equal(changed.ok, true);
+    assert.equal((await auth.login({ code: "test-admin-pin-123", identifier: "device" })).ok, false);
+    const restarted = createAdminAuth({ accessCode: "test-admin-pin-123", sessionSecret: secret, storePath });
+    assert.equal((await restarted.login({ code: "new-private-admin-code-123", identifier: "device" })).ok, true);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
 test("admin login fails closed when server secrets are missing or too short", async () => {
   const auth = createAdminAuth({ accessCode: "", sessionSecret: "short" });
   assert.equal(auth.configured(), false);
