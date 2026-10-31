@@ -13,3 +13,31 @@
   transition: none !important;
   scroll-behavior: auto !important;
 }
+
+
+/* Mobile keyboard viewport fix (Android Chrome/WebView and iOS Safari). */
+html { height:100%; }
+body { min-height:100%; }
+.app { min-height:var(--ulugbek-visual-height, 100dvh); }
+.chat-main {
+  min-height:var(--ulugbek-visual-height, 100dvh);
+  padding-bottom:calc(190px + env(safe-area-inset-bottom));
+}
+.composer-wrap {
+  bottom:var(--ulugbek-keyboard-offset, 0px);
+  transform:translateY(0);
+  will-change:bottom;
+  transition:bottom .12s ease-out;
+}
+@media(max-width:560px) {
+  .chat-main {
+    min-height:var(--ulugbek-visual-height, 100dvh);
+    padding-bottom:calc(175px + env(safe-area-inset-bottom));
+  }
+  .composer-wrap {
+    padding-bottom:calc(8px + env(safe-area-inset-bottom));
+  }
+}
+@media(prefers-reduced-motion:reduce) {
+  .composer-wrap { transition:none; }
+}
