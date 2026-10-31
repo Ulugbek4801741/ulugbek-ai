@@ -22,7 +22,7 @@ test("ranks evidence that shares query concepts", () => {
 test("does not invent an answer when there is no evidence", () => {
   const result = brain.respond("kvant teleportatsiya", []);
   assert.equal(result.reasoning.answerable, false);
-  assert.match(result.reply, /yetarli dalil topilmadi/);
+  assert.match(result.reply, /ishonchli javob topa olmadim/);
 });
 
 test("deduplicates identical evidence", () => {
