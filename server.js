@@ -5,6 +5,7 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 const agentRuntime = require("./agent-runtime");
 const developerAgent = require("./developer-agent");
+const agentPermissions = require("./agent-permissions");
 const learningWorkerForAdmin = require("./lab-learning-worker");
 const { createAdminAutopilot } = require("./admin-autopilot");
 const adminAutopilot = createAdminAutopilot({ developerAgent, learningWorker: learningWorkerForAdmin, agentRuntime });
@@ -227,6 +228,28 @@ app.post("/api/admin/safety/quarantines/:hash/release", requireAdmin, (req, res)
     res.json({ ok: true, result });
   } catch (error) {
     res.status(error.status || 400).json({ error: error.message || "Karantin holati o‘zgartirilmadi." });
+  }
+});
+
+app.get("/api/admin/agent-permissions", requireAdmin, async (_req, res) => {
+  try {
+    await agentPermissions.load();
+    res.set("Cache-Control", "no-store");
+    res.json({ ok: true, policy: agentPermissions.snapshot() });
+  } catch (error) {
+    res.status(500).json({ error: "Ruxsatlar siyosatini o‘qib bo‘lmadi." });
+  }
+});
+app.put("/api/admin/agent-permissions", requireAdmin, async (req, res) => {
+  try {
+    const token = readCookie(req, "ulugbek_admin");
+    let email = "admin";
+    try { email = JSON.parse(Buffer.from(token.split(".")[0], "base64url").toString("utf8")).email || email; } catch (_) {}
+    const policy = await agentPermissions.update(req.body?.capabilities, email);
+    res.set("Cache-Control", "no-store");
+    res.json({ ok: true, policy });
+  } catch (error) {
+    res.status(error.status || 500).json({ error: error.message || "Ruxsatlar saqlanmadi." });
   }
 });
 
