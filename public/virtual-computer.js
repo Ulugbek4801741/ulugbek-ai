@@ -8,6 +8,7 @@
     "microsoft-store": { name: "Microsoft Store", phrases: ["microsoft store", "microsoft do‘koni", "windows do‘koni", "windows store"] },
     "apple-app-store": { name: "Apple App Store", phrases: ["app store", "apple store", "ayfon do‘koni", "iphone store"] }
   };
+  function api(path) { const base = typeof window.ULUGBEK_API_BASE_URL === "string" ? window.ULUGBEK_API_BASE_URL.trim().replace(/\\/$/, "") : ""; return (base ? base + "/" : "/") + path.replace(/^\\//, ""); }
   function normalize(value) { return value.toLocaleLowerCase("uz").replace(/[’'‘]/g, "'").replace(/[^a-z0-9\s'-]/g, " ").replace(/\s+/g, " ").trim(); }
   function render(items) {
     grid.replaceChildren();
@@ -20,7 +21,7 @@
       card.append(title, platform, link); grid.appendChild(card);
     }
   }
-  fetch("/api/integrations/app-stores", { headers: { Accept: "application/json" }, cache: "no-store" })
+  fetch(api("api/integrations/app-stores"), { headers: { Accept: "application/json" }, cache: "no-store" })
     .then(response => { if (!response.ok) throw new Error("HTTP " + response.status); return response.json(); })
     .then(data => { if (!data.ok || !Array.isArray(data.items)) throw new Error("Katalog formati noto‘g‘ri"); render(data.items); })
     .catch(() => { grid.textContent = "Do‘konlar katalogini serverdan olib bo‘lmadi. Server manzilini tekshiring."; });
@@ -34,7 +35,7 @@
       if (!/(och|ochib ber|ishga tushir|open)/i.test(spoken)) { voiceResult.textContent += " Faqat “...ni och” buyrug‘i qabul qilinadi."; return; }
       const id = Object.keys(allowed).find(key => allowed[key].phrases.some(phrase => spoken.includes(normalize(phrase))));
       if (!id) { voiceResult.textContent += " Bu buyruq ruxsat etilgan ro‘yxatda yo‘q."; return; }
-      fetch("/api/integrations/app-stores", { cache: "no-store" }).then(r => r.json()).then(data => {
+      fetch(api("api/integrations/app-stores"), { cache: "no-store" }).then(r => r.json()).then(data => {
         const item = data.items.find(x => x.id === id);
         if (!item) throw new Error("Do‘kon topilmadi");
         if (window.confirm(item.name + " rasmiy sahifasini ochishga ruxsat berasizmi?")) window.open(item.url, "_blank", "noopener,noreferrer");
