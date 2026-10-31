@@ -80,3 +80,49 @@ test("worker pool never exceeds its hard safety cap", async () => {
     assert.equal(lab.status().workerPool.configuredConcurrency, 64);
   } finally { await fs.rm(dir, { recursive: true, force: true }); }
 });
+
+
+test("1000-task stress test: queue, routing, bounded workers, and reports remain consistent", async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "ulugbek-lab-stress-"));
+  try {
+    const lab = createVirtualLab({ storePath: path.join(dir, "state.json"), maxWorkers: 16 });
+    await lab.load();
+    const expectedIds = new Set();
+    for (let i = 0; i < 1000; i++) {
+      const task = await lab.enqueue({
+        type: ["benchmark", "research", "product", "security", "engineering", "device"][i % 6],
+        title: "Stress scenario " + i,
+        priority: (i % 5) + 1
+      });
+      assert.ok(task.id);
+      assert.equal(task.status, "queued");
+      assert.ok(!expectedIds.has(task.id), "task IDs must be unique");
+      expectedIds.add(task.id);
+    }
+    assert.equal(lab.status().queued, 1000);
+    const result = await lab.runCycle({ maxTasks: 1000, concurrency: 16 });
+    assert.equal(result.processed, 1000);
+    assert.equal(result.reports.length, 1000);
+    assert.equal(new Set(result.reports.map(report => report.taskId)).size, 1000);
+    assert.ok(result.reports.every(report => expectedIds.has(report.taskId)));
+    assert.ok(result.reports.every(report => /^worker-(?:[1-9]|1[0-6])$/.test(report.workerId)));
+    assert.equal(result.status.queued, 0);
+    assert.equal(result.status.completed, 500, "history is intentionally capped at 500");
+    assert.ok(result.reports.every(report => report.limitations.some(item => item.includes("Simulation only"))));
+  } finally { await fs.rm(dir, { recursive: true, force: true }); }
+});
+
+test("1000 malformed task inputs are rejected without entering the queue", async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "ulugbek-lab-invalid-"));
+  try {
+    const lab = createVirtualLab({ storePath: path.join(dir, "state.json") });
+    await lab.load();
+    for (let i = 0; i < 1000; i++) {
+      await assert.rejects(
+        lab.enqueue({ type: "unapproved-" + i, title: "Invalid task " + i }),
+        /Ruxsat etilmagan/
+      );
+    }
+    assert.equal(lab.status().queued, 0);
+  } finally { await fs.rm(dir, { recursive: true, force: true }); }
+});
