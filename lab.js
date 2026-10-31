@@ -6,7 +6,7 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 
 const router = express.Router();
-const DATA_DIR = path.join(__dirname, "data");
+const DATA_DIR = path.resolve(process.env.ULUGBEK_DATA_DIR || path.join(__dirname, "data"));
 const KNOWLEDGE_FILE = path.join(DATA_DIR, "knowledge.json");
 const MEMORY_FILE = path.join(DATA_DIR, "agent-memory.json");
 const MAX_QUERY = 240;
