@@ -105,6 +105,19 @@ app.post("/api/admin/login", async (req, res) => {
     return res.status(503).json({ error: "Administrator kirish holatini saqlab bo‘lmadi." });
   }
 });
+app.post("/api/admin/change-code", requireAdmin, async (req, res) => {
+  try {
+    const result = await adminAuth.changeCode({
+      currentCode: req.body?.currentCode,
+      newCode: req.body?.newCode
+    });
+    res.set("Cache-Control", "no-store");
+    if (!result.ok) return res.status(result.status).json({ error: result.error });
+    return res.json({ ok: true, note: "Administrator kodi xavfsiz xesh ko‘rinishida saqlandi." });
+  } catch (_) {
+    return res.status(503).json({ error: "Yangi administrator kodi saqlanmadi." });
+  }
+});
 app.get("/api/admin/status", (req, res) => {
   res.set("Cache-Control", "no-store");
   res.json({
