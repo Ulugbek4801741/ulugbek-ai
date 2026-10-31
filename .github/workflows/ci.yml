@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   test:
-    name: Node.js tests
+    name: Node.js and Python syntax checks
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
@@ -25,6 +25,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Check Python model trainer syntax
+        run: python -m py_compile training/train_tiny_gpt.py
       - name: Install dependencies
         run: npm install --no-audit --no-fund
       - name: Run automated tests
