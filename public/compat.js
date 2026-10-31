@@ -9,10 +9,6 @@
     }
     if (root.document && result.profile === "lite") {
       root.document.documentElement.className += " ulugbek-lite";
-      var style = root.document.createElement("style");
-      style.type = "text/css";
-      style.appendChild(root.document.createTextNode("*{animation:none!important;transition:none!important;scroll-behavior:auto!important}")); 
-      (root.document.head || root.document.documentElement).appendChild(style);
     }
   }
 }(typeof window !== "undefined" ? window : null, function () {
