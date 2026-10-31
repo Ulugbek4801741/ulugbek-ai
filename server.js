@@ -290,7 +290,7 @@ app.get("/api/voice/status", (_req, res) => {
   res.json({ ok: true, voice: voiceEngine.status() });
 });
 
-app.post("/api/voice/speech", async (req, res) => {
+app.post("/api/voice/speech", chatRateLimit, async (req, res) => {
   try {
     const result = await voiceEngine.synthesize({
       text: req.body?.text,
