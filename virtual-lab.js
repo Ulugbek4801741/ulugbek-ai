@@ -117,7 +117,7 @@ function createVirtualLab({ storePath = process.env.VIRTUAL_LAB_STORE || path.jo
         }
       }
       await Promise.all(Array.from({ length: Math.min(parallelism, batch.length) }, (_, i) => worker(i + 1)));
-      state.history = reports.reverse().concat(state.history).slice(0, MAX_HISTORY);
+      state.history = [...reports].reverse().concat(state.history).slice(0, MAX_HISTORY);
       state.cycle += 1;
       state.lastCycleAt = now();
       await persist();
