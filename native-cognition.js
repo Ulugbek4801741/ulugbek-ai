@@ -23,9 +23,11 @@ function reason(query, entries) {
       const f = new Set(words(fact));
       let common = 0;
       for (const term of q) if (f.has(term)) common++;
-      if (common) ranked.push({
+      const requiredOverlap = Math.min(2, q.size);
+      if (common >= requiredOverlap && q.size > 0) ranked.push({
         fact, title: entry.title, source: entry.source,
-        score: (q.size ? common/q.size : 0) + Math.min(common,5)*0.03
+        score: (common/q.size) + Math.min(common,5)*0.03,
+        matchedTerms: common
       });
     }
   }
