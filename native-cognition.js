@@ -1,7 +1,7 @@
 "use strict";
 
 // Native symbolic cognition: no hosted AI, no model weights, no API key.
-const STOP = new Set(("the and for with that this from into about which when where what who whom whose are was were been being have has had will would could should can may might not but or nor dan yoki uchun bilan bu shu bir uning ular qanday nima qachon qayerda kim haqida orqali ham esa edi bor yo‘q").split(/\s+/));
+const STOP = new Set(("the and for with that this from into about which when where what who whom whose are was were been being have has had will would could should can may might not but or nor dan yoki uchun bilan bu shu bir uning ular qanday nima qachon qayerda kim haqida orqali ham esa edi bor yo‘q qaysi qayerda qayerga qayerdan").split(/\s+/));
 function words(text) {
   return String(text || "").toLocaleLowerCase().replace(/[^\p{L}\p{N}\s-]/gu, " ")
     .split(/\s+/).filter(x => x.length > 2 && !STOP.has(x));
