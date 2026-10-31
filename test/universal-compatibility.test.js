@@ -30,7 +30,7 @@ test("low-memory devices get the lite profile", () => {
 });
 
 test("old browsers without fetch use the legacy interface", () => {
-  const env = environment({ fetch: undefined, Promise: undefined });
+  const env = environment({ fetch: undefined, Promise: undefined, speechSynthesis: undefined });
   const result = detect(env);
   assert.equal(result.profile, "legacy");
   assert.equal(result.fallbacks.network, "xmlhttprequest");
