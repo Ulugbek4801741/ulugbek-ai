@@ -4,6 +4,7 @@ const rateLimit = require("express-rate-limit");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const agentRuntime = require("./agent-runtime");
+const autonomousEngine = require("./modules/autonomous-engine");
 const developerAgent = require("./developer-agent");
 const learningWorkerForAdmin = require("./lab-learning-worker");
 const { createAdminAutopilot } = require("./admin-autopilot");
@@ -251,6 +252,20 @@ app.post("/api/admin/developer-agent/proposals/:id/review", requireAdmin, (req, 
     return res.json({ ok: true, proposal, note: "Tasdiqlash taklifni chiqarishga ruxsat beradi, lekin kodni avtomatik o‘zgartirmaydi yoki deploy qilmaydi." });
   } catch (error) {
     return res.status(error.status || 500).json({ error: error.message || "Taklif holati saqlanmadi." });
+  }
+});
+
+app.get("/api/admin/autonomous-engine/status", requireAdmin, (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, engine: autonomousEngine.status() });
+});
+app.post("/api/admin/autonomous-engine/execute", requireAdmin, async (req, res) => {
+  try {
+    const result = await autonomousEngine.executeTask({ goal: req.body?.goal });
+    res.set("Cache-Control", "no-store");
+    res.json(result);
+  } catch (error) {
+    res.status(error.status || 500).json({ error: error.message || "Agent vazifani bajara olmadi." });
   }
 });
 
