@@ -115,15 +115,35 @@ test("API smoke tests", async (t) => {
       assert.equal(css.status, 200);
     });
 
-    await t.test("chat page has no admin button or password gate; Google OAuth routes are present", async () => {
-      const page = await fetch(`${baseUrl}/voice.html`);
-      const pageText = await page.text();
-      const script = await (await fetch(`${baseUrl}/voice.js`)).text();
-      assert.doesNotMatch(pageText, /admin-gate|admin-gate-open|type="password"/);
-      assert.doesNotMatch(script, /api\/admin\/chat-gate|admin-gate-open/);
-      const login = await fetch(`${baseUrl}/api/auth/google`);
-      assert.equal(login.status, 503);
-      assert.match(await login.text(), /Google kirishi sozlanmagan/);
+    await t.test("public chat hides admin access and Google OAuth is disabled", async () => {
+      const pageText = await (await fetch(`${baseUrl}/index.html`)).text();
+      assert.doesNotMatch(pageText, /Bosh admin paneli|onrender\.com\/admin\.html/);
+      const googleLogin = await fetch(`${baseUrl}/api/auth/google`);
+      assert.equal(googleLogin.status, 404);
+      const status = await (await fetch(`${baseUrl}/api/admin/status`)).json();
+      assert.equal(status.configured, true);
+      assert.equal(status.authenticated, false);
+      assert.equal(status.sessionMinutes, 60);
+      assert.equal(status.maxAttempts, 5);
+    });
+
+    await t.test("local administrator PIN creates a protected one-hour session", async () => {
+      const login = await fetch(`${baseUrl}/api/admin/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: "ci-test-admin-code" })
+      });
+      assert.equal(login.status, 200);
+      const cookie = (login.headers.get("set-cookie") || "").split(";")[0];
+      assert.match(cookie, /^ulugbek_admin=/);
+      const overview = await fetch(`${baseUrl}/api/admin/overview`, { headers: { Cookie: cookie } });
+      assert.equal(overview.status, 200);
+      const logout = await fetch(`${baseUrl}/api/admin/logout`, {
+        method: "POST", headers: { Cookie: cookie, "Content-Type": "application/json" }, body: "{}"
+      });
+      assert.equal(logout.status, 200);
+      const denied = await fetch(`${baseUrl}/api/admin/overview`, { headers: { Cookie: cookie } });
+      assert.equal(denied.status, 401);
     });
 
     await t.test("admin API denies anonymous access and protects overview", async () => {
