@@ -25,6 +25,34 @@ async function loadOverview() {
   );
   $("details").textContent = JSON.stringify(data, null, 2);
 }
+async function loadAutopilot() {
+  const data = await request("/api/admin/autopilot/status");
+  const status = data.autopilot || {};
+  const monitored = status.monitored || {};
+  $("autopilot-status").replaceChildren(
+    metric("Watchdog", status.enabled ? (status.quarantined ? "Karantin" : "Faol") : "To‘xtagan"),
+    metric("Oxirgi tekshiruv", status.lastCheckAt ? new Date(status.lastCheckAt).toLocaleString() : "—"),
+    metric("Oxirgi sog‘lom holat", status.lastHealthyAt ? new Date(status.lastHealthyAt).toLocaleString() : "—"),
+    metric("Xato ketma-ketligi", status.consecutiveErrors ?? 0),
+    metric("Qayta tiklash urinishlari", (status.restartAttempts ?? 0) + " / " + (status.maxRestarts ?? 2)),
+    metric("Developer Agent", monitored.developerAgent?.enabled ? "Faol" : "To‘xtagan"),
+    metric("Learning Worker", monitored.learningWorker?.enabled ? "Faol" : "To‘xtagan"),
+    metric("Navbatdagi vazifalar", monitored.queuedTasks ?? 0)
+  );
+  const events = $("autopilot-events");
+  events.replaceChildren();
+  const entries = status.recentEvents || [];
+  if (!entries.length) events.textContent = "Hozircha hodisa yo‘q.";
+  for (const item of entries) {
+    const card = document.createElement("article"); card.className = "task-card";
+    addText(card, "strong", item.type || "event");
+    addText(card, "p", item.at + " · " + (item.detail || ""));
+    events.append(card);
+  }
+  $("autopilot-message").textContent = status.quarantined
+    ? "Agentlar karantinda: " + (status.quarantineReason || "xavfsizlik tekshiruvi")
+    : (status.lastError ? "Oxirgi xato: " + status.lastError : status.note || "");
+}
 async function loadSafety() {
   const [policyData, runtimeData, eventData] = await Promise.all([
     request("/api/security/policy"),
@@ -177,7 +205,7 @@ async function loadDeveloperAgent() {
 async function checkSession() {
   try {
     const status = await request("/api/admin/status");
-    if (status.authenticated) { showDashboard(true); await Promise.all([loadOverview(), loadTasks(), loadSafety(), loadDeveloperAgent()]); }
+    if (status.authenticated) { showDashboard(true); await Promise.all([loadOverview(), loadTasks(), loadSafety(), loadDeveloperAgent(), loadAutopilot()]); }
     else showDashboard(false);
   } catch (_) { showDashboard(false); $("status").textContent = "Backend server talab qilinadi"; }
 }
@@ -204,6 +232,24 @@ $("developer-run").addEventListener("click", async () => {
   } catch (error) { $("developer-message").textContent = error.message; }
   finally { button.disabled = false; }
 });
+$("autopilot-check").addEventListener("click", async () => {
+  const button = $("autopilot-check"); button.disabled = true;
+  try { await request("/api/admin/autopilot/check", { method: "POST", body: "{}" }); await loadAutopilot(); }
+  catch (error) { $("autopilot-message").textContent = error.message; }
+  finally { button.disabled = false; }
+});
+$("autopilot-recover").addEventListener("click", async () => {
+  const button = $("autopilot-recover"); button.disabled = true;
+  try { await request("/api/admin/autopilot/recover", { method: "POST", body: "{}" }); await loadAutopilot(); }
+  catch (error) { $("autopilot-message").textContent = error.message; }
+  finally { button.disabled = false; }
+});
+$("autopilot-stop").addEventListener("click", async () => {
+  const button = $("autopilot-stop"); button.disabled = true;
+  try { await request("/api/admin/autopilot/stop", { method: "POST", body: "{}" }); await loadAutopilot(); }
+  catch (error) { $("autopilot-message").textContent = error.message; }
+  finally { button.disabled = false; }
+});
 $("refresh-safety").addEventListener("click", async () => { try { await loadSafety(); } catch (error) { $("safety-summary").textContent = error.message; } });
 checkSession();
-setInterval(() => { if (!$("dashboard").hidden) { loadTasks().catch(() => {}); loadOverview().catch(() => {}); loadDeveloperAgent().catch(() => {}); } }, 10000);
+setInterval(() => { if (!$("dashboard").hidden) { loadTasks().catch(() => {}); loadOverview().catch(() => {}); loadDeveloperAgent().catch(() => {}); loadAutopilot().catch(() => {}); } }, 10000);

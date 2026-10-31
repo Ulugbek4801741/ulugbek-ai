@@ -33,12 +33,23 @@ test("chat request calls only the Chat Agent once", async () => {
   assert.equal(result.safety.autonomousExternalActionsEnabled, false);
 });
 
-test("background worker startup does not enable queued specialist execution", async () => {
+test("native specialist task worker runs without enabling external actions or model APIs", async () => {
   await runtime.startWorker();
-  await assert.rejects(
-    runtime.createTask({ prompt: "test task", role: "research-agent" }),
-    (error) => error.status === 503 && /vaqtincha o‘chirilgan/.test(error.message)
-  );
-  assert.deepEqual(runtime.listTasks(), []);
+  assert.equal(runtime.modelConfig().configured, false);
+  assert.equal(runtime.modelConfig().apiUsed, false);
+  const task = await runtime.createTask({ prompt: "Ochiq manbalarni tadqiq qilish rejasini tuz", role: "research-agent" });
+  assert.ok(task.id);
+  let current = task;
+  for (let i = 0; i < 100; i += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    current = runtime.getTask(task.id);
+    if (current && ["completed", "failed"].includes(current.status)) break;
+  }
   await runtime.flush();
+  assert.equal(current.status, "completed");
+  assert.equal(current.approvalStatus, "pending_review");
+  assert.ok(current.output.includes("Research Agent"));
+  assert.ok(current.output.includes("Tashqi API ishlatildi: yo‘q"));
+  assert.equal(current.tests.status, "not_run");
+  assert.equal(current.logs.some((entry) => /shell command executed|deployment executed|source file changed/i.test(entry.message)), false);
 });
