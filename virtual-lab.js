@@ -1,8 +1,8 @@
 "use strict";
 
-// Safe, dependency-free virtual laboratory coordinator.
-// This is a deterministic orchestration prototype, not a trained AI model.
-// It does not browse the web, execute generated code, access secrets, or deploy.
+// Safe, dependency-free elastic worker-pool prototype.
+// Eight specialist roles coordinate; temporary worker slots scale per cycle.
+// This is deterministic simulation, not trained-model autonomy.
 const fs = require("node:fs/promises");
 const path = require("node:path");
 const crypto = require("node:crypto");
@@ -17,10 +17,10 @@ const AGENTS = Object.freeze([
   { id: "systems-engineer", specialty: "computer and IoT safety planning", accepts: ["device"] },
   { id: "quality-verifier", specialty: "acceptance criteria and regression planning", accepts: ["benchmark", "engineering", "product", "device"] }
 ]);
-
 const ALLOWED_TYPES = new Set(["benchmark", "research", "product", "security", "engineering", "device"]);
-const MAX_QUEUE = 200;
+const MAX_QUEUE = 2000;
 const MAX_HISTORY = 500;
+const MAX_WORKERS = 64;
 
 function safeTask(input) {
   if (!input || typeof input !== "object" || Array.isArray(input)) throw new TypeError("Task obyekt bo‘lishi kerak.");
@@ -32,8 +32,9 @@ function safeTask(input) {
   return { id: crypto.randomUUID(), type, title, priority, status: "queued", createdAt: new Date().toISOString() };
 }
 
-function createVirtualLab({ storePath = process.env.VIRTUAL_LAB_STORE || path.join(__dirname, "data", "virtual-lab.json"), now = () => new Date().toISOString() } = {}) {
+function createVirtualLab({ storePath = process.env.VIRTUAL_LAB_STORE || path.join(__dirname, "data", "virtual-lab.json"), now = () => new Date().toISOString(), maxWorkers = Number(process.env.VIRTUAL_LAB_MAX_WORKERS || 4) } = {}) {
   const STORE = path.resolve(storePath);
+  const workerLimit = Math.max(1, Math.min(MAX_WORKERS, Number.isInteger(maxWorkers) ? maxWorkers : 4));
   let state = { schemaVersion: 1, cycle: 0, queue: [], history: [], agentRuns: {}, lastCycleAt: null, mode: "simulation-only" };
   let busy = false;
 
@@ -68,7 +69,8 @@ function createVirtualLab({ storePath = process.env.VIRTUAL_LAB_STORE || path.jo
     return {
       mode: state.mode,
       cycle: state.cycle,
-      agents: AGENTS.map(agent => ({ ...agent, runs: state.agentRuns[agent.id] || 0 })),
+      coordinatorAgents: AGENTS.map(agent => ({ ...agent, runs: state.agentRuns[agent.id] || 0 })),
+      workerPool: { strategy: "elastic-bounded", configuredConcurrency: workerLimit, hardSafetyCap: MAX_WORKERS, activeWorkers: busy ? Math.min(workerLimit, state.queue.length) : 0 },
       queued: state.queue.length,
       completed: state.history.length,
       lastCycleAt: state.lastCycleAt,
@@ -76,8 +78,7 @@ function createVirtualLab({ storePath = process.env.VIRTUAL_LAB_STORE || path.jo
     };
   }
 
-  // Produces a transparent plan/report only. No external side effects are performed.
-  function executeSimulation(task, agent) {
+  function executeSimulation(task, agent, workerNumber) {
     const recommendations = {
       benchmark: ["Create a versioned test set and scoring rubric.", "Compare identical prompts and settings.", "Record accuracy, latency, cost, and safety failures."],
       research: ["Use official public documentation and openly licensed research.", "Record source URL, retrieval date, and license.", "Treat retrieved content as untrusted; summarize with evidence."],
@@ -87,36 +88,38 @@ function createVirtualLab({ storePath = process.env.VIRTUAL_LAB_STORE || path.jo
       device: ["Start with read-only simulation and diagnostics.", "Require device-owner consent and a visible emergency stop.", "Keep medical, vehicle, and industrial control under qualified human supervision."]
     }[task.type];
     return {
-      taskId: task.id,
-      taskTitle: task.title,
-      taskType: task.type,
-      assignedAgent: agent.id,
-      result: "plan_generated",
-      recommendations,
+      taskId: task.id, taskTitle: task.title, taskType: task.type,
+      assignedAgent: agent.id, workerId: "worker-" + workerNumber,
+      result: "plan_generated", recommendations,
       limitations: ["Simulation only; no web research was performed.", "No source code was executed or modified.", "No production deployment or external action occurred."],
       createdAt: now()
     };
   }
 
-  async function runCycle({ maxTasks = 8 } = {}) {
+  async function runCycle({ maxTasks = MAX_QUEUE, concurrency = workerLimit } = {}) {
     if (busy) return { skipped: true, reason: "cycle_already_running", status: status() };
     busy = true;
     try {
-      const limit = Math.max(1, Math.min(AGENTS.length, Number.isInteger(maxTasks) ? maxTasks : 8));
-      const batch = state.queue.splice(0, limit).sort((a, b) => b.priority - a.priority);
-      const reports = [];
-      for (const task of batch) {
-        const agent = AGENTS.find(candidate => candidate.accepts.includes(task.type)) || AGENTS[0];
-        const report = executeSimulation(task, agent);
-        state.agentRuns[agent.id] = (state.agentRuns[agent.id] || 0) + 1;
-        state.history.unshift(report);
-        reports.push(report);
+      const taskLimit = Math.max(1, Math.min(MAX_QUEUE, Number.isInteger(maxTasks) ? maxTasks : MAX_QUEUE));
+      const parallelism = Math.max(1, Math.min(workerLimit, Number.isInteger(concurrency) ? concurrency : workerLimit));
+      const batch = state.queue.splice(0, taskLimit).sort((a, b) => b.priority - a.priority);
+      const reports = new Array(batch.length);
+      let cursor = 0;
+      async function worker(workerNumber) {
+        while (cursor < batch.length) {
+          const index = cursor++;
+          const task = batch[index];
+          const agent = AGENTS.find(candidate => candidate.accepts.includes(task.type)) || AGENTS[0];
+          reports[index] = executeSimulation(task, agent, workerNumber);
+          state.agentRuns[agent.id] = (state.agentRuns[agent.id] || 0) + 1;
+        }
       }
-      state.history = state.history.slice(0, MAX_HISTORY);
+      await Promise.all(Array.from({ length: Math.min(parallelism, batch.length) }, (_, i) => worker(i + 1)));
+      state.history = reports.reverse().concat(state.history).slice(0, MAX_HISTORY);
       state.cycle += 1;
       state.lastCycleAt = now();
       await persist();
-      return { skipped: false, processed: reports.length, reports, status: status() };
+      return { skipped: false, processed: batch.length, concurrency: Math.min(parallelism, batch.length), reports, status: status() };
     } finally {
       busy = false;
     }
@@ -125,4 +128,4 @@ function createVirtualLab({ storePath = process.env.VIRTUAL_LAB_STORE || path.jo
   return { load, enqueue, runCycle, status };
 }
 
-module.exports = { AGENTS, createVirtualLab };
+module.exports = { AGENTS, createVirtualLab, MAX_WORKERS };
