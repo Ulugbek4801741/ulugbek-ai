@@ -8,8 +8,7 @@ const { createAdminAutopilot } = require("../admin-autopilot");
 
 test("admin watchdog monitors agents and reports healthy status", async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "ulugbek-watchdog-"));
-  const old = process.env.ADMIN_AUTOPILOT_STORE;
-  process.env.ADMIN_AUTOPILOT_STORE = path.join(dir, "state.json");
+  const storePath = path.join(dir, "state.json");
   let devError = null;
   let learningError = null;
   const calls = { devStop: 0, learningStop: 0, devStart: 0, learningStart: 0 };
@@ -24,7 +23,8 @@ test("admin watchdog monitors agents and reports healthy status", async () => {
       stop: () => { calls.learningStop += 1; },
       start: () => { calls.learningStart += 1; return {}; }
     },
-    agentRuntime: { listTasks: () => [{ status: "queued" }, { status: "completed" }] }
+    agentRuntime: { listTasks: () => [{ status: "queued" }, { status: "completed" }] },
+    storePath
   });
   try {
     const initial = await watchdog.start();
@@ -33,16 +33,13 @@ test("admin watchdog monitors agents and reports healthy status", async () => {
     assert.equal(initial.monitored.completedTasks, 1);
     await watchdog.stop();
   } finally {
-    if (old === undefined) delete process.env.ADMIN_AUTOPILOT_STORE;
-    else process.env.ADMIN_AUTOPILOT_STORE = old;
     await fs.rm(dir, { recursive: true, force: true });
   }
 });
 
 test("watchdog quarantines repeated agent failures and limits recovery attempts", async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "ulugbek-watchdog-"));
-  const old = process.env.ADMIN_AUTOPILOT_STORE;
-  process.env.ADMIN_AUTOPILOT_STORE = path.join(dir, "state.json");
+  const storePath = path.join(dir, "state.json");
   let devError = "simulated failure";
   const calls = { devStop: 0, learningStop: 0, devStart: 0, learningStart: 0 };
   const watchdog = createAdminAutopilot({
@@ -56,7 +53,8 @@ test("watchdog quarantines repeated agent failures and limits recovery attempts"
       stop: () => { calls.learningStop += 1; },
       start: () => { calls.learningStart += 1; return {}; }
     },
-    agentRuntime: { listTasks: () => [] }
+    agentRuntime: { listTasks: () => [] },
+    storePath
   });
   try {
     await watchdog.start();
@@ -73,8 +71,6 @@ test("watchdog quarantines repeated agent failures and limits recovery attempts"
     assert.equal(calls.learningStart, 1);
     await watchdog.stop();
   } finally {
-    if (old === undefined) delete process.env.ADMIN_AUTOPILOT_STORE;
-    else process.env.ADMIN_AUTOPILOT_STORE = old;
     await fs.rm(dir, { recursive: true, force: true });
   }
 });
