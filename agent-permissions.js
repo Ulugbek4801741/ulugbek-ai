@@ -20,6 +20,7 @@ const DEFINITIONS = Object.freeze({
 });
 const LOCKED = Object.freeze({
   main_branch_write: "Asosiy main tarmog‘iga to‘g‘ridan-to‘g‘ri yozish — bloklangan",
+  direct_source_write: "Manba kodini to‘g‘ridan-to‘g‘ri o‘zgartirish — bloklangan",
   production_deploy: "Serverga avtomatik chiqarish — hozircha bloklangan",
   secret_access: "Maxfiy kalit va parollarni o‘qish — bloklangan",
   user_data_delete: "Foydalanuvchi ma’lumotlarini o‘chirish — bloklangan"
