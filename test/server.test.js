@@ -23,7 +23,7 @@ async function waitForServer() {
 
 test("API smoke tests", async (t) => {
   server = spawn(process.execPath, ["server.js"], {
-    env: { ...process.env, OPENAI_API_KEY: "", OPENAI_BASE_URL: "", OPENAI_MODEL: "", PORT: String(port), TASK_STORE_PATH: require("node:path").join(require("node:os").tmpdir(), `ulugbek-tasks-${port}.json`), AGENT_MEMORY_PATH: require("node:path").join(require("node:os").tmpdir(), `ulugbek-memory-${port}.json`), FRONTEND_ORIGIN: "https://ulugbek4801741.github.io", ADMIN_ACCESS_CODE: "ci-test-admin-code", ADMIN_SESSION_SECRET: "ci-test-session-secret-long-enough", LAB_ADMIN_TOKEN: "ci-test-lab-admin-token-long-enough-32chars" },
+    env: { ...process.env, OPENAI_API_KEY: "", OPENAI_BASE_URL: "", OPENAI_MODEL: "", PORT: String(port), ULUGBEK_DATA_DIR: require("node:path").join(require("node:os").tmpdir(), `ulugbek-data-${port}`), TASK_STORE_PATH: require("node:path").join(require("node:os").tmpdir(), `ulugbek-tasks-${port}.json`), AGENT_MEMORY_PATH: require("node:path").join(require("node:os").tmpdir(), `ulugbek-memory-${port}.json`), FRONTEND_ORIGIN: "https://ulugbek4801741.github.io", ADMIN_ACCESS_CODE: "ci-test-admin-code", ADMIN_SESSION_SECRET: "ci-test-session-secret-long-enough", LAB_ADMIN_TOKEN: "ci-test-lab-admin-token-long-enough-32chars" },
     stdio: "ignore"
   });
 
@@ -138,6 +138,12 @@ test("API smoke tests", async (t) => {
       assert.match(cookie, /^ulugbek_admin=/);
       const overview = await fetch(`${baseUrl}/api/admin/overview`, { headers: { Cookie: cookie } });
       assert.equal(overview.status, 200);
+      const change = await fetch(`${baseUrl}/api/admin/change-code`, {
+        method: "POST",
+        headers: { Cookie: cookie, "Content-Type": "application/json" },
+        body: JSON.stringify({ currentCode: "ci-test-admin-code", newCode: "new-ci-admin-code-123" })
+      });
+      assert.equal(change.status, 200);
       const logout = await fetch(`${baseUrl}/api/admin/logout`, {
         method: "POST", headers: { Cookie: cookie, "Content-Type": "application/json" }, body: "{}"
       });
