@@ -15,7 +15,7 @@ app.disable("x-powered-by");
 // not overrides, so an outdated FRONTEND_ORIGIN value cannot silently break the public website.
 const FRONTEND_ORIGINS = new Set([
   "https://ulugbek4801741.github.io",
-  ...(process.env.FRONTEND_ORIGIN || "").split(",").map(value => value.trim().replace(/\\/$/, "")).filter(Boolean)
+  ...(process.env.FRONTEND_ORIGIN || "").split(",").map(value => value.trim().replace(/\/$/, "")).filter(Boolean)
 ]);
 const FRONTEND_ORIGIN = [...FRONTEND_ORIGINS][0];
 app.use((req, res, next) => {
