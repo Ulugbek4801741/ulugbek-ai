@@ -47,6 +47,7 @@ jobs:
         run: |
           node --check server.js
           node --check agent-runtime.js
+          node --check modules/autonomous-engine.js
           node --check developer-agent.js
           node --check public/compat.js
           node --check public/app.js
