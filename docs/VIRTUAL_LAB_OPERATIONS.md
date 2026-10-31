@@ -1,8 +1,8 @@
 # ULUGBEK AI Virtual Laboratory — Operations
 
-## Specialist roster
+## Eight coordinators and an elastic worker pool
 
-The initial virtual roster has eight roles:
+The eight specialist roles are permanent coordination functions, not a fixed limit on how many tasks can be handled:
 
 1. Chief Scientist — prioritizes work and coordinates research plans.
 2. Benchmark Analyst — designs repeatable evaluations.
@@ -13,7 +13,9 @@ The initial virtual roster has eight roles:
 7. Systems Engineer — plans safe computer and IoT integrations.
 8. Quality Verifier — defines regression and acceptance checks.
 
-These are software roles in a deterministic simulation coordinator. They are not eight independent trained neural models and do not currently browse, learn new weights, write code, or operate devices.
+For each workload, the coordinator can assign many temporary worker slots. The pool is elastic in configuration: it can process a larger batch than eight tasks, and its concurrency can be increased when real compute capacity is provisioned. The current prototype has a hard safety cap of 64 concurrent worker slots per process; the default is 4. This is a deliberate prototype limit, not a claim that 64 machines or independent AI models exist. A future distributed deployment can use many worker processes across multiple machines, with capacity controlled by actual CPU/GPU, memory, queue depth, rate limits, and budget. It must never create billions of live processes.
+
+These are currently software roles in a deterministic simulation coordinator. They are not eight independent trained neural models or real autonomous researchers.
 
 ## Run locally
 
@@ -27,12 +29,14 @@ The module can be imported by a future worker:
 
 ```js
 const { createVirtualLab } = require("./virtual-lab");
-const lab = createVirtualLab();
+const lab = createVirtualLab({ maxWorkers: 4 });
 await lab.load();
 await lab.enqueue({ type: "benchmark", title: "Evaluate Uzbek reasoning" });
-const report = await lab.runCycle({ maxTasks: 8 });
+const report = await lab.runCycle({ maxTasks: 100, concurrency: 4 });
 console.log(report.status);
 ```
+
+Set `VIRTUAL_LAB_MAX_WORKERS` to configure the process concurrency (1–64). Do not raise it beyond the actual resources available to the process.
 
 ## Task types
 
@@ -47,11 +51,11 @@ Unknown task types are rejected. The coordinator creates transparent plans and r
 
 ## Persistence and hosting
 
-The default state file is `data/virtual-lab.json` with restrictive file permissions and atomic replacement. This is suitable only for a local prototype. It is not durable on ephemeral hosting and is not a distributed queue. Before unattended multi-month operation, migrate state to a managed database, add worker leases/locking, backups, alerting, and independent health monitoring.
+The default state file is `data/virtual-lab.json` with restrictive file permissions and atomic replacement. This is suitable only for a local prototype. It is not durable on ephemeral hosting and is not a distributed queue. Before unattended multi-month operation, migrate state to a managed database, add worker leases/locking, retries with dead-letter handling, backups, alerting, and independent health monitoring. Distributed workers must claim tasks transactionally so two workers do not execute the same task.
 
 ## Parallelism and time
 
-The current implementation processes a bounded batch sequentially. The eight roles are a roster, not eight CPU/GPU workers. Real parallel execution requires provisioned CPU/GPU capacity, concurrency limits, task isolation, and a durable queue. No system can turn one physical second into a billion hours; throughput is bounded by hardware, model inference speed, network latency, and budget.
+The prototype uses a bounded in-process worker pool; its current task handler is a deterministic simulation, not parallel neural-network inference. More workers do not automatically mean more intelligence or faster results. Real scaling requires provisioned compute, independent worker processes, a durable queue, task isolation, model-serving capacity, rate limits, observability, and a budget. One physical second cannot become a billion hours, and eight billion simultaneously running agents are not a realistic target. The scalable goal is to create as many short-lived worker tasks as the infrastructure can safely sustain.
 
 ## Production gates
 
