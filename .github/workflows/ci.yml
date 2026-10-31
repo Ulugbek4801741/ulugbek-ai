@@ -48,6 +48,7 @@ jobs:
           node --check server.js
           node --check agent-runtime.js
           node --check modules/autonomous-engine.js
+          node --check modules/build-workspace.js
           node --check modules/local-model.js
           node --check modules/public-research.js
           node --check agents/autonomous-orchestrator.js
