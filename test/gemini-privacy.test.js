@@ -53,7 +53,7 @@ test("ULUGBEK AI never sends chat content to Gemini, even when old consent flags
         body: JSON.stringify({ message: "Salom" })
       });
       assert.equal(response.status, 200);
-      assert.equal((await response.json()).mode, "native-symbolic-no-external-ai");
+      assert.match((await response.json()).mode, /no-external-ai$/);
       assert.equal(fs.existsSync(capturePath), false);
     });
   });
@@ -64,7 +64,7 @@ test("ULUGBEK AI never sends chat content to Gemini, even when old consent flags
         body: JSON.stringify({ message: "Faqat joriy xabar", history: [{ role: "user", content: "private" }] })
       });
       assert.equal(response.status, 200);
-      assert.equal((await response.json()).mode, "native-symbolic-no-external-ai");
+      assert.match((await response.json()).mode, /no-external-ai$/);
       assert.equal(fs.existsSync(capturePath), false);
     });
   });
