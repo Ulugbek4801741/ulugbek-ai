@@ -9,9 +9,14 @@ on:
 permissions:
   contents: read
 
+# Keep only the newest run for this branch/PR; stale runs waste runner time.
+concurrency:
+  group: ulugbek-ai-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
-    name: Node.js and Python syntax checks
+    name: Node.js ${{ matrix.node-version }} / Python syntax / full tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
@@ -21,17 +26,40 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Set up Node.js
+      - name: Set up Node.js and restore npm cache
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
+      - name: Cache npm download data
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-node-${{ matrix.node-version }}-${{ hashFiles('package.json') }}
+          restore-keys: |
+            npm-${{ runner.os }}-node-${{ matrix.node-version }}-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: pip
+          cache-dependency-path: training/requirements.txt
       - name: Check Python model trainer syntax
         run: python -m py_compile training/train_tiny_gpt.py
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund
-      - name: Run automated tests
+      - name: Check critical JavaScript syntax
+        run: |
+          node --check server.js
+          node --check agent-runtime.js
+          node --check developer-agent.js
+          node --check public/app.js
+          node --check public/config.js
+          node --check public/admin.js
+          node --check public/voice.js
+          node --check public/lab.js
+          node --check agents/registry.js
+          node --check agents/memory-store.js
+          node --check agents/chat-dispatcher.js
+          node --check agents/chat-coordinator.js
+      - name: Install dependencies (reuse runner cache)
+        run: npm install --prefer-offline --no-audit --no-fund
+      - name: Run complete automated test suite
         run: npm test
