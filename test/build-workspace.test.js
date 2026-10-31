@@ -8,7 +8,7 @@ test("builder accepts only safe relative source paths", () => {
   assert.equal(builder.validateRelativePath("../outside.js"), false);
   assert.equal(builder.validateRelativePath("/tmp/out.js"), false);
   assert.equal(builder.validateRelativePath("src\\\\outside.js"), false);
-  assert.equal(builder.validateRelativePath("node_modules/x.js"), true);
+  assert.equal(builder.validateRelativePath("node_modules/x.js"), false);
   assert.equal(builder.validateRelativePath(".env"), false);
 });
 
