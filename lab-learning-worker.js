@@ -1,7 +1,7 @@
 "use strict";
 
 // Continuous, API-key-free public knowledge retrieval.
-// This stores sourced candidate notes; it does NOT train model weights or execute downloaded code.
+// Candidate notes are reviewed before chat use. Downloaded code is never executed.
 const fs = require("node:fs/promises");
 const path = require("node:path");
 const crypto = require("node:crypto");
@@ -9,23 +9,46 @@ const crypto = require("node:crypto");
 const DATA_DIR = path.resolve(process.env.ULUGBEK_DATA_DIR || path.join(__dirname, "data"));
 const FILE = path.join(DATA_DIR, "knowledge.json");
 const STATE_FILE = path.join(DATA_DIR, "learning-worker-state.json");
-const INTERVAL_MS = Math.max(60_000, Number(process.env.LEARNING_INTERVAL_MS) || 5 * 60_000);
+const INTERVAL_MS = Math.max(60_000, Number(process.env.LEARNING_INTERVAL_MS) || 60_000);
 const REQUEST_TIMEOUT_MS = 15_000;
 const MAX_RESPONSE_BYTES = 1_000_000;
 const MAX_KNOWLEDGE_ITEMS = 2000;
-const TOPICS = [
-  "JavaScript programming", "Node.js documentation", "web security",
-  "HTML CSS accessibility", "HTTP APIs", "database fundamentals",
-  "artificial intelligence", "machine learning", "software testing",
-  "Git version control", "Android development", "Python programming"
+
+// O‘zbek tili ustuvor: 12/20 sikl, ingliz tili 5/20, rus tili 3/20.
+const LANGUAGE_PLAN = [
+  "uz","uz","en","uz","ru","uz","en","uz","uz","ru",
+  "uz","en","uz","uz","ru","en","uz","uz","en","uz"
 ];
+const TOPICS = {
+  uz: [
+    "O‘zbekiston tarixi", "o‘zbek tili va adabiyoti", "matematika asoslari",
+    "informatika va dasturlash", "sun’iy intellekt", "tabiiy fanlar",
+    "O‘zbekiston geografiyasi", "iqtisodiyot asoslari", "tibbiyot asoslari",
+    "kiberxavfsizlik", "ta’lim va pedagogika", "muhandislik texnologiyalari"
+  ],
+  en: [
+    "JavaScript programming", "Node.js documentation", "web security",
+    "artificial intelligence", "machine learning", "software testing",
+    "database fundamentals", "Android development"
+  ],
+  ru: [
+    "информатика и программирование", "искусственный интеллект",
+    "наука и технологии", "кибербезопасность", "математика",
+    "история Узбекистана"
+  ]
+};
+const ALLOWED_WIKIPEDIA_HOSTS = new Set([
+  "uz.wikipedia.org", "en.wikipedia.org", "ru.wikipedia.org"
+]);
 
 let state = {
   enabled: true, running: false, startedAt: null, lastCycleAt: null,
-  lastSuccessAt: null, cycles: 0, saved: 0, lastError: null, lastTopic: null
+  lastSuccessAt: null, cycles: 0, saved: 0, lastError: null,
+  lastTopic: null, lastLanguage: null
 };
 let timer = null;
 let cursor = 0;
+const topicCursors = { uz: 0, en: 0, ru: 0 };
 let inFlight = false;
 let stopRequested = false;
 let writeChain = Promise.resolve();
@@ -65,12 +88,12 @@ async function readJsonResponse(response) {
 }
 async function fetchPublicJson(url, signal) {
   const parsed = new URL(url);
-  if (parsed.protocol !== "https:" || parsed.hostname !== "en.wikipedia.org") {
+  if (parsed.protocol !== "https:" || !ALLOWED_WIKIPEDIA_HOSTS.has(parsed.hostname)) {
     throw new Error("Tadqiqot manbasi ruxsat etilgan domen ro‘yxatida emas.");
   }
   const response = await fetch(parsed, {
     headers: {
-      "User-Agent": "ULUGBEK-AI-OpenKnowledge/1.1 (public read-only research)",
+      "User-Agent": "ULUGBEK-AI-OpenKnowledge/1.2 (public read-only research)",
       "Accept": "application/json"
     },
     signal,
@@ -78,11 +101,13 @@ async function fetchPublicJson(url, signal) {
   });
   return readJsonResponse(response);
 }
-async function learnTopic(topic) {
+async function learnTopic(topic, language = "uz") {
+  if (!Object.hasOwn(TOPICS, language)) throw new Error("Qo‘llab-quvvatlanmaydigan til.");
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
-    const url = new URL("https://en.wikipedia.org/w/api.php");
+    const base = "https://" + language + ".wikipedia.org";
+    const url = new URL(base + "/w/api.php");
     url.search = new URLSearchParams({
       action: "query", list: "search", srsearch: topic,
       srlimit: "3", format: "json"
@@ -97,13 +122,13 @@ async function learnTopic(topic) {
       if (stopRequested) break;
       const title = clean(hit.title, 180);
       if (!title) continue;
-      const summaryUrl = "https://en.wikipedia.org/api/rest_v1/page/summary/" +
+      const summaryUrl = base + "/api/rest_v1/page/summary/" +
         encodeURIComponent(title.replace(/ /g, "_"));
       const item = await fetchPublicJson(summaryUrl, controller.signal);
       const content = clean(item.extract, 4000);
       const source = item.content_urls?.desktop?.page;
       if (!content || typeof source !== "string" ||
-          !source.startsWith("https://en.wikipedia.org/wiki/") || known.has(source)) continue;
+          !source.startsWith(base + "/wiki/") || known.has(source)) continue;
 
       known.add(source);
       additions.push({
@@ -111,6 +136,7 @@ async function learnTopic(topic) {
         title: clean(item.title || title, 180),
         content,
         source,
+        language,
         agent: "AutonomousResearchAgent",
         status: "pending-review",
         quality: "public-encyclopedia-summary-unverified",
@@ -125,6 +151,7 @@ async function learnTopic(topic) {
     }
     state.cycles += 1;
     state.lastTopic = topic;
+    state.lastLanguage = language;
     state.lastSuccessAt = new Date().toISOString();
     state.lastError = null;
     return additions.length;
@@ -137,9 +164,11 @@ async function cycle() {
   inFlight = true;
   state.running = true;
   state.lastCycleAt = new Date().toISOString();
-  const topic = TOPICS[cursor++ % TOPICS.length];
+  const language = LANGUAGE_PLAN[cursor++ % LANGUAGE_PLAN.length];
+  const topics = TOPICS[language];
+  const topic = topics[topicCursors[language]++ % topics.length];
   try {
-    await learnTopic(topic);
+    await learnTopic(topic, language);
   } catch (error) {
     state.lastError = clean(error.name === "AbortError" ? "Ochiq manba so‘rovi vaqti tugadi." : error.message, 240);
   } finally {
@@ -172,14 +201,19 @@ function status() {
   return {
     ...state,
     intervalMinutes: Math.round(INTERVAL_MS / 60_000),
-    mode: "continuous-public-read-only-knowledge-retrieval",
-    sourceAllowlist: ["en.wikipedia.org"],
+    languagePriority: [
+      { language: "uz", name: "O‘zbek", sharePercent: 60 },
+      { language: "en", name: "Ingliz", sharePercent: 25 },
+      { language: "ru", name: "Rus", sharePercent: 15 }
+    ],
+    sourceAllowlist: [...ALLOWED_WIKIPEDIA_HOSTS],
+    mode: "continuous-multilingual-public-read-only-knowledge-retrieval",
     writesToExternalSites: false,
     executesDownloadedCode: false,
     chatUsesOnlyApprovedKnowledge: true,
     modelWeightsRetrained: false,
     uptimeGuarantee: "host-process-and-persistent-storage-dependent",
-    note: "Manbalar tekshirilmagan nomzod sifatida saqlanadi. Chat faqat tasdiqlangan yozuvlardan foydalanadi. Bu model vaznlarini o‘qitmaydi."
+    note: "O‘zbekcha 60%, inglizcha 25%, ruscha 15% navbat bilan o‘rganiladi. Manbalar tekshirilmagan nomzod sifatida saqlanadi; chat faqat tasdiqlangan yozuvlardan foydalanadi. Bu model vaznlarini o‘qitmaydi."
   };
 }
 async function searchKnowledge(query, limit = 5) {
