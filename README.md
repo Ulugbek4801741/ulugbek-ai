@@ -87,7 +87,7 @@ Set these server-only environment variables in the hosting dashboard:
 - `ADMIN_ACCESS_CODE`: a private administrator PIN/passphrase (at least 8 characters). Do not commit it or send it in chat.
 - `ADMIN_SESSION_SECRET`: a unique random secret of at least 32 characters. Render can generate this value automatically.
 
-Five incorrect PIN attempts from the same client identifier trigger a one-hour lockout. Successful authentication creates an HttpOnly, Secure, SameSite=Strict session cookie that expires after one hour. Lockout counters are stored in the persistent data directory. HTTPS is required in production. The PIN is checked only by the backend and is never placed in browser code.
+Five incorrect PIN attempts from the same client identifier trigger a one-hour lockout. Successful authentication creates an HttpOnly, Secure, SameSite=Strict session cookie that expires after one hour. After signing in, the administrator can change the PIN from the admin dashboard; the new PIN is stored as a salted scrypt hash in the persistent data directory. Lockout counters are also stored there. HTTPS is required in production. The PIN is checked only by the backend and is never placed in browser code.
 
 ## Security configuration
 
