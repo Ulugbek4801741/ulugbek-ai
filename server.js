@@ -11,18 +11,23 @@ const PORT = Number(process.env.PORT) || 3000;
 const MAX_TASK_LENGTH = 4000;
 
 app.disable("x-powered-by");
-// Allow the published GitHub Pages frontend by default; a host env var may override it.
-const FRONTEND_ORIGIN = (process.env.FRONTEND_ORIGIN || "https://ulugbek4801741.github.io").trim().replace(/\/$/, "");
+// Always allow the official GitHub Pages origin. Hosting variables are additional allowed origins,
+// not overrides, so an outdated FRONTEND_ORIGIN value cannot silently break the public website.
+const FRONTEND_ORIGINS = new Set([
+  "https://ulugbek4801741.github.io",
+  ...(process.env.FRONTEND_ORIGIN || "").split(",").map(value => value.trim().replace(/\\/$/, "")).filter(Boolean)
+]);
+const FRONTEND_ORIGIN = [...FRONTEND_ORIGINS][0];
 app.use((req, res, next) => {
   const origin = req.headers.origin || "";
-  if (origin && FRONTEND_ORIGIN && origin === FRONTEND_ORIGIN) {
-    res.setHeader("Access-Control-Allow-Origin", FRONTEND_ORIGIN);
+  if (origin && FRONTEND_ORIGINS.has(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Vary", "Origin");
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   }
   if (req.method === "OPTIONS") {
-    if (origin && origin === FRONTEND_ORIGIN) return res.status(204).end();
+    if (origin && FRONTEND_ORIGINS.has(origin)) return res.status(204).end();
     return res.status(403).end();
   }
   next();
