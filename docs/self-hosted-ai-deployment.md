@@ -6,7 +6,7 @@
 - Til modeli API kalitisiz, server ichida ishlaydigan Ollama orqali ulanadi.
 - Dastlabki model: `qwen2.5:3b`. Model birinchi ishga tushishda internetdan yuklanadi va doimiy Docker volume ichida saqlanadi.
 - Ochiq internet tadqiqoti hozircha Wikipedia public API bilan cheklangan; API kaliti kerak emas. Qidirilgan matn ishonchsiz manba sifatida ko‘riladi.
-- Agentlar chat, tadqiqot, dasturiy ta’minot, frontend, backend, QA, xavfsizlik, DevOps va mahsulot yo‘nalishlarida vazifalarni taqsimlaydi. Kodni ishlab chiqarish serveriga o‘zlari yozmaydi yoki deploy qilmaydi; xavfsiz keyingi bosqich uchun patch/workspace va test ijrochisi alohida qurilishi lozim.
+- Agentlar chat, tadqiqot, dasturiy ta’minot, frontend, backend, QA, xavfsizlik, DevOps va mahsulot yo‘nalishlarida vazifalarni taqsimlaydi. Builder agent mahalliy model yordamida 1–10 ta loyiha faylini `data/build-workspaces` ichidagi ajratilgan ish maydoniga yozadi; fayllar ko‘rib chiqish uchun qaytariladi. Kod avtomatik ishga tushirilmaydi, GitHubga yuborilmaydi yoki deploy qilinmaydi.
 
 ## Tavsiya etiladigan server
 
@@ -49,4 +49,4 @@ docker compose logs --tail=100 ulugbek-ai
 - Zaxira nusxa va tiklash rejasi operator zimmasida.
 - Ochiq internet matni prompt-injection bo‘lishi mumkin; model uni buyruq emas, ma’lumot sifatida qabul qilishi kerak.
 - Tashqi xabar, deploy, pul sarflash, maxfiy ma’lumotga kirish va qaytarib bo‘lmaydigan o‘zgarishlar uchun inson tasdig‘i shart.
-- Ushbu compose chat + mahalliy model + cheklangan tadqiqotni ishga tushirish yo‘lini beradi. U o‘z-o‘zidan ishlab chiqarish darajasidagi sandbox kod ijrosi, loyiha fayllarini avtomatik commit qilish, ko‘p serverli navbat, to‘liq ovozli STT/TTS yoki 100% uzluksiz ishlashni ta’minlamaydi.
+- Ushbu compose chat + mahalliy model + cheklangan tadqiqotni ishga tushirish yo‘lini beradi. U o‘z-o‘zidan ishlab chiqarish darajasidagi kod ijrosi, avtomatik commit/deploy, ko‘p serverli navbat, server tomonidagi to‘liq ovozli STT/TTS yoki 100% uzluksiz ishlashni ta’minlamaydi. Loyiha ish maydoni IDsi maxfiy havola kabi saqlanishi kerak; keyingi bosqichda foydalanuvchi autentifikatsiyasiga bog‘lash talab etiladi.
