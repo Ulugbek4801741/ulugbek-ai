@@ -2,15 +2,27 @@ services:
   - type: web
     name: ulugbek-ai-web
     runtime: node
-    plan: free
+    plan: starter
     branch: main
     autoDeployTrigger: checksPass
     buildCommand: npm install --omit=dev
     startCommand: npm start
     healthCheckPath: /api/health
+    disk:
+      name: ulugbek-ai-data
+      mountPath: /var/data
+      sizeGB: 1
     envVars:
       - key: NODE_ENV
         value: production
+      - key: ULUGBEK_DATA_DIR
+        value: /var/data
+      - key: TASK_STORE_PATH
+        value: /var/data/agent-tasks.json
+      - key: DEVELOPER_AGENT_STORE
+        value: /var/data/developer-agent.json
+      - key: ADMIN_AUTOPILOT_STORE
+        value: /var/data/admin-autopilot.json
       - key: PUBLIC_BASE_URL
         sync: false
       - key: FRONTEND_ORIGIN
