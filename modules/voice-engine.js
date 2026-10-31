@@ -87,12 +87,33 @@ function createVoiceEngine({ env = process.env, fetchImpl = globalThis.fetch } =
       const error = new Error("Audio fayl hajmi ruxsat etilgan chegaradan katta.");
       error.status = 502; throw error;
     }
-    const audio = Buffer.from(await response.arrayBuffer());
-    if (!audio.length || audio.length > MAX_AUDIO_BYTES) {
-      const error = new Error("Audio fayl bo‘sh yoki hajmi juda katta.");
+    const chunks = [];
+    let totalBytes = 0;
+    if (!response.body || typeof response.body.getReader !== "function") {
+      const error = new Error("Ovoz serveri oqimli audio javob qaytarmadi.");
       error.status = 502; throw error;
     }
-    return { audio, contentType };
+    const reader = response.body.getReader();
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        totalBytes += value.byteLength;
+        if (totalBytes > MAX_AUDIO_BYTES) {
+          await reader.cancel();
+          const error = new Error("Audio fayl hajmi ruxsat etilgan chegaradan katta.");
+          error.status = 502; throw error;
+        }
+        chunks.push(Buffer.from(value));
+      }
+    } finally {
+      reader.releaseLock();
+    }
+    if (!totalBytes) {
+      const error = new Error("Audio fayl bo‘sh.");
+      error.status = 502; throw error;
+    }
+    return { audio: Buffer.concat(chunks, totalBytes), contentType };
   }
 
   return { status, synthesize };
