@@ -39,6 +39,10 @@ services:
         value: gemini-flash-latest
       - key: GEMINI_ALLOW_CHAT_CONTENT
         value: "false"
+      - key: ULUGBEK_TTS_URL
+        sync: false
+      - key: ULUGBEK_TTS_TOKEN
+        sync: false
       - key: OPENAI_BASE_URL
         value: https://api.openai.com/v1
       - key: OPENAI_MODEL
