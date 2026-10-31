@@ -316,7 +316,21 @@ app.post("/api/admin/tasks/:id/review", requireAdmin, (req, res) => {
 
 app.get("/api/health", (_req, res) => {
   res.set("Cache-Control", "no-store");
-  res.json({ ok: true, app: "ULUGBEK AI", version: "0.3.1", aiConfigured: false, nativeReasoningReady: true, trainedLanguageModelReady: false, externalAiApiEnabled: false, mode: "native-rule-based-reasoning" });
+  res.json({
+    ok: true,
+    app: "ULUGBEK AI",
+    version: "0.3.1",
+    processUptimeSeconds: Math.floor(process.uptime()),
+    aiConfigured: false,
+    nativeReasoningReady: true,
+    trainedLanguageModelReady: false,
+    externalAiApiEnabled: false,
+    mode: "native-rule-based-reasoning",
+    storageMode: "local-json",
+    workerConcurrency: 1,
+    multiInstanceSafe: false,
+    automaticFailoverReady: false
+  });
 });
 
 app.get("/api/diagnostics", (_req, res) => {
