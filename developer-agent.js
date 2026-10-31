@@ -49,17 +49,33 @@ async function save() {
   });
   return chain;
 }
+function githubHeaders() {
+  const token = String(process.env.GITHUB_TOKEN || process.env.DEVELOPER_AGENT_GITHUB_TOKEN || "").trim();
+  return {
+    "Accept": "application/vnd.github+json",
+    "User-Agent": "ULUGBEK-AI-Developer-Agent/1.0",
+    "X-GitHub-Api-Version": "2022-11-28",
+    ...(token ? { "Authorization": "Bearer " + token } : {})
+  };
+}
 async function githubJson(url, signal) {
   const response = await fetch(url, {
-    headers: {
-      "Accept": "application/vnd.github+json",
-      "User-Agent": "ULUGBEK-AI-Developer-Agent/1.0",
-      "X-GitHub-Api-Version": "2022-11-28"
-    },
+    headers: githubHeaders(),
     redirect: "error",
     signal
   });
-  if (!response.ok) throw new Error("GitHub API HTTP " + response.status);
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    if (response.status === 401) throw new Error("GitHub API HTTP 401: GITHUB_TOKEN noto‘g‘ri yoki muddati tugagan.");
+    if (response.status === 403) {
+      const limited = response.headers.get("x-ratelimit-remaining") === "0" || /rate limit exceeded/i.test(body);
+      throw new Error(limited
+        ? "GitHub API HTTP 403: anonim API limiti tugagan. Hostingda faqat repo uchun Contents: Read-only va Metadata: Read-only ruxsatli GITHUB_TOKEN sozlang."
+        : "GitHub API HTTP 403: token ruxsati yoki GitHub repository siyosati so‘rovni rad etdi. Token uchun Contents: Read-only va Metadata: Read-only ruxsatlarini tekshiring.");
+    }
+    if (response.status === 404) throw new Error("GitHub API HTTP 404: repository yoki tanlangan branch topilmadi.");
+    throw new Error("GitHub API HTTP " + response.status);
+  }
   return response.json();
 }
 function addProposal(kind, severity, title, detail, file) {
@@ -214,4 +230,4 @@ function status() {
   };
 }
 function listProposals() { return state.proposals.map(item => ({ ...item })); }
-module.exports = { start, stop, auditOnce, status, listProposals, reviewProposal, inspectFile };
+module.exports = { start, stop, auditOnce, status, listProposals, reviewProposal, inspectFile, githubHeaders };
