@@ -71,6 +71,10 @@ const plannerRateLimit = rateLimit({
   windowMs: 60 * 1000, limit: 10, standardHeaders: "draft-8", legacyHeaders: false,
   message: { error: "Reja so‘rovlari vaqtinchalik chegaraga yetdi. Bir daqiqadan keyin qayta urinib ko‘ring." }
 });
+const buildRateLimit = rateLimit({
+  windowMs: 60 * 1000, limit: 3, standardHeaders: "draft-8", legacyHeaders: false,
+  message: { error: "Loyiha yaratish limiti tugadi. Bir daqiqadan keyin qayta urinib ko‘ring." }
+});
 
 
 const ADMIN_GOOGLE_EMAIL = (process.env.ADMIN_GOOGLE_EMAIL || "").trim().toLowerCase();
@@ -454,7 +458,7 @@ app.post("/api/agent/plan", plannerRateLimit, async (req, res) => {
   return res.json({ plan: createPlan(task), mode: "native-rules", notice: "Reja tashqi AI modelisiz, mahalliy qoidalar asosida tuzildi." });
 });
 
-app.post("/api/agent/build", plannerRateLimit, async (req, res) => {
+app.post("/api/agent/build", buildRateLimit, async (req, res) => {
   try {
     const build = await buildWorkspace.createBuild({ goal: req.body?.task });
     res.status(201).set("Cache-Control", "no-store").json({ ok: true, build });
