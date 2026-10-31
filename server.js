@@ -343,7 +343,7 @@ app.get("/api/health", async (_req, res) => {
   });
 });
 
-app.get("/api/diagnostics", (_req, res) => {
+app.get("/api/diagnostics", async (_req, res) => {
   res.set("Cache-Control", "no-store");
   res.json({
     ok: true,
