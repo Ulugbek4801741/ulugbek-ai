@@ -174,8 +174,9 @@ app.post("/api/admin/logout", (req, res) => {
   res.setHeader("Set-Cookie", "ulugbek_admin=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0");
   res.json({ ok: true });
 });
-app.get("/api/admin/overview", requireAdmin, (_req, res) => {
+app.get("/api/admin/overview", requireAdmin, async (_req, res) => {
   res.set("Cache-Control", "no-store");
+  const modelStatus = await localModel.status();
   res.json({
     ok: true,
     app: "ULUGBEK AI",
@@ -183,11 +184,12 @@ app.get("/api/admin/overview", requireAdmin, (_req, res) => {
     uptimeSeconds: Math.floor(process.uptime()),
     nodeVersion: process.version,
     memory: { rssBytes: process.memoryUsage().rss, heapUsedBytes: process.memoryUsage().heapUsed },
-    aiConfigured: false,
+    aiConfigured: modelStatus.available,
+    localModel: modelStatus,
     nativeReasoningReady: true,
     trainedLanguageModelReady: false,
     externalAiApiEnabled: false,
-    model: null,
+    model: modelStatus.available ? modelStatus.model : null,
     cognition: "native-rule-based-reasoning",
     agentWorker: "single-process-queue",
     queuedTasks: agentRuntime.listTasks().filter(task => task.status === "queued").length,
@@ -338,7 +340,8 @@ app.get("/api/health", async (_req, res) => {
     aiConfigured: modelStatus.available,
     localModel: modelStatus,
     nativeReasoningReady: true,
-    trainedLanguageModelReady: modelStatus.available,
+    trainedLanguageModelReady: false,
+    localModelAvailable: modelStatus.available,
     externalAiApiEnabled: false,
     mode: "local-ollama-with-native-fallback",
     storageMode: "local-json",
@@ -365,10 +368,11 @@ app.get("/api/diagnostics", async (_req, res) => {
     developerAgent: developerAgent.status(),
     automaticFailover: "not-configured-requires-authorized-backup-host",
     productionDatabase: "not-configured-task-store-uses-local-json-file",
-    agentExecution: "local Ollama model when installed; registered specialist agents; no hosted model API, no source writes or production deploy",
+    agentExecution: "local Ollama model when installed; registered specialist agents; project files can be written only to isolated review workspaces; no code execution or production deploy",
     nativeReasoning: "ulugbek-native-rule-reasoner-v1; deterministic symbolic planning; not a trained neural language model",
     externalAiApiEnabled: false,
     trainedLanguageModelReady: false,
+    localModelAvailable: (await localModel.status()).available,
     note: "Agent navbati server jarayoni ishlayotganida bajariladi. Hosting qayta ishga tushsa yoki uxlab qolsa 24/7 kafolatlanmaydi. JSON saqlash vaqtinchalik; doimiy ishlab chiqarish uchun PostgreSQL/Redis va alohida worker kerak. Bu diagnostika end-to-end sinov o‘rnini bosmaydi."
   });
 });
