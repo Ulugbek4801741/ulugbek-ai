@@ -56,7 +56,7 @@ app.use(helmet({
 app.use(express.json({ limit: "20kb", strict: true, type: "application/json" }));
 app.use("/api/", rateLimit({
   windowMs: 60 * 1000,
-  limit: 30,
+  limit: 120,
   standardHeaders: "draft-8",
   legacyHeaders: false
 }));
