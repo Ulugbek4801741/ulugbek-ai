@@ -142,6 +142,17 @@ test("API smoke tests", async (t) => {
       assert.equal(denied.headers.get("access-control-allow-origin"), null);
     });
 
+    await t.test("agent status exposes keyless local model and registered agents", async () => {
+      const response = await fetch(`${baseUrl}/api/agents/status`);
+      const body = await response.json();
+      assert.equal(response.status, 200);
+      assert.equal(body.mainChatAgent, "chat-coordinator");
+      assert.equal(body.voiceAssistant, "browser-speech-recognition-and-speech-synthesis");
+      assert.ok(body.agents.some(agent => agent.id === "research-agent"));
+      assert.equal(body.localModel.apiKeyRequired, false);
+      assert.equal(body.safety.externalActionsEnabled, false);
+    });
+
     await t.test("health endpoint reports the app", async () => {
       const response = await fetch(`${baseUrl}/api/health`);
       const body = await response.json();
@@ -200,7 +211,7 @@ test("API smoke tests", async (t) => {
       const body = await response.json();
       assert.equal(response.status, 200);
       assert.equal(body.backend, "running");
-      assert.equal(body.ai, "native-symbolic-no-external-ai");
+      assert.equal(body.ai, "local-ollama-when-installed-with-native-fallback");
       assert.equal(body.automaticFailover, "not-configured-requires-authorized-backup-host");
     });
 
@@ -251,6 +262,20 @@ test("API smoke tests", async (t) => {
       assert.equal(response.status, 200);
       assert.equal(body.mode, "native-symbolic-no-external-ai");
       assert.equal(body.receivedCharacters, 5);
+    });
+
+    await t.test("project builder rejects empty tasks before local model access", async () => {
+      const response = await fetch(`${baseUrl}/api/agent/build`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ task: "   " })
+      });
+      assert.equal(response.status, 400);
+    });
+
+    await t.test("project workspace lookup rejects unknown build IDs", async () => {
+      const response = await fetch(`${baseUrl}/api/agent/build/not-a-build-id`);
+      assert.equal(response.status, 404);
     });
 
     await t.test("agent planner creates a structured plan", async () => {

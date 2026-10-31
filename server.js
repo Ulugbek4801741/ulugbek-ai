@@ -4,6 +4,10 @@ const rateLimit = require("express-rate-limit");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const agentRuntime = require("./agent-runtime");
+const autonomousEngine = require("./modules/autonomous-engine");
+const localModel = require("./modules/local-model");
+const buildWorkspace = require("./modules/build-workspace");
+const agentRegistry = require("./agents/registry");
 const developerAgent = require("./developer-agent");
 const learningWorkerForAdmin = require("./lab-learning-worker");
 const { createAdminAutopilot } = require("./admin-autopilot");
@@ -55,7 +59,7 @@ app.use(helmet({
 app.use(express.json({ limit: "20kb", strict: true, type: "application/json" }));
 app.use("/api/", rateLimit({
   windowMs: 60 * 1000,
-  limit: 30,
+  limit: 60,
   standardHeaders: "draft-8",
   legacyHeaders: false
 }));
@@ -66,6 +70,10 @@ const chatRateLimit = rateLimit({
 const plannerRateLimit = rateLimit({
   windowMs: 60 * 1000, limit: 10, standardHeaders: "draft-8", legacyHeaders: false,
   message: { error: "Reja so‘rovlari vaqtinchalik chegaraga yetdi. Bir daqiqadan keyin qayta urinib ko‘ring." }
+});
+const buildRateLimit = rateLimit({
+  windowMs: 60 * 1000, limit: 3, standardHeaders: "draft-8", legacyHeaders: false,
+  message: { error: "Loyiha yaratish limiti tugadi. Bir daqiqadan keyin qayta urinib ko‘ring." }
 });
 
 
@@ -166,8 +174,9 @@ app.post("/api/admin/logout", (req, res) => {
   res.setHeader("Set-Cookie", "ulugbek_admin=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0");
   res.json({ ok: true });
 });
-app.get("/api/admin/overview", requireAdmin, (_req, res) => {
+app.get("/api/admin/overview", requireAdmin, async (_req, res) => {
   res.set("Cache-Control", "no-store");
+  const modelStatus = await localModel.status();
   res.json({
     ok: true,
     app: "ULUGBEK AI",
@@ -175,11 +184,12 @@ app.get("/api/admin/overview", requireAdmin, (_req, res) => {
     uptimeSeconds: Math.floor(process.uptime()),
     nodeVersion: process.version,
     memory: { rssBytes: process.memoryUsage().rss, heapUsedBytes: process.memoryUsage().heapUsed },
-    aiConfigured: false,
+    aiConfigured: modelStatus.available,
+    localModel: modelStatus,
     nativeReasoningReady: true,
     trainedLanguageModelReady: false,
     externalAiApiEnabled: false,
-    model: null,
+    model: modelStatus.available ? modelStatus.model : null,
     cognition: "native-rule-based-reasoning",
     agentWorker: "single-process-queue",
     queuedTasks: agentRuntime.listTasks().filter(task => task.status === "queued").length,
@@ -254,6 +264,20 @@ app.post("/api/admin/developer-agent/proposals/:id/review", requireAdmin, (req, 
   }
 });
 
+app.get("/api/admin/autonomous-engine/status", requireAdmin, (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, engine: autonomousEngine.status() });
+});
+app.post("/api/admin/autonomous-engine/execute", requireAdmin, async (req, res) => {
+  try {
+    const result = await autonomousEngine.executeTask({ goal: req.body?.goal });
+    res.set("Cache-Control", "no-store");
+    res.json(result);
+  } catch (error) {
+    res.status(error.status || 500).json({ error: error.message || "Agent vazifani bajara olmadi." });
+  }
+});
+
 app.get("/api/admin/tasks", requireAdmin, (_req, res) => {
   res.set("Cache-Control", "no-store");
   res.json({ ok: true, tasks: agentRuntime.listTasks() });
@@ -291,18 +315,35 @@ app.post("/api/admin/tasks/:id/review", requireAdmin, (req, res) => {
   }
 });
 
-app.get("/api/health", (_req, res) => {
+app.get("/api/agents/status", async (_req, res) => {
+  const model = await localModel.status();
   res.set("Cache-Control", "no-store");
+  res.json({
+    ok: true,
+    mainChatAgent: "chat-coordinator",
+    voiceAssistant: "browser-speech-recognition-and-speech-synthesis",
+    agents: agentRegistry.listAgents(),
+    localModel: model,
+    publicResearch: { provider: "Wikipedia public API", apiKeyRequired: false, readOnly: true },
+    safety: { externalActionsEnabled: false, productionWritesEnabled: false, codeExecutionEnabled: false }
+  });
+});
+
+app.get("/api/health", async (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  const modelStatus = await localModel.status();
   res.json({
     ok: true,
     app: "ULUGBEK AI",
     version: "0.3.1",
     processUptimeSeconds: Math.floor(process.uptime()),
-    aiConfigured: false,
+    aiConfigured: modelStatus.available,
+    localModel: modelStatus,
     nativeReasoningReady: true,
     trainedLanguageModelReady: false,
+    localModelAvailable: modelStatus.available,
     externalAiApiEnabled: false,
-    mode: "native-rule-based-reasoning",
+    mode: "local-ollama-with-native-fallback",
     storageMode: "local-json",
     workerConcurrency: 1,
     multiInstanceSafe: false,
@@ -310,14 +351,15 @@ app.get("/api/health", (_req, res) => {
   });
 });
 
-app.get("/api/diagnostics", (_req, res) => {
+app.get("/api/diagnostics", async (_req, res) => {
   res.set("Cache-Control", "no-store");
   res.json({
     ok: true,
     app: "ULUGBEK AI",
     backend: "running",
-    ai: "native-symbolic-no-external-ai",
-    publicWebResearch: "available-through-lab-route-when-server-has-internet",
+    ai: "local-ollama-when-installed-with-native-fallback",
+    localModel: await localModel.status(),
+    publicWebResearch: "keyless-wikipedia-api-and-lab-search-when-server-has-internet",
     knowledgeStorage: "server-local-json-files",
     agentMemory: "separate-per-agent-per-browser-session; JSON file; durable hosting storage must be configured",
     voiceInput: "browser-dependent-and-user-permission-required",
@@ -326,10 +368,11 @@ app.get("/api/diagnostics", (_req, res) => {
     developerAgent: developerAgent.status(),
     automaticFailover: "not-configured-requires-authorized-backup-host",
     productionDatabase: "not-configured-task-store-uses-local-json-file",
-    agentExecution: "native rule-based task planner plus registered role modules; no hosted model API, no trained language model, no source writes or deploy",
+    agentExecution: "local Ollama model when installed; registered specialist agents; project files can be written only to isolated review workspaces; no code execution or production deploy",
     nativeReasoning: "ulugbek-native-rule-reasoner-v1; deterministic symbolic planning; not a trained neural language model",
     externalAiApiEnabled: false,
     trainedLanguageModelReady: false,
+    localModelAvailable: (await localModel.status()).available,
     note: "Agent navbati server jarayoni ishlayotganida bajariladi. Hosting qayta ishga tushsa yoki uxlab qolsa 24/7 kafolatlanmaydi. JSON saqlash vaqtinchalik; doimiy ishlab chiqarish uchun PostgreSQL/Redis va alohida worker kerak. Bu diagnostika end-to-end sinov o‘rnini bosmaydi."
   });
 });
@@ -419,6 +462,27 @@ app.post("/api/agent/plan", plannerRateLimit, async (req, res) => {
   return res.json({ plan: createPlan(task), mode: "native-rules", notice: "Reja tashqi AI modelisiz, mahalliy qoidalar asosida tuzildi." });
 });
 
+app.post("/api/agent/build", buildRateLimit, async (req, res) => {
+  try {
+    const build = await buildWorkspace.createBuild({ goal: req.body?.task });
+    res.status(201).set("Cache-Control", "no-store").json({ ok: true, build });
+  } catch (error) {
+    res.status(error.status || 502).set("Cache-Control", "no-store").json({
+      error: error.message || "Loyiha fayllari yaratilmadi."
+    });
+  }
+});
+app.get("/api/agent/build/:id", async (req, res) => {
+  try {
+    const build = await buildWorkspace.getBuild(req.params.id);
+    if (!build) return res.status(404).json({ error: "Loyiha ish maydoni topilmadi." });
+    res.set("Cache-Control", "no-store");
+    return res.json({ ok: true, build });
+  } catch (_) {
+    return res.status(500).json({ error: "Loyiha ish maydonini o‘qib bo‘lmadi." });
+  }
+});
+
 app.post("/api/chat", chatRateLimit, async (req, res) => {
   const message = typeof req.body?.message === "string" ? req.body.message.trim() : "";
   const suppliedSessionId = typeof req.body?.sessionId === "string" ? req.body.sessionId : "";
@@ -434,27 +498,20 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       safety: { blocked: true, category: shieldDecision.reason, quarantined: shieldDecision.quarantined === true }
     });
   }
-  // Native-only chat mode: never call hosted/open-weight AI providers.
+  // Main chat coordinates the local Ollama model, bounded public research,
+  // specialist agents, and per-session memory. If Ollama is absent it degrades
+  // honestly to the existing native knowledge engine; no hosted API is called.
   try {
-    const nativeBrain = require("./lab-learning-worker");
-    const learned = await nativeBrain.searchKnowledge(message, 5);
-    const result = nativeBrain.buildLocalReply(message, learned);
-    return res.json({
-      reply: result.reply,
-      mode: "native-symbolic-no-external-ai",
-      agents: ["NativeResearch", "NativeReasoner"],
-      reasoning: result.reasoning,
-      knowledgeUsed: learned.length,
-      learning: nativeBrain.status(),
-      receivedCharacters: message.length
-    });
+    const chatOrchestrator = require("./agents/autonomous-orchestrator");
+    const result = await chatOrchestrator.run({ message, sessionId });
+    return res.json({ ...result, receivedCharacters: message.length });
   } catch (error) {
+    console.error("Chat orchestrator error:", error.message);
     return res.status(503).json({
-      error: "Mahalliy mantiqiy mexanizm ishlamadi; tashqi AI xizmatiga avtomatik o‘tilmadi.",
-      mode: "native-only-error"
+      error: "Asosiy chat agenti vaqtincha ishlamadi. Serverdagi mahalliy model va xotira holatini tekshiring.",
+      mode: "chat-agent-error"
     });
   }
-
 });
 
 app.use("/api/lab", require("./lab"));
