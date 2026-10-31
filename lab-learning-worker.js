@@ -228,7 +228,65 @@ async function searchKnowledge(query, limit = 5) {
   }).filter(item => item.score > 0 && item.status === "approved")
     .sort((a, b) => b.score - a.score).slice(0, Math.max(1, Math.min(10, limit)));
 }
+async function researchQuestion(query) {
+  const question = clean(query, 500);
+  if (!question || question.length < 3) return [];
+  const languages = ["uz", "en", "ru"];
+  const collected = [];
+  const current = await readKnowledge();
+  const known = new Set(current.map(item => item.source).filter(Boolean));
+
+  for (const language of languages) {
+    if (stopRequested) break;
+    const base = "https://" + language + ".wikipedia.org";
+    const searchUrl = new URL(base + "/w/api.php");
+    searchUrl.search = new URLSearchParams({
+      action: "query", list: "search", srsearch: question,
+      srlimit: "2", format: "json"
+    }).toString();
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    try {
+      const payload = await fetchPublicJson(searchUrl.href, controller.signal);
+      const hits = Array.isArray(payload?.query?.search) ? payload.query.search.slice(0, 2) : [];
+      const summaries = await Promise.all(hits.map(async hit => {
+        const title = clean(hit.title, 180);
+        if (!title) return null;
+        const url = base + "/api/rest_v1/page/summary/" + encodeURIComponent(title.replace(/ /g, "_"));
+        const item = await fetchPublicJson(url, controller.signal);
+        const content = clean(item.extract, 4000);
+        const source = item.content_urls?.desktop?.page;
+        if (!content || typeof source !== "string" || !source.startsWith(base + "/wiki/")) return null;
+        return {
+          id: crypto.randomUUID(), title: clean(item.title || title, 180),
+          content, source, language, agent: "OnDemandResearchAgent",
+          status: "pending-review", quality: "live-public-summary-unverified",
+          createdAt: new Date().toISOString()
+        };
+      }));
+      for (const item of summaries.filter(Boolean)) {
+        collected.push(item);
+        if (!known.has(item.source)) {
+          known.add(item.source);
+          current.push(item);
+        }
+      }
+    } catch (error) {
+      state.lastError = clean(error.name === "AbortError" ? "Internet qidiruvi vaqti tugadi." : error.message, 240);
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  if (collected.length) {
+    await writeKnowledge(current);
+    state.saved += collected.length;
+    state.lastOnDemandSearchAt = new Date().toISOString();
+    state.lastOnDemandSearchLanguages = [...new Set(collected.map(item => item.language))];
+  }
+  return collected;
+}
 function buildLocalReply(query, hits) {
   return require("./native-cognition").respond(query, hits);
 }
-module.exports = { start, stop, status, cycle, learnTopic, searchKnowledge, buildLocalReply };
+module.exports = { start, stop, status, cycle, learnTopic, searchKnowledge, researchQuestion, buildLocalReply };

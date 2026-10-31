@@ -460,14 +460,24 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   // Native-only chat mode: never call hosted/open-weight AI providers.
   try {
     const nativeBrain = require("./lab-learning-worker");
-    const learned = await nativeBrain.searchKnowledge(message, 5);
-    const result = nativeBrain.buildLocalReply(message, learned);
+    let learned = await nativeBrain.searchKnowledge(message, 5);
+    let result = nativeBrain.buildLocalReply(message, learned);
+    let webResearchUsed = false;
+    if (!result.reasoning.answerable) {
+      const publicFindings = await nativeBrain.researchQuestion(message);
+      if (publicFindings.length) {
+        learned = publicFindings;
+        result = nativeBrain.buildLocalReply(message, learned);
+        webResearchUsed = result.reasoning.answerable;
+      }
+    }
     return res.json({
       reply: result.reply,
-      mode: "native-symbolic-no-external-ai",
-      agents: ["NativeResearch", "NativeReasoner"],
+      mode: webResearchUsed ? "native-public-research-no-external-ai" : "native-symbolic-no-external-ai",
+      agents: webResearchUsed ? ["NativeResearch", "NativeReasoner"] : ["NativeReasoner"],
       reasoning: result.reasoning,
       knowledgeUsed: learned.length,
+      webResearchUsed,
       learning: nativeBrain.status(),
       receivedCharacters: message.length
     });
