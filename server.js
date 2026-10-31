@@ -6,6 +6,7 @@ const crypto = require("node:crypto");
 const agentRuntime = require("./agent-runtime");
 const autonomousEngine = require("./modules/autonomous-engine");
 const localModel = require("./modules/local-model");
+const buildWorkspace = require("./modules/build-workspace");
 const agentRegistry = require("./agents/registry");
 const developerAgent = require("./developer-agent");
 const learningWorkerForAdmin = require("./lab-learning-worker");
@@ -451,6 +452,27 @@ app.post("/api/agent/plan", plannerRateLimit, async (req, res) => {
   if (task.length > MAX_TASK_LENGTH) return res.status(413).json({ error: "Vazifa 4000 belgidan oshmasligi kerak." });
 
   return res.json({ plan: createPlan(task), mode: "native-rules", notice: "Reja tashqi AI modelisiz, mahalliy qoidalar asosida tuzildi." });
+});
+
+app.post("/api/agent/build", plannerRateLimit, async (req, res) => {
+  try {
+    const build = await buildWorkspace.createBuild({ goal: req.body?.task });
+    res.status(201).set("Cache-Control", "no-store").json({ ok: true, build });
+  } catch (error) {
+    res.status(error.status || 502).set("Cache-Control", "no-store").json({
+      error: error.message || "Loyiha fayllari yaratilmadi."
+    });
+  }
+});
+app.get("/api/agent/build/:id", async (req, res) => {
+  try {
+    const build = await buildWorkspace.getBuild(req.params.id);
+    if (!build) return res.status(404).json({ error: "Loyiha ish maydoni topilmadi." });
+    res.set("Cache-Control", "no-store");
+    return res.json({ ok: true, build });
+  } catch (_) {
+    return res.status(500).json({ error: "Loyiha ish maydonini o‘qib bo‘lmadi." });
+  }
 });
 
 app.post("/api/chat", chatRateLimit, async (req, res) => {
