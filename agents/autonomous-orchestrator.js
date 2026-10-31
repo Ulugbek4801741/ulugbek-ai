@@ -39,7 +39,8 @@ async function run({ message, sessionId }) {
     catch (error) { research = []; }
   }
 
-  const specialistIds = dispatcher.chooseSpecialists(message);
+  const specialistIntent = /(kod|dastur|ilova|sayt|web|apk|android|frontend|backend|api|program|sinov|test|xato|tekshir|xavfsiz|himoya|parol|maxfiy|server|hosting|deploy|joylash|biznes|marketing|reklama|izla|tadqiq|manba|internet|taqqosla|o‘rgan)/i.test(message);
+  const specialistIds = specialistIntent ? dispatcher.chooseSpecialists(message) : [];
   if (modelStatus.available) {
     for (const id of specialistIds) {
       const specialist = registry.getAgent(id);
