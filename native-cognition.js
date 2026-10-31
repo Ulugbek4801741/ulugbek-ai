@@ -22,7 +22,15 @@ function reason(query, entries) {
     for (const fact of splitFacts(entry.content)) {
       const f = new Set(words(fact));
       let common = 0;
-      for (const term of q) if (f.has(term)) common++;
+      for (const term of q) {
+        const matched = [...f].some(candidate =>
+          candidate === term ||
+          (candidate.length >= 5 && term.length >= 5 &&
+            Math.abs(candidate.length - term.length) <= 3 &&
+            (candidate.startsWith(term) || term.startsWith(candidate)))
+        );
+        if (matched) common++;
+      }
       const requiredOverlap = Math.min(2, q.size);
       if (common >= requiredOverlap && q.size > 0) ranked.push({
         fact, title: entry.title, source: entry.source,
