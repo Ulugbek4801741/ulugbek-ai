@@ -173,8 +173,11 @@ app.get("/api/admin/overview", requireAdmin, (_req, res) => {
     nodeVersion: process.version,
     memory: { rssBytes: process.memoryUsage().rss, heapUsedBytes: process.memoryUsage().heapUsed },
     aiConfigured: false,
+    nativeReasoningReady: true,
+    trainedLanguageModelReady: false,
+    externalAiApiEnabled: false,
     model: null,
-    cognition: "native-symbolic-no-external-ai",
+    cognition: "native-rule-based-reasoning",
     agentWorker: "single-process-queue",
     queuedTasks: agentRuntime.listTasks().filter(task => task.status === "queued").length,
     runningTasks: agentRuntime.listTasks().filter(task => task.status === "running").length,
@@ -267,7 +270,7 @@ app.post("/api/admin/tasks/:id/review", requireAdmin, (req, res) => {
 
 app.get("/api/health", (_req, res) => {
   res.set("Cache-Control", "no-store");
-  res.json({ ok: true, app: "ULUGBEK AI", version: "0.3.1", aiConfigured: false, mode: "native-symbolic-no-external-ai" });
+  res.json({ ok: true, app: "ULUGBEK AI", version: "0.3.1", aiConfigured: false, nativeReasoningReady: true, trainedLanguageModelReady: false, externalAiApiEnabled: false, mode: "native-rule-based-reasoning" });
 });
 
 app.get("/api/diagnostics", (_req, res) => {
@@ -286,7 +289,10 @@ app.get("/api/diagnostics", (_req, res) => {
     developerAgent: developerAgent.status(),
     automaticFailover: "not-configured-requires-authorized-backup-host",
     productionDatabase: "not-configured-task-store-uses-local-json-file",
-    agentExecution: "native chat plus one read-only repository Developer Agent; proposals only; no source writes or deploy",
+    agentExecution: "native rule-based task planner plus registered role modules; no hosted model API, no trained language model, no source writes or deploy",
+    nativeReasoning: "ulugbek-native-rule-reasoner-v1; deterministic symbolic planning; not a trained neural language model",
+    externalAiApiEnabled: false,
+    trainedLanguageModelReady: false,
     note: "Agent navbati server jarayoni ishlayotganida bajariladi. Hosting qayta ishga tushsa yoki uxlab qolsa 24/7 kafolatlanmaydi. JSON saqlash vaqtinchalik; doimiy ishlab chiqarish uchun PostgreSQL/Redis va alohida worker kerak. Bu diagnostika end-to-end sinov o‘rnini bosmaydi."
   });
 });
