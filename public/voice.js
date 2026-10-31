@@ -31,8 +31,17 @@ async function requestMicPermission(){
 }
 function speak(text){
   if(!("speechSynthesis" in window)){setStatus("Brauzer ovoz chiqarishni qo‘llamaydi.");return;}
+  const lang=$("lang").value;let selectedVoice=null;
+  if(lang.toLowerCase().startsWith("uz")){
+    const voices=window.speechSynthesis.getVoices();
+    selectedVoice=voices.find(v=>v.lang.toLowerCase()==="uz-uz")||voices.find(v=>v.lang.toLowerCase().startsWith("uz-"));
+    if(!selectedVoice){setStatus("Qurilmada o‘zbekcha ovoz topilmadi. Android sozlamalarida Matndan nutqqa bo‘limidan o‘zbekcha ovozni o‘rnating.");return;}
+  }else{
+    const voices=window.speechSynthesis.getVoices();
+    selectedVoice=voices.find(v=>v.lang.toLowerCase()===lang.toLowerCase())||voices.find(v=>v.lang.toLowerCase().startsWith(lang.toLowerCase().split("-")[0]));
+  }
   window.speechSynthesis.cancel();
-  const u=new SpeechSynthesisUtterance(text);u.lang=$("lang").value;u.rate=1;
+  const u=new SpeechSynthesisUtterance(text);u.lang=lang;u.rate=1;if(selectedVoice)u.voice=selectedVoice;
   u.onstart=()=>orb.classList.add("speaking");u.onend=()=>orb.classList.remove("speaking");
   u.onerror=()=>{orb.classList.remove("speaking");setStatus("Ovoz chiqarilmadi; matn javobi mavjud.");};
   window.speechSynthesis.speak(u);
