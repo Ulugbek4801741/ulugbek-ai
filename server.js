@@ -4,6 +4,10 @@ const rateLimit = require("express-rate-limit");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const agentRuntime = require("./agent-runtime");
+const autonomousEngine = require("./modules/autonomous-engine");
+const localModel = require("./modules/local-model");
+const buildWorkspace = require("./modules/build-workspace");
+const agentRegistry = require("./agents/registry");
 const developerAgent = require("./developer-agent");
 const agentPermissions = require("./agent-permissions");
 const learningWorkerForAdmin = require("./lab-learning-worker");
@@ -28,7 +32,7 @@ app.use((req, res, next) => {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Vary", "Origin");
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-ULUGBEK-SESSION");
   }
   if (req.method === "OPTIONS") {
     if (origin && FRONTEND_ORIGINS.has(origin)) return res.status(204).end();
@@ -67,6 +71,10 @@ const chatRateLimit = rateLimit({
 const plannerRateLimit = rateLimit({
   windowMs: 60 * 1000, limit: 10, standardHeaders: "draft-8", legacyHeaders: false,
   message: { error: "Reja so‘rovlari vaqtinchalik chegaraga yetdi. Bir daqiqadan keyin qayta urinib ko‘ring." }
+});
+const buildRateLimit = rateLimit({
+  windowMs: 60 * 1000, limit: 3, standardHeaders: "draft-8", legacyHeaders: false,
+  message: { error: "Loyiha yaratish limiti tugadi. Bir daqiqadan keyin qayta urinib ko‘ring." }
 });
 
 
@@ -246,6 +254,20 @@ app.post("/api/admin/developer-agent/proposals/:id/review", requireAdmin, (req, 
   }
 });
 
+app.get("/api/admin/autonomous-engine/status", requireAdmin, (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, engine: autonomousEngine.status() });
+});
+app.post("/api/admin/autonomous-engine/execute", requireAdmin, async (req, res) => {
+  try {
+    const result = await autonomousEngine.executeTask({ goal: req.body?.goal });
+    res.set("Cache-Control", "no-store");
+    res.json(result);
+  } catch (error) {
+    res.status(error.status || 500).json({ error: error.message || "Agent vazifani bajara olmadi." });
+  }
+});
+
 app.get("/api/admin/tasks", requireAdmin, (_req, res) => {
   res.set("Cache-Control", "no-store");
   res.json({ ok: true, tasks: agentRuntime.listTasks() });
@@ -283,18 +305,35 @@ app.post("/api/admin/tasks/:id/review", requireAdmin, (req, res) => {
   }
 });
 
-app.get("/api/health", (_req, res) => {
+app.get("/api/agents/status", async (_req, res) => {
+  const model = await localModel.status();
   res.set("Cache-Control", "no-store");
   res.json({
     ok: true,
+    mainChatAgent: "chat-coordinator",
+    voiceAssistant: "browser-speech-recognition-and-speech-synthesis",
+    agents: agentRegistry.listAgents(),
+    localModel: model,
+    publicResearch: { provider: "Wikipedia public API", apiKeyRequired: false, readOnly: true },
+    safety: { externalActionsEnabled: false, productionWritesEnabled: false, codeExecutionEnabled: false }
+  });
+});
+
+app.get("/api/health", async (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  const modelStatus = await localModel.status();
+  res.json({
+    ok: true,
     app: "ULUGBEK AI",
-    version: "0.3.1",
+    version: "0.3.2",
     processUptimeSeconds: Math.floor(process.uptime()),
-    aiConfigured: false,
+    aiConfigured: modelStatus.available,
+    localModel: modelStatus,
     nativeReasoningReady: true,
     trainedLanguageModelReady: false,
+    localModelAvailable: modelStatus.available,
     externalAiApiEnabled: false,
-    mode: "native-rule-based-reasoning",
+    mode: "local-ollama-with-native-fallback",
     storageMode: "local-json",
     workerConcurrency: 1,
     multiInstanceSafe: false,
@@ -302,27 +341,30 @@ app.get("/api/health", (_req, res) => {
   });
 });
 
-app.get("/api/diagnostics", (_req, res) => {
+app.get("/api/diagnostics", async (_req, res) => {
   res.set("Cache-Control", "no-store");
+  const modelStatus = await localModel.status();
   res.json({
     ok: true,
     app: "ULUGBEK AI",
     backend: "running",
-    ai: "native-symbolic-no-external-ai",
-    publicWebResearch: "available-through-lab-route-when-server-has-internet",
+    ai: "local-ollama-when-installed-with-native-fallback",
+    localModel: modelStatus,
+    publicWebResearch: "keyless-wikipedia-api-and-lab-search-when-server-has-internet",
     knowledgeStorage: "server-local-json-files",
     agentMemory: "separate-per-agent-per-browser-session; JSON file; durable hosting storage must be configured",
     voiceInput: "browser-dependent-and-user-permission-required",
     voiceOutput: "browser-dependent",
-    autonomousAgents: "one continuous read-only Developer Agent; process-and-host-dependent 24/7 loop",
+    autonomousAgents: "local chat coordinator and registered specialist agents; process-and-host-dependent",
     developerAgent: developerAgent.status(),
     automaticFailover: "not-configured-requires-authorized-backup-host",
     productionDatabase: "not-configured-task-store-uses-local-json-file",
-    agentExecution: "native rule-based task planner plus registered role modules; no hosted model API, no trained language model, no source writes or deploy",
-    nativeReasoning: "ulugbek-native-rule-reasoner-v1; deterministic symbolic planning; not a trained neural language model",
+    agentExecution: "local Ollama when installed; project files are limited to session-bound isolated review workspaces; no code execution or production deploy",
+    nativeReasoning: "ulugbek-native-rule-reasoner-v1; deterministic symbolic fallback; not a trained neural language model",
     externalAiApiEnabled: false,
     trainedLanguageModelReady: false,
-    note: "Agent navbati server jarayoni ishlayotganida bajariladi. Hosting qayta ishga tushsa yoki uxlab qolsa 24/7 kafolatlanmaydi. JSON saqlash vaqtinchalik; doimiy ishlab chiqarish uchun PostgreSQL/Redis va alohida worker kerak. Bu diagnostika end-to-end sinov o‘rnini bosmaydi."
+    localModelAvailable: modelStatus.available,
+    note: "Ollama modeli serverda o‘rnatilmagan bo‘lsa chat mahalliy qoidaviy javobga qaytadi. Hosting qayta ishga tushsa yoki uxlab qolsa 24/7 kafolatlanmaydi. JSON saqlash vaqtinchalik; doimiy ishlab chiqarish uchun PostgreSQL/Redis va alohida worker kerak."
   });
 });
 
@@ -421,19 +463,23 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   const inputSafety = require("./modules/input-safety").inspectUserMessage(message);
   const shieldDecision = globalSafetyShield.inspectChat({ message, sessionId, ip: req.ip, inputSafety });
   if (!shieldDecision.allowed) {
-    return res.status(400).set("Cache-Control", "no-store").json({
+    return res.status(400).json({
       error: shieldDecision.message || inputSafety.message,
       safety: { blocked: true, category: shieldDecision.reason, quarantined: shieldDecision.quarantined === true }
     });
   }
-  // Native-only chat mode: never call hosted/open-weight AI providers.
   try {
-    const nativeBrain = require("./lab-learning-worker");
-    let learned = await nativeBrain.searchKnowledge(message, 5);
-    let result = nativeBrain.buildLocalReply(message, learned);
-    let webResearchUsed = false;
-    if (!result.reasoning.answerable) {
-      const publicFindings = await nativeBrain.researchQuestion(message);
+    const chatOrchestrator = require("./agents/autonomous-orchestrator");
+    const result = await chatOrchestrator.run({ message, sessionId });
+    return res.json({ ...result, receivedCharacters: message.length });
+  } catch (error) {
+    console.error("Chat orchestrator error:", error.message);
+    return res.status(503).json({
+      error: "Asosiy chat agenti vaqtincha ishlamadi. Serverdagi mahalliy model va xotira holatini tekshiring.",
+      mode: "chat-agent-error"
+    });
+  }
+});onst publicFindings = await nativeBrain.researchQuestion(message);
       if (publicFindings.length) {
         learned = publicFindings;
         result = nativeBrain.buildLocalReply(message, learned);
