@@ -23,8 +23,6 @@ services:
         value: /var/data/developer-agent.json
       - key: ADMIN_AUTOPILOT_STORE
         value: /var/data/admin-autopilot.json
-      - key: PUBLIC_BASE_URL
-        sync: false
       - key: FRONTEND_ORIGIN
         sync: false
       - key: GITHUB_TOKEN
