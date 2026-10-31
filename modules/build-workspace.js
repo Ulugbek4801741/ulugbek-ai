@@ -31,7 +31,7 @@ function validateRelativePath(value) {
   const parts = value.split("/");
   if (parts.some(part => !part || part === "." || part === ".." || !/^[a-zA-Z0-9._-]+$/.test(part))) return false;
   const ext = path.extname(value).toLowerCase();
-  return ALLOWED_EXTENSIONS.has(ext) && !parts.some(part => part.startsWith("."));
+  return ALLOWED_EXTENSIONS.has(ext) && !parts.some(part => part.startsWith(".") || part.toLowerCase() === "node_modules" || part.toLowerCase() === ".git");
 }
 
 function parseGeneratedProject(raw) {
