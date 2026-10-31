@@ -8,7 +8,7 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 
 const AGENTS = Object.freeze([
-  { id: "chief-scientist", specialty: "prioritization", accepts: ["benchmark", "research", "product", "security", "engineering", "device"] },
+  { id: "chief-scientist", specialty: "prioritization and coordination", accepts: [] },
   { id: "benchmark-analyst", specialty: "evaluation", accepts: ["benchmark"] },
   { id: "public-researcher", specialty: "public-source research planning", accepts: ["research"] },
   { id: "security-auditor", specialty: "threat modeling and review", accepts: ["security", "engineering", "device"] },
@@ -104,12 +104,14 @@ function createVirtualLab({ storePath = process.env.VIRTUAL_LAB_STORE || path.jo
       const parallelism = Math.max(1, Math.min(workerLimit, Number.isInteger(concurrency) ? concurrency : workerLimit));
       const batch = state.queue.splice(0, taskLimit).sort((a, b) => b.priority - a.priority);
       const reports = new Array(batch.length);
-      let cursor = 0;
       async function worker(workerNumber) {
-        while (cursor < batch.length) {
-          const index = cursor++;
+        // Assign work deterministically across bounded worker slots.
+        // The current simulation is synchronous in one Node.js process;
+        // this is task distribution, not multi-core model inference.
+        for (let index = workerNumber - 1; index < batch.length; index += parallelism) {
           const task = batch[index];
-          const agent = AGENTS.find(candidate => candidate.accepts.includes(task.type)) || AGENTS[0];
+          const agent = AGENTS.find(candidate => candidate.accepts.includes(task.type));
+          if (!agent) throw new Error("Task uchun mutaxassis agent topilmadi.");
           reports[index] = executeSimulation(task, agent, workerNumber);
           state.agentRuns[agent.id] = (state.agentRuns[agent.id] || 0) + 1;
         }
