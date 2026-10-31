@@ -34,6 +34,22 @@ function validateRelativePath(value) {
   return ALLOWED_EXTENSIONS.has(ext) && !parts.some(part => part.startsWith(".") || part.toLowerCase() === "node_modules" || part.toLowerCase() === ".git");
 }
 
+function ownerFingerprint(ownerId) {
+  if (typeof ownerId !== "string" || !/^[a-zA-Z0-9_-]{8,80}$/.test(ownerId)) {
+    const error = new Error("Loyiha ish maydoni uchun sessiya identifikatori kerak.");
+    error.status = 400;
+    throw error;
+  }
+  return crypto.createHash("sha256").update(ownerId).digest("hex");
+}
+function ownsBuild(manifest, ownerId) {
+  if (!manifest || typeof manifest.ownerHash !== "string" || !/^[a-f0-9]{64}$/.test(manifest.ownerHash)) return false;
+  let expected;
+  try { expected = Buffer.from(ownerFingerprint(ownerId), "hex"); } catch (_) { return false; }
+  const actual = Buffer.from(manifest.ownerHash, "hex");
+  return actual.length === expected.length && crypto.timingSafeEqual(actual, expected);
+}
+
 function parseGeneratedProject(raw) {
   const text = String(raw || "").trim().replace(/^\x60{3}(?:json)?\s*/i, "").replace(/\s*\x60{3}$/i, "");
   let parsed;
@@ -64,6 +80,7 @@ function parseGeneratedProject(raw) {
 
 async function createBuild(input = {}) {
   const goal = validateGoal(input.goal);
+  const ownerHash = ownerFingerprint(input.ownerId);
   const model = await localModel.status();
   if (!model.available) {
     const error = new Error("Loyiha yaratish uchun serverda Ollama va qwen2.5:3b modeli o‘rnatilgan bo‘lishi kerak. Docker Compose orqali ishga tushiring.");
@@ -90,7 +107,7 @@ async function createBuild(input = {}) {
     await fs.writeFile(target, file.content, { encoding: "utf8", mode: 0o600, flag: "wx" });
   }
   const manifest = {
-    id, title: project.title, summary: project.summary, goal,
+    id, title: project.title, summary: project.summary, goal, ownerHash,
     status: "awaiting_human_review",
     execution: "not_executed",
     deployment: "not_deployed",
@@ -98,14 +115,16 @@ async function createBuild(input = {}) {
     files: project.files.map(({ path: filePath, bytes }) => ({ path: filePath, bytes }))
   };
   await fs.writeFile(path.join(directory, "manifest.json"), JSON.stringify(manifest, null, 2), { mode: 0o600, flag: "wx" });
-  return { ...manifest, files: project.files };
+  const { ownerHash: _ownerHash, ...publicManifest } = manifest;
+  return { ...publicManifest, files: project.files };
 }
 
-async function getBuild(id) {
+async function getBuild(id, ownerId) {
   if (typeof id !== "string" || !/^[a-f0-9-]{36}$/i.test(id)) return null;
   const directory = path.join(ROOT, id);
   try {
     const manifest = JSON.parse(await fs.readFile(path.join(directory, "manifest.json"), "utf8"));
+    if (!ownsBuild(manifest, ownerId)) return null;
     const files = [];
     for (const item of manifest.files) {
       if (!validateRelativePath(item.path)) continue;
@@ -113,11 +132,12 @@ async function getBuild(id) {
       if (!target.startsWith(directory + path.sep)) continue;
       files.push({ path: item.path, content: await fs.readFile(target, "utf8"), bytes: item.bytes });
     }
-    return { ...manifest, files };
+    const { ownerHash: _ownerHash, ...publicManifest } = manifest;
+    return { ...publicManifest, files };
   } catch (error) {
     if (error.code === "ENOENT") return null;
     throw error;
   }
 }
 
-module.exports = { createBuild, getBuild, validateGoal, validateRelativePath, parseGeneratedProject };
+module.exports = { createBuild, getBuild, validateGoal, validateRelativePath, parseGeneratedProject, ownerFingerprint, ownsBuild };
