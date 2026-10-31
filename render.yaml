@@ -27,16 +27,12 @@ services:
         sync: false
       - key: FRONTEND_ORIGIN
         sync: false
-      - key: GOOGLE_CLIENT_ID
-        sync: false
-      - key: GOOGLE_CLIENT_SECRET
-        sync: false
-      - key: ADMIN_GOOGLE_EMAIL
-        sync: false
       - key: GITHUB_TOKEN
         sync: false
       - key: ADMIN_SESSION_SECRET
         generateValue: true
+      - key: ADMIN_ACCESS_CODE
+        sync: false
       - key: OPENAI_API_KEY
         sync: false
       - key: GEMINI_API_KEY
