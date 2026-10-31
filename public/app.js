@@ -58,4 +58,34 @@ builderModal.addEventListener("click",e=>{if(e.target===builderModal)builderModa
 $("builder-run").onclick=async()=>{const task=$("builder-task").value.trim(),out=$("builder-result"),btn=$("builder-run");if(!task){out.textContent="Avval ilova g‘oyangizni yozing.";return}btn.disabled=true;out.className="builder-result busy";out.textContent="Loyiha rejasi tuzilmoqda…";try{const res=await fetch(api("api/agent/plan"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({task})});const data=await res.json();if(!res.ok)throw Error(data.error||"Reja tuzilmadi");out.className="builder-result";out.textContent=(typeof data.plan==="string"?data.plan:JSON.stringify(data.plan,null,2))+(data.notice?"\\n\\nEslatma: "+data.notice:"");}catch(err){out.className="builder-result";out.textContent="Reja olishda xatolik: "+(err.message||"server bilan aloqa yo‘q");}finally{btn.disabled=false}};
 
 $("integrations-open").onclick=async()=>{const panel=$("integrations-panel"),list=$("integration-list");panel.hidden=!panel.hidden;if(panel.hidden)return;list.textContent="Modullar tekshirilmoqda…";try{const response=await fetch(api("api/modules"),{cache:"no-store"});const data=await response.json();if(!response.ok)throw Error(data.error||"Server xatosi");list.replaceChildren();const items=Array.isArray(data.modules)?data.modules:[];if(!items.length){list.textContent="Serverda modul ro‘yxati yo‘q.";return}items.forEach(m=>{const item=el("div","integration-item");item.appendChild(el("strong","",m.name||m.title||m.id||"Modul"));item.appendChild(el("span","",m.description||m.status||"Holat haqida qo‘shimcha ma’lumot yo‘q"));list.appendChild(item)});if(data.note)list.appendChild(el("p","",data.note));}catch(err){list.textContent="Integratsiya katalogi olinmadi: "+(err.message||"serverga ulanib bo‘lmadi")}};
+/* Android/iOS on-screen keyboard: keep the composer above the keyboard and
+   resize the visible chat area so recent questions and answers remain visible. */
+(function setupMobileKeyboardLayout(){
+  const viewport=window.visualViewport;
+  const root=document.documentElement;
+  let frame=0;
+  function update(){
+    if(frame) cancelAnimationFrame(frame);
+    frame=requestAnimationFrame(()=>{
+      const height=viewport?viewport.height:window.innerHeight;
+      const offset=viewport?Math.max(0,window.innerHeight-viewport.height-viewport.offsetTop):0;
+      root.style.setProperty("--ulugbek-visual-height",Math.max(240,height)+"px");
+      root.style.setProperty("--ulugbek-keyboard-offset",offset+"px");
+      if(document.activeElement===input && offset>80){
+        const composer=document.querySelector(".composer-wrap");
+        if(composer) composer.style.transform="translateY(0)";
+      }
+      frame=0;
+    });
+  }
+  if(viewport){
+    viewport.addEventListener("resize",update,{passive:true});
+    viewport.addEventListener("scroll",update,{passive:true});
+  }
+  window.addEventListener("resize",update,{passive:true});
+  input.addEventListener("focus",()=>{update();setTimeout(update,80);setTimeout(update,260)});
+  input.addEventListener("blur",()=>{setTimeout(update,80)});
+  update();
+})();
+
 })();
