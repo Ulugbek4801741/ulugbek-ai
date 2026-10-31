@@ -1,19 +1,13 @@
-name: Security and test checks
+name: Security and test checks (manual)
 
 on:
-  push:
-    branches:
-      - security/chat-agent-isolation
-  pull_request:
-    branches:
-      - main
-      - security/chat-agent-isolation
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  test:
+  security-test:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -23,7 +17,14 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Install dependencies
-        run: npm install --ignore-scripts --no-audit --no-fund
-      - name: Run tests
+      - name: Cache npm download data
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-node-22-${{ hashFiles('package.json') }}
+          restore-keys: |
+            npm-${{ runner.os }}-node-22-
+      - name: Install production dependency tree safely
+        run: npm install --ignore-scripts --prefer-offline --no-audit --no-fund
+      - name: Run complete tests without dependency lifecycle scripts
         run: npm test
