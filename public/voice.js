@@ -1,7 +1,9 @@
 "use strict";
 const $ = (id) => document.getElementById(id);
 const messages = $("messages"), status = $("status"), orb = $("orb");
-const STORE = "ulugbek_voice_profile_v1", CHAT = "ulugbek_voice_chat_v1", SESSION = "ulugbek_voice_session_v1";\nlet sessionId = "";\ntry { sessionId = localStorage.getItem(SESSION) || ""; if (!/^[a-zA-Z0-9_-]{8,80}$/.test(sessionId)) { sessionId = (crypto.randomUUID ? crypto.randomUUID().replace(/-/g, "") : "voice" + Date.now().toString(36) + Math.random().toString(36).slice(2)); localStorage.setItem(SESSION, sessionId); } } catch (_) { sessionId = "voice" + Date.now().toString(36) + Math.random().toString(36).slice(2); }
+const STORE = "ulugbek_voice_profile_v1", CHAT = "ulugbek_voice_chat_v1", SESSION = "ulugbek_voice_session_v1";
+let sessionId = "";
+try { sessionId = localStorage.getItem(SESSION) || ""; if (!/^[a-zA-Z0-9_-]{8,80}$/.test(sessionId)) { sessionId = (crypto.randomUUID ? crypto.randomUUID().replace(/-/g, "") : "voice" + Date.now().toString(36) + Math.random().toString(36).slice(2)); localStorage.setItem(SESSION, sessionId); } } catch (_) { sessionId = "voice" + Date.now().toString(36) + Math.random().toString(36).slice(2); }
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognizer = null, lastReply = "", objectUrl = "", micStream = null;
 function setStatus(text){status.textContent=text;}
