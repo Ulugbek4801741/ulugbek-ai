@@ -8,7 +8,7 @@
     "microsoft-store": { name: "Microsoft Store", phrases: ["microsoft store", "microsoft do‘koni", "windows do‘koni", "windows store"] },
     "apple-app-store": { name: "Apple App Store", phrases: ["app store", "apple store", "ayfon do‘koni", "iphone store"] }
   };
-  function api(path) { const base = typeof window.ULUGBEK_API_BASE_URL === "string" ? window.ULUGBEK_API_BASE_URL.trim().replace(/\\/$/, "") : ""; return (base ? base + "/" : "/") + path.replace(/^\\//, ""); }
+  function api(path) { const base = typeof window.ULUGBEK_API_BASE_URL === "string" ? window.ULUGBEK_API_BASE_URL.trim() : ""; const cleanBase = base.endsWith("/") ? base.slice(0, -1) : base; const cleanPath = path.startsWith("/") ? path.slice(1) : path; return (cleanBase ? cleanBase + "/" : "/") + cleanPath; }
   function normalize(value) { return value.toLocaleLowerCase("uz").replace(/[’'‘]/g, "'").replace(/[^a-z0-9\s'-]/g, " ").replace(/\s+/g, " ").trim(); }
   function render(items) {
     grid.replaceChildren();
