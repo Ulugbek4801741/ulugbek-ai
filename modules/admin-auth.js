@@ -14,6 +14,7 @@ function createAdminAuth(options = {}) {
   const sessionTtlMs = Number.isFinite(options.sessionTtlMs) ? options.sessionTtlMs : 60 * 60 * 1000;
   const attempts = new Map();
   const revoked = new Set();
+  let persistedPin = null;
   let loaded = false;
   let writeChain = Promise.resolve();
 
@@ -26,6 +27,11 @@ function createAdminAuth(options = {}) {
       .digest("hex");
   }
   function sameCode(candidate) {
+    if (persistedPin) {
+      const actual = crypto.scryptSync(String(candidate), Buffer.from(persistedPin.salt, "hex"), 64);
+      const expected = Buffer.from(persistedPin.hash, "hex");
+      return crypto.timingSafeEqual(actual, expected);
+    }
     const actual = crypto.createHash("sha256").update(String(candidate)).digest();
     const expected = crypto.createHash("sha256").update(accessCode).digest();
     return crypto.timingSafeEqual(actual, expected);
@@ -36,6 +42,9 @@ function createAdminAuth(options = {}) {
     if (!storePath) return;
     try {
       const saved = JSON.parse(await fs.readFile(storePath, "utf8"));
+      if (saved.pin && /^[a-f0-9]{32}$/.test(saved.pin.salt || "") && /^[a-f0-9]{128}$/.test(saved.pin.hash || "")) {
+        persistedPin = { salt: saved.pin.salt, hash: saved.pin.hash };
+      }
       for (const [key, value] of Object.entries(saved.entries || {})) {
         if (/^[a-f0-9]{64}$/.test(key) && value && Number.isInteger(value.count) && Number.isFinite(value.lockUntil)) {
           attempts.set(key, { count: Math.max(0, Math.min(maxAttempts, value.count)), lockUntil: Math.max(0, value.lockUntil) });
@@ -48,7 +57,7 @@ function createAdminAuth(options = {}) {
   async function persist() {
     if (!storePath) return;
     const entries = Object.fromEntries([...attempts.entries()]);
-    const snapshot = JSON.stringify({ version: 1, entries }, null, 2);
+    const snapshot = JSON.stringify({ version: 1, entries, pin: persistedPin }, null, 2);
     writeChain = writeChain.then(async () => {
       await fs.mkdir(path.dirname(storePath), { recursive: true });
       const temp = storePath + ".tmp";
@@ -112,6 +121,21 @@ function createAdminAuth(options = {}) {
     const token = sign({ role: "admin", jti: crypto.randomUUID(), iat: issuedAt, exp: issuedAt + sessionTtlMs });
     return { ok: true, token, expiresAt: issuedAt + sessionTtlMs };
   }
+  async function changeCode({ currentCode, newCode } = {}) {
+    if (!configured()) return { ok: false, status: 503, error: "Administrator kirish kodi serverda sozlanmagan." };
+    await load();
+    if (typeof currentCode !== "string" || !sameCode(currentCode)) {
+      return { ok: false, status: 401, error: "Joriy administrator kodi noto‘g‘ri." };
+    }
+    if (typeof newCode !== "string" || newCode.length < 12 || newCode.length > 256) {
+      return { ok: false, status: 400, error: "Yangi kod kamida 12 ta belgidan iborat bo‘lishi kerak." };
+    }
+    const salt = crypto.randomBytes(16);
+    const hash = crypto.scryptSync(newCode, salt, 64);
+    persistedPin = { salt: salt.toString("hex"), hash: hash.toString("hex") };
+    await persist();
+    return { ok: true };
+  }
   let loginQueue = Promise.resolve();
   function login(input) {
     const operation = loginQueue.then(() => loginInternal(input));
@@ -131,7 +155,7 @@ function createAdminAuth(options = {}) {
       return false;
     }
   }
-  return { configured, load, login, verifySession, revoke };
+  return { configured, load, login, changeCode, verifySession, revoke };
 }
 
 module.exports = { createAdminAuth };
