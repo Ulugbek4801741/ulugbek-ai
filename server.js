@@ -5,6 +5,9 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 const agentRuntime = require("./agent-runtime");
 const developerAgent = require("./developer-agent");
+const learningWorkerForAdmin = require("./lab-learning-worker");
+const { createAdminAutopilot } = require("./admin-autopilot");
+const adminAutopilot = createAdminAutopilot({ developerAgent, learningWorker: learningWorkerForAdmin, agentRuntime });
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -180,6 +183,26 @@ app.get("/api/admin/overview", requireAdmin, (_req, res) => {
     adminEmail: (() => { const token = readCookie(_req, "ulugbek_admin"); try { return JSON.parse(Buffer.from(token.split(".")[0], "base64url").toString("utf8")).email || null; } catch (_) { return null; } })(),
     deployment: "manual-host-configuration-required"
   });
+});
+
+app.get("/api/admin/autopilot/status", requireAdmin, (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, autopilot: adminAutopilot.status() });
+});
+app.post("/api/admin/autopilot/check", requireAdmin, async (_req, res) => {
+  const status = await adminAutopilot.checkOnce();
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, autopilot: status });
+});
+app.post("/api/admin/autopilot/recover", requireAdmin, async (_req, res) => {
+  const status = await adminAutopilot.recover();
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, autopilot: status, note: "Faqat cheklangan, read-only workerlar qayta ishga tushiriladi." });
+});
+app.post("/api/admin/autopilot/stop", requireAdmin, async (_req, res) => {
+  const status = await adminAutopilot.stop();
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, autopilot: status });
 });
 
 app.get("/api/admin/safety/status", requireAdmin, (_req, res) => {
@@ -438,6 +461,7 @@ agentRuntime.startWorker().then(() => {
   const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`ULUGBEK AI serveri ${PORT}-portda ishga tushdi.`);
     developerAgent.start().catch(error => console.error("Developer Agent ishga tushmadi:", error.message));
+    adminAutopilot.start().catch(error => console.error("Admin Autopilot ishga tushmadi:", error.message));
   });
   server.on("error", error => console.error("HTTP server xatosi:", error.message));
 }).catch(error => {
