@@ -5,6 +5,8 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 const agentRuntime = require("./agent-runtime");
 const autonomousEngine = require("./modules/autonomous-engine");
+const localModel = require("./modules/local-model");
+const agentRegistry = require("./agents/registry");
 const developerAgent = require("./developer-agent");
 const learningWorkerForAdmin = require("./lab-learning-worker");
 const { createAdminAutopilot } = require("./admin-autopilot");
@@ -306,6 +308,20 @@ app.post("/api/admin/tasks/:id/review", requireAdmin, (req, res) => {
   }
 });
 
+app.get("/api/agents/status", async (_req, res) => {
+  const model = await localModel.status();
+  res.set("Cache-Control", "no-store");
+  res.json({
+    ok: true,
+    mainChatAgent: "chat-coordinator",
+    voiceAssistant: "browser-speech-recognition-and-speech-synthesis",
+    agents: agentRegistry.listAgents(),
+    localModel: model,
+    publicResearch: { provider: "Wikipedia public API", apiKeyRequired: false, readOnly: true },
+    safety: { externalActionsEnabled: false, productionWritesEnabled: false, codeExecutionEnabled: false }
+  });
+});
+
 app.get("/api/health", (_req, res) => {
   res.set("Cache-Control", "no-store");
   res.json({
@@ -449,27 +465,20 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       safety: { blocked: true, category: shieldDecision.reason, quarantined: shieldDecision.quarantined === true }
     });
   }
-  // Native-only chat mode: never call hosted/open-weight AI providers.
+  // Main chat coordinates the local Ollama model, bounded public research,
+  // specialist agents, and per-session memory. If Ollama is absent it degrades
+  // honestly to the existing native knowledge engine; no hosted API is called.
   try {
-    const nativeBrain = require("./lab-learning-worker");
-    const learned = await nativeBrain.searchKnowledge(message, 5);
-    const result = nativeBrain.buildLocalReply(message, learned);
-    return res.json({
-      reply: result.reply,
-      mode: "native-symbolic-no-external-ai",
-      agents: ["NativeResearch", "NativeReasoner"],
-      reasoning: result.reasoning,
-      knowledgeUsed: learned.length,
-      learning: nativeBrain.status(),
-      receivedCharacters: message.length
-    });
+    const chatOrchestrator = require("./agents/autonomous-orchestrator");
+    const result = await chatOrchestrator.run({ message, sessionId });
+    return res.json({ ...result, receivedCharacters: message.length });
   } catch (error) {
+    console.error("Chat orchestrator error:", error.message);
     return res.status(503).json({
-      error: "Mahalliy mantiqiy mexanizm ishlamadi; tashqi AI xizmatiga avtomatik o‘tilmadi.",
-      mode: "native-only-error"
+      error: "Asosiy chat agenti vaqtincha ishlamadi. Serverdagi mahalliy model va xotira holatini tekshiring.",
+      mode: "chat-agent-error"
     });
   }
-
 });
 
 app.use("/api/lab", require("./lab"));
