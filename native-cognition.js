@@ -42,8 +42,8 @@ function reason(query, entries) {
 }
 function normalizeInput(value) {
   return String(value || "").toLocaleLowerCase("uz")
-    .replace(/[’‘ʻʼ`]/g, "'").replace(/[^\\p{L}\\p{N}\\s']/gu, " ")
-    .replace(/\\s+/g, " ").trim();
+    .replace(/[’‘ʻʼ`]/g, "'").replace(/[^\p{L}\p{N}\s']/gu, " ")
+    .replace(/\s+/g, " ").trim();
 }
 function quickReply(query) {
   const q = normalizeInput(query);
