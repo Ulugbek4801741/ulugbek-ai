@@ -56,3 +56,27 @@ test("virtual lab persists its queue and history across reload", async () => {
     assert.equal(second.status().completed, 1);
   } finally { await fs.rm(dir, { recursive: true, force: true }); }
 });
+
+
+test("worker pool scales above the eight coordinator roles but respects configured limits", async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "ulugbek-lab-"));
+  try {
+    const lab = createVirtualLab({ storePath: path.join(dir, "state.json"), maxWorkers: 3 });
+    await lab.load();
+    for (let i = 0; i < 12; i++) await lab.enqueue({ type: "benchmark", title: "Benchmark batch " + i });
+    const result = await lab.runCycle({ maxTasks: 12, concurrency: 3 });
+    assert.equal(result.processed, 12);
+    assert.equal(result.concurrency, 3);
+    assert.equal(new Set(result.reports.map(report => report.workerId)).size, 3);
+    assert.equal(result.status.workerPool.configuredConcurrency, 3);
+  } finally { await fs.rm(dir, { recursive: true, force: true }); }
+});
+
+test("worker pool never exceeds its hard safety cap", async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "ulugbek-lab-"));
+  try {
+    const lab = createVirtualLab({ storePath: path.join(dir, "state.json"), maxWorkers: 1000000000 });
+    await lab.load();
+    assert.equal(lab.status().workerPool.configuredConcurrency, 64);
+  } finally { await fs.rm(dir, { recursive: true, force: true }); }
+});
