@@ -33,6 +33,8 @@ services:
         sync: false
       - key: ADMIN_GOOGLE_EMAIL
         sync: false
+      - key: GITHUB_TOKEN
+        sync: false
       - key: ADMIN_SESSION_SECRET
         generateValue: true
       - key: OPENAI_API_KEY
