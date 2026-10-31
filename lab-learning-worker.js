@@ -232,24 +232,24 @@ async function researchQuestion(query) {
   const question = clean(query, 500);
   if (!question || question.length < 3) return [];
   const languages = ["uz", "en", "ru"];
-  const collected = [];
   const current = await readKnowledge();
   const known = new Set(current.map(item => item.source).filter(Boolean));
 
-  for (const language of languages) {
-    if (stopRequested) break;
+  // Three language searches run in parallel; each has its own 15-second timeout.
+  const batches = await Promise.all(languages.map(async language => {
+    if (stopRequested) return [];
     const base = "https://" + language + ".wikipedia.org";
-    const searchUrl = new URL(base + "/w/api.php");
-    searchUrl.search = new URLSearchParams({
-      action: "query", list: "search", srsearch: question,
-      srlimit: "2", format: "json"
-    }).toString();
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     try {
+      const searchUrl = new URL(base + "/w/api.php");
+      searchUrl.search = new URLSearchParams({
+        action: "query", list: "search", srsearch: question,
+        srlimit: "2", format: "json"
+      }).toString();
       const payload = await fetchPublicJson(searchUrl.href, controller.signal);
       const hits = Array.isArray(payload?.query?.search) ? payload.query.search.slice(0, 2) : [];
-      const summaries = await Promise.all(hits.map(async hit => {
+      return (await Promise.all(hits.map(async hit => {
         const title = clean(hit.title, 180);
         if (!title) return null;
         const url = base + "/api/rest_v1/page/summary/" + encodeURIComponent(title.replace(/ /g, "_"));
@@ -263,21 +263,22 @@ async function researchQuestion(query) {
           status: "pending-review", quality: "live-public-summary-unverified",
           createdAt: new Date().toISOString()
         };
-      }));
-      for (const item of summaries.filter(Boolean)) {
-        collected.push(item);
-        if (!known.has(item.source)) {
-          known.add(item.source);
-          current.push(item);
-        }
-      }
+      }))).filter(Boolean);
     } catch (error) {
       state.lastError = clean(error.name === "AbortError" ? "Internet qidiruvi vaqti tugadi." : error.message, 240);
+      return [];
     } finally {
       clearTimeout(timeout);
     }
-  }
+  }));
 
+  const collected = batches.flat();
+  for (const item of collected) {
+    if (!known.has(item.source)) {
+      known.add(item.source);
+      current.push(item);
+    }
+  }
   if (collected.length) {
     await writeKnowledge(current);
     state.saved += collected.length;
