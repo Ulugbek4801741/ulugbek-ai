@@ -22,3 +22,23 @@ test("rejects private-network and credential-bearing result URLs", () => {
 test("ignores malformed or incomplete search results", () => {
   assert.deepEqual(research.parseResults('<a class="result__a" href="javascript:alert(1)">bad</a>'), []);
 });
+
+
+test("extracts readable text from a public HTML page", () => {
+  const text = research.stripHtml("<html><head><title>Title</title><script>secret()</script></head><body><nav>Menu</nav><article><h1>Useful heading</h1><p>This is a sufficiently long public article paragraph with useful information for readers.</p></article></body></html>");
+  assert.match(text, /Useful heading/);
+  assert.match(text, /public article paragraph/);
+  assert.doesNotMatch(text, /secret|Menu/);
+});
+
+test("identifies private and local IP addresses", () => {
+  assert.equal(research.isPrivateAddress("127.0.0.1"), true);
+  assert.equal(research.isPrivateAddress("10.1.2.3"), true);
+  assert.equal(research.isPrivateAddress("192.168.1.5"), true);
+  assert.equal(research.isPrivateAddress("8.8.8.8"), false);
+});
+
+test("rejects private URLs before attempting to fetch a page", async () => {
+  assert.equal(await research.fetchPage("http://127.0.0.1/"), null);
+  assert.equal(await research.fetchPage("http://192.168.0.1/"), null);
+});
