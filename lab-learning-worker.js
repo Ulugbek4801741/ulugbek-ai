@@ -5,6 +5,7 @@
 const fs = require("node:fs/promises");
 const path = require("node:path");
 const crypto = require("node:crypto");
+const { verifyKnowledgeCandidate } = require("./knowledge-quality-gate");
 
 const DATA_DIR = path.resolve(process.env.ULUGBEK_DATA_DIR || path.join(__dirname, "data"));
 const FILE = path.join(DATA_DIR, "knowledge.json");
@@ -44,7 +45,7 @@ const ALLOWED_WIKIPEDIA_HOSTS = new Set([
 let state = {
   enabled: true, running: false, startedAt: null, lastCycleAt: null,
   lastSuccessAt: null, cycles: 0, saved: 0, lastError: null,
-  lastTopic: null, lastLanguage: null
+  lastTopic: null, lastLanguage: null, qualityAccepted: 0, qualityRejected: 0
 };
 let timer = null;
 let cursor = 0;
@@ -170,7 +171,7 @@ async function learnTopic(topic, language = "uz") {
           !source.startsWith(base + "/wiki/") || known.has(source)) continue;
 
       known.add(source);
-      additions.push({
+      const candidate = {
         id: crypto.randomUUID(),
         title: clean(item.title || title, 180),
         content,
@@ -181,7 +182,18 @@ async function learnTopic(topic, language = "uz") {
         quality: "public-encyclopedia-summary-unverified",
         licenseNote: "Manba litsenziyasi va attribution talablari tekshirilishi kerak.",
         createdAt: new Date().toISOString()
-      });
+      };
+      const quality = verifyKnowledgeCandidate(candidate, current);
+      if (!quality.ok) {
+        state.qualityRejected = (state.qualityRejected || 0) + 1;
+        continue;
+      }
+      candidate.quality = quality.quality;
+      candidate.qualityChecks = quality.checks;
+      candidate.qualityScore = quality.score;
+      candidate.requiresHumanReview = true;
+      state.qualityAccepted = (state.qualityAccepted || 0) + 1;
+      additions.push(candidate);
     }
 
     if (additions.length) {
@@ -250,6 +262,7 @@ function status() {
     ...state,
     intervalMinutes: Math.round(INTERVAL_MS / 60_000),
     parallelLanguages: 3,
+    qualityGate: { enabled: true, accepted: state.qualityAccepted || 0, rejected: state.qualityRejected || 0, autoApproval: false },
     maxCandidatesPerCycle: 6,
     languagePriority: [
       { language: "uz", name: "O‘zbek", sharePercent: 60 },
@@ -257,13 +270,13 @@ function status() {
       { language: "ru", name: "Rus", sharePercent: 15 }
     ],
     sourceAllowlist: [...ALLOWED_WIKIPEDIA_HOSTS],
-    mode: "continuous-multilingual-public-read-only-knowledge-retrieval",
+    mode: "continuous-multilingual-public-research-with-prestorage-quality-gate",
     writesToExternalSites: false,
     executesDownloadedCode: false,
     chatUsesOnlyApprovedKnowledge: true,
     modelWeightsRetrained: false,
     uptimeGuarantee: "host-process-and-persistent-storage-dependent",
-    note: "Oldin ko‘rilgan sahifalar doimiy ro‘yxatda saqlanadi va qayta yuklanmaydi. Har daqiqada o‘zbek, ingliz va rus Wikipedia manbalarida parallel qidiruv; har tildan 2 tagacha nomzod (jami ko‘pi bilan 6). O‘zbek mavzulari 60%, ingliz 25%, rus 15% navbatda. Manbalar pending-review holatida saqlanadi; chat faqat tasdiqlangan yozuvlardan foydalanadi. Bu model vaznlarini o‘qitmaydi."
+    note: "Oldin ko‘rilgan sahifalar doimiy ro‘yxatda saqlanadi va qayta yuklanmaydi. Har daqiqada o‘zbek, ingliz va rus Wikipedia manbalarida parallel qidiruv; har tildan 2 tagacha nomzod (jami ko‘pi bilan 6). O‘zbek mavzulari 60%, ingliz 25%, rus 15% navbatda. Har bir nomzod saqlanishidan oldin HTTPS, ruxsat etilgan domen, til, matn uzunligi va takrorlanish tekshiruvidan o‘tadi. Tekshiruv faktlarning rostligini isbotlamaydi; barcha yozuvlar pending-review holatida qoladi va chat faqat administrator tasdiqlagan yozuvlardan foydalanadi. Bu model vaznlarini o‘qitmaydi."
   };
 }
 async function searchKnowledge(query, limit = 5) {
@@ -312,12 +325,23 @@ async function researchQuestion(query) {
         const content = clean(item.extract, 4000);
         const source = item.content_urls?.desktop?.page;
         if (!content || typeof source !== "string" || !source.startsWith(base + "/wiki/")) return null;
-        return {
+        const candidate = {
           id: crypto.randomUUID(), title: clean(item.title || title, 180),
           content, source, language, agent: "OnDemandResearchAgent",
           status: "pending-review", quality: "live-public-summary-unverified",
           createdAt: new Date().toISOString()
         };
+        const quality = verifyKnowledgeCandidate(candidate, current);
+        if (!quality.ok) {
+          state.qualityRejected = (state.qualityRejected || 0) + 1;
+          return null;
+        }
+        candidate.quality = quality.quality;
+        candidate.qualityChecks = quality.checks;
+        candidate.qualityScore = quality.score;
+        candidate.requiresHumanReview = true;
+        state.qualityAccepted = (state.qualityAccepted || 0) + 1;
+        return candidate;
       }))).filter(Boolean);
     } catch (error) {
       state.lastError = clean(error.name === "AbortError" ? "Internet qidiruvi vaqti tugadi." : error.message, 240);
