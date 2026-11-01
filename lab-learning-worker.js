@@ -164,11 +164,20 @@ async function cycle() {
   inFlight = true;
   state.running = true;
   state.lastCycleAt = new Date().toISOString();
+
+  // Har bir siklda 3 til parallel qidiriladi. Har til 2 tagacha qisqa
+  // ensiklopedik xulosa oladi: ko‘pi bilan 6 nomzod/sikl.
+  // Bu manba cheklovlariga rioya qiladi; minglab sahifani yuklab olmaydi.
   const language = LANGUAGE_PLAN[cursor++ % LANGUAGE_PLAN.length];
   const topics = TOPICS[language];
   const topic = topics[topicCursors[language]++ % topics.length];
   try {
-    await learnTopic(topic, language);
+    const findings = await researchQuestion(topic);
+    state.cycles += 1;
+    state.lastTopic = topic;
+    state.lastLanguage = language;
+    state.lastSuccessAt = new Date().toISOString();
+    if (findings.length) state.lastError = null;
   } catch (error) {
     state.lastError = clean(error.name === "AbortError" ? "Ochiq manba so‘rovi vaqti tugadi." : error.message, 240);
   } finally {
@@ -201,6 +210,8 @@ function status() {
   return {
     ...state,
     intervalMinutes: Math.round(INTERVAL_MS / 60_000),
+    parallelLanguages: 3,
+    maxCandidatesPerCycle: 6,
     languagePriority: [
       { language: "uz", name: "O‘zbek", sharePercent: 60 },
       { language: "en", name: "Ingliz", sharePercent: 25 },
@@ -213,7 +224,7 @@ function status() {
     chatUsesOnlyApprovedKnowledge: true,
     modelWeightsRetrained: false,
     uptimeGuarantee: "host-process-and-persistent-storage-dependent",
-    note: "O‘zbekcha 60%, inglizcha 25%, ruscha 15% navbat bilan o‘rganiladi. Manbalar tekshirilmagan nomzod sifatida saqlanadi; chat faqat tasdiqlangan yozuvlardan foydalanadi. Bu model vaznlarini o‘qitmaydi."
+    note: "Har daqiqada o‘zbek, ingliz va rus Wikipedia manbalarida parallel qidiruv; har tildan 2 tagacha nomzod (jami ko‘pi bilan 6). O‘zbek mavzulari 60%, ingliz 25%, rus 15% navbatda. Manbalar pending-review holatida saqlanadi; chat faqat tasdiqlangan yozuvlardan foydalanadi. Bu model vaznlarini o‘qitmaydi."
   };
 }
 async function searchKnowledge(query, limit = 5) {
@@ -273,19 +284,19 @@ async function researchQuestion(query) {
   }));
 
   const collected = batches.flat();
-  for (const item of collected) {
-    if (!known.has(item.source)) {
-      known.add(item.source);
-      current.push(item);
-    }
-  }
-  if (collected.length) {
+  const additions = collected.filter(item => {
+    if (!item.source || known.has(item.source)) return false;
+    known.add(item.source);
+    current.push(item);
+    return true;
+  });
+  if (additions.length) {
     await writeKnowledge(current);
-    state.saved += collected.length;
+    state.saved += additions.length;
     state.lastOnDemandSearchAt = new Date().toISOString();
-    state.lastOnDemandSearchLanguages = [...new Set(collected.map(item => item.language))];
+    state.lastOnDemandSearchLanguages = [...new Set(additions.map(item => item.language))];
   }
-  return collected;
+  return additions;
 }
 function buildLocalReply(query, hits) {
   return require("./native-cognition").respond(query, hits);
