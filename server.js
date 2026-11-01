@@ -439,6 +439,36 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
         result = nativeBrain.buildLocalReply(message, learned);
         webResearchUsed = result.reasoning.answerable;
       }
+      // If the local knowledge and encyclopedia search are insufficient, use
+      // a public search provider. Only the current question is sent; no chat
+      // history, profile, private memory or uploaded content is transmitted.
+      if (!result.reasoning.answerable) {
+        const webSearch = require("./modules/chat-web-research");
+        const searchResults = await webSearch.search(message);
+        if (searchResults.length) {
+          const evidence = searchResults.map(item => ({
+            title: item.title,
+            content: item.snippet,
+            source: item.url,
+            status: "unverified-public-search-snippet"
+          }));
+          const researched = nativeBrain.buildLocalReply(message, evidence);
+          if (researched.reasoning.answerable) {
+            result = {
+              ...researched,
+              reply: researched.reply + "\\n\\nInternet manbalari (ochib tekshiring):\\n" +
+                searchResults.map((item, index) => (index + 1) + ". " + item.title + "\\n" + item.url).join("\\n")
+            };
+          } else {
+            result = {
+              reply: "Savolingiz bo‘yicha internetdan ochiq natijalar topildi, ammo ularning parchalaridan ishonchli xulosa chiqarish uchun dalil yetarli emas. Quyidagi manbalarni ochib tekshiring:\\n\\n" +
+                searchResults.map((item, index) => (index + 1) + ". " + item.title + "\\n" + item.snippet + "\\n" + item.url).join("\\n\\n"),
+              reasoning: { method: "public-search-results-unverified", answerable: false, facts: [] }
+            };
+          }
+          webResearchUsed = true;
+        }
+      }
     }
     return res.json({
       reply: result.reply,
