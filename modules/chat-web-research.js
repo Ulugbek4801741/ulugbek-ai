@@ -17,7 +17,7 @@ function clean(value, max = 800) {
     .replace(/&amp;/g, "&").replace(/&quot;/g, '"')
     .replace(/&#39;|&apos;/g, "'").replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">").replace(/&nbsp;/g, " ")
-    .replace(/\\s+/g, " ").trim().slice(0, max);
+    .replace(/\s+/g, " ").trim().slice(0, max);
 }
 function isPrivateAddress(address) {
   let value = String(address || "").toLowerCase().split("%")[0];
@@ -73,7 +73,7 @@ function stripHtml(html) {
     .replace(/<(script|style|noscript|svg|iframe|form|nav|footer|header)[^>]*>[\s\S]*?<\/\1>/gi, " ")
     .replace(/<(br|\/p|\/div|\/li|\/h[1-6]|\/article|\/section)[^>]*>/gi, "\n")
     .replace(/<[^>]+>/g, " ")
-    .replace(/&#(\\d+);/g, (_m, n) => { const p = Number(n); return p > 0 && p <= 0x10ffff ? String.fromCodePoint(p) : " "; })
+    .replace(/&#(\d+);/g, (_m, n) => { const p = Number(n); return p > 0 && p <= 0x10ffff ? String.fromCodePoint(p) : " "; })
     .replace(/&#x([0-9a-f]+);/gi, (_m, n) => { const p = parseInt(n, 16); return p > 0 && p <= 0x10ffff ? String.fromCodePoint(p) : " "; });
   return clean(text, MAX_PAGE_CHARS);
 }
@@ -128,7 +128,7 @@ async function fetchPage(value) {
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     const url = new URL(current);
     try {
-      const addresses = await resolvePublicHost(url.hostname.replace(/^\\[|\\]$/g, ""));
+      const addresses = await resolvePublicHost(url.hostname.replace("[", "").replace("]", ""));
       const response = await requestPinned(url, addresses);
       if ([301, 302, 303, 307, 308].includes(response.status)) {
         const location = response.headers.location;
