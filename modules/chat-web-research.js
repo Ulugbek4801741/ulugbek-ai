@@ -42,7 +42,7 @@ function safePublicUrl(value) {
     const url = new URL(value);
     if (url.protocol !== "https:" && url.protocol !== "http:") return null;
     if (url.username || url.password) return null;
-    const host = url.hostname.toLowerCase().replace(/^\\[|\\]$/g, "");
+    const host = url.hostname.toLowerCase().replace("[", "").replace("]", "");
     if (!host || host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local")) return null;
     if (net.isIP(host) && isPrivateAddress(host)) return null;
     return url.href;
