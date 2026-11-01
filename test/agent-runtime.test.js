@@ -40,7 +40,12 @@ test("native reasoning routes a specialist role and rejects unknown roles", () =
 
 test("agent runtime queues and completes a local reasoning task without APIs", async () => {
   const temp = await fs.mkdtemp(path.join(os.tmpdir(), "ulugbek-agent-test-"));
+  process.env.ULUGBEK_DATA_DIR = temp;
   process.env.TASK_STORE_PATH = path.join(temp, "tasks.json");
+  await fs.writeFile(path.join(temp, "knowledge.json"), JSON.stringify([
+    { id: "approved-1", title: "Backend server xavfsizligi", content: "Backend server xavfsizligi uchun kirish ruxsatlari, HTTPS, so‘rovlarni cheklash va maxfiy kalitlarni server muhitida saqlash muhim hisoblanadi.", source: "https://uz.wikipedia.org/wiki/Backend", language: "uz", status: "approved" },
+    { id: "pending-1", title: "Backend xavfsizlik bo‘yicha tasdiqlanmagan", content: "Bu hali tekshirilmagan ma’lumot agentga uzatilmasligi kerak.", source: "https://example.com/pending", language: "uz", status: "pending-review" }
+  ], null, 2));
   const runtime = require("../agent-runtime");
   try {
     const created = await runtime.createTask({ prompt: "Backend server uchun xavfsizlik rejasini tuz", role: "backend" });
@@ -56,6 +61,11 @@ test("agent runtime queues and completes a local reasoning task without APIs", a
     assert.equal(task.status, "completed");
     assert.equal(task.approvalStatus, "pending_review");
     assert.ok(task.output.includes("Backend & API Engineer"));
+    assert.equal(task.knowledgeUsed.length, 1);
+    assert.equal(task.knowledgeUsed[0].title, "Backend server xavfsizligi");
+    assert.ok(task.output.includes("Chat Agentdan umumiy bilimlar bazasi"));
+    assert.ok(task.output.includes("https://uz.wikipedia.org/wiki/Backend"));
+    assert.ok(!task.output.includes("Tasdiqlanmagan"));
     assert.equal(task.tests.status, "not_run");
     assert.ok(task.logs.some(log => log.message.includes("API ishlatilmadi")));
   } finally {

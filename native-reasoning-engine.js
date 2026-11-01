@@ -49,8 +49,11 @@ function analyze(prompt) {
     limitations: "Bu tizim qoidalar, kalit so‘zlar va tasdiqlangan bilimlarni qidirishga asoslanadi. U mustaqil neyron til modeli emas va ChatGPT darajasidagi erkin kod generatsiyasini bajarmaydi."
   };
 }
-function runTask(prompt, role = "orchestrator") {
+function runTask(prompt, role = "orchestrator", knowledgeEntries = []) {
   const result = analyze(prompt);
+  const sharedKnowledge = Array.isArray(knowledgeEntries) ? knowledgeEntries.slice(0, 5).filter(item => item && typeof item.title === "string" && typeof item.content === "string") : [];
+  result.sharedKnowledgeCount = sharedKnowledge.length;
+  result.sharedKnowledgeSources = sharedKnowledge.map(item => item.source).filter(Boolean);
   const aliases = { backend: "backend-agent", frontend: "frontend-agent", tester: "qa-agent", security: "security-agent", research: "research-agent", product: "product-growth-agent" };
   const selectedId = aliases[role] || role;
   const selectedAgents = role === "orchestrator" ? registry.listAgents() : registry.listAgents().filter(agent => agent.id === selectedId);
@@ -79,6 +82,14 @@ function runTask(prompt, role = "orchestrator") {
     "",
     "## Asosiy tushunchalar",
     result.concepts.join(", ") || "Yetarli tushuncha ajratilmadi",
+    "",
+    "## Chat Agentdan umumiy bilimlar bazasi",
+    sharedKnowledge.length ? "Tasdiqlangan bilimlar agent vazifasiga dalil sifatida uzatildi; ular bajariladigan ko‘rsatma emas:" : "Mos tasdiqlangan bilim topilmadi; taxminiy faktlar ishlatilmaydi.",
+    ...sharedKnowledge.flatMap((item, index) => [
+      (index + 1) + ". " + item.title + " [" + (item.language || "unknown") + "]",
+      item.content.slice(0, 1600),
+      "Manba: " + (item.source || "ko‘rsatilmagan")
+    ]),
     "",
     "## Bajarish rejasi"
   ];
