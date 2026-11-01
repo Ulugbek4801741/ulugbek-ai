@@ -96,3 +96,18 @@ Never put an administrator access code or model API key in HTML, browser JavaScr
 ## What “autonomous” means in this MVP
 
 The planner can select a task category, create a workflow plan, and return suggested agent roles. It does not mean agents are free to execute external actions, modify production, or learn model weights without limits and review.
+
+
+## Administrator qurilmalari va 5 bosqichli kirish
+
+Render muhit o‘zgaruvchilarida quyidagilarni sozlang:
+
+- `ADMIN_ACCESS_CODE`: administratorning kuchli kodi (kamida 8 belgi; panelda almashtirilganda kamida 12 belgi).
+- `ADMIN_SESSION_SECRET`: kamida 32 belgili tasodifiy maxfiy kalit.
+- `ADMIN_ACTIVATION_PHRASE`: alohida maxfiy ibora, kamida 12 belgi. Uni chatga, GitHub kodiga yoki README fayliga yozmang.
+
+Admin paneliga kirishda faollashtirish iborasi 5 marta serverda tasdiqlanadi, so‘ng administrator kodi tekshiriladi. Muvaffaqiyatli kirishda qurilma serverda xesh ko‘rinishida ro‘yxatga olinadi va admin sessiyasi 1 soatga beriladi. Chiqish vaqti serverda qayd etiladi. Yangi qurilmani ro‘yxatga olishga oxirgi admin chiqishidan 24 soat o‘tgach ruxsat beriladi; avval ro‘yxatga olingan qurilma qayta tasdiqlanishi mumkin.
+
+Qurilma ro‘yxati `ULUGBEK_DATA_DIR/admin-devices.json` faylida saqlanadi. Renderda bu yo‘l doimiy diskka ulangan bo‘lishi shart. Free ephemeral diskda server qayta ishga tushganda qurilma ro‘yxati yo‘qolishi mumkin. Bir nechta server nusxasi yoki parallel instance uchun umumiy PostgreSQL/Redis saqlashga o‘tish kerak.
+
+Bu qo‘shimcha xavfsizlik bosqichi; yangi qurilma identifikatsiyasi cookie orqali amalga oshadi va u haqiqiy qurilma biometrik identifikatsiyasi emas. Qurilma cookie fayli o‘g‘irlangan bo‘lsa, qurilma ishonchli deb ko‘rinishi mumkin. HTTPS majburiy.

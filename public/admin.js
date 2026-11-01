@@ -264,15 +264,24 @@ $("login-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const button = $("login-submit");
   const input = $("admin-code");
+  const phrase = $("activation-phrase");
   button.disabled = true;
-  $("login-error").textContent = "Kod tekshirilmoqda…";
+  $("login-error").textContent = "5 bosqichli tasdiqlash bajarilmoqda…";
   try {
+    for (let i = 1; i <= 5; i += 1) {
+      const step = await request("/api/admin/device/step", {
+        method: "POST", body: JSON.stringify({ phrase: phrase.value })
+      });
+      $("login-error").textContent = "Maxfiy ibora tasdiqlandi: " + step.count + " / 5";
+    }
     await request("/api/admin/login", { method: "POST", body: JSON.stringify({ code: input.value }) });
     input.value = "";
+    phrase.value = "";
     $("login-error").textContent = "";
     await checkSession();
   } catch (error) {
     input.value = "";
+    phrase.value = "";
     $("login-error").textContent = error.message;
   } finally {
     button.disabled = false;
