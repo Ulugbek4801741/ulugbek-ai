@@ -52,6 +52,41 @@ const topicCursors = { uz: 0, en: 0, ru: 0 };
 let inFlight = false;
 let stopRequested = false;
 let writeChain = Promise.resolve();
+const visitedPages = new Set();
+let visitedLoaded = false;
+let stateWriteChain = Promise.resolve();
+
+async function loadVisitedPages() {
+  if (visitedLoaded) return;
+  try {
+    const saved = JSON.parse(await fs.readFile(STATE_FILE, "utf8"));
+    if (Array.isArray(saved.visitedPages)) {
+      for (const url of saved.visitedPages) {
+        if (typeof url === "string" && url.startsWith("https://")) visitedPages.add(url);
+      }
+    }
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+  visitedLoaded = true;
+}
+async function markPageVisited(url) {
+  await loadVisitedPages();
+  if (visitedPages.has(url)) return false;
+  // Mark before fetching: failed pages are not hammered repeatedly either.
+  visitedPages.add(url);
+  stateWriteChain = stateWriteChain.then(async () => {
+    await fs.mkdir(DATA_DIR, { recursive: true });
+    const temp = STATE_FILE + ".tmp";
+    await fs.writeFile(temp, JSON.stringify({
+      visitedPages: [...visitedPages].slice(-20_000),
+      updatedAt: new Date().toISOString()
+    }), { mode: 0o600 });
+    await fs.rename(temp, STATE_FILE);
+  });
+  await stateWriteChain;
+  return true;
+}
 
 function clean(value, max = 4000) {
   return String(value || "").replace(/<[^>]*>/g, " ")
@@ -124,6 +159,10 @@ async function learnTopic(topic, language = "uz") {
       if (!title) continue;
       const summaryUrl = base + "/api/rest_v1/page/summary/" +
         encodeURIComponent(title.replace(/ /g, "_"));
+      const pageKey = base + "/wiki/" + encodeURIComponent(title.replace(/ /g, "_"));
+      await loadVisitedPages();
+      if (visitedPages.has(pageKey)) continue;
+      await markPageVisited(pageKey);
       const item = await fetchPublicJson(summaryUrl, controller.signal);
       const content = clean(item.extract, 4000);
       const source = item.content_urls?.desktop?.page;
@@ -164,11 +203,20 @@ async function cycle() {
   inFlight = true;
   state.running = true;
   state.lastCycleAt = new Date().toISOString();
+
+  // Har bir siklda 3 til parallel qidiriladi. Har til 2 tagacha qisqa
+  // ensiklopedik xulosa oladi: ko‘pi bilan 6 nomzod/sikl.
+  // Bu manba cheklovlariga rioya qiladi; minglab sahifani yuklab olmaydi.
   const language = LANGUAGE_PLAN[cursor++ % LANGUAGE_PLAN.length];
   const topics = TOPICS[language];
   const topic = topics[topicCursors[language]++ % topics.length];
   try {
-    await learnTopic(topic, language);
+    const findings = await researchQuestion(topic);
+    state.cycles += 1;
+    state.lastTopic = topic;
+    state.lastLanguage = language;
+    state.lastSuccessAt = new Date().toISOString();
+    if (findings.length) state.lastError = null;
   } catch (error) {
     state.lastError = clean(error.name === "AbortError" ? "Ochiq manba so‘rovi vaqti tugadi." : error.message, 240);
   } finally {
@@ -201,6 +249,8 @@ function status() {
   return {
     ...state,
     intervalMinutes: Math.round(INTERVAL_MS / 60_000),
+    parallelLanguages: 3,
+    maxCandidatesPerCycle: 6,
     languagePriority: [
       { language: "uz", name: "O‘zbek", sharePercent: 60 },
       { language: "en", name: "Ingliz", sharePercent: 25 },
@@ -213,7 +263,7 @@ function status() {
     chatUsesOnlyApprovedKnowledge: true,
     modelWeightsRetrained: false,
     uptimeGuarantee: "host-process-and-persistent-storage-dependent",
-    note: "O‘zbekcha 60%, inglizcha 25%, ruscha 15% navbat bilan o‘rganiladi. Manbalar tekshirilmagan nomzod sifatida saqlanadi; chat faqat tasdiqlangan yozuvlardan foydalanadi. Bu model vaznlarini o‘qitmaydi."
+    note: "Oldin ko‘rilgan sahifalar doimiy ro‘yxatda saqlanadi va qayta yuklanmaydi. Har daqiqada o‘zbek, ingliz va rus Wikipedia manbalarida parallel qidiruv; har tildan 2 tagacha nomzod (jami ko‘pi bilan 6). O‘zbek mavzulari 60%, ingliz 25%, rus 15% navbatda. Manbalar pending-review holatida saqlanadi; chat faqat tasdiqlangan yozuvlardan foydalanadi. Bu model vaznlarini o‘qitmaydi."
   };
 }
 async function searchKnowledge(query, limit = 5) {
@@ -234,6 +284,7 @@ async function researchQuestion(query) {
   const languages = ["uz", "en", "ru"];
   const current = await readKnowledge();
   const known = new Set(current.map(item => item.source).filter(Boolean));
+  await loadVisitedPages();
 
   // Three language searches run in parallel; each has its own 15-second timeout.
   const batches = await Promise.all(languages.map(async language => {
@@ -253,6 +304,10 @@ async function researchQuestion(query) {
         const title = clean(hit.title, 180);
         if (!title) return null;
         const url = base + "/api/rest_v1/page/summary/" + encodeURIComponent(title.replace(/ /g, "_"));
+        const pageKey = base + "/wiki/" + encodeURIComponent(title.replace(/ /g, "_"));
+        await loadVisitedPages();
+        if (visitedPages.has(pageKey)) return null;
+        await markPageVisited(pageKey);
         const item = await fetchPublicJson(url, controller.signal);
         const content = clean(item.extract, 4000);
         const source = item.content_urls?.desktop?.page;
@@ -273,21 +328,21 @@ async function researchQuestion(query) {
   }));
 
   const collected = batches.flat();
-  for (const item of collected) {
-    if (!known.has(item.source)) {
-      known.add(item.source);
-      current.push(item);
-    }
-  }
-  if (collected.length) {
+  const additions = collected.filter(item => {
+    if (!item.source || known.has(item.source)) return false;
+    known.add(item.source);
+    current.push(item);
+    return true;
+  });
+  if (additions.length) {
     await writeKnowledge(current);
-    state.saved += collected.length;
+    state.saved += additions.length;
     state.lastOnDemandSearchAt = new Date().toISOString();
-    state.lastOnDemandSearchLanguages = [...new Set(collected.map(item => item.language))];
+    state.lastOnDemandSearchLanguages = [...new Set(additions.map(item => item.language))];
   }
-  return collected;
+  return additions;
 }
 function buildLocalReply(query, hits) {
   return require("./native-cognition").respond(query, hits);
 }
-module.exports = { start, stop, status, cycle, learnTopic, searchKnowledge, researchQuestion, buildLocalReply };
+module.exports = { start, stop, status, cycle, learnTopic, searchKnowledge, researchQuestion, buildLocalReply, loadVisitedPages };
