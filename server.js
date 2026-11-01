@@ -297,6 +297,8 @@ app.get("/api/health", (_req, res) => {
     mode: "native-rule-based-reasoning",
     storageMode: "local-json",
     workerConcurrency: 1,
+    learningWorker: learningWorker.status(),
+    agentSupervisor: adminAutopilot.status(),
     multiInstanceSafe: false,
     automaticFailoverReady: false
   });
