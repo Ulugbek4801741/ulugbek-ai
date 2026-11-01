@@ -17,6 +17,8 @@ services:
         value: production
       - key: ULUGBEK_DATA_DIR
         value: /var/data
+      - key: ULUGBEK_KNOWLEDGE_KEY
+        sync: false
       - key: TASK_STORE_PATH
         value: /var/data/agent-tasks.json
       - key: DEVELOPER_AGENT_STORE

@@ -96,3 +96,14 @@ Never put an administrator access code or model API key in HTML, browser JavaScr
 ## What “autonomous” means in this MVP
 
 The planner can select a task category, create a workflow plan, and return suggested agent roles. It does not mean agents are free to execute external actions, modify production, or learn model weights without limits and review.
+
+
+## Encrypted compressed knowledge archive
+
+- New knowledge is stored in `knowledge.archive.json.gz.enc`: JSON is compressed with GZIP level 9 and encrypted with AES-256-GCM.
+- Configure `ULUGBEK_KNOWLEDGE_KEY` as a server-only 32-byte key (64 hexadecimal characters or base64). Generate it with `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"` and paste it directly into the Render Environment secret field. Never send it in chat or commit it.
+- When the key is configured, the first knowledge read migrates `knowledge.json`: it writes the encrypted archive, decrypts and verifies it, and only then removes the plaintext legacy file. If verification fails, the old file is retained.
+- If the key is missing, existing legacy JSON remains readable, but new knowledge writes are blocked rather than silently stored in plaintext. If an encrypted archive exists and its key is missing, reads fail closed.
+- The archive is separate from private per-session agent chat memory; this feature does not claim to encrypt that separate store.
+- Persistent storage is required for data to survive host restarts. Render's Free web services do not provide the same persistent-disk guarantees as a paid service. Confirm the actual service plan and disk mount in the Render Dashboard before relying on long-term retention.
+- The key is not recoverable from the archive. Keep a secure offline backup; losing it makes the encrypted knowledge unreadable.
