@@ -52,6 +52,41 @@ const topicCursors = { uz: 0, en: 0, ru: 0 };
 let inFlight = false;
 let stopRequested = false;
 let writeChain = Promise.resolve();
+const visitedPages = new Set();
+let visitedLoaded = false;
+let stateWriteChain = Promise.resolve();
+
+async function loadVisitedPages() {
+  if (visitedLoaded) return;
+  try {
+    const saved = JSON.parse(await fs.readFile(STATE_FILE, "utf8"));
+    if (Array.isArray(saved.visitedPages)) {
+      for (const url of saved.visitedPages) {
+        if (typeof url === "string" && url.startsWith("https://")) visitedPages.add(url);
+      }
+    }
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+  visitedLoaded = true;
+}
+async function markPageVisited(url) {
+  await loadVisitedPages();
+  if (visitedPages.has(url)) return false;
+  // Mark before fetching: failed pages are not hammered repeatedly either.
+  visitedPages.add(url);
+  stateWriteChain = stateWriteChain.then(async () => {
+    await fs.mkdir(DATA_DIR, { recursive: true });
+    const temp = STATE_FILE + ".tmp";
+    await fs.writeFile(temp, JSON.stringify({
+      visitedPages: [...visitedPages].slice(-20_000),
+      updatedAt: new Date().toISOString()
+    }), { mode: 0o600 });
+    await fs.rename(temp, STATE_FILE);
+  });
+  await stateWriteChain;
+  return true;
+}
 
 function clean(value, max = 4000) {
   return String(value || "").replace(/<[^>]*>/g, " ")
@@ -224,7 +259,7 @@ function status() {
     chatUsesOnlyApprovedKnowledge: true,
     modelWeightsRetrained: false,
     uptimeGuarantee: "host-process-and-persistent-storage-dependent",
-    note: "Har daqiqada o‘zbek, ingliz va rus Wikipedia manbalarida parallel qidiruv; har tildan 2 tagacha nomzod (jami ko‘pi bilan 6). O‘zbek mavzulari 60%, ingliz 25%, rus 15% navbatda. Manbalar pending-review holatida saqlanadi; chat faqat tasdiqlangan yozuvlardan foydalanadi. Bu model vaznlarini o‘qitmaydi."
+    note: "Oldin ko‘rilgan sahifalar doimiy ro‘yxatda saqlanadi va qayta yuklanmaydi. Har daqiqada o‘zbek, ingliz va rus Wikipedia manbalarida parallel qidiruv; har tildan 2 tagacha nomzod (jami ko‘pi bilan 6). O‘zbek mavzulari 60%, ingliz 25%, rus 15% navbatda. Manbalar pending-review holatida saqlanadi; chat faqat tasdiqlangan yozuvlardan foydalanadi. Bu model vaznlarini o‘qitmaydi."
   };
 }
 async function searchKnowledge(query, limit = 5) {
@@ -245,6 +280,7 @@ async function researchQuestion(query) {
   const languages = ["uz", "en", "ru"];
   const current = await readKnowledge();
   const known = new Set(current.map(item => item.source).filter(Boolean));
+  await loadVisitedPages();
 
   // Three language searches run in parallel; each has its own 15-second timeout.
   const batches = await Promise.all(languages.map(async language => {
@@ -264,6 +300,10 @@ async function researchQuestion(query) {
         const title = clean(hit.title, 180);
         if (!title) return null;
         const url = base + "/api/rest_v1/page/summary/" + encodeURIComponent(title.replace(/ /g, "_"));
+        const pageKey = base + "/wiki/" + encodeURIComponent(title.replace(/ /g, "_"));
+        await loadVisitedPages();
+        if (visitedPages.has(pageKey)) return null;
+        await markPageVisited(pageKey);
         const item = await fetchPublicJson(url, controller.signal);
         const content = clean(item.extract, 4000);
         const source = item.content_urls?.desktop?.page;
@@ -301,4 +341,4 @@ async function researchQuestion(query) {
 function buildLocalReply(query, hits) {
   return require("./native-cognition").respond(query, hits);
 }
-module.exports = { start, stop, status, cycle, learnTopic, searchKnowledge, researchQuestion, buildLocalReply };
+module.exports = { start, stop, status, cycle, learnTopic, searchKnowledge, researchQuestion, buildLocalReply, loadVisitedPages };
