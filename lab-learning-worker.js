@@ -164,7 +164,10 @@ function robotsAllows(robotsText, targetUrl) {
       if (Number.isFinite(seconds) && seconds >= 0) current.crawlDelay = Math.min(seconds * 1000, 60 * 60 * 1000);
     }
   }
-  const matching = groups.filter(group => group.agents.includes("ulugbek-ai"));
+  const productToken = "ulugbek-ai-openknowledge";
+  const matching = groups.filter(group => group.agents.some(agent =>
+    agent !== "*" && productToken.startsWith(agent)
+  ));
   const selected = matching.length ? matching : groups.filter(group => group.agents.includes("*"));
   if (!selected.length) return { allowed: true, delayMs: 0 };
   const rules = selected.flatMap(group => group.rules)
