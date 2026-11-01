@@ -121,11 +121,104 @@ async function readJsonResponse(response) {
   if (Buffer.byteLength(raw, "utf8") > MAX_RESPONSE_BYTES) throw new Error("Manba javobi hajmi limitdan oshdi.");
   return JSON.parse(raw);
 }
-async function fetchPublicJson(url, signal) {
+// All crawler HTTP requests share one queue: never parallelize requests.
+// A one-second gap is a minimum, not permission to ignore stricter site rules.
+const MIN_REQUEST_GAP_MS = 1000;
+const ROBOTS_TIMEOUT_MS = 10000;
+const robotsCache = new Map();
+let requestQueue = Promise.resolve();
+let lastHttpRequestAt = 0;
+const hostBlockedUntil = new Map();
+
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, Math.max(0, ms)));
+}
+function retryAfterMs(value) {
+  if (!value) return 60 * 60 * 1000;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds) && seconds >= 0) return Math.min(seconds * 1000, 24 * 60 * 60 * 1000);
+  const date = Date.parse(value);
+  return Number.isFinite(date) ? Math.max(0, Math.min(date - Date.now(), 24 * 60 * 60 * 1000)) : 60 * 60 * 1000;
+}
+function robotsAllows(robotsText, targetUrl) {
+  const pathAndQuery = new URL(targetUrl).pathname + new URL(targetUrl).search;
+  const groups = [];
+  let current = null;
+  for (const rawLine of String(robotsText || "").split(/\\r?\\n/)) {
+    const line = rawLine.split("#", 1)[0].trim();
+    if (!line || !line.includes(":")) continue;
+    const split = line.indexOf(":");
+    const key = line.slice(0, split).trim().toLowerCase();
+    const value = line.slice(split + 1).trim();
+    if (key === "user-agent") {
+      if (!current || current.rulesStarted) {
+        current = { agents: [], rules: [], crawlDelay: 0, rulesStarted: false };
+        groups.push(current);
+      }
+      current.agents.push(value.toLowerCase());
+    } else if (current && (key === "allow" || key === "disallow")) {
+      current.rulesStarted = true;
+      if (value) current.rules.push({ allow: key === "allow", path: value });
+    } else if (current && key === "crawl-delay") {
+      const seconds = Number(value);
+      if (Number.isFinite(seconds) && seconds >= 0) current.crawlDelay = Math.min(seconds * 1000, 60 * 60 * 1000);
+    }
+  }
+  const matching = groups.filter(group => group.agents.includes("ulugbek-ai"));
+  const selected = matching.length ? matching : groups.filter(group => group.agents.includes("*"));
+  if (!selected.length) return { allowed: true, delayMs: 0 };
+  const rules = selected.flatMap(group => group.rules)
+    .filter(rule => pathAndQuery.startsWith(rule.path))
+    .sort((a, b) => b.path.length - a.path.length);
+  const delayMs = Math.max(...selected.map(group => group.crawlDelay), 0);
+  return { allowed: !rules.length || rules[0].allow, delayMs };
+}
+async function fetchRobots(host) {
+  if (robotsCache.has(host)) return robotsCache.get(host);
+  const promise = (async () => {
+    const robotsUrl = "https://" + host + "/robots.txt";
+    await wait(Math.max(0, lastHttpRequestAt + MIN_REQUEST_GAP_MS - Date.now()));
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), ROBOTS_TIMEOUT_MS);
+    try {
+      const response = await fetch(robotsUrl, {
+        headers: {
+          "User-Agent": "ULUGBEK-AI-OpenKnowledge/1.2 (public read-only research)",
+          "Accept": "text/plain"
+        },
+        signal: controller.signal,
+        redirect: "error"
+      });
+      lastHttpRequestAt = Date.now();
+      if (response.status === 403 || response.status === 429) {
+        hostBlockedUntil.set(host, Date.now() + retryAfterMs(response.headers.get("retry-after")));
+        return { denied: true, text: "" };
+      }
+      if (response.status === 404) return { denied: false, text: "" };
+      if (!response.ok) return { denied: true, text: "" };
+      const text = await response.text();
+      if (Buffer.byteLength(text, "utf8") > 100000) return { denied: true, text: "" };
+      return { denied: false, text };
+    } finally {
+      clearTimeout(timeout);
+    }
+  })();
+  robotsCache.set(host, promise);
+  return promise;
+}
+async function fetchPublicJsonNow(url, signal) {
   const parsed = new URL(url);
   if (parsed.protocol !== "https:" || !ALLOWED_WIKIPEDIA_HOSTS.has(parsed.hostname)) {
     throw new Error("Tadqiqot manbasi ruxsat etilgan domen ro‘yxatida emas.");
   }
+  const blockedUntil = hostBlockedUntil.get(parsed.hostname) || 0;
+  if (blockedUntil > Date.now()) throw new Error("Manba 403/429 cheklovi sababli vaqtincha to‘xtatildi.");
+  const robots = await fetchRobots(parsed.host);
+  if (robots.denied) throw new Error("Manba robots.txt yoki HTTP cheklovi sababli o‘qilmadi.");
+  const policy = robotsAllows(robots.text, parsed.href);
+  if (!policy.allowed) throw new Error("Sahifa robots.txt qoidasi bilan taqiqlangan.");
+  const gap = Math.max(MIN_REQUEST_GAP_MS, policy.delayMs);
+  await wait(Math.max(0, lastHttpRequestAt + gap - Date.now()));
   const response = await fetch(parsed, {
     headers: {
       "User-Agent": "ULUGBEK-AI-OpenKnowledge/1.2 (public read-only research)",
@@ -134,7 +227,17 @@ async function fetchPublicJson(url, signal) {
     signal,
     redirect: "error"
   });
+  lastHttpRequestAt = Date.now();
+  if (response.status === 403 || response.status === 429) {
+    hostBlockedUntil.set(parsed.hostname, Date.now() + retryAfterMs(response.headers.get("retry-after")));
+    throw new Error("Manba 403/429 qaytardi; chetlab o‘tish yoki qayta-qayta urinish to‘xtatildi.");
+  }
   return readJsonResponse(response);
+}
+async function fetchPublicJson(url, signal) {
+  const task = requestQueue.then(() => fetchPublicJsonNow(url, signal));
+  requestQueue = task.catch(() => {});
+  return task;
 }
 async function learnTopic(topic, language = "uz") {
   if (!Object.hasOwn(TOPICS, language)) throw new Error("Qo‘llab-quvvatlanmaydigan til.");
@@ -257,6 +360,12 @@ function status() {
       { language: "ru", name: "Rus", sharePercent: 15 }
     ],
     sourceAllowlist: [...ALLOWED_WIKIPEDIA_HOSTS],
+    minimumRequestGapSeconds: 1,
+    requestConcurrency: 1,
+    robotsTxtEnforced: true,
+    obeysCrawlDelay: true,
+    pausesOnHttp403Or429: true,
+    neverBypassesBlocks: true,
     mode: "continuous-multilingual-public-read-only-knowledge-retrieval",
     writesToExternalSites: false,
     executesDownloadedCode: false,
