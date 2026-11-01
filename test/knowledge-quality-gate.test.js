@@ -30,7 +30,7 @@ test("rejects non-HTTPS and non-allowlisted sources", () => {
 test("rejects mismatched language, short content, and duplicates", () => {
   assert.equal(verifyKnowledgeCandidate(candidate({ language: "en" })).ok, false);
   assert.equal(verifyKnowledgeCandidate(candidate({ content: "Juda qisqa." })).ok, false);
-  assert.equal(verifyKnowledgeCandidate(candidate(), [{ source: candidate().source }])).ok, false);
+  assert.equal(verifyKnowledgeCandidate(candidate(), [{ source: candidate().source }]).ok, false);
 });
 
 test("flags suspicious instruction-like text for human review without auto-approving", () => {
