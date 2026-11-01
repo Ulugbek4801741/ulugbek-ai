@@ -5,9 +5,9 @@
 const fs = require("node:fs/promises");
 const path = require("node:path");
 const crypto = require("node:crypto");
+const knowledgeStore = require("./knowledge-store");
 
 const DATA_DIR = path.resolve(process.env.ULUGBEK_DATA_DIR || path.join(__dirname, "data"));
-const FILE = path.join(DATA_DIR, "knowledge.json");
 const STATE_FILE = path.join(DATA_DIR, "learning-worker-state.json");
 const INTERVAL_MS = Math.max(60_000, Number(process.env.LEARNING_INTERVAL_MS) || 60_000);
 const REQUEST_TIMEOUT_MS = 15_000;
@@ -95,23 +95,10 @@ function clean(value, max = 4000) {
     .replace(/&gt;/g, ">").replace(/\s+/g, " ").trim().slice(0, max);
 }
 async function readKnowledge() {
-  try {
-    const data = JSON.parse(await fs.readFile(FILE, "utf8"));
-    return Array.isArray(data) ? data.slice(-MAX_KNOWLEDGE_ITEMS) : [];
-  } catch (error) {
-    if (error.code === "ENOENT") return [];
-    throw error;
-  }
+  return (await knowledgeStore.read()).slice(-MAX_KNOWLEDGE_ITEMS);
 }
 async function writeKnowledge(items) {
-  const snapshot = JSON.stringify(items.slice(-MAX_KNOWLEDGE_ITEMS), null, 2);
-  writeChain = writeChain.then(async () => {
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    const temp = FILE + ".learning.tmp";
-    await fs.writeFile(temp, snapshot, { mode: 0o600 });
-    await fs.rename(temp, FILE);
-  });
-  return writeChain;
+  return knowledgeStore.write(items.slice(-MAX_KNOWLEDGE_ITEMS));
 }
 async function readJsonResponse(response) {
   if (!response.ok) throw new Error("Ochiq manba HTTP " + response.status);
