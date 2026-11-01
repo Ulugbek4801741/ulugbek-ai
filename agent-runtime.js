@@ -33,7 +33,7 @@ function publicTask(task) {
     startedAt: task.startedAt || null, finishedAt: task.finishedAt || null,
     approvalStatus: task.approvalStatus, output: task.output || "",
     error: task.error || null, logs: task.logs || [], tests: task.tests || null,
-    knowledgeUsed: task.knowledgeUsed || [],\n    knowledgeUsed: task.knowledgeUsed || []
+    knowledgeUsed: task.knowledgeUsed || []
   };
 }
 async function persist() {
