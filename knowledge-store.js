@@ -129,6 +129,17 @@ async function read() {
     return verified;
   }
 
+  // An encrypted archive must never be silently treated as an empty store.
+  // Missing key is an explicit operational error, not permission to fall back.
+  try {
+    await fs.access(ARCHIVE_FILE);
+    const error = new Error("Shifrlangan bilimlar arxivi mavjud, lekin ULUGBEK_KNOWLEDGE_KEY sozlanmagan.");
+    error.code = "KNOWLEDGE_KEY_REQUIRED";
+    throw error;
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+
   // Without a key, legacy data remains readable but all writes are blocked.
   // This prevents new knowledge from silently being stored in plaintext.
   try {
