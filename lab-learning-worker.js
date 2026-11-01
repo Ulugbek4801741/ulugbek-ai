@@ -159,6 +159,10 @@ async function learnTopic(topic, language = "uz") {
       if (!title) continue;
       const summaryUrl = base + "/api/rest_v1/page/summary/" +
         encodeURIComponent(title.replace(/ /g, "_"));
+      const pageKey = base + "/wiki/" + encodeURIComponent(title.replace(/ /g, "_"));
+      await loadVisitedPages();
+      if (visitedPages.has(pageKey)) continue;
+      await markPageVisited(pageKey);
       const item = await fetchPublicJson(summaryUrl, controller.signal);
       const content = clean(item.extract, 4000);
       const source = item.content_urls?.desktop?.page;
