@@ -77,6 +77,39 @@ const adminAuth = require("./modules/admin-auth").createAdminAuth({
   sessionSecret: ADMIN_SESSION_SECRET,
   storePath: path.join(ADMIN_DATA_DIR, "admin-auth-lockouts.json")
 });
+const adminDeviceGate = require("./modules/admin-device-gate").createAdminDeviceGate({
+  activationPhrase: process.env.ADMIN_ACTIVATION_PHRASE,
+  storePath: path.join(ADMIN_DATA_DIR, "admin-devices.json")
+});
+const ADMIN_DEVICE_COOKIE = "ulugbek_device";
+function readAdminDevice(req) { return readCookie(req, ADMIN_DEVICE_COOKIE); }
+function adminDeviceIdentifier(req) {
+  return crypto.createHash("sha256").update(String(req.ip || "") + "|" + String(req.headers["user-agent"] || "")).digest("hex");
+}
+app.post("/api/admin/device/step", async (req, res) => {
+  try {
+    const result = await adminDeviceGate.step({
+      token: readAdminDevice(req),
+      phrase: req.body?.phrase,
+      identifier: adminDeviceIdentifier(req)
+    });
+    res.set("Cache-Control", "no-store");
+    return res.status(result.ok ? 200 : result.status).json(result);
+  } catch (_) {
+    return res.status(503).json({ error: "Qurilma tasdiqlash holatini saqlab bo‘lmadi." });
+  }
+});
+app.get("/api/admin/devices/status", async (req, res) => {
+  try {
+    res.set("Cache-Control", "no-store");
+    const token = readAdminDevice(req);
+    const trusted = await adminDeviceGate.isTrusted(token);
+    const canEnroll = await adminDeviceGate.canEnroll(token);
+    return res.json({ ok: true, trusted, canEnroll, ...(await adminDeviceGate.list()) });
+  } catch (_) {
+    return res.status(503).json({ error: "Qurilmalar holatini o‘qib bo‘lmadi." });
+  }
+});
 function readCookie(req, name) {
   const item = (req.headers.cookie || "").split(";").map(x => x.trim()).find(x => x.startsWith(name + "="));
   if (!item) return "";
@@ -90,6 +123,11 @@ function requireAdmin(req, res, next) {
 }
 app.post("/api/admin/login", async (req, res) => {
   try {
+    const deviceToken = readAdminDevice(req);
+    const identifier = adminDeviceIdentifier(req);
+    if (!(await adminDeviceGate.ready(deviceToken, identifier))) {
+      return res.status(403).json({ error: "Avval maxfiy faollashtirish iborasini 5 marta tasdiqlang." });
+    }
     const result = await adminAuth.login({ code: req.body?.code, identifier: req.ip });
     res.set("Cache-Control", "no-store");
     if (!result.ok) {
@@ -99,7 +137,13 @@ app.post("/api/admin/login", async (req, res) => {
         lockedUntil: result.lockedUntil
       });
     }
-    res.setHeader("Set-Cookie", "ulugbek_admin=" + encodeURIComponent(result.token) + "; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=3600");
+    let trustedToken = deviceToken;
+    if (!(await adminDeviceGate.isTrusted(trustedToken))) trustedToken = adminDeviceGate.issueToken();
+    await adminDeviceGate.register(trustedToken, identifier);
+    res.setHeader("Set-Cookie", [
+      "ulugbek_admin=" + encodeURIComponent(result.token) + "; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=3600",
+      ADMIN_DEVICE_COOKIE + "=" + encodeURIComponent(trustedToken) + "; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=31536000"
+    ]);
     return res.json({ ok: true, expiresAt: result.expiresAt, sessionMinutes: 60 });
   } catch (error) {
     return res.status(503).json({ error: "Administrator kirish holatini saqlab bo‘lmadi." });
@@ -129,8 +173,11 @@ app.get("/api/admin/status", (req, res) => {
     lockoutMinutes: 60
   });
 });
-app.post("/api/admin/logout", (req, res) => {
+app.post("/api/admin/logout", async (req, res) => {
   adminAuth.revoke(readCookie(req, "ulugbek_admin"));
+  try { await adminDeviceGate.markLogout(readAdminDevice(req)); } catch (_) {
+    return res.status(503).json({ error: "Chiqish vaqti saqlanmadi; yangi qurilma ro‘yxati yangilanmadi." });
+  }
   res.setHeader("Set-Cookie", "ulugbek_admin=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0");
   res.set("Cache-Control", "no-store");
   res.json({ ok: true });
