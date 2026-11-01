@@ -50,7 +50,7 @@ function safePublicUrl(value) {
 }
 function parseResults(html) {
   const results = [];
-  const pattern = /<a[^>]*class="[^"]*result__a[^"]*"[^>]*href="([^"]+)"[^>]*>([\\s\\S]*?)<\\/a>[\\s\\S]{0,1800}?<a[^>]*class="[^"]*result__snippet[^"]*"[^>]*>([\\s\\S]*?)<\\/a>/gi;
+  const pattern = /<a[^>]*class="[^"]*result__a[^"]*"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>[\s\S]{0,1800}?<a[^>]*class="[^"]*result__snippet[^"]*"[^>]*>([\s\S]*?)<\/a>/gi;
   let match;
   while ((match = pattern.exec(String(html || ""))) && results.length < MAX_RESULTS) {
     let href = clean(match[1], 2000);
@@ -69,9 +69,9 @@ function parseResults(html) {
 }
 function stripHtml(html) {
   const text = String(html || "")
-    .replace(/<!--[\\s\\S]*?-->/g, " ")
-    .replace(/<(script|style|noscript|svg|iframe|form|nav|footer|header)[^>]*>[\\s\\S]*?<\\/\\1>/gi, " ")
-    .replace(/<(br|\\/p|\\/div|\\/li|\\/h[1-6]|\\/article|\\/section)[^>]*>/gi, "\\n")
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<(script|style|noscript|svg|iframe|form|nav|footer|header)[^>]*>[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<(br|\/p|\/div|\/li|\/h[1-6]|\/article|\/section)[^>]*>/gi, "\n")
     .replace(/<[^>]+>/g, " ")
     .replace(/&#(\\d+);/g, (_m, n) => { const p = Number(n); return p > 0 && p <= 0x10ffff ? String.fromCodePoint(p) : " "; })
     .replace(/&#x([0-9a-f]+);/gi, (_m, n) => { const p = parseInt(n, 16); return p > 0 && p <= 0x10ffff ? String.fromCodePoint(p) : " "; });
@@ -140,7 +140,7 @@ async function fetchPage(value) {
       if (response.status < 200 || response.status >= 300) return null;
       const type = String(response.headers["content-type"] || "").toLowerCase();
       if (!type.includes("text/html") && !type.includes("text/plain") && !type.includes("application/xhtml+xml")) return null;
-      const titleMatch = response.body.match(/<title[^>]*>([\\s\\S]*?)<\\/title>/i);
+      const titleMatch = response.body.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
       const title = titleMatch ? clean(titleMatch[1], 240) : url.hostname;
       const content = type.includes("text/plain") ? clean(response.body, MAX_PAGE_CHARS) : stripHtml(response.body);
       if (content.length < 120) return null;
