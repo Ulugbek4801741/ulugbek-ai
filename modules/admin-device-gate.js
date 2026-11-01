@@ -79,12 +79,13 @@ function createAdminDeviceGate(options = {}) {
     await persist();
     return { ok: true, count: item.count, ready: item.count === 5 };
   }
-  async function register(token) {
+  async function register(token, identifier) {
     await load();
     const id = deviceId(token);
     if (!id) throw new Error("Qurilma tokeni noto‘g‘ri.");
     state.devices[id] = { createdAt: state.devices[id]?.createdAt || now(), lastSeenAt: now() };
     delete state.pending[id];
+    if (identifier) delete state.pending[digest(identifier)];
     await persist();
   }
   async function markLogout(token) {
