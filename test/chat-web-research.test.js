@@ -42,3 +42,22 @@ test("rejects private URLs before attempting to fetch a page", async () => {
   assert.equal(await research.fetchPage("http://127.0.0.1/"), null);
   assert.equal(await research.fetchPage("http://192.168.0.1/"), null);
 });
+test("blocks reserved IPv4 and non-public IPv6 ranges", () => {
+  for (const ip of ["0.0.0.0", "100.64.0.1", "169.254.169.254", "198.18.0.1", "224.0.0.1", "203.0.113.8", "::1", "fc00::1", "fd12::1", "fe80::1", "ff02::1", "::ffff:127.0.0.1"]) {
+    assert.equal(research.isPrivateAddress(ip), true, ip);
+  }
+  assert.equal(research.isPrivateAddress("1.1.1.1"), false);
+  assert.equal(research.isPrivateAddress("2606:4700:4700::1111"), false);
+});
+
+test("rejects local IPv6 URLs and permits public HTTPS URLs", () => {
+  assert.equal(research.safePublicUrl("http://[::1]/"), null);
+  assert.equal(research.safePublicUrl("http://[fd00::1]/"), null);
+  assert.equal(research.safePublicUrl("https://example.org/article"), "https://example.org/article");
+});
+
+test("public page fetch never follows non-HTTP protocols or private hosts", async () => {
+  assert.equal(await research.fetchPage("file:///etc/passwd"), null);
+  assert.equal(await research.fetchPage("http://[::1]/"), null);
+  assert.equal(await research.fetchPage("http://127.0.0.1/"), null);
+});
