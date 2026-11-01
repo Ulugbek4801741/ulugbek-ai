@@ -5,7 +5,7 @@ const worker = require("../lab-learning-worker");
 
 test("research worker prioritizes Uzbek, then English, then Russian", () => {
   const status = worker.status();
-  assert.equal(status.mode, "continuous-multilingual-public-read-only-knowledge-retrieval");
+  assert.equal(status.mode, "continuous-multilingual-public-research-with-prestorage-quality-gate");
   assert.deepEqual(status.languagePriority.map(item => item.language), ["uz", "en", "ru"]);
   assert.deepEqual(status.languagePriority.map(item => item.sharePercent), [60, 25, 15]);
   assert.deepEqual(status.sourceAllowlist, ["uz.wikipedia.org", "en.wikipedia.org", "ru.wikipedia.org"]);
