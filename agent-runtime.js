@@ -32,7 +32,7 @@ function publicTask(task) {
     status: task.status, createdAt: task.createdAt, updatedAt: task.updatedAt,
     startedAt: task.startedAt || null, finishedAt: task.finishedAt || null,
     approvalStatus: task.approvalStatus, output: task.output || "",
-    error: task.error || null, logs: task.logs || [], tests: task.tests || null
+    error: task.error || null, logs: task.logs || [], tests: task.tests || null,\n    knowledgeUsed: task.knowledgeUsed || []
   };
 }
 async function persist() {
@@ -82,7 +82,7 @@ async function runModel(task) {
     task.status = "completed";
     task.approvalStatus = "pending_review";
     addLog(task, "Mahalliy qoidaviy tahlil tugadi. API ishlatilmadi; loyiha fayllari o‘zgartirilmadi.");
-    addLog(task, "Natija neyron model javobi emas, qoidalar asosidagi reja va agent rollari hisobotidir.");
+    addLog(task, "Natija neyron model javobi emas, qoidalar asosidagi reja va agent rollari hisobotidir. Bilim uzatish model vaznlarini o‘qitmaydi.");
   } catch (error) {
     task.status = "failed";
     task.error = String(error.message || "Mahalliy fikrlash xatosi").slice(0, 300);
