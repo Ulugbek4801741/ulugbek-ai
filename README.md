@@ -43,6 +43,15 @@ npm start
 
 Open `http://localhost:3000`.
 
+## Image generation (optional, no API key)
+
+ULUGBEK AI can create an image from a prompt such as `Rasm chiz: tog‘lar orasida futuristik shahar`. The backend uses a self-hosted AUTOMATIC1111-compatible Stable Diffusion WebUI API; it does not send prompts to a paid image provider. Install and run the image model on a separate GPU-capable machine/server with its API enabled, then set these server-only variables:
+
+- `IMAGE_GENERATION_URL` — private or trusted URL of the Stable Diffusion WebUI (for example `http://127.0.0.1:7860` when it runs on the same machine).
+- `IMAGE_GENERATION_USERNAME` and `IMAGE_GENERATION_PASSWORD` — optional HTTP Basic credentials if enabled on the model server.
+
+The app sends only the image prompt, limits requests to 2 per minute, uses 512×512 images and 20 steps, and returns the PNG directly to the browser. No image is generated until a model server is configured. A normal low-memory web host without a GPU may not be able to run image generation; do not expose the model API publicly without authentication/firewall rules.
+
 ## Connect an AI model (optional)
 
 Set these on the **server hosting environment**, not in browser JavaScript or GitHub Pages:
