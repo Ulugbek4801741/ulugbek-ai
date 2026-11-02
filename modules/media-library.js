@@ -31,6 +31,12 @@ function safeMediaUrl(value) {
   if (!DOWNLOAD_HOSTS.has(url.hostname.toLowerCase())) return null;
   return url;
 }
+function safeSourceUrl(value) {
+  let url;
+  try { url = new URL(value); } catch (_) { return ""; }
+  if (url.protocol !== "https:" || url.username || url.password) return "";
+  return url.toString();
+}
 function identifyMedia(buffer) {
   if (buffer.length >= 8 && buffer.subarray(0, 8).toString("hex") === "89504e470d0a1a0a") return { mimeType: "image/png", extension: ".png", kind: "image" };
   if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return { mimeType: "image/jpeg", extension: ".jpg", kind: "image" };
@@ -52,7 +58,7 @@ function normalizeOpenverse(item) {
     creator: cleanText(item.creator, 200),
     license,
     licenseVersion: cleanText(item.license_version, 30),
-    sourceUrl: cleanText(item.foreign_landing_url, 1000),
+    sourceUrl: safeSourceUrl(item.foreign_landing_url),
     mediaUrl: mediaUrl.toString(),
     kind: "image"
   };
