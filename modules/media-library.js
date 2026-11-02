@@ -37,7 +37,7 @@ function identifyMedia(buffer) {
   if (buffer.length >= 12 && buffer.toString("ascii", 0, 4) === "RIFF" && buffer.toString("ascii", 8, 12) === "WEBP") return { mimeType: "image/webp", extension: ".webp", kind: "image" };
   if (buffer.length >= 12 && buffer.toString("ascii", 4, 8) === "ftyp") return { mimeType: "video/mp4", extension: ".mp4", kind: "video" };
   if (buffer.length >= 4 && buffer.toString("ascii", 0, 4) === "OggS") return { mimeType: "video/ogg", extension: ".ogv", kind: "video" };
-  if (buffer.length >= 4 && buffer.toString("ascii", 0, 4) === "\u001aEß£") return { mimeType: "video/webm", extension: ".webm", kind: "video" };
+  if (buffer.length >= 4 && buffer.subarray(0, 4).toString("hex") === "1a45dfa3") return { mimeType: "video/webm", extension: ".webm", kind: "video" };
   return null;
 }
 function normalizeOpenverse(item) {
@@ -117,6 +117,7 @@ function createMediaLibrary({ env = process.env, fetchImpl = globalThis.fetch, d
   const root = path.resolve(dataDir || path.join(env.ULUGBEK_DATA_DIR || path.join(process.cwd(), "data"), "media-library"));
   const assetsDir = path.join(root, "assets");
   const indexPath = path.join(root, "index.json");
+  const candidates = new Map();
 
   async function readIndex() {
     try {
@@ -175,15 +176,25 @@ function createMediaLibrary({ env = process.env, fetchImpl = globalThis.fetch, d
       } catch (error) { errors.push("Wikimedia Commons: " + cleanText(error.message, 120)); }
     }
     const unique = [...new Map(results.map(item => [item.id, item])).values()].slice(0, count * 2);
-    return { query: q, results: unique, errors, licensePolicy: "CC0, CC BY, CC BY-SA and public domain only" };
+    const now = Date.now();
+    for (const [key, value] of candidates) if (value.expiresAt < now) candidates.delete(key);
+    for (const item of unique) candidates.set(item.id, { item, expiresAt: now + 10 * 60 * 1000 });
+    while (candidates.size > 500) candidates.delete(candidates.keys().next().value);
+    return { query: q, results: unique.map(({ mediaUrl, ...safe }) => safe), errors, licensePolicy: "CC0, CC BY, CC BY-SA and public domain only" };
   }
   async function importAsset(input) {
     const id = cleanText(input?.id, 120);
+    const cached = candidates.get(id);
+    if (!id || !cached || cached.expiresAt < Date.now()) {
+      const error = new Error("Manba topilmadi yoki qidiruv natijasi eskirgan. Avval qayta qidiring.");
+      error.status = 400;
+      throw error;
+    }
+    const candidate = cached.item;
     const source = await readIndex();
     if (source.some(item => item.sourceId === id)) return { item: source.find(item => item.sourceId === id), duplicate: true };
-    const license = cleanText(input?.license, 80).toLowerCase();
-    if (!id || !licenseAllowed(license)) { const error = new Error("Faqat CC0, CC BY, CC BY-SA yoki public domain litsenziyali materiallar olinadi."); error.status = 400; throw error; }
-    const mediaUrl = safeMediaUrl(input?.mediaUrl);
+    if (!licenseAllowed(candidate.license)) { const error = new Error("Faqat CC0, CC BY, CC BY-SA yoki public domain litsenziyali materiallar olinadi."); error.status = 400; throw error; }
+    const mediaUrl = safeMediaUrl(candidate.mediaUrl);
     if (!mediaUrl) { const error = new Error("Manba domeni ruxsat etilgan xavfsiz HTTPS manzil emas."); error.status = 400; throw error; }
     const response = await fetchImpl(mediaUrl, { redirect: "error", signal: AbortSignal.timeout(20000), headers: { Accept: "image/*,video/*" } });
     if (!response.ok) { const error = new Error("Media manbasi HTTP " + response.status + " javob qaytardi."); error.status = 502; throw error; }
@@ -193,7 +204,7 @@ function createMediaLibrary({ env = process.env, fetchImpl = globalThis.fetch, d
     if (!bytes.length || bytes.length > VIDEO_LIMIT) { const error = new Error("Media fayl bo‘sh yoki 25 MB dan katta."); error.status = 413; throw error; }
     const detected = identifyMedia(bytes);
     if (!detected || (detected.kind === "image" && bytes.length > IMAGE_LIMIT)) { const error = new Error("Fayl turi qo‘llab-quvvatlanmaydi yoki rasm 12 MB dan katta."); error.status = 415; throw error; }
-    if (input.kind && input.kind !== detected.kind) { const error = new Error("Fayl turi manba ma’lumotiga mos kelmadi."); error.status = 415; throw error; }
+    if (candidate.kind && candidate.kind !== detected.kind) { const error = new Error("Fayl turi manba ma’lumotiga mos kelmadi."); error.status = 415; throw error; }
     await fs.mkdir(assetsDir, { recursive: true });
     const fileName = crypto.randomUUID() + detected.extension;
     const fullPath = path.join(assetsDir, fileName);
@@ -201,12 +212,12 @@ function createMediaLibrary({ env = process.env, fetchImpl = globalThis.fetch, d
     const item = {
       id: crypto.randomUUID(),
       sourceId: id,
-      provider: cleanText(input.provider, 40),
-      title: cleanText(input.title, 240),
-      creator: cleanText(input.creator, 200),
-      license,
-      licenseVersion: cleanText(input.licenseVersion, 30),
-      sourceUrl: cleanText(input.sourceUrl, 1000),
+      provider: cleanText(candidate.provider, 40),
+      title: cleanText(candidate.title, 240),
+      creator: cleanText(candidate.creator, 200),
+      license: candidate.license,
+      licenseVersion: cleanText(candidate.licenseVersion, 30),
+      sourceUrl: cleanText(candidate.sourceUrl, 1000),
       mediaUrl: mediaUrl.toString(),
       kind: detected.kind,
       mimeType: detected.mimeType,
@@ -223,6 +234,7 @@ function createMediaLibrary({ env = process.env, fetchImpl = globalThis.fetch, d
       }
       latest.push(item);
       await writeIndex(latest);
+      candidates.delete(id);
     } catch (error) {
       await fs.unlink(fullPath).catch(() => {});
       throw error;
