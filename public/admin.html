@@ -59,6 +59,21 @@
 <p id="autopilot-message" class="error" aria-live="polite"></p>
 <h3>Avtomatik nazorat jurnali</h3><div id="autopilot-events" class="task-list">Jurnal yuklanmoqda…</div>
 </section>
+<section class="panel" id="media-library-panel">
+<div class="panel-heading"><div><p class="eyebrow">OCHIQ LITSENZIYALI MEDIA</p><h2>Rasm va video kutubxonasi</h2></div><button id="media-refresh" class="secondary" type="button">Yangilash</button></div>
+<p class="muted">Openverse va Wikimedia Commons manbalaridan faqat CC0, CC BY, CC BY-SA yoki Public Domain materiallarini qidiring. Tanlangan fayllar serverning shaxsiy omboriga saqlanadi. Saqlash modelni avtomatik o‘qitmaydi.</p>
+<form id="media-search-form" style="max-width:none">
+<label for="media-search-query">Nima qidiramiz?</label>
+<input id="media-search-query" type="search" maxlength="120" required placeholder="Masalan: mountains, nature, city">
+<label for="media-search-kind">Media turi</label>
+<select id="media-search-kind"><option value="all">Rasm va video</option><option value="image">Faqat rasm</option><option value="video">Faqat video</option></select>
+<button id="media-search-submit" type="submit">Ochiq media qidirish</button>
+</form>
+<p id="media-message" class="error" aria-live="polite"></p>
+<h3>Qidiruv natijalari</h3><div id="media-search-results" class="task-list">Qidiruv boshlanmagan.</div>
+<h3>Serverda saqlangan media</h3><div id="media-library-status" class="notice">Ombor holati yuklanmoqda…</div>
+<div id="media-library-items" class="task-list">Saqlangan fayllar yuklanmoqda…</div>
+</section>
 <section class="panel" id="agent-console">
 <p class="eyebrow">AGENTLAR ISH MARKAZI</p><h2>Agentlarga topshiriq berish</h2>
 <p class="muted">Vazifalar navbatda ishlaydi. Agent natijani taklif sifatida beradi; u kodni o‘zi ishga tushirmaydi, fayllarni o‘zgartirmaydi va deploy qilmaydi.</p>
@@ -77,5 +92,5 @@
 <div class="notice"><b>Xavfsizlik eslatmasi</b><p>AI kaliti hech qachon bu sahifada ko‘rsatilmaydi. Hosting, to‘lovlar, foydalanuvchi ma’lumotlari va deploy amallari alohida ruxsat hamda sinovlarni talab qiladi.</p></div>
 </section>
 <footer>ULUGBEK AI · Admin panel MVP · HTTPS talab qilinadi</footer>
-</main><script src="admin.js" defer></script>
+</main><script src="admin.js" defer></script><script src="media-library-admin.js" defer></script>
 </body></html>
