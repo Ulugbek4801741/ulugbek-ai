@@ -56,7 +56,7 @@ function normalizeInput(value) {
     .replace(/\s+/g, " ").trim();
 }
 function quickReply(query) {
-  const q = normalizeInput(query);\n  const language = multilingual.detectLanguage(query);\n  const greeting = /^(salom|assalomu alaykum|assalom alaykum|hello|hi|hola|bonjour|hallo|ciao|merhaba|\\u4f60\\u597d|\\u3053\\u3093\\u306b\\u3061\\u306f|\\u 안녕하세요)[!. ]*$/iu.test(String(query || "").trim());\n  if (greeting) return multilingual.phrase(query, "hello");\n  if (/^(rahmat|thanks|thank you|gracias|merci|danke|grazie|teşekkürler)[!. ]*$/iu.test(q)) return multilingual.phrase(query, "thanks");
+  const q = normalizeInput(query);\n  const greeting = /^(salom|assalomu alaykum|assalom alaykum|hello|hi|hola|bonjour|hallo|ciao|merhaba|привет|здравствуйте|مرحبا|नमस्ते|\\u4f60\\u597d|\\u3053\\u3093\\u306b\\u3061\\u306f|\\u 안녕하세요)[!. ]*$/iu.test(String(query || "").trim());\n  if (greeting) return multilingual.phrase(query, "hello");\n  if (/^(rahmat|thanks|thank you|gracias|merci|danke|grazie|teşekkürler)[!. ]*$/iu.test(q)) return multilingual.phrase(query, "thanks");
   if (/^(salom|assalomu alaykum|assalom alaykum|salom alaykum|hello|hi|hayrli tong|hayrli kun|hayrli kech)[!. ]*$/.test(q)) {
     return "Va alaykum assalom! Men ULUGBEK AI’man. Savolingizni yozing — mavjud bilimlarim asosida javob beraman.";
   }
@@ -84,7 +84,7 @@ function respond(query, entries) {
   const quick = quickReply(query);
   if (quick) return { reply:quick, reasoning:{ method:"built-in-uzbek-dialogue", answerable:true, facts:[] } };
   const result = reason(query, entries);
-  if (!result.answerable) return { reply:"Bu savolga hozircha tasdiqlangan bilimlar bazamdan ishonchli javob topa olmadim. Savolni boshqacha yoki aniqroq yozib ko‘ring. Bilmagan narsamni to‘qib aytmayman.", reasoning:result };
+  if (!result.answerable) return { reply:multilingual.phrase(query, "unknown"), reasoning:result };
   const lines = result.facts.map((x,i)=>(i+1)+". "+x.fact+"\n   Mavzu: "+x.title);
   const sources = [...new Set(result.facts.map(x=>x.source).filter(Boolean))];
   return { reply:"ULUGBEK AI mustaqil mantiqiy mexanizmi topgan dalillar:\n\n"+lines.join("\n\n")+
