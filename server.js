@@ -75,6 +75,8 @@ const imageRateLimit = rateLimit({
   message: { error: "Rasm yaratish limiti tugadi. Bir daqiqadan keyin qayta urinib ko‘ring." }
 });
 const imageGenerator = require("./modules/image-generation").createImageGenerator();
+const mediaLibraryRoot = path.join(process.env.ULUGBEK_DATA_DIR || path.join(__dirname, "data"), "media-library");
+const mediaLibrary = require("./modules/media-library").createMediaLibrary({ dataDir: mediaLibraryRoot });
 
 const ADMIN_SESSION_SECRET = process.env.ADMIN_SESSION_SECRET || "";
 const ADMIN_DATA_DIR = path.resolve(process.env.ULUGBEK_DATA_DIR || path.join(__dirname, "data"));
@@ -430,6 +432,56 @@ app.post("/api/images/generate", imageRateLimit, async (req, res) => {
   } catch (error) {
     return res.status(error.status || 502).json({ error: error.message || "Rasm yaratib bo‘lmadi." });
   }
+});
+
+const mediaSearchRateLimit = rateLimit({
+  windowMs: 60 * 1000, limit: 20, standardHeaders: "draft-8", legacyHeaders: false,
+  message: { error: "Media qidiruv limiti tugadi. Bir daqiqadan keyin qayta urinib ko‘ring." }
+});
+
+app.get("/api/media/status", async (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  try {
+    return res.json({ ok: true, mediaLibrary: await mediaLibrary.status() });
+  } catch (_) {
+    return res.status(503).json({ error: "Media ombori holatini o‘qib bo‘lmadi." });
+  }
+});
+
+app.get("/api/media/search", mediaSearchRateLimit, async (req, res) => {
+  res.set("Cache-Control", "no-store");
+  try {
+    const kind = ["all", "image", "video"].includes(req.query.kind) ? req.query.kind : "all";
+    const result = await mediaLibrary.search(req.query.q, { kind, limit: req.query.limit });
+    return res.json({ ok: true, ...result, importRequiresAdmin: true });
+  } catch (error) {
+    return res.status(error.status || 502).json({ error: error.message || "Ochiq media manbalarini qidirib bo‘lmadi." });
+  }
+});
+
+app.post("/api/admin/media/import", requireAdmin, async (req, res) => {
+  res.set("Cache-Control", "no-store");
+  try {
+    const result = await mediaLibrary.importAsset({ id: req.body?.id });
+    return res.status(result.duplicate ? 200 : 201).json({ ok: true, ...result });
+  } catch (error) {
+    return res.status(error.status || 502).json({ error: error.message || "Media omborga saqlanmadi." });
+  }
+});
+
+app.get("/api/admin/media/library", requireAdmin, async (req, res) => {
+  res.set("Cache-Control", "no-store");
+  try {
+    const kind = ["image", "video"].includes(req.query.kind) ? req.query.kind : undefined;
+    return res.json({ ok: true, items: await mediaLibrary.list({ kind, limit: req.query.limit }) });
+  } catch (_) {
+    return res.status(503).json({ error: "Media omborini o‘qib bo‘lmadi." });
+  }
+});
+
+app.get("/api/admin/media/status", requireAdmin, async (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  return res.json({ ok: true, mediaLibrary: await mediaLibrary.status() });
 });
 
 app.post("/api/chat", chatRateLimit, async (req, res) => {
