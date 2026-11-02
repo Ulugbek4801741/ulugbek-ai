@@ -68,6 +68,9 @@ function quickReply(query) {
   if (/^(xayr|hayr|ko'rishguncha|ko'rishamiz|goodbye|bye|adiós|au revoir|再见|さようなら)[!.? ]*$/iu.test(q)) {
     return multilingual.phrase(query, "thanks");
   }
+  if (/(qanday o'rganasan|qanday organasan|qanday o‘rganasan|o'zingni qanday o'rgat|qanday bilim olasan)/.test(q)) {
+    return "Men o‘zbekcha savollar va ruxsat etilgan ochiq manbalardan olingan ma’lumotlarni tahlil qilib, tasdiqlash uchun bilimlar bazasiga nomzod sifatida saqlashim mumkin. Bu jarayon model vaznlarini qayta o‘qitmaydi; yangi bilimlar tekshiruvdan keyin ishlatiladi.";
+  }
   if (/(sen kimsan|siz kimsiz|isming nima|o'zing kimsan|uzing kimsan)/.test(q)) {
     return "Men ULUGBEK AI — hozircha tashqi AI API’siz ishlaydigan, mahalliy mantiqiy javob va bilimlar bazasidan foydalanadigan yordamchiman.";
   }
