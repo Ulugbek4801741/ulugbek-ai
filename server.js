@@ -70,6 +70,12 @@ const plannerRateLimit = rateLimit({
 });
 
 
+const imageRateLimit = rateLimit({
+  windowMs: 60 * 1000, limit: 2, standardHeaders: "draft-8", legacyHeaders: false,
+  message: { error: "Rasm yaratish limiti tugadi. Bir daqiqadan keyin qayta urinib ko‘ring." }
+});
+const imageGenerator = require("./modules/image-generation").createImageGenerator();
+
 const ADMIN_SESSION_SECRET = process.env.ADMIN_SESSION_SECRET || "";
 const ADMIN_DATA_DIR = path.resolve(process.env.ULUGBEK_DATA_DIR || path.join(__dirname, "data"));
 const adminAuth = require("./modules/admin-auth").createAdminAuth({
@@ -409,6 +415,21 @@ app.post("/api/agent/plan", plannerRateLimit, async (req, res) => {
   if (task.length > MAX_TASK_LENGTH) return res.status(413).json({ error: "Vazifa 4000 belgidan oshmasligi kerak." });
 
   return res.json({ plan: createPlan(task), mode: "native-rules", notice: "Reja tashqi AI modelisiz, mahalliy qoidalar asosida tuzildi." });
+});
+
+app.get("/api/images/status", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, imageGeneration: imageGenerator.status() });
+});
+
+app.post("/api/images/generate", imageRateLimit, async (req, res) => {
+  res.set("Cache-Control", "no-store");
+  try {
+    const result = await imageGenerator.generate(req.body?.prompt);
+    return res.json({ ok: true, ...result, provider: "self-hosted-stable-diffusion-webui" });
+  } catch (error) {
+    return res.status(error.status || 502).json({ error: error.message || "Rasm yaratib bo‘lmadi." });
+  }
 });
 
 app.post("/api/chat", chatRateLimit, async (req, res) => {
