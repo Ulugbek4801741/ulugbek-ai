@@ -10,7 +10,7 @@ const SCRIPT_RULES = [
   ["uk", /[ієїґ]/iu], ["ru", /[а-яё]/iu]
 ];
 const LATIN_HINTS = {
-  uz: /\b(salom|assalomu|rahmat|iltimos|qanday|nima|men|siz|haqida|o'zbekiston)\b/iu,
+  uz: /\b(salom|assalomu|rahmat|iltimos|qanday|nima|men|siz|haqida|o'zbekiston|kvant|teleportatsiya|o'rganasan|o'rganish)\b/iu,
   en: /\b(hello|hi|thanks|please|what|where|how|who|the|is|are|you|your)\b/iu,
   es: /\b(hola|gracias|por favor|qué|como|dónde|quién|usted|español)\b/iu,
   fr: /\b(bonjour|merci|s'il vous plaît|comment|pourquoi|où|vous|est)\b/iu,
@@ -26,7 +26,7 @@ const LATIN_HINTS = {
   fa: /[پچژگکی]/u
 };
 const TEXT = {
-  uz: {hello:"Salom! Men ULUGBEK AI’man. Sizga qanday yordam bera olaman?",thanks:"Arzimaydi! Yana qanday yordam kerak?",unknown:"Bu savolga hozircha yetarli darajada tekshirilgan ma’lumot topilmadi. Noto‘g‘ri javob to‘qib aytmayman."},
+  uz: {hello:"Va alaykum assalom! Men ULUGBEK AI’man. Sizga qanday yordam bera olaman?",thanks:"Arzimaydi! Yana qanday yordam kerak?",unknown:"Hozircha ishonchli javob topa olmadim. Bu savol bo‘yicha o‘zbekcha va boshqa ochiq manbalardan tekshirilgan ma’lumot izlash kerak; noto‘g‘ri javob to‘qib aytmayman."},
   en: {hello:"Hello! I’m ULUGBEK AI. How can I help you?",thanks:"You’re welcome! What else can I help with?",unknown:"I could not find enough verified information to answer reliably yet. I won’t make up an answer."},
   es: {hello:"¡Hola! Soy ULUGBEK AI. ¿Cómo puedo ayudarte?",thanks:"¡De nada! ¿En qué más puedo ayudarte?",unknown:"Aún no he encontrado información verificada suficiente para responder con fiabilidad. No inventaré una respuesta."},
   fr: {hello:"Bonjour ! Je suis ULUGBEK AI. Comment puis-je vous aider ?",thanks:"Avec plaisir ! Puis-je vous aider pour autre chose ?",unknown:"Je n’ai pas encore trouvé suffisamment d’informations vérifiées pour répondre de manière fiable. Je ne vais pas inventer de réponse."},
@@ -50,7 +50,7 @@ function detectLanguage(value) {
   const text = String(value || "").trim();
   for (const [language, pattern] of SCRIPT_RULES) if (pattern.test(text)) return language;
   for (const [language, pattern] of Object.entries(LATIN_HINTS)) if (pattern.test(text)) return language;
-  return "en";
+  return "uz";
 }
 function phrase(value, kind) {
   const language = detectLanguage(value);
