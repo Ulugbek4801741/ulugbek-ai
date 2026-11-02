@@ -46,7 +46,7 @@ test("detects supported file signatures, not file-name claims", () => {
   assert.equal(identifyMedia(pngBytes()).mimeType, "image/png");
   assert.equal(identifyMedia(Buffer.from([0xff, 0xd8, 0xff, 0x00])).kind, "image");
   assert.equal(identifyMedia(Buffer.from("1a45dfa3", "hex")).kind, "video");
-  assert.equal(identifyMedia(Buffer.from("<html>")).kind, undefined);
+  assert.equal(identifyMedia(Buffer.from("<html>")), null);
 });
 
 test("Wikimedia results with noncommercial or unknown licenses are excluded", () => {
