@@ -1,4 +1,4 @@
-"use strict";
+"use strict";\nconst multilingual = require("./modules/multilingual");
 
 // Native symbolic cognition: no hosted AI, no model weights, no API key.
 const STOP = new Set(("the and for with that this from into about which when where what who whom whose are was were been being have has had will would could should can may might not but or nor dan yoki uchun bilan bu shu bir uning ular qanday nima qachon qayerda kim haqida orqali ham esa edi bor yo‘q qaysi qayerda qayerga qayerdan").split(/\s+/));
@@ -56,7 +56,7 @@ function normalizeInput(value) {
     .replace(/\s+/g, " ").trim();
 }
 function quickReply(query) {
-  const q = normalizeInput(query);
+  const q = normalizeInput(query);\n  const language = multilingual.detectLanguage(query);\n  const greeting = /^(salom|assalomu alaykum|assalom alaykum|hello|hi|hola|bonjour|hallo|ciao|merhaba|\\u4f60\\u597d|\\u3053\\u3093\\u306b\\u3061\\u306f|\\u 안녕하세요)[!. ]*$/iu.test(String(query || "").trim());\n  if (greeting) return multilingual.phrase(query, "hello");\n  if (/^(rahmat|thanks|thank you|gracias|merci|danke|grazie|teşekkürler)[!. ]*$/iu.test(q)) return multilingual.phrase(query, "thanks");
   if (/^(salom|assalomu alaykum|assalom alaykum|salom alaykum|hello|hi|hayrli tong|hayrli kun|hayrli kech)[!. ]*$/.test(q)) {
     return "Va alaykum assalom! Men ULUGBEK AI’man. Savolingizni yozing — mavjud bilimlarim asosida javob beraman.";
   }
