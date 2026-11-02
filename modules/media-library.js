@@ -216,15 +216,16 @@ function createMediaLibrary({ env = process.env, fetchImpl = globalThis.fetch, d
   }
   async function importAsset(input) {
     const id = cleanText(input?.id, 120);
+    if (!id) { const error = new Error("Media identifikatori ko‘rsatilmagan."); error.status = 400; throw error; }
+    const source = await readIndex();
+    if (source.some(item => item.sourceId === id)) return { item: source.find(item => item.sourceId === id), duplicate: true };
     const cached = candidates.get(id);
-    if (!id || !cached || cached.expiresAt < Date.now()) {
+    if (!cached || cached.expiresAt < Date.now()) {
       const error = new Error("Manba topilmadi yoki qidiruv natijasi eskirgan. Avval qayta qidiring.");
       error.status = 400;
       throw error;
     }
     const candidate = cached.item;
-    const source = await readIndex();
-    if (source.some(item => item.sourceId === id)) return { item: source.find(item => item.sourceId === id), duplicate: true };
     if (!licenseAllowed(candidate.license)) { const error = new Error("Faqat CC0, CC BY, CC BY-SA yoki public domain litsenziyali materiallar olinadi."); error.status = 400; throw error; }
     const mediaUrl = safeMediaUrl(candidate.mediaUrl);
     if (!mediaUrl) { const error = new Error("Manba domeni ruxsat etilgan xavfsiz HTTPS manzil emas."); error.status = 400; throw error; }
