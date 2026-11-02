@@ -118,6 +118,7 @@ async function readBoundedBody(response, maxBytes) {
 function commonsLicenseName(value) {
   const v = String(value || "").toLowerCase();
   if (/public domain|cc0/.test(v)) return "pdm";
+  if (/cc by-(nc|nd)|cc-by-(nc|nd)/.test(v)) return "restricted";
   if (/cc by-sa/.test(v)) return "by-sa";
   if (/cc by/.test(v)) return "by";
   return v;
