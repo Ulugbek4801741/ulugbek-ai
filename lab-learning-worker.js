@@ -144,7 +144,7 @@ function robotsAllows(robotsText, targetUrl) {
   const pathAndQuery = new URL(targetUrl).pathname + new URL(targetUrl).search;
   const groups = [];
   let current = null;
-  for (const rawLine of String(robotsText || "").split(/\\r?\\n/)) {
+  for (const rawLine of String(robotsText || "").split(/\r?\n/)) {
     const line = rawLine.split("#", 1)[0].trim();
     if (!line || !line.includes(":")) continue;
     const split = line.indexOf(":");
