@@ -56,27 +56,25 @@ function normalizeInput(value) {
     .replace(/\s+/g, " ").trim();
 }
 function quickReply(query) {
-  const q = normalizeInput(query);\n  const greeting = /^(salom|assalomu alaykum|assalom alaykum|hello|hi|hola|bonjour|hallo|ciao|merhaba|привет|здравствуйте|مرحبا|नमस्ते|\\u4f60\\u597d|\\u3053\\u3093\\u306b\\u3061\\u306f|\\u 안녕하세요)[!. ]*$/iu.test(String(query || "").trim());\n  if (greeting) return multilingual.phrase(query, "hello");\n  if (/^(rahmat|thanks|thank you|gracias|merci|danke|grazie|teşekkürler)[!. ]*$/iu.test(q)) return multilingual.phrase(query, "thanks");
-  if (/^(salom|assalomu alaykum|assalom alaykum|salom alaykum|hello|hi|hayrli tong|hayrli kun|hayrli kech)[!. ]*$/.test(q)) {
-    return "Va alaykum assalom! Men ULUGBEK AI’man. Savolingizni yozing — mavjud bilimlarim asosida javob beraman.";
+  const q = normalizeInput(query);
+  const raw = String(query || "").trim();
+  if (/^(salom|assalomu alaykum|assalom alaykum|hello|hi|hola|bonjour|hallo|ciao|merhaba|привет|здравствуйте|مرحبا|नमस्ते|你好|こんにちは|안녕하세요)[!.? ]*$/iu.test(raw)) {
+    return multilingual.phrase(query, "hello");
   }
-  if (/^(rahmat|katta rahmat|tashakkur)[!. ]*$/.test(q)) {
-    return "Arzimaydi! Yana qanday savolingiz bor?";
+  if (/^(rahmat|katta rahmat|tashakkur|thanks|thank you|gracias|merci|danke|grazie|teşekkürler)[!.? ]*$/iu.test(q)) {
+    return multilingual.phrase(query, "thanks");
   }
-  if (/^(xayr|hayr|ko'rishguncha|ko'rishamiz)[!. ]*$/.test(q)) {
-    return "Xayr! Yana kerak bo‘lsam, bemalol yozing.";
+  if (/^(xayr|hayr|ko'rishguncha|ko'rishamiz|goodbye|bye|adiós|au revoir|再见|さようなら)[!.? ]*$/iu.test(q)) {
+    return multilingual.phrase(query, "thanks");
   }
   if (/(sen kimsan|siz kimsiz|isming nima|o'zing kimsan|uzing kimsan)/.test(q)) {
-    return "Men ULUGBEK AI — hozircha tashqi AI API’siz ishlaydigan, mahalliy mantiqiy javob va tasdiqlangan bilimlar bazasidan foydalanadigan yordamchiman.";
+    return "Men ULUGBEK AI — hozircha tashqi AI API’siz ishlaydigan, mahalliy mantiqiy javob va bilimlar bazasidan foydalanadigan yordamchiman.";
   }
   if (/(nima qila olasan|nimalar qila olasan|imkoniyatlaring|vazifang nima)/.test(q)) {
-    return "Men savollarga mavjud bilimlar bazasi asosida javob berish, mavzular bo‘yicha ochiq manbalardan ma’lumot yig‘ish va ularni tekshiruvga yuborishga mo‘ljallanganman. Hozircha barcha mavzularni bilmayman; bilmagan narsamni aniq aytaman.";
-  }
-  if (/(qanday o'rganasan|qanday organasan|o'zingni o'rgat|ozingni urgat|qayta o'qit|qayta oqit)/.test(q)) {
-    return "Men o‘zbekcha ma’lumotlarni birinchi o‘rinda, inglizcha va ruscha ma’lumotlarni keyingi navbatlarda ochiq Wikipedia manbalaridan yig‘aman. Yangi ma’lumot avval tekshiruvga tushadi; tasdiqlanmaguncha javoblarda ishlatilmaydi. Bu jarayon hozircha katta til modelining vaznlarini qayta o‘qitmaydi.";
+    return "Men mavjud bilimlar bazasi va ochiq manbalardan topilgan ma’lumotlar asosida javob berishga mo‘ljallanganman. Murakkab va boshqa tillardagi savollarda imkoniyatlarim hozircha cheklangan bo‘lishi mumkin.";
   }
   if (/(api kalit|tashqi api|ma'lumotlarim|maxfiylik|suhbatlarim)/.test(q)) {
-    return "Hozirgi chat rejimi tashqi AI API’ga ulanmaydi va javob yaratish uchun xabarni tashqi AI provayderiga yubormaydi. Serverning odatiy ishlashi va saqlash sozlamalari baribir hostingga bog‘liq.";
+    return "Hozirgi chat rejimi tashqi AI API’ga ulanmaydi. Serverning odatiy ishlashi va saqlash sozlamalari hostingga bog‘liq.";
   }
   return null;
 }
