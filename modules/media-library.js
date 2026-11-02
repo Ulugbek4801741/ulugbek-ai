@@ -84,6 +84,37 @@ function identifyExtension(filename) {
   if ([".mp4", ".webm", ".ogv", ".ogg"].includes(ext)) return "video";
   return null;
 }
+async function readBoundedBody(response, maxBytes) {
+  if (response.body && typeof response.body.getReader === "function") {
+    const reader = response.body.getReader();
+    const chunks = [];
+    let total = 0;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        total += value.byteLength;
+        if (total > maxBytes) {
+          await reader.cancel().catch(() => {});
+          const error = new Error("Media fayl hajmi ruxsat etilgan chegaradan oshdi.");
+          error.status = 413;
+          throw error;
+        }
+        chunks.push(Buffer.from(value));
+      }
+    } finally {
+      reader.releaseLock();
+    }
+    return Buffer.concat(chunks, total);
+  }
+  const bytes = Buffer.from(await response.arrayBuffer());
+  if (bytes.length > maxBytes) {
+    const error = new Error("Media fayl hajmi ruxsat etilgan chegaradan oshdi.");
+    error.status = 413;
+    throw error;
+  }
+  return bytes;
+}
 function commonsLicenseName(value) {
   const v = String(value || "").toLowerCase();
   if (/public domain|cc0/.test(v)) return "pdm";
@@ -200,7 +231,7 @@ function createMediaLibrary({ env = process.env, fetchImpl = globalThis.fetch, d
     if (!response.ok) { const error = new Error("Media manbasi HTTP " + response.status + " javob qaytardi."); error.status = 502; throw error; }
     const declaredLength = Number(response.headers?.get?.("content-length") || 0);
     if (declaredLength > VIDEO_LIMIT) { const error = new Error("Fayl hajmi 25 MB dan oshmasligi kerak."); error.status = 413; throw error; }
-    const bytes = Buffer.from(await response.arrayBuffer());
+    const bytes = await readBoundedBody(response, VIDEO_LIMIT);
     if (!bytes.length || bytes.length > VIDEO_LIMIT) { const error = new Error("Media fayl bo‘sh yoki 25 MB dan katta."); error.status = 413; throw error; }
     const detected = identifyMedia(bytes);
     if (!detected || (detected.kind === "image" && bytes.length > IMAGE_LIMIT)) { const error = new Error("Fayl turi qo‘llab-quvvatlanmaydi yoki rasm 12 MB dan katta."); error.status = 415; throw error; }
