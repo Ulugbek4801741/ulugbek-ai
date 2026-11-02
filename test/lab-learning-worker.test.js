@@ -30,18 +30,18 @@ test("stop disables future research scheduling", () => {
 });
 
 test("robots policy blocks disallowed API paths", () => {
-  const robots = "User-agent: *\\nDisallow: /w/api.php\\n";
+  const robots = "User-agent: *\nDisallow: /w/api.php\n";
   assert.equal(worker.robotsAllows(robots, "https://uz.wikipedia.org/w/api.php?action=query").allowed, false);
 });
 
 test("robots policy permits explicitly allowed paths", () => {
-  const robots = "User-agent: *\\nDisallow: /wiki/\\nAllow: /wiki/Public_page\\n";
+  const robots = "User-agent: *\nDisallow: /wiki/\nAllow: /wiki/Public_page\n";
   assert.equal(worker.robotsAllows(robots, "https://en.wikipedia.org/wiki/Public_page").allowed, true);
   assert.equal(worker.robotsAllows(robots, "https://en.wikipedia.org/wiki/Private_page").allowed, false);
 });
 
 test("robots crawl-delay is respected as a minimum request interval", () => {
-  const robots = "User-agent: ULUGBEK-AI-OpenKnowledge\\nCrawl-delay: 4\\n";
+  const robots = "User-agent: ULUGBEK-AI-OpenKnowledge\nCrawl-delay: 4\n";
   assert.equal(worker.robotsAllows(robots, "https://ru.wikipedia.org/w/api.php").delayMs, 4000);
 });
 
