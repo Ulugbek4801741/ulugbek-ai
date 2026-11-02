@@ -3,26 +3,26 @@
 // Lightweight language detection and safe conversational templates.
 // This does not translate arbitrary text or replace a multilingual language model.
 const SCRIPT_RULES = [
-  ["zh", /[\\u3400-\\u9fff]/u], ["ja", /[\\u3040-\\u30ff]/u],
-  ["ko", /[\\uac00-\\ud7af]/u], ["ar", /[\\u0600-\\u06ff]/u],
-  ["hi", /[\\u0900-\\u097f]/u], ["th", /[\\u0e00-\\u0e7f]/u],
-  ["he", /[\\u0590-\\u05ff]/u], ["el", /[\\u0370-\\u03ff]/u],
+  ["zh", /[\u3400-\u9fff]/u], ["ja", /[\u3040-\u30ff]/u],
+  ["ko", /[\uac00-\ud7af]/u], ["ar", /[\u0600-\u06ff]/u],
+  ["hi", /[\u0900-\u097f]/u], ["th", /[\u0e00-\u0e7f]/u],
+  ["he", /[\u0590-\u05ff]/u], ["el", /[\u0370-\u03ff]/u],
   ["uk", /[ієїґ]/iu], ["ru", /[а-яё]/iu]
 ];
 const LATIN_HINTS = {
-  uz: /\\b(salom|assalomu|rahmat|iltimos|qanday|nima|men|siz|haqida|o'zbekiston)\\b/iu,
-  en: /\\b(hello|hi|thanks|please|what|where|how|who|the|is|are|you|your)\\b/iu,
-  es: /\\b(hola|gracias|por favor|qué|como|dónde|quién|usted|español)\\b/iu,
-  fr: /\\b(bonjour|merci|s'il vous plaît|comment|pourquoi|où|vous|est)\\b/iu,
-  de: /\\b(hallo|danke|bitte|wie|warum|wo|ist|und|ich)\\b/iu,
-  pt: /\\b(olá|obrigado|obrigada|por favor|como|onde|você|não)\\b/iu,
-  it: /\\b(ciao|grazie|per favore|come|dove|perché|sono)\\b/iu,
-  tr: /\\b(merhaba|teşekkürler|lütfen|nasıl|nerede|neden|ben|sen)\\b/iu,
-  id: /\\b(h halo|halo|terima kasih|tolong|bagaimana|dimana|saya|anda)\\b/iu,
-  nl: /\\b(hallo|bedankt|alsjeblieft|waar|hoe|waarom|ik|jij)\\b/iu,
-  pl: /\\b(cześć|dzień dobry|dziękuję|proszę|jak|gdzie|jest)\\b/iu,
-  sv: /\\b(hej|tack|snälla|hur|var|varför|jag|du)\\b/iu,
-  vi: /\\b(xin chào|cảm ơn|làm ơn|như thế nào|ở đâu|tôi|bạn)\\b/iu,
+  uz: /\b(salom|assalomu|rahmat|iltimos|qanday|nima|men|siz|haqida|o'zbekiston)\b/iu,
+  en: /\b(hello|hi|thanks|please|what|where|how|who|the|is|are|you|your)\b/iu,
+  es: /\b(hola|gracias|por favor|qué|como|dónde|quién|usted|español)\b/iu,
+  fr: /\b(bonjour|merci|s'il vous plaît|comment|pourquoi|où|vous|est)\b/iu,
+  de: /\b(hallo|danke|bitte|wie|warum|wo|ist|und|ich)\b/iu,
+  pt: /\b(olá|obrigado|obrigada|por favor|como|onde|você|não)\b/iu,
+  it: /\b(ciao|grazie|per favore|come|dove|perché|sono)\b/iu,
+  tr: /\b(merhaba|teşekkürler|lütfen|nasıl|nerede|neden|ben|sen)\b/iu,
+  id: /\b(h halo|halo|terima kasih|tolong|bagaimana|dimana|saya|anda)\b/iu,
+  nl: /\b(hallo|bedankt|alsjeblieft|waar|hoe|waarom|ik|jij)\b/iu,
+  pl: /\b(cześć|dzień dobry|dziękuję|proszę|jak|gdzie|jest)\b/iu,
+  sv: /\b(hej|tack|snälla|hur|var|varför|jag|du)\b/iu,
+  vi: /\b(xin chào|cảm ơn|làm ơn|như thế nào|ở đâu|tôi|bạn)\b/iu,
   fa: /[پچژگکی]/u
 };
 const TEXT = {
