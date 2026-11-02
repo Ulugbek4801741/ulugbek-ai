@@ -52,6 +52,20 @@ ULUGBEK AI can create an image from a prompt such as `Rasm chiz: tog‘lar orasi
 
 The app sends only the image prompt, limits requests to 2 per minute, uses 512×512 images and 20 steps, and returns the PNG directly to the browser. No image is generated until a model server is configured. A normal low-memory web host without a GPU may not be able to run image generation; do not expose the model API publicly without authentication/firewall rules.
 
+## Open-licensed image and video library
+
+The backend can search public media catalogs and import selected files into a private server-side library. It does not crawl social accounts, private groups, user profiles, or arbitrary websites.
+
+- `GET /api/media/search?q=mountain&kind=image` searches Openverse images.
+- `GET /api/media/search?q=waterfall&kind=video` searches Wikimedia Commons video files.
+- `GET /api/media/search?q=mountain&kind=all` searches both supported catalogs.
+- `POST /api/admin/media/import` with `{"id":"<search-result-id>"}` imports one result after administrator login. The result must have been returned by a recent search from this running server; search candidates expire after 10 minutes.
+- `GET /api/admin/media/library` lists imported items. `GET /api/admin/media/status` reports counts.
+
+Only CC0, CC BY, CC BY-SA and public-domain results are eligible. Noncommercial, no-derivatives, unknown-license, and unsupported-host results are excluded. Each imported file keeps its creator, license, source page, media URL, file type, size and import time. Images are limited to 12 MB; videos to 25 MB. The downloader allows HTTPS from a small media-host allowlist, rejects redirects, and verifies file signatures rather than trusting file extensions. Files are stored under `ULUGBEK_DATA_DIR/media-library/` (or `data/media-library/`) and should be placed on persistent private storage in production.
+
+This is a controlled collection library, **not automatic model training**. Imported records start with `trainingStatus: "not-approved"`. They must be reviewed for license compliance, attribution, quality, privacy and suitability before any future training pipeline uses them. Search is read-only; downloading is administrator-only. Openverse currently supplies image discovery in this integration; Wikimedia Commons supplies image/video discovery. Instagram, Facebook, Telegram, WhatsApp and YouTube are not scraped.
+
 ## Connect an AI model (optional)
 
 Set these on the **server hosting environment**, not in browser JavaScript or GitHub Pages:
