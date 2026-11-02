@@ -57,6 +57,9 @@ function normalizeInput(value) {
 }
 function quickReply(query) {
   const q = normalizeInput(query);
+  if (/^(o'zbekiston|uzbekiston|uzbekistan)$/.test(q)) {
+    return "O‘zbekiston — Markaziy Osiyoda joylashgan mustaqil davlat. Poytaxti — Toshkent. Davlatning rasmiy nomi — O‘zbekiston Respublikasi. Qaysi yo‘nalish haqida batafsil ma’lumot kerak: tarixi, geografiyasi, aholisi, iqtisodiyoti yoki viloyatlari?";
+  }
   if (/^(salom|assalomu alaykum|assalom alaykum|salom alaykum|hello|hi|hayrli tong|hayrli kun|hayrli kech)[!. ]*$/.test(q)) {
     return "Va alaykum assalom! Men ULUGBEK AI’man. Savolingizni yozing — mavjud bilimlarim asosida javob beraman.";
   }
