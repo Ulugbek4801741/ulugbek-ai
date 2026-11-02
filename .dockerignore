@@ -1,0 +1,13 @@
+.git
+.github
+node_modules
+npm-debug.log
+*.log
+.env
+.env.*
+!.env.example
+data
+coverage
+dist
+android
+ios

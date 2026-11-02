@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>ULUGBEK AI — Yengil rejim</title>
+<style>
+body{font:16px Arial,sans-serif;margin:0;padding:12px;background:#fff;color:#111}
+main{max-width:680px;margin:0 auto}h1{font-size:24px}textarea{width:98%;min-height:90px;font:16px Arial}
+button{font:16px Arial;padding:10px;margin:6px 0}#answer{white-space:pre-wrap;border:1px solid #ccc;padding:10px;min-height:80px}
+.small{font-size:13px;color:#555}
+</style>
+</head>
+<body>
+<main>
+<h1>ULUGBEK AI — Yengil rejim</h1>
+<p>Bu sahifa eski telefon va kompyuterlar uchun. Animatsiya, ovoz va og‘ir funksiyalar o‘chirilgan.</p>
+<form id="chat">
+<label for="message">Xabaringiz</label><br>
+<textarea id="message" maxlength="4000" required></textarea><br>
+<button type="submit" id="send">Yuborish</button>
+</form>
+<h2>Javob</h2><div id="answer" aria-live="polite">Savolingizni yozing.</div>
+<p class="small" id="status">Yengil matnli interfeys.</p>
+<p><a href="./">Zamonaviy interfeysga qaytish</a></p>
+</main>
+<script type="text/javascript">
+(function () {
+  var form=document.getElementById("chat"), input=document.getElementById("message");
+  var answer=document.getElementById("answer"), status=document.getElementById("status");
+  var send=document.getElementById("send");
+  function request(url, body, done) {
+    var xhr;
+    if (window.XMLHttpRequest) xhr=new XMLHttpRequest();
+    else if (window.ActiveXObject) { try{xhr=new ActiveXObject("Microsoft.XMLHTTP");}catch(e){} }
+    if (!xhr) { done("Bu brauzer server bilan xavfsiz aloqa o‘rnata olmaydi. Yangiroq brauzer yoki mahalliy ULUGBEK AI ilovasidan foydalaning."); return; }
+    xhr.open("POST",url,true);
+    xhr.setRequestHeader("Content-Type","application/json");
+    xhr.onreadystatechange=function(){
+      if(xhr.readyState!==4)return;
+      if(xhr.status<200||xhr.status>=300){done("Serverga ulanib bo‘lmadi (HTTP "+xhr.status+").");return;}
+      try{var data=JSON.parse(xhr.responseText);done(data.reply||"Server javobida matn yo‘q.");}
+      catch(e){done("Server javobini o‘qib bo‘lmadi.");}
+    };
+    try{xhr.send(JSON.stringify(body));}catch(e){done("Ulanish xatosi: "+e.message);}
+  }
+  form.onsubmit=function(e){
+    if(e&&e.preventDefault)e.preventDefault();
+    var message=input.value.replace(/^\s+|\s+$/g,"");
+    if(!message)return false;
+    send.disabled=true;answer.innerHTML="Javob kutilmoqda…";status.innerHTML="So‘rov yuborilmoqda.";
+    var base=window.ULUGBEK_API_BASE_URL||"";
+    if(!base){answer.innerHTML="Backend manzili sozlanmagan. Bu yengil sahifa server manzilisiz AI javobini yarata olmaydi.";send.disabled=false;return false;}
+    request(base.replace(/\/$/,"")+"/api/chat",{message:message,sessionId:"legacy-"+(new Date().getTime())},function(reply){
+      answer.appendChild(document.createTextNode(reply));send.disabled=false;status.innerHTML="Tayyor.";
+    });
+    return false;
+  };
+}());
+</script>
+<script type="text/javascript" src="config.js"></script>
+</body></html>

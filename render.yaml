@@ -1,0 +1,45 @@
+services:
+  - type: web
+    name: ulugbek-ai-web
+    runtime: node
+    plan: starter
+    branch: main
+    autoDeployTrigger: checksPass
+    buildCommand: npm install --omit=dev
+    startCommand: npm start
+    healthCheckPath: /api/health
+    disk:
+      name: ulugbek-ai-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ULUGBEK_DATA_DIR
+        value: /var/data
+      - key: TASK_STORE_PATH
+        value: /var/data/agent-tasks.json
+      - key: DEVELOPER_AGENT_STORE
+        value: /var/data/developer-agent.json
+      - key: ADMIN_AUTOPILOT_STORE
+        value: /var/data/admin-autopilot.json
+      - key: FRONTEND_ORIGIN
+        sync: false
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: ADMIN_SESSION_SECRET
+        generateValue: true
+      - key: ADMIN_ACCESS_CODE
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-flash-latest
+      - key: GEMINI_ALLOW_CHAT_CONTENT
+        value: "false"
+      - key: OPENAI_BASE_URL
+        value: https://api.openai.com/v1
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini
