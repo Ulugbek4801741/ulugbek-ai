@@ -63,6 +63,8 @@ test("Wikimedia results with noncommercial or unknown licenses are excluded", ()
   assert.equal(result.kind, "image");
   page.imageinfo[0].extmetadata.LicenseShortName.value = "CC BY-NC 4.0";
   assert.equal(safeCommons(page), null);
+  page.imageinfo[0].extmetadata.LicenseShortName.value = "CC BY-ND 4.0";
+  assert.equal(safeCommons(page), null);
 });
 
 test("search returns only approved results and hides direct download URLs", async () => {
