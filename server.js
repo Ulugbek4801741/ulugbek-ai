@@ -597,7 +597,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     }
     return res.json({
       reply: result.reply,
-      mode: result.modelUsed ? "self-hosted-single-agent" : webResearchUsed ? "native-public-research-single-agent-fallback" : "native-single-agent-fallback",
+      mode: result.modelUsed ? "self-hosted-single-agent-no-external-ai" : webResearchUsed ? "native-public-research-single-agent-fallback-no-external-ai" : "native-single-agent-fallback-no-external-ai",
       agents: ["ULUGBEK Universal Agent"],
       reasoning: result.reasoning,
       knowledgeUsed: learned.length,
