@@ -36,6 +36,7 @@ test("native reasoning always uses one universal agent regardless of requested r
   const result = engine.runTask("Backend serverni rejalashtir", "backend");
   assert.ok(result.output.includes("ULUGBEK Universal Agent"));
   assert.equal(result.analysis.agentCount, 1);
-  assert.throws(() => engine.runTask("Vazifa", "not-a-real-agent"), /invalid|bo‘sh|uzun/i);
+  const other = engine.runTask("Vazifa", "not-a-real-agent");
+  assert.equal(other.analysis.agentCount, 1);
 });
 
