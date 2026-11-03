@@ -56,6 +56,11 @@ function normalizeInput(value) {
     .replace(/\s+/g, " ").trim();
 }
 function quickReply(query) {
+  const math = require("./modules/math-engine").findExpression(query);
+  if (math) {
+    const answer = require("./modules/math-engine").formatNumber(math.result);
+    return "Hisoblash: " + math.expression + " = " + answer + "\\nJavob: " + answer + ".";
+  }
   const q = normalizeInput(query);
   if (/^(o'zbekiston|uzbekiston|uzbekistan)$/.test(q)) {
     return "O‘zbekiston — Markaziy Osiyoda joylashgan mustaqil davlat. Poytaxti — Toshkent. Davlatning rasmiy nomi — O‘zbekiston Respublikasi. Qaysi yo‘nalish haqida batafsil ma’lumot kerak: tarixi, geografiyasi, aholisi, iqtisodiyoti yoki viloyatlari?";
