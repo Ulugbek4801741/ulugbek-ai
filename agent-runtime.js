@@ -7,7 +7,7 @@ const singleAgent = require("./modules/single-agent").createSingleAgent();
 
 const MAX_TASKS = 200;
 const MAX_PROMPT_LENGTH = 4000;
-const ROLES = new Set(["orchestrator", "backend", "frontend", "tester", "security", "research", "product", "ulugbek-agent"]);
+const ROLES = new Set(["orchestrator", "backend", "frontend", "tester", "security", "research", "product", "ulugbek-agent", "chat-coordinator", "core-architect", "research-agent", "software-builder-agent", "frontend-agent", "backend-agent", "qa-agent", "security-agent", "devops-agent", "product-growth-agent"]);
 const ROLE_LABELS = { orchestrator: "ULUGBEK Universal Agent", backend: "ULUGBEK Universal Agent", frontend: "ULUGBEK Universal Agent", tester: "ULUGBEK Universal Agent", security: "ULUGBEK Universal Agent", research: "ULUGBEK Universal Agent", product: "ULUGBEK Universal Agent", "ulugbek-agent": "ULUGBEK Universal Agent" };
 const DATA_DIR = path.resolve(process.env.ULUGBEK_DATA_DIR || path.join(__dirname, "data"));
 const TASK_STORE_PATH = path.resolve(process.env.TASK_STORE_PATH || path.join(DATA_DIR, "agent-tasks.json"));
