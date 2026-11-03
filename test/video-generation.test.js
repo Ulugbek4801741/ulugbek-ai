@@ -73,7 +73,13 @@ test("queues ComfyUI workflow, waits for MP4 and returns video bytes", async () 
         return response({ json: { prompt_id: "test-prompt-1" } });
       }
       if (String(url).includes("/history/")) {
-        return response({ json: { "test-prompt-1": { status: { status_str: "success", completed: true }, outputs: { "20": { videos: [{ filename: "result.mp4", subfolder: "", type: "output" }] } } } });
+        const history = {
+          "test-prompt-1": {
+            status: { status_str: "success", completed: true },
+            outputs: { "20": { videos: [{ filename: "result.mp4", subfolder: "", type: "output" }] } }
+          }
+        };
+        return response({ json: history });
       }
       if (String(url).includes("/view?")) return response({ bytes: mp4 });
       throw new Error("Unexpected URL " + url);
@@ -97,7 +103,9 @@ test("rejects ComfyUI HTML or image response as a video", async () => {
     sleepImpl: async () => {},
     fetchImpl: async url => {
       if (String(url).endsWith("/prompt")) return response({ json: { prompt_id: "p" } });
-      if (String(url).includes("/history/")) return response({ json: { p: { outputs: { "1": { videos: [{ filename: "fake.mp4" }] } } } });
+      if (String(url).includes("/history/")) {
+        return response({ json: { p: { outputs: { "1": { videos: [{ filename: "fake.mp4" }] } } } } });
+      }
       return response({ bytes: Buffer.from("<html>not a video</html>") });
     }
   });
