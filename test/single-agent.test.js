@@ -5,7 +5,7 @@ const { createSingleAgent, configuration, knowledgeContext } = require("../modul
 
 test("single agent answers arithmetic without requiring a language model", async () => {
   const result = await createSingleAgent({ env: {} }).answer("1+1= javob nechun bo‘ladi?");
-  assert.match(result.reply, /1\\+1 = 2/);
+  assert.equal(result.reply, "Hisoblash: 1+1 = 2" + String.fromCharCode(10) + "Javob: 2.");
   assert.equal(result.reasoning.method, "verified-native-arithmetic");
 });
 
