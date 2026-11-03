@@ -30,7 +30,7 @@ test("single agent sends one unified prompt and returns local model answer", asy
       return { ok: true, json: async () => ({ choices: [{ message: { content: "1+1=2" } }] }) };
     }
   });
-  const result = await agent.answer("1+1 nechchi?");
+  const result = await agent.answer("Python dasturidagi xatoni qanday topaman?");
   assert.equal(result.reply, "1+1=2");
   assert.equal(result.externalProviderUsed, false);
   assert.equal(request.body.messages.length, 2);
