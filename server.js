@@ -330,7 +330,7 @@ app.get("/api/diagnostics", (_req, res) => {
     ok: true,
     app: "ULUGBEK AI",
     backend: "running",
-    ai: singleAgent.status().configured ? "self-hosted-single-agent-no-external-ai" : "native-single-agent-fallback",
+    ai: singleAgent.status().configured ? "self-hosted-single-agent-no-external-ai" : "native-single-agent-fallback-no-external-ai",
     agentCount: 1,
     model: singleAgent.status(),
     publicWebResearch: "available-through-lab-route-when-server-has-internet",
