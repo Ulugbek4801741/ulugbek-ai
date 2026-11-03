@@ -4,6 +4,7 @@ const rateLimit = require("express-rate-limit");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const agentRuntime = require("./agent-runtime");
+const singleAgent = require("./modules/single-agent").createSingleAgent();
 const developerAgent = require("./developer-agent");
 const agentPermissions = require("./agent-permissions");
 const learningWorkerForAdmin = require("./lab-learning-worker");
@@ -158,12 +159,13 @@ app.get("/api/admin/overview", requireAdmin, (_req, res) => {
     uptimeSeconds: Math.floor(process.uptime()),
     nodeVersion: process.version,
     memory: { rssBytes: process.memoryUsage().rss, heapUsedBytes: process.memoryUsage().heapUsed },
-    aiConfigured: false,
+    aiConfigured: singleAgent.status().configured,
     nativeReasoningReady: true,
     trainedLanguageModelReady: false,
+    localModelConfigured: singleAgent.status().configured,
     externalAiApiEnabled: false,
-    model: null,
-    cognition: "native-rule-based-reasoning",
+    model: singleAgent.status(),
+    cognition: "one-universal-agent-with-native-fallback",
     agentWorker: "single-process-queue",
     queuedTasks: agentRuntime.listTasks().filter(task => task.status === "queued").length,
     runningTasks: agentRuntime.listTasks().filter(task => task.status === "running").length,
@@ -296,6 +298,11 @@ app.post("/api/admin/tasks/:id/review", requireAdmin, (req, res) => {
   }
 });
 
+app.get("/api/ai/status", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, agentCount: 1, agentName: "ULUGBEK Universal Agent", model: singleAgent.status(), mathEngine: "native-safe-arithmetic", research: "public-read-only-with-source-checks" });
+});
+
 app.get("/api/health", (_req, res) => {
   res.set("Cache-Control", "no-store");
   res.json({
@@ -303,11 +310,13 @@ app.get("/api/health", (_req, res) => {
     app: "ULUGBEK AI",
     version: "0.3.1",
     processUptimeSeconds: Math.floor(process.uptime()),
-    aiConfigured: false,
+    aiConfigured: singleAgent.status().configured,
     nativeReasoningReady: true,
     trainedLanguageModelReady: false,
+    localModelConfigured: singleAgent.status().configured,
     externalAiApiEnabled: false,
-    mode: "native-rule-based-reasoning",
+    agentCount: 1,
+    mode: singleAgent.status().configured ? "self-hosted-single-agent" : "native-single-agent-fallback-no-external-ai",
     storageMode: "local-json",
     workerConcurrency: 1,
     multiInstanceSafe: false,
@@ -321,17 +330,19 @@ app.get("/api/diagnostics", (_req, res) => {
     ok: true,
     app: "ULUGBEK AI",
     backend: "running",
-    ai: "native-symbolic-no-external-ai",
+    ai: singleAgent.status().configured ? "self-hosted-single-agent-no-external-ai" : "native-single-agent-fallback-no-external-ai",
+    agentCount: 1,
+    model: singleAgent.status(),
     publicWebResearch: "available-through-lab-route-when-server-has-internet",
     knowledgeStorage: "server-local-json-files",
-    agentMemory: "separate-per-agent-per-browser-session; JSON file; durable hosting storage must be configured",
+    agentMemory: "single-agent memory per browser session; JSON file; durable hosting storage must be configured",
     voiceInput: "browser-dependent-and-user-permission-required",
     voiceOutput: "browser-dependent",
-    autonomousAgents: "one continuous read-only Developer Agent; process-and-host-dependent 24/7 loop",
+    autonomousAgents: "one ULUGBEK Universal Agent; separate background knowledge-fetch worker only",
     developerAgent: developerAgent.status(),
     automaticFailover: "not-configured-requires-authorized-backup-host",
     productionDatabase: "not-configured-task-store-uses-local-json-file",
-    agentExecution: "native rule-based task planner plus registered role modules; no hosted model API, no trained language model, no source writes or deploy",
+    agentExecution: "one universal agent with optional self-hosted local model; no multi-agent delegation; source writes and deploy remain disabled",
     nativeReasoning: "ulugbek-native-rule-reasoner-v1; deterministic symbolic planning; not a trained neural language model",
     externalAiApiEnabled: false,
     trainedLanguageModelReady: false,
@@ -519,17 +530,21 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       safety: { blocked: true, category: shieldDecision.reason, quarantined: shieldDecision.quarantined === true }
     });
   }
-  // Native-only chat mode: never call hosted/open-weight AI providers.
+  // One-agent chat mode: optional self-hosted model only; never call a hosted AI provider.
   try {
     const nativeBrain = require("./lab-learning-worker");
+    const answerWithOneAgent = async entries => {
+      const modelAnswer = await singleAgent.answer(message, entries);
+      return modelAnswer || nativeBrain.buildLocalReply(message, entries);
+    };
     let learned = await nativeBrain.searchKnowledge(message, 5);
-    let result = nativeBrain.buildLocalReply(message, learned);
+    let result = await answerWithOneAgent(learned);
     let webResearchUsed = false;
     if (!result.reasoning.answerable) {
       const publicFindings = await nativeBrain.researchQuestion(message);
       if (publicFindings.length) {
         learned = publicFindings;
-        result = nativeBrain.buildLocalReply(message, learned);
+        result = await answerWithOneAgent(learned);
         webResearchUsed = result.reasoning.answerable;
       }
       // If the local knowledge and encyclopedia search are insufficient, use
@@ -555,7 +570,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
             source: item.page?.url || item.url,
             status: item.page ? "unverified-public-page-content" : "unverified-search-snippet"
           }));
-          const researched = nativeBrain.buildLocalReply(message, evidence);
+          const researched = await answerWithOneAgent(evidence);
           const sourceLines = pageResults.map((item, index) =>
             (index + 1) + ". " + (item.page?.title || item.title) +
             (item.page ? " (sahifa matni o‘qildi)" : " (faqat qidiruv parchasi)") +
@@ -582,8 +597,8 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     }
     return res.json({
       reply: result.reply,
-      mode: webResearchUsed ? "native-public-research-no-external-ai" : "native-symbolic-no-external-ai",
-      agents: webResearchUsed ? ["NativeResearch", "NativeReasoner"] : ["NativeReasoner"],
+      mode: result.modelUsed ? "self-hosted-single-agent-no-external-ai" : webResearchUsed ? "native-public-research-single-agent-fallback-no-external-ai" : "native-single-agent-fallback-no-external-ai",
+      agents: ["ULUGBEK Universal Agent"],
       reasoning: result.reasoning,
       knowledgeUsed: learned.length,
       webResearchUsed,
@@ -621,8 +636,6 @@ learningWorker.start();
 agentRuntime.startWorker().then(() => {
   const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`ULUGBEK AI serveri ${PORT}-portda ishga tushdi.`);
-    developerAgent.start().catch(error => console.error("Developer Agent ishga tushmadi:", error.message));
-    adminAutopilot.start().catch(error => console.error("Admin Autopilot ishga tushmadi:", error.message));
   });
   server.on("error", error => console.error("HTTP server xatosi:", error.message));
 }).catch(error => {

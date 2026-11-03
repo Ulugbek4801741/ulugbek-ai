@@ -48,8 +48,8 @@ test("native specialist task worker runs without enabling external actions or mo
   await runtime.flush();
   assert.equal(current.status, "completed");
   assert.equal(current.approvalStatus, "pending_review");
-  assert.ok(current.output.includes("Research Agent"));
-  assert.ok(current.output.includes("Tashqi API ishlatildi: yo‘q"));
+  assert.ok(current.output.includes("ULUGBEK Universal Agent"));
+  assert.ok(current.output.includes("Tashqi AI API: ishlatilmaydi"));
   assert.equal(current.tests.status, "not_run");
   assert.equal(current.logs.some((entry) => /shell command executed|deployment executed|source file changed/i.test(entry.message)), false);
 });
