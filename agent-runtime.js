@@ -3,21 +3,12 @@
 const fs = require("node:fs/promises");
 const path = require("node:path");
 const crypto = require("node:crypto");
-const agentRegistry = require("./agents/registry");
+const singleAgent = require("./modules/single-agent").createSingleAgent();
 
 const MAX_TASKS = 200;
 const MAX_PROMPT_LENGTH = 4000;
-const ROLES = new Set(["orchestrator", "backend", "frontend", "tester", "security", "research", "product", ...agentRegistry.listAgents().map(agent => agent.id)]);
-const ROLE_LABELS = {
-  orchestrator: "Boshqaruvchi agent",
-  backend: "Backend/kod agenti",
-  frontend: "Interfeys agenti",
-  tester: "Sinov agenti",
-  security: "Xavfsizlik agenti",
-  research: "Tadqiqot agenti",
-  product: "Mahsulot agenti",
-  ...Object.fromEntries(agentRegistry.listAgents().map(agent => [agent.id, agent.name]))
-};
+const ROLES = new Set(["orchestrator", "backend", "frontend", "tester", "security", "research", "product", "ulugbek-agent"]);
+const ROLE_LABELS = { orchestrator: "ULUGBEK Universal Agent", backend: "ULUGBEK Universal Agent", frontend: "ULUGBEK Universal Agent", tester: "ULUGBEK Universal Agent", security: "ULUGBEK Universal Agent", research: "ULUGBEK Universal Agent", product: "ULUGBEK Universal Agent", "ulugbek-agent": "ULUGBEK Universal Agent" };
 const DATA_DIR = path.resolve(process.env.ULUGBEK_DATA_DIR || path.join(__dirname, "data"));
 const TASK_STORE_PATH = path.resolve(process.env.TASK_STORE_PATH || path.join(DATA_DIR, "agent-tasks.json"));
 let tasks = [];
@@ -70,7 +61,7 @@ function addLog(task, message) {
   task.updatedAt = new Date().toISOString();
 }
 function modelConfig() {
-  return { configured: false, mode: "native-rule-based-reasoning", apiUsed: false, trainedLanguageModel: false };
+  return { ...singleAgent.status(), agentCount: 1, apiUsed: false, trainedLanguageModel: singleAgent.status().configured };
 }
 async function runModel(task) {
   try {
@@ -78,7 +69,12 @@ async function runModel(task) {
     const engine = require("./native-reasoning-engine");
     const knowledgeBridge = require("./agent-knowledge-bridge");
     const sharedKnowledge = await knowledgeBridge.retrieve(task.prompt, 5);
-    const result = engine.runTask(task.prompt, task.role, sharedKnowledge);
+    const modelAnswer = await singleAgent.answer(task.prompt, sharedKnowledge);
+    const result = modelAnswer
+      ? { output: modelAnswer.reply, analysis: { engine: "self-hosted-single-agent", agentCount: 1, model: modelAnswer.modelUsed } }
+      : engine.runTask(task.prompt, "ulugbek-agent", sharedKnowledge);
+    task.role = "ulugbek-agent";
+    task.roleLabel = "ULUGBEK Universal Agent";
     task.knowledgeUsed = sharedKnowledge.map(item => ({ title: item.title, source: item.source, language: item.language }));
     addLog(task, sharedKnowledge.length
       ? "Chat Agentning tasdiqlangan bilimlar bazasidan " + sharedKnowledge.length + " ta manba agent vazifasiga uzatildi."
@@ -88,8 +84,10 @@ async function runModel(task) {
     task.tests = { status: "not_run", note: "Mahalliy reja tayyorlandi; kod ishga tushirilmadi va avtomatik test bajarilmadi." };
     task.status = "completed";
     task.approvalStatus = "pending_review";
-    addLog(task, "Mahalliy qoidaviy tahlil tugadi. API ishlatilmadi; loyiha fayllari o‘zgartirilmadi.");
-    addLog(task, "Natija neyron model javobi emas, qoidalar asosidagi reja va agent rollari hisobotidir. Bilim uzatish model vaznlarini o‘qitmaydi.");
+    addLog(task, modelAnswer
+      ? "Bitta ULUGBEK Universal Agent mahalliy model orqali javob tayyorladi; tashqi AI API ishlatilmadi."
+      : "Bitta ULUGBEK Universal Agent mahalliy qoidalar va tasdiqlangan bilimlar asosida reja tayyorladi.");
+    addLog(task, "Fayllarni avtomatik o‘zgartirish, buyruq bajarish va deploy o‘chiq. Kod natijasi alohida muhitda test qilinishi kerak.");
   } catch (error) {
     task.status = "failed";
     task.error = String(error.message || "Mahalliy fikrlash xatosi").slice(0, 300);
@@ -131,10 +129,11 @@ function startWorker() {
 async function createTask(input = {}) {
   await startWorker();
   const prompt = typeof input.prompt === "string" ? input.prompt.trim() : "";
-  const role = typeof input.role === "string" ? input.role : "orchestrator";
+  const requestedRole = typeof input.role === "string" ? input.role : "orchestrator";
   if (!prompt) { const error = new Error("Vazifa matni bo‘sh bo‘lmasligi kerak."); error.status = 400; throw error; }
   if (prompt.length > MAX_PROMPT_LENGTH) { const error = new Error("Vazifa 4000 belgidan oshmasligi kerak."); error.status = 413; throw error; }
-  if (!ROLES.has(role)) { const error = new Error("Noma’lum agent roli."); error.status = 400; throw error; }
+  if (!ROLES.has(requestedRole)) { const error = new Error("Noma’lum agent roli."); error.status = 400; throw error; }
+  const role = "ulugbek-agent";
   if (!workerStarted) { const error = new Error("Agent ishchi jarayoni tayyor emas."); error.status = 503; throw error; }
   const task = {
     id: crypto.randomUUID(), prompt, role, roleLabel: ROLE_LABELS[role] || role,
@@ -143,7 +142,7 @@ async function createTask(input = {}) {
   };
   tasks.push(task);
   tasks = tasks.slice(-MAX_TASKS);
-  addLog(task, "Vazifa navbatga qo‘shildi. Natija kod taklifi; avtomatik fayl yozish va deploy o‘chiq.");
+  addLog(task, "Vazifa yagona ULUGBEK Universal Agent navbatiga qo‘shildi. Kodni avtomatik yozish va deploy o‘chiq.");
   await persist();
   queueMicrotask(pump);
   return publicTask(task);
