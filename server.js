@@ -159,12 +159,13 @@ app.get("/api/admin/overview", requireAdmin, (_req, res) => {
     uptimeSeconds: Math.floor(process.uptime()),
     nodeVersion: process.version,
     memory: { rssBytes: process.memoryUsage().rss, heapUsedBytes: process.memoryUsage().heapUsed },
-    aiConfigured: false,
+    aiConfigured: singleAgent.status().configured,
     nativeReasoningReady: true,
     trainedLanguageModelReady: false,
+    localModelConfigured: singleAgent.status().configured,
     externalAiApiEnabled: false,
-    model: null,
-    cognition: "native-rule-based-reasoning",
+    model: singleAgent.status(),
+    cognition: "one-universal-agent-with-native-fallback",
     agentWorker: "single-process-queue",
     queuedTasks: agentRuntime.listTasks().filter(task => task.status === "queued").length,
     runningTasks: agentRuntime.listTasks().filter(task => task.status === "running").length,
@@ -529,7 +530,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       safety: { blocked: true, category: shieldDecision.reason, quarantined: shieldDecision.quarantined === true }
     });
   }
-  // Native-only chat mode: never call hosted/open-weight AI providers.
+  // One-agent chat mode: optional self-hosted model only; never call a hosted AI provider.
   try {
     const nativeBrain = require("./lab-learning-worker");
     const answerWithOneAgent = async entries => {
