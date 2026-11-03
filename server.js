@@ -75,6 +75,11 @@ const imageRateLimit = rateLimit({
   message: { error: "Rasm yaratish limiti tugadi. Bir daqiqadan keyin qayta urinib ko‘ring." }
 });
 const imageGenerator = require("./modules/image-generation").createImageGenerator();
+const videoGenerator = require("./modules/video-generation").createVideoGenerator();
+const videoRateLimit = rateLimit({
+  windowMs: 60 * 1000, limit: 1, standardHeaders: "draft-8", legacyHeaders: false,
+  message: { error: "Video yaratish limiti tugadi. Bir daqiqadan keyin qayta urinib ko‘ring." }
+});
 const mediaLibraryRoot = path.join(process.env.ULUGBEK_DATA_DIR || path.join(__dirname, "data"), "media-library");
 const mediaLibrary = require("./modules/media-library").createMediaLibrary({ dataDir: mediaLibraryRoot });
 
@@ -431,6 +436,21 @@ app.post("/api/images/generate", imageRateLimit, async (req, res) => {
     return res.json({ ok: true, ...result, provider: "self-hosted-stable-diffusion-webui" });
   } catch (error) {
     return res.status(error.status || 502).json({ error: error.message || "Rasm yaratib bo‘lmadi." });
+  }
+});
+
+app.get("/api/videos/status", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, videoGeneration: videoGenerator.status() });
+});
+
+app.post("/api/videos/generate", videoRateLimit, async (req, res) => {
+  res.set("Cache-Control", "no-store");
+  try {
+    const result = await videoGenerator.generate(req.body?.prompt);
+    return res.json({ ok: true, ...result, provider: "self-hosted-comfyui" });
+  } catch (error) {
+    return res.status(error.status || 502).json({ error: error.message || "Video yaratib bo‘lmadi." });
   }
 });
 
