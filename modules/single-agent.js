@@ -56,7 +56,7 @@ function createSingleAgent(options = {}) {
     if (calculation) {
       const value = math.formatNumber(calculation.result);
       return {
-        reply: "Hisoblash: " + calculation.expression + " = " + value + "\\nJavob: " + value + ".",
+        reply: "Hisoblash: " + calculation.expression + " = " + value + String.fromCharCode(10) + "Javob: " + value + ".",
         reasoning: { method: "verified-native-arithmetic", answerable: true, facts: [] },
         modelUsed: null,
         externalProviderUsed: false
