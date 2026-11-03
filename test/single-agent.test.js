@@ -3,6 +3,12 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { createSingleAgent, configuration, knowledgeContext } = require("../modules/single-agent");
 
+test("single agent answers arithmetic without requiring a language model", async () => {
+  const result = await createSingleAgent({ env: {} }).answer("1+1= javob nechun bo‘ladi?");
+  assert.match(result.reply, /1\\+1 = 2/);
+  assert.equal(result.reasoning.method, "verified-native-arithmetic");
+});
+
 test("single agent stays disabled until local model URL and name are configured", () => {
   assert.equal(configuration({}).configured, false);
 });
