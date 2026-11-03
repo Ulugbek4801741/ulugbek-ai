@@ -43,6 +43,52 @@ npm start
 
 Open `http://localhost:3000`.
 
+## Image generation (optional, no API key)
+
+ULUGBEK AI can create an image from a prompt such as `Rasm chiz: tog‘lar orasida futuristik shahar`. The backend uses a self-hosted AUTOMATIC1111-compatible Stable Diffusion WebUI API; it does not send prompts to a paid image provider. Install and run the image model on a separate GPU-capable machine/server with its API enabled, then set these server-only variables:
+
+- `IMAGE_GENERATION_URL` — private or trusted URL of the Stable Diffusion WebUI (for example `http://127.0.0.1:7860` when it runs on the same machine).
+- `IMAGE_GENERATION_USERNAME` and `IMAGE_GENERATION_PASSWORD` — optional HTTP Basic credentials if enabled on the model server.
+
+The app sends only the image prompt, limits requests to 2 per minute, uses 512×512 images and 20 steps, and returns the PNG directly to the browser. No image is generated until a model server is configured. A normal low-memory web host without a GPU may not be able to run image generation; do not expose the model API publicly without authentication/firewall rules.
+
+## Open-licensed image and video library
+
+The backend can search public media catalogs and import selected files into a private server-side library. It does not crawl social accounts, private groups, user profiles, or arbitrary websites.
+
+- `GET /api/media/search?q=mountain&kind=image` searches Openverse images.
+- `GET /api/media/search?q=waterfall&kind=video` searches Wikimedia Commons video files.
+- `GET /api/media/search?q=mountain&kind=all` searches both supported catalogs.
+- `POST /api/admin/media/import` with `{"id":"<search-result-id>"}` imports one result after administrator login. The result must have been returned by a recent search from this running server; search candidates expire after 10 minutes.
+- `GET /api/admin/media/library` lists imported items. `GET /api/admin/media/status` reports counts.
+
+Only CC0, CC BY, CC BY-SA and public-domain results are eligible. Noncommercial, no-derivatives, unknown-license, and unsupported-host results are excluded. Each imported file keeps its creator, license, source page, media URL, file type, size and import time. Images are limited to 12 MB; videos to 25 MB. The downloader allows HTTPS from a small media-host allowlist, rejects redirects, and verifies file signatures rather than trusting file extensions. Files are stored under `ULUGBEK_DATA_DIR/media-library/` (or `data/media-library/`) and should be placed on persistent private storage in production.
+
+This is a controlled collection library, **not automatic model training**. Imported records start with `trainingStatus: "not-approved"`. They must be reviewed for license compliance, attribution, quality, privacy and suitability before any future training pipeline uses them. Search is read-only; downloading is administrator-only. Openverse currently supplies image discovery in this integration; Wikimedia Commons supplies image/video discovery. Instagram, Facebook, Telegram, WhatsApp and YouTube are not scraped.
+
+## Self-hosted video generation (ComfyUI)
+
+The chat accepts commands such as `Video yarat: quyosh botayotgan paytda tog‘lar ustidan uchayotgan dron`. It sends the prompt to a ComfyUI server that you control; no paid inference API key is required.
+
+Configure these secrets/environment variables on the **backend host**:
+
+- `VIDEO_COMFYUI_URL` — private ComfyUI API base URL, for example `http://127.0.0.1:8188` when ComfyUI runs on the same server.
+- `VIDEO_COMFYUI_WORKFLOW` — absolute path to a ComfyUI API-format workflow JSON file stored on the server, for example `/app/config/video-workflow.json`.
+- `VIDEO_PROMPT_NODE_ID` — optional node ID in that workflow whose text input receives the user's prompt.
+- `VIDEO_PROMPT_INPUT` — optional input name for that node; defaults to `text`.
+- `VIDEO_COMFYUI_USERNAME` and `VIDEO_COMFYUI_PASSWORD` — optional Basic authentication if your ComfyUI reverse proxy requires it.
+
+Create the workflow in ComfyUI using a video model whose license and hardware requirements you have checked. Export it using **Save (API Format)**, not the regular UI workflow export. For a prompt node, either put the literal placeholder `{{PROMPT}}` in the text field or set `VIDEO_PROMPT_NODE_ID` and `VIDEO_PROMPT_INPUT`. The workflow may also use `{{NEGATIVE_PROMPT}}` and `{{SEED}}` placeholders. The workflow is administrator-provided; chat users cannot upload or replace it.
+
+Endpoints:
+- `GET /api/videos/status` reports whether ComfyUI and the workflow path are configured.
+- `POST /api/videos/generate` queues the workflow, waits up to 3 minutes, validates the MP4/WebM output and returns it to the chat.
+- The chat command is `Video yarat: ...`; the generated clip can be played and saved in the browser.
+
+Video generation is limited to one request per minute and 20 MB per returned clip. ComfyUI must be reachable from the backend. The workflow must actually produce an MP4 or WebM output (for example through a compatible video-combine node). This adapter does not download model weights, train a new foundation model, or guarantee a video will be generated before a compatible workflow and GPU model are installed. Do not expose ComfyUI directly to the public internet; keep it private behind the backend or a protected network.
+
+**Important:** collecting images/videos in the media library does not train the image/video model. Only use files for training after verifying their licenses, attribution requirements, consent/privacy and the model's own training-data policy.
+
 ## Connect an AI model (optional)
 
 Set these on the **server hosting environment**, not in browser JavaScript or GitHub Pages:
