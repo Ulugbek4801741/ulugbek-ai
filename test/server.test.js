@@ -226,7 +226,7 @@ test("API smoke tests", async (t) => {
       const body = await response.json();
       assert.equal(response.status, 200);
       assert.equal(body.backend, "running");
-      assert.equal(body.ai, "native-symbolic-no-external-ai");
+      assert.equal(body.ai, "native-single-agent-fallback-no-external-ai");
       assert.equal(body.automaticFailover, "not-configured-requires-authorized-backup-host");
     });
 
@@ -275,7 +275,7 @@ test("API smoke tests", async (t) => {
       });
       const body = await response.json();
       assert.equal(response.status, 200);
-      assert.equal(body.mode, "native-symbolic-no-external-ai");
+      assert.equal(body.mode, "native-single-agent-fallback-no-external-ai");
       assert.equal(body.receivedCharacters, 5);
     });
 
