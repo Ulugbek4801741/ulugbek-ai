@@ -142,3 +142,20 @@ Never put an administrator access code or model API key in HTML, browser JavaScr
 ## What “autonomous” means in this MVP
 
 The planner can select a task category, create a workflow plan, and return suggested agent roles. It does not mean agents are free to execute external actions, modify production, or learn model weights without limits and review.
+
+
+## One universal agent (no 10-agent orchestration)
+
+ULUGBEK AI uses one assistant agent for chat, learning, research, education, mathematics and programming. The same agent can use the approved local knowledge base and the safe arithmetic engine. It does not delegate work to ten separate agents.
+
+For stronger general answers and code generation, optionally run an OpenAI-compatible local model server such as Ollama on the same trusted machine or private GPU host. No paid AI API key is required. Configure these server-side environment variables:
+
+- `ULUGBEK_LOCAL_MODEL_URL=http://127.0.0.1:11434/v1/chat/completions`
+- `ULUGBEK_LOCAL_MODEL_NAME=qwen2.5:7b` (replace with a model actually installed on your host)
+- `ULUGBEK_LOCAL_MODEL_TOKEN` (optional; only if your private model gateway requires it)
+
+The backend sends only the current user message and up to five relevant knowledge excerpts to this configured model endpoint. It does not send chat history, profile data, or unrelated uploads. The endpoint is configured by the server administrator, not by chat users. Keep it on localhost or a private network; do not expose Ollama or ComfyUI directly to the public internet.
+
+Check `GET /api/ai/status` to see whether the local model is configured. If it is not configured or is temporarily unavailable, chat falls back to the built-in arithmetic and evidence-based native reasoning. A regular CPU VPS may be too slow or too small for a useful language model; model size and hardware must be chosen for the available RAM/VRAM.
+
+The local model is an inference engine, not automatic model training. New web findings remain unverified until reviewed. Code execution, automatic source-file edits and deployment remain disabled; code proposals must be reviewed and tested separately.
