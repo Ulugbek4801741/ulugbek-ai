@@ -52,7 +52,7 @@ test("native-only mode ignores configured external AI endpoints", async (t) => {
       });
       assert.equal(response.status, 200);
       const data = await response.json();
-      assert.equal(data.mode, "native-symbolic-no-external-ai");
+      assert.equal(data.mode, "native-single-agent-fallback-no-external-ai");
       assert.match(data.reply, /yetarli dalil topilmadi|Salom/i);
       assert.equal(providerRequests, 0);
     });
