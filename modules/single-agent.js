@@ -52,6 +52,16 @@ function createSingleAgent(options = {}) {
   async function answer(prompt, entries = []) {
     const question = String(prompt || "").trim();
     if (!question || question.length > 4000) return null;
+    const calculation = math.findExpression(question);
+    if (calculation) {
+      const value = math.formatNumber(calculation.result);
+      return {
+        reply: "Hisoblash: " + calculation.expression + " = " + value + "\\nJavob: " + value + ".",
+        reasoning: { method: "verified-native-arithmetic", answerable: true, facts: [] },
+        modelUsed: null,
+        externalProviderUsed: false
+      };
+    }
     const config = configuration(env);
     if (!config.configured || typeof fetchImpl !== "function") return null;
 
