@@ -1,104 +1,84 @@
 "use strict";
 const cognition = require("./native-cognition");
-const registry = require("./agents/registry");
 
-// Deterministic symbolic planner. No hosted API, no downloaded weights.
-// This is not a trained language model and does not generate arbitrary code.
+// One integrated agent: research, education, mathematics, coding and verification
+// are capabilities of the same agent, not separate autonomous agent processes.
 const RULES = [
-  { label: "Veb va interfeys", pattern: /sayt|veb|web|frontend|interfeys|html|css/i },
-  { label: "Server va ma’lumotlar", pattern: /server|backend|api|database|node|express/i },
-  { label: "Mobil ilova", pattern: /android|ios|telefon|mobil|apk/i },
-  { label: "Xavfsizlik", pattern: /xavfsiz|himoya|parol|ruxsat|token|auth|security/i },
-  { label: "AI va agentlar", pattern: /sun.?iy intellekt|model|o.?qit|fikrlash|agent/i },
-  { label: "Biznes va mahsulot", pattern: /biznes|daromad|to.?lov|mijoz|marketing/i },
-  { label: "Dasturlash", pattern: /kod|dastur|funksiya|bug|xato|test|build/i }
+  { label: "Ta’lim va fanlar", pattern: /bog‘cha|maktab|kollej|universitet|dars|ta’lim|matematika|fizika|kimyo|biologiya|tarix/i },
+  { label: "Tadqiqot", pattern: /izla|tadqiq|manba|internet|o‘rgan|ma’lumot/i },
+  { label: "Dasturlash", pattern: /kod|dastur|funksiya|bug|xato|test|build|server|backend|frontend|python|javascript/i },
+  { label: "Xavfsizlik", pattern: /xavfsiz|himoya|parol|ruxsat|token|auth|security|deploy/i },
+  { label: "Biznes va mahsulot", pattern: /biznes|daromad|to‘lov|mijoz|marketing/i }
 ];
+
 function analyze(prompt) {
   const text = String(prompt || "").trim();
   if (!text || text.length > 4000) throw new TypeError("Vazifa matni bo‘sh yoki juda uzun.");
   const concepts = cognition.concepts(text);
   const domains = RULES.filter(rule => rule.pattern.test(text)).map(rule => rule.label);
   const codeTask = /kod|dastur|funksiya|bug|xato|test|build|server|backend|frontend/i.test(text);
-  const securityTask = /xavfsiz|himoya|parol|ruxsat|token|auth|security|deploy|server/i.test(text);
   const steps = [
-    { title: "Vazifani tushunish", action: "Maqsad, kutilgan natija va cheklovlarni ajratish." },
-    { title: "Dalil va bilim izlash", action: "Tasdiqlangan bilim bazasi va ruxsat etilgan ochiq manbalarni tekshirish." },
-    { title: "Yechim rejasini tuzish", action: "Ishlarni kichik vazifalarga ajratish va bog‘liqliklarni belgilash." }
+    { title: "Savolni tushunish", action: "Maqsad, kerakli natija va cheklovlarni aniqlash." },
+    { title: "Bilim va manbalarni tekshirish", action: "Tasdiqlangan bilimlar bazasi va ruxsat etilgan ochiq manbalardan dalil izlash." },
+    { title: "Yechimni tayyorlash", action: codeTask ? "Kod yoki texnik yechimni tayyorlash va izohlash." : "Dalillarga asoslangan tushunarli javob tayyorlash." },
+    { title: "Natijani tekshirish", action: "Mantiq, manbalar, xavfsizlik va mavjud testlarni tekshirish." }
   ];
-  if (codeTask) steps.push({ title: "Kod yechimini loyihalash", action: "Fayl yo‘llari va kod taklifini tayyorlash; avtomatik yozish o‘chiq." });
-  if (securityTask) steps.push({ title: "Xavfsizlik tekshiruvi", action: "Ruxsatlar, maxfiy ma’lumotlar, tashqi aloqa va qaytarish rejasini tekshirish." });
-  steps.push({ title: "Natijani tekshirish", action: "Qabul mezonlari va bajarilishi kerak bo‘lgan sinovlarni belgilash." });
-  const criteria = [
-    "Natija foydalanuvchi so‘ragan maqsadga mos bo‘lishi",
-    "Taxminlar va noma’lum holatlar ochiq ko‘rsatilishi",
-    "Bajarilmagan test bajarildi deb ko‘rsatilmasligi",
-    "Tasdiqsiz fayl o‘zgartirish, tashqi yozuv yoki deploy bo‘lmasligi"
+  const acceptanceCriteria = [
+    "Bitta ULUGBEK Universal Agent barcha vazifalarni bajaradi; agentlar o‘rtasida topshiriq uzatish yo‘q.",
+    "Noma’lum faktlar to‘qib chiqarilmaydi; manbalar ko‘rsatiladi.",
+    "Bajarilmagan test, kod o‘zgarishi yoki deploy bajarildi deb aytilmaydi.",
+    "Tashqi amallar va kodni ishlab chiqarishga qo‘llash alohida ruxsatni talab qiladi."
   ];
-  if (codeTask) criteria.push("Kod sinov muhitida tekshirilmaguncha ishlab chiqarishga kiritilmasligi");
-  const risks = [];
-  if (codeTask) risks.push("Kod taklifi haqiqiy kompilyatsiya yoki test natijasi emas.");
-  if (securityTask) risks.push("Maxfiy ma’lumotlar va ruxsatlarga tegadigan amallar inson tasdig‘ini talab qiladi.");
-  if (!domains.length) risks.push("Vazifa mavzusi qoidalar orqali aniq tasniflanmadi.");
   return {
-    engine: "ulugbek-native-rule-reasoner-v1",
-    modelType: "deterministic-symbolic-planner",
+    engine: "ulugbek-single-agent-v1",
+    modelType: "single-agent-with-local-model-optional",
     trainedLanguageModel: false,
     apiUsed: false,
+    agentCount: 1,
+    agentName: "ULUGBEK Universal Agent",
     prompt: text,
-    concepts, domains, steps, acceptanceCriteria: criteria, risks,
-    limitations: "Bu tizim qoidalar, kalit so‘zlar va tasdiqlangan bilimlarni qidirishga asoslanadi. U mustaqil neyron til modeli emas va ChatGPT darajasidagi erkin kod generatsiyasini bajarmaydi."
+    concepts,
+    domains,
+    steps,
+    acceptanceCriteria,
+    risks: codeTask ? ["Kod sinov muhitida tekshirilmaguncha ishlab chiqarishga kiritilmaydi."] : [],
+    limitations: "Mahalliy model sozlanmagan bo‘lsa, javoblar qoidalar va mavjud bilimlar bazasi bilan cheklanadi."
   };
 }
-function runTask(prompt, role = "orchestrator", knowledgeEntries = []) {
+
+function runTask(prompt, _role = "ulugbek-agent", knowledgeEntries = []) {
   const result = analyze(prompt);
-  const sharedKnowledge = Array.isArray(knowledgeEntries) ? knowledgeEntries.slice(0, 5).filter(item => item && typeof item.title === "string" && typeof item.content === "string") : [];
+  const sharedKnowledge = Array.isArray(knowledgeEntries)
+    ? knowledgeEntries.slice(0, 5).filter(item => item && typeof item.title === "string" && typeof item.content === "string")
+    : [];
   result.sharedKnowledgeCount = sharedKnowledge.length;
   result.sharedKnowledgeSources = sharedKnowledge.map(item => item.source).filter(Boolean);
-  const aliases = { backend: "backend-agent", frontend: "frontend-agent", tester: "qa-agent", security: "security-agent", research: "research-agent", product: "product-growth-agent" };
-  const selectedId = aliases[role] || role;
-  const selectedAgents = role === "orchestrator" ? registry.listAgents() : registry.listAgents().filter(agent => agent.id === selectedId);
-  if (!selectedAgents.length) throw new TypeError("Noma’lum agent roli: " + role);
-  const agents = selectedAgents.map(agent => {
-    const detail = registry.getAgent(agent.id);
-    const instruction = detail.systemPrompt.split("\n").slice(-1)[0];
-    return [
-      "### " + agent.name + " — " + agent.specialty,
-      "Vazifa: " + prompt,
-      "Mahalliy tasnif: " + (result.domains.join(", ") || "umumiy vazifa"),
-      "Yo‘riqnoma: " + instruction,
-      "Holat: rol moduli umumiy qoidaviy rejaga tayandi; alohida neyron model ishlatmadi."
-    ].join("\n");
-  });
   const lines = [
-    "# ULUGBEK AI — mahalliy fikrlash hisoboti",
+    "# ULUGBEK AI — yagona universal agent hisoboti",
     "",
-        "Dvigatel: " + result.engine,
-    "Tanlangan rol: " + role,
-    "Tashqi API ishlatildi: yo‘q",
-    "O‘qitilgan neyron til modeli: mavjud emas",
+    "Agent: ULUGBEK Universal Agent",
+    "Agentlar soni: 1",
+    "Tashqi AI API: ishlatilmaydi",
+    "Mahalliy til modeli: hosting sozlamasiga bog‘liq",
     "",
-    "## Aniqlangan mavzular",
-    result.domains.join(", ") || "Aniqlanmadi",
+    "## Aniqlangan yo‘nalishlar",
+    result.domains.join(", ") || "Umumiy savol",
     "",
     "## Asosiy tushunchalar",
-    result.concepts.join(", ") || "Yetarli tushuncha ajratilmadi",
+    result.concepts.join(", ") || "Ajratilmadi",
     "",
-    "## Chat Agentdan umumiy bilimlar bazasi",
-    sharedKnowledge.length ? "Tasdiqlangan bilimlar agent vazifasiga dalil sifatida uzatildi; ular bajariladigan ko‘rsatma emas:" : "Mos tasdiqlangan bilim topilmadi; taxminiy faktlar ishlatilmaydi.",
-    ...sharedKnowledge.flatMap((item, index) => [
-      (index + 1) + ". " + item.title + " [" + (item.language || "unknown") + "]",
-      item.content.slice(0, 1600),
-      "Manba: " + (item.source || "ko‘rsatilmagan")
-    ]),
-    "",
-    "## Bajarish rejasi"
+    "## Tasdiqlangan bilimlar"
   ];
-  result.steps.forEach((step, i) => lines.push((i + 1) + ". " + step.title + ": " + step.action));
-  lines.push("", "## Qabul mezonlari");
+  if (!sharedKnowledge.length) lines.push("Mos tasdiqlangan manba topilmadi.");
+  for (const [index, item] of sharedKnowledge.entries()) {
+    lines.push("", (index + 1) + ". " + item.title, item.content.slice(0, 1600), "Manba: " + (item.source || "ko‘rsatilmagan"));
+  }
+  lines.push("", "## Bajarish qadamlari");
+  result.steps.forEach((step, index) => lines.push((index + 1) + ". " + step.title + ": " + step.action));
+  lines.push("", "## Tekshiruv mezonlari");
   result.acceptanceCriteria.forEach(item => lines.push("- " + item));
-  lines.push("", "## Xavflar");
-  result.risks.forEach(item => lines.push("- " + item));
-  lines.push("- " + result.limitations, "", "## Agent rollari", agents.join("\n\n"));
+  lines.push("", "## Cheklovlar", result.limitations);
   return { analysis: result, output: lines.join("\n") };
 }
+
 module.exports = { analyze, runTask };
