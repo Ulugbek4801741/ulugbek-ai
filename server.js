@@ -311,7 +311,8 @@ app.get("/api/health", (_req, res) => {
     processUptimeSeconds: Math.floor(process.uptime()),
     aiConfigured: singleAgent.status().configured,
     nativeReasoningReady: true,
-    trainedLanguageModelReady: singleAgent.status().configured,
+    trainedLanguageModelReady: false,
+    localModelConfigured: singleAgent.status().configured,
     externalAiApiEnabled: false,
     agentCount: 1,
     mode: singleAgent.status().configured ? "self-hosted-single-agent" : "native-single-agent-fallback",
@@ -336,7 +337,7 @@ app.get("/api/diagnostics", (_req, res) => {
     agentMemory: "separate-per-agent-per-browser-session; JSON file; durable hosting storage must be configured",
     voiceInput: "browser-dependent-and-user-permission-required",
     voiceOutput: "browser-dependent",
-    autonomousAgents: "one continuous read-only Developer Agent; process-and-host-dependent 24/7 loop",
+    autonomousAgents: "one ULUGBEK Universal Agent; separate background knowledge-fetch worker only",
     developerAgent: developerAgent.status(),
     automaticFailover: "not-configured-requires-authorized-backup-host",
     productionDatabase: "not-configured-task-store-uses-local-json-file",
@@ -634,8 +635,6 @@ learningWorker.start();
 agentRuntime.startWorker().then(() => {
   const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`ULUGBEK AI serveri ${PORT}-portda ishga tushdi.`);
-    developerAgent.start().catch(error => console.error("Developer Agent ishga tushmadi:", error.message));
-    adminAutopilot.start().catch(error => console.error("Admin Autopilot ishga tushmadi:", error.message));
   });
   server.on("error", error => console.error("HTTP server xatosi:", error.message));
 }).catch(error => {
