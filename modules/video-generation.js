@@ -37,6 +37,29 @@ function replacePlaceholders(value, prompt, negativePrompt, seed) {
     .replaceAll("{{NEGATIVE_PROMPT}}", negativePrompt)
     .replaceAll("{{SEED}}", String(seed));
 }
+async function readBoundedVideo(response) {
+  if (response.body && typeof response.body.getReader === "function") {
+    const reader = response.body.getReader();
+    const chunks = [];
+    let total = 0;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        total += value.byteLength;
+        if (total > MAX_VIDEO_BYTES) {
+          await reader.cancel().catch(() => {});
+          const error = new Error("Yaratilgan video 20 MB dan katta."); error.status = 413; throw error;
+        }
+        chunks.push(Buffer.from(value));
+      }
+    } finally { reader.releaseLock(); }
+    return Buffer.concat(chunks, total);
+  }
+  const buffer = Buffer.from(await response.arrayBuffer());
+  if (buffer.length > MAX_VIDEO_BYTES) { const error = new Error("Yaratilgan video 20 MB dan katta."); error.status = 413; throw error; }
+  return buffer;
+}
 function findVideoOutput(history) {
   const outputs = history?.outputs || {};
   for (const node of Object.values(outputs)) {
@@ -139,9 +162,8 @@ function createVideoGenerator({ env = process.env, fetchImpl = globalThis.fetch,
       const videoResponse = await call(view.toString(), { headers: { Accept: "video/mp4,video/webm,video/*,application/octet-stream" } });
       const declared = Number(videoResponse.headers?.get?.("content-length") || 0);
       if (declared > MAX_VIDEO_BYTES) { const error = new Error("Yaratilgan video 20 MB dan katta."); error.status = 413; throw error; }
-      const bytes = await videoResponse.arrayBuffer();
-      if (!bytes.byteLength || bytes.byteLength > MAX_VIDEO_BYTES) { const error = new Error("Video bo‘sh yoki 20 MB dan katta."); error.status = 413; throw error; }
-      const buffer = Buffer.from(bytes);
+      const buffer = await readBoundedVideo(videoResponse);
+      if (!buffer.length || buffer.length > MAX_VIDEO_BYTES) { const error = new Error("Video bo‘sh yoki 20 MB dan katta."); error.status = 413; throw error; }
       const isMp4 = buffer.length > 12 && buffer.toString("ascii", 4, 8) === "ftyp";
       const isWebm = buffer.length > 4 && buffer.subarray(0, 4).toString("hex") === "1a45dfa3";
       if (!isMp4 && !isWebm) { const error = new Error("ComfyUI chiqargan fayl MP4 yoki WebM video emas."); error.status = 415; throw error; }
