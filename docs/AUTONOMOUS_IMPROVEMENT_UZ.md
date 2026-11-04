@@ -14,7 +14,7 @@ Aniqlanadigan yo‘nalishlar:
 
 ## Admin API
 
-Barcha yo‘llar administrator sessiyasi bilan himoyalangan:
+Barcha yo‘llar administrator sessiyasi bilan himoyalangan. Administrator panelidagi “ULUGBEK AI — o‘z kamchiliklarini aniqlash” bo‘limi shu API bilan ishlaydi. Barcha yo‘llar:
 - GET /api/admin/improvements — holat va takliflar.
 - POST /api/admin/improvements/scan — hozir darhol qayta tekshirish.
 - POST /api/admin/improvements/:id/decision — JSON {"decision":"approve"} yoki {"decision":"reject"}.
