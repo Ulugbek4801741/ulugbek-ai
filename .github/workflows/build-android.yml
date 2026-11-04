@@ -57,7 +57,7 @@ jobs:
 
       - name: Check JavaScript syntax
         run: |
-          node --check server.js
+          node --check server.js\n          node --check modules/voice-report.js\n          node --check scripts/install-android-voice-report.js
           node --check public/app.js
           node --check public/admin.js
           node --check public/voice.js
