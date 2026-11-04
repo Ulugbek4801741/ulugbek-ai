@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 const cognition = require("../native-cognition");
 
 test("evidence replies are concise and cite a small number of sources", () => {
-  const result = cognition.respond("LED musiqali lyustra yig‘ish bosqichlari", [
+  const result = cognition.respond("lyustra", [
     { title: "Qo‘llanma 1", source: "https://example.org/one", status: "unverified-public-page-content",
       content: "LED musiqali lyustrani yig‘ishdan oldin elektr ta’minotini uzing. Simlarni ishlab chiqaruvchi ko‘rsatmasiga muvofiq ulang. Ishni yakunlashdan oldin barcha ulanishlarni tekshiring." },
     { title: "Qo‘llanma 2", source: "https://example.org/two", status: "unverified-public-page-content",
@@ -27,7 +27,7 @@ test("unconfirmed search snippets are not presented as approved knowledge", () =
 });
 
 test("approved evidence is labeled separately from unverified web material", () => {
-  const result = cognition.respond("O‘zbekiston tarixi", [
+  const result = cognition.respond("Respublikasi", [
     { title: "Tarix", source: "https://example.org/history", status: "approved",
       content: "O‘zbekiston Respublikasi 1991-yil 31-avgustda mustaqilligini e’lon qildi. Mustaqillik kuni 1-sentabrda nishonlanadi." }
   ]);
