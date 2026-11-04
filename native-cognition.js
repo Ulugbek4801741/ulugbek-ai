@@ -1,5 +1,7 @@
 "use strict";
 
+const decisionReasoner = require("./modules/decision-reasoner");
+
 // Native symbolic cognition: no hosted AI, no model weights, no API key.
 const STOP = new Set(("the and for with that this from into about which when where what who whom whose are was were been being have has had will would could should can may might not but or nor dan yoki uchun bilan bu shu bir uning ular qanday nima qachon qayerda kim haqida orqali ham esa edi bor yo‘q qaysi qayerda qayerga qayerdan").split(/\s+/));
 function words(text) {
@@ -85,9 +87,9 @@ function quickReply(query) {
 }
 function respond(query, entries) {
   const quick = quickReply(query);
-  if (quick) return { reply:quick, reasoning:{ method:"built-in-uzbek-dialogue", answerable:true, facts:[] } };
+  if (quick) return { reply:quick, reasoning:{ method:"built-in-uzbek-dialogue", answerable:true, facts:[], decision:decisionReasoner.analyze(query, []) } };
   const result = reason(query, entries);
-  if (!result.answerable) return { reply:"Bu savolga hozircha tasdiqlangan bilimlar bazamdan ishonchli javob topa olmadim. Savolni boshqacha yoki aniqroq yozib ko‘ring. Bilmagan narsamni to‘qib aytmayman.", reasoning:result };
+  if (!result.answerable) { const decision = decisionReasoner.analyze(query, []); const note = decisionReasoner.explain(decision); return { reply:"Bu savolga hozircha tasdiqlangan bilimlar bazamdan ishonchli javob topa olmadim. Savolni boshqacha yoki aniqroq yozib ko‘ring. Bilmagan narsamni to‘qib aytmayman." + (note ? "\\n\\n" + note : ""), reasoning:{ ...result, decision } }; }
   const lines = result.facts.map((x,i)=>(i+1)+". "+x.fact+"\n   Mavzu: "+x.title);
   const sources = [...new Set(result.facts.map(x=>x.source).filter(Boolean))];
   return { reply:"ULUGBEK AI mustaqil mantiqiy mexanizmi topgan dalillar:\n\n"+lines.join("\n\n")+
