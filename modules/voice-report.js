@@ -25,26 +25,31 @@ function countTasks(tasks) {
 function buildReport(snapshot, now = new Date()) {
   const learning = snapshot.learning || {}, model = snapshot.model || {}, developer = snapshot.developer || {}, tasks = snapshot.tasks || {};
   const date = now.toLocaleString("uz-UZ", { timeZone: process.env.REPORT_TIME_ZONE || "Asia/Tashkent" });
+  const statusUnavailable = snapshot.available === false;
   const lines = [
     "ULUGBEK AI tizim hisoboti.",
     "Hisobot vaqti: " + date + ".",
     "Server ishlash vaqti: " + Math.max(0, Math.floor(snapshot.uptimeSeconds || 0)) + " soniya.",
-    "Aql markazi: " + (model.configured ? "shaxsiy mahalliy model ulangan." : "mahalliy qoidaviy rejim; to‘liq neyron model ulanmagan."),
+    "Aql markazi: " + (statusUnavailable ? "holatini aniqlab bo‘lmadi." : model.configured ? "shaxsiy mahalliy model ulangan." : "mahalliy qoidaviy rejim; to‘liq neyron model ulanmagan."),
     "O‘rganish moduli: " + (learning.running === true ? "ishlayapti." : learning.enabled === false ? "o‘chirilgan." : "holati tekshirilmoqda."),
     "O‘rganish sikllari: " + (Number(learning.cycles) || 0) + "; saqlangan bilim nomzodlari: " + (Number(learning.saved) || 0) + ".",
-    "Dasturchi moduli: " + (developer.enabled === false ? "o‘chirilgan." : developer.running === true ? "ishlayapti." : "holati tekshirilmoqda."),
+    "Dasturchi moduli: " + (statusUnavailable ? "holatini aniqlab bo‘lmadi." : developer.enabled === false ? "o‘chirilgan." : developer.running === true ? "ishlayapti." : "holati tekshirilmoqda."),
+    "Agentlar: chatda bitta universal agent faol; boshqa mutaxassis agentlar mustaqil ishga tushirilmagan.",
+    "Internet tadqiqoti: faqat ochiq manbalarni o‘qish va tekshirish rejimi; tashqi yozish amallari yo‘q.",
+    "Bilim va xotira: serverdagi lokal fayl ombori; bir nechta server nusxasi bilan sinxron ishlash kafolatlanmagan.",
+    "Ovoz: oddiy chat ovozi qurilma/brauzer imkoniyatiga bog‘liq; fon hisobotlari maxsus Android ilovasida ishlaydi."
     "Rasm yaratish moduli: " + (snapshot.images?.enabled ? "ulangan." : "serverda ulanmagan."),
     "Video yaratish moduli: " + (snapshot.videos?.enabled ? "ulangan." : "serverda ulanmagan."),
     "Vazifalar: jami " + tasks.total + ", bajarilgan " + tasks.completed + ", jarayonda " + tasks.running + ", tekshiruv kutayotgan " + tasks.awaitingReview + ", xatoli " + tasks.failed + ".",
     "Xavfsizlik: tashqi yozish, kodni ishga tushirish va deploy amallari alohida ruxsatsiz bajarilmaydi.",
     "Keyingi hisobot taxminan besh daqiqadan keyin tayyorlanadi."
   ];
-  if (learning.lastError) lines.splice(6, 0, "O‘rganishdagi oxirgi xabar: " + String(learning.lastError).slice(0, 180) + ".");
-  if (developer.lastError) lines.splice(lines.length - 2, 0, "Dasturchi modulidagi oxirgi xabar: " + String(developer.lastError).slice(0, 180) + ".");
   return { id: now.toISOString(), createdAt: now.toISOString(), type: "system-summary", text: lines.join(" "), summary: {
     uptimeSeconds: Math.max(0, Math.floor(snapshot.uptimeSeconds || 0)), modelConfigured: model.configured === true,
     learningRunning: learning.running === true, learningCycles: Number(learning.cycles) || 0,
-    learningSaved: Number(learning.saved) || 0, developerEnabled: developer.enabled !== false, tasks
+    learningSaved: Number(learning.saved) || 0, developerEnabled: developer.enabled !== false,
+    statusAvailable: !statusUnavailable, imagesConfigured: snapshot.images?.enabled === true,
+    videosConfigured: snapshot.videos?.enabled === true, tasks
   }};
 }
 function createVoiceReportService(options = {}) {
