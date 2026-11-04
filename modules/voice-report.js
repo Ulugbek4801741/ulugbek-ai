@@ -33,6 +33,8 @@ function buildReport(snapshot, now = new Date()) {
     "O‘rganish moduli: " + (learning.running === true ? "ishlayapti." : learning.enabled === false ? "o‘chirilgan." : "holati tekshirilmoqda."),
     "O‘rganish sikllari: " + (Number(learning.cycles) || 0) + "; saqlangan bilim nomzodlari: " + (Number(learning.saved) || 0) + ".",
     "Dasturchi moduli: " + (developer.enabled === false ? "o‘chirilgan." : developer.running === true ? "ishlayapti." : "holati tekshirilmoqda."),
+    "Rasm yaratish moduli: " + (snapshot.images?.enabled ? "ulangan." : "serverda ulanmagan."),
+    "Video yaratish moduli: " + (snapshot.videos?.enabled ? "ulangan." : "serverda ulanmagan."),
     "Vazifalar: jami " + tasks.total + ", bajarilgan " + tasks.completed + ", jarayonda " + tasks.running + ", tekshiruv kutayotgan " + tasks.awaitingReview + ", xatoli " + tasks.failed + ".",
     "Xavfsizlik: tashqi yozish, kodni ishga tushirish va deploy amallari alohida ruxsatsiz bajarilmaydi.",
     "Keyingi hisobot taxminan besh daqiqadan keyin tayyorlanadi."
