@@ -34,6 +34,7 @@ function reason(query, entries) {
       const requiredOverlap = Math.min(2, q.size);
       if (common >= requiredOverlap && q.size > 0) ranked.push({
         fact, title: entry.title, source: entry.source,
+        status: entry.status || "unknown",
         score: (common/q.size) + Math.min(common,5)*0.03,
         matchedTerms: common
       });
@@ -45,7 +46,7 @@ function reason(query, entries) {
     const key = x.fact.toLocaleLowerCase();
     if (seen.has(key)) return false;
     seen.add(key); return true;
-  }).slice(0,5);
+  }).slice(0,3);
   return { method:"symbolic-retrieval-and-evidence-ranking", answerable:facts.length>0,
     queryConcepts:concepts(query), facts,
     inference:facts.length>1 ? "Bir nechta dalil solishtirildi." : "Bitta mos dalil topildi; keng xulosa uchun dalil yetarli emas." };
@@ -59,44 +60,50 @@ function quickReply(query) {
   const math = require("./modules/math-engine").findExpression(query);
   if (math) {
     const answer = require("./modules/math-engine").formatNumber(math.result);
-    return "Hisoblash: " + math.expression + " = " + answer + "\\nJavob: " + answer + ".";
+    return "Hisoblash: " + math.expression + " = " + answer + "\nJavob: " + answer + ".";
   }
   const q = normalizeInput(query);
   if (/^(o'zbekiston|uzbekiston|uzbekistan)$/.test(q)) {
-    return "O‘zbekiston — Markaziy Osiyoda joylashgan mustaqil davlat. Poytaxti — Toshkent. Davlatning rasmiy nomi — O‘zbekiston Respublikasi. Qaysi yo‘nalish haqida batafsil ma’lumot kerak: tarixi, geografiyasi, aholisi, iqtisodiyoti yoki viloyatlari?";
+    return "O‘zbekiston — Markaziy Osiyodagi mustaqil davlat. Poytaxti — Toshkent.";
   }
   if (/^(salom|assalomu alaykum|assalom alaykum|salom alaykum|hello|hi|hayrli tong|hayrli kun|hayrli kech)[!. ]*$/.test(q)) {
-    return "Va alaykum assalom! Men ULUGBEK AI’man. Savolingizni yozing — mavjud bilimlarim asosida javob beraman.";
+    return "Va alaykum assalom! Savolingizni yozing.";
   }
-  if (/^(rahmat|katta rahmat|tashakkur)[!. ]*$/.test(q)) {
-    return "Arzimaydi! Yana qanday savolingiz bor?";
-  }
-  if (/^(xayr|hayr|ko'rishguncha|ko'rishamiz)[!. ]*$/.test(q)) {
-    return "Xayr! Yana kerak bo‘lsam, bemalol yozing.";
-  }
+  if (/^(rahmat|katta rahmat|tashakkur)[!. ]*$/.test(q)) return "Arzimaydi!";
+  if (/^(xayr|hayr|ko'rishguncha|ko'rishamiz)[!. ]*$/.test(q)) return "Xayr! Yana yozishingiz mumkin.";
   if (/(sen kimsan|siz kimsiz|isming nima|o'zing kimsan|uzing kimsan)/.test(q)) {
-    return "Men ULUGBEK AI — hozircha tashqi AI API’siz ishlaydigan, mahalliy mantiqiy javob va tasdiqlangan bilimlar bazasidan foydalanadigan yordamchiman.";
+    return "Men ULUGBEK AI — mahalliy mantiqiy qoidalar va mavjud bilimlardan foydalanuvchi yordamchiman.";
   }
   if (/(nima qila olasan|nimalar qila olasan|imkoniyatlaring|vazifang nima)/.test(q)) {
-    return "Men savollarga mavjud bilimlar bazasi asosida javob berish, mavzular bo‘yicha ochiq manbalardan ma’lumot yig‘ish va ularni tekshiruvga yuborishga mo‘ljallanganman. Hozircha barcha mavzularni bilmayman; bilmagan narsamni aniq aytaman.";
+    return "Savollarga mavjud bilimlar asosida javob beraman, ochiq manbalarni qidiraman va topilgan ma’lumotlarni tekshiruvga ajrataman.";
   }
   if (/(qanday o'rganasan|qanday organasan|o'zingni o'rgat|ozingni urgat|qayta o'qit|qayta oqit)/.test(q)) {
-    return "Men o‘zbekcha ma’lumotlarni birinchi o‘rinda, inglizcha va ruscha ma’lumotlarni keyingi navbatlarda ochiq Wikipedia manbalaridan yig‘aman. Yangi ma’lumot avval tekshiruvga tushadi; tasdiqlanmaguncha javoblarda ishlatilmaydi. Bu jarayon hozircha katta til modelining vaznlarini qayta o‘qitmaydi.";
+    return "Ochiq manbalardan ma’lumot qidiraman, qisqa yozuv sifatida saqlashga nomzod qilaman. Tasdiqlanmagan ma’lumotni ishonchli bilim deb ko‘rsatmayman. Bu model vaznlarini qayta o‘qitish emas.";
   }
   if (/(api kalit|tashqi api|ma'lumotlarim|maxfiylik|suhbatlarim)/.test(q)) {
-    return "Hozirgi chat rejimi tashqi AI API’ga ulanmaydi va javob yaratish uchun xabarni tashqi AI provayderiga yubormaydi. Serverning odatiy ishlashi va saqlash sozlamalari baribir hostingga bog‘liq.";
+    return "Hozirgi chat rejimi tashqi AI API’ga ulanmaydi. Serverdagi saqlash va hosting sozlamalarini alohida tekshirish kerak.";
   }
   return null;
+}
+function conciseEvidenceReply(facts) {
+  const approved = facts.every(item => item.status === "approved");
+  const label = approved ? "Tasdiqlangan bilimlar asosida" : "O‘qilgan ochiq manbalar asosida (hali mustaqil tasdiqlanmagan)";
+  const lines = facts.slice(0,3).map(item => {
+    const text = item.fact.replace(/\s+/g, " ").trim();
+    return text.length > 260 ? text.slice(0,257).replace(/[ ,;:-]+$/, "") + "…" : text;
+  });
+  return label + ":\n" + lines.map(line => "• " + line).join("\n") +
+    (facts.length === 1 ? "\n\nEslatma: bitta dalil topildi; umumiy xulosa uchun qo‘shimcha manba kerak." : "");
 }
 function respond(query, entries) {
   const quick = quickReply(query);
   if (quick) return { reply:quick, reasoning:{ method:"built-in-uzbek-dialogue", answerable:true, facts:[] } };
   const result = reason(query, entries);
-  if (!result.answerable) return { reply:"Bu savolga hozircha tasdiqlangan bilimlar bazamdan ishonchli javob topa olmadim. Savolni boshqacha yoki aniqroq yozib ko‘ring. Bilmagan narsamni to‘qib aytmayman.", reasoning:result };
-  const lines = result.facts.map((x,i)=>(i+1)+". "+x.fact+"\n   Mavzu: "+x.title);
+  if (!result.answerable) return { reply:"Hozircha yetarli dalil topilmadi. Savolni aniqroq yozing yoki boshqa manba so‘rang.", reasoning:result };
   const sources = [...new Set(result.facts.map(x=>x.source).filter(Boolean))];
-  return { reply:"ULUGBEK AI mustaqil mantiqiy mexanizmi topgan dalillar:\n\n"+lines.join("\n\n")+
-    (sources.length ? "\n\nManbalar:\n"+sources.join("\n") : "")+
-    "\n\nXulosa faqat topilgan dalillarga asoslandi; dalil yetishmasa taxmin qilinmadi.", reasoning:result };
+  return {
+    reply: conciseEvidenceReply(result.facts) + (sources.length ? "\n\nManbalar: " + sources.slice(0,3).join(" | ") : ""),
+    reasoning: result
+  };
 }
-module.exports = { concepts, splitFacts, reason, respond, quickReply, normalizeInput };
+module.exports = { concepts, splitFacts, reason, respond, quickReply, normalizeInput, conciseEvidenceReply };
