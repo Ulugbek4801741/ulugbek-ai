@@ -12,7 +12,7 @@ const CAUSE_MARKERS = ["agar", "sabab", "natija", "oqibat", "shuning uchun", "ol
 const DECISION_MARKERS = ["qilishim kerakmi", "qilsam", "qilaymi", "tanlash", "qaror", "maslahat", "to'g'rimi", "yaxshimi"];
 function normalize(value) {
   return String(value || "").toLocaleLowerCase("uz")
-    .replace(/[’‘ʻʼ`]/g, "'").replace(/[^\\p{L}\\p{N}\\s']/gu, " ");
+    .replace(/[’‘ʻʼ`]/g, "'").replace(/[^\p{L}\p{N}\s']/gu, " ");
 }
 function containsAny(text, terms) { return terms.filter(term => text.includes(term)); }
 function analyze(query, evidence = []) {
