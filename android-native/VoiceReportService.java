@@ -11,6 +11,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.speech.tts.TextToSpeech;
+import android.speech.tts.UtteranceProgressListener;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -32,8 +33,9 @@ public class VoiceReportService extends Service implements TextToSpeech.OnInitLi
     private final ExecutorService network = Executors.newSingleThreadExecutor();
     private TextToSpeech tts;
     private String baseUrl = "";
-    private String lastReportId = "";
-    private boolean ttsReady = false;
+    private volatile String lastReportId = "";
+    private volatile String pendingReportId = "";
+    private volatile boolean ttsReady = false;
 
     private final Runnable poll = new Runnable() {
         @Override public void run() {
@@ -45,6 +47,7 @@ public class VoiceReportService extends Service implements TextToSpeech.OnInitLi
     @Override public void onCreate() {
         super.onCreate();
         createNotificationChannel();
+        lastReportId = getSharedPreferences("voice-report", MODE_PRIVATE).getString("lastReportId", "");
         tts = new TextToSpeech(this, this);
         Notification notification = notification("Har 5 daqiqada tizim hisoboti tayyorlanadi.");
         if (Build.VERSION.SDK_INT >= 29) {
@@ -69,17 +72,45 @@ public class VoiceReportService extends Service implements TextToSpeech.OnInitLi
     }
 
     @Override public void onInit(int status) {
-        if (status == TextToSpeech.SUCCESS) {
+        if (status == TextToSpeech.SUCCESS && tts != null) {
             int language = tts.setLanguage(new Locale("uz", "UZ"));
             if (language == TextToSpeech.LANG_MISSING_DATA || language == TextToSpeech.LANG_NOT_SUPPORTED) {
                 tts.setLanguage(Locale.getDefault());
             }
+            tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
+                @Override public void onStart(String utteranceId) {
+                    handler.post(() -> updateNotification("Hisobot ovozli o‘qilmoqda."));
+                }
+                @Override public void onDone(String utteranceId) {
+                    handler.post(() -> {
+                        if (utteranceId != null && utteranceId.startsWith("ulugbek-report-")) {
+                            String completedId = utteranceId.substring("ulugbek-report-".length());
+                            lastReportId = completedId;
+                            pendingReportId = "";
+                            getSharedPreferences("voice-report", MODE_PRIVATE).edit()
+                                .putString("lastReportId", completedId).apply();
+                            updateNotification("Oxirgi hisobot ovozli o‘qildi.");
+                        }
+                    });
+                }
+                @Override public void onError(String utteranceId) {
+                    handler.post(() -> {
+                        if (utteranceId != null && utteranceId.equals("ulugbek-report-" + pendingReportId)) {
+                            pendingReportId = "";
+                        }
+                        updateNotification("Ovozli o‘qishda xato. Keyingi urinishda qayta tekshiriladi.");
+                    });
+                }
+            });
             ttsReady = true;
+        } else {
+            ttsReady = false;
+            updateNotification("Telefonning matnni ovozga aylantirish xizmati tayyor emas.");
         }
     }
 
     private void fetchLatestReport() {
-        if (baseUrl.isEmpty()) return;
+        if (baseUrl.isEmpty() || !ttsReady || tts == null) return;
         network.execute(() -> {
             HttpURLConnection connection = null;
             try {
@@ -93,18 +124,24 @@ public class VoiceReportService extends Service implements TextToSpeech.OnInitLi
                      BufferedReader reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8))) {
                     StringBuilder body = new StringBuilder();
                     String line;
-                    while ((line = reader.readLine()) != null && body.length() < 20000) body.append(line);
+                    while ((line = reader.readLine()) != null) {
+                        if (body.length() + line.length() > 20000) return;
+                        body.append(line);
+                    }
                     JSONObject json = new JSONObject(body.toString());
                     JSONObject report = json.optJSONObject("report");
                     if (report == null) return;
                     String id = report.optString("id", "");
                     String text = report.optString("text", "");
-                    if (id.isEmpty() || text.isEmpty() || id.equals(lastReportId)) return;
-                    lastReportId = id;
+                    if (id.isEmpty() || text.isEmpty() || text.length() > 8000 ||
+                        id.equals(lastReportId) || id.equals(pendingReportId) || !ttsReady) return;
                     handler.post(() -> {
-                        if (ttsReady && tts != null) {
-                            tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "ulugbek-report-" + id);
-                            updateNotification("Hisobot ovozli o‘qilmoqda.");
+                        if (!ttsReady || tts == null || id.equals(lastReportId) || id.equals(pendingReportId)) return;
+                        int result = tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "ulugbek-report-" + id);
+                        if (result == TextToSpeech.SUCCESS) {
+                            pendingReportId = id;
+                        } else {
+                            updateNotification("Hisobotni ovozli o‘qib bo‘lmadi. Qayta uriniladi.");
                         }
                     });
                 }
@@ -135,11 +172,12 @@ public class VoiceReportService extends Service implements TextToSpeech.OnInitLi
 
     private void updateNotification(String message) {
         NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-        manager.notify(NOTIFICATION_ID, notification(message));
+        if (manager != null) manager.notify(NOTIFICATION_ID, notification(message));
     }
 
     @Override public void onDestroy() {
         handler.removeCallbacks(poll);
+        ttsReady = false;
         if (tts != null) { tts.stop(); tts.shutdown(); }
         network.shutdownNow();
         super.onDestroy();
