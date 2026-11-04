@@ -99,9 +99,9 @@ function quickReply(query) {
   if(/(sen kimsan|siz kimsiz|isming nima|o'zing kimsan|uzing kimsan)/.test(q))
     return "Men ULUGBEK AI — mahalliy mantiqiy mexanizm va mavjud bilimlardan foydalanadigan yordamchiman.";
   if(/(nima qila olasan|nimalar qila olasan|imkoniyatlaring|vazifang nima)/.test(q))
-    return "Savollarga javob beraman, ochiq manbalarni izlayman, dalillarni solishtiraman va qisqa xulosa tuzaman. Dalil yetarli bo‘lmasa, buni aytaman.";
+    return "Men mavjud bilimlar bazasi va ochiq manbalardan foydalanib savollarga javob beraman, dalillarni solishtiraman va bitta qisqa xulosa tuzaman. Dalil yetarli bo‘lmasa, buni aytaman.";
   if(/(qanday o'rganasan|qanday organasan|o'zingni o'rgat|ozingni urgat|qayta o'qit|qayta oqit)/.test(q))
-    return "Ochiq manbalardan ma’lumot yig‘aman, ularni tekshiruvga ajrataman va tasdiqlangan bilimlar bazasiga qo‘shish mumkin. Bu hozircha neyron tarmoq vaznlarini qayta o‘qitmaydi.";
+    return "Avval o‘zbekcha, keyin inglizcha va ruscha ochiq manbalardan ma’lumot yig‘aman. Yangi ma’lumot tekshiruvga ajratiladi va tasdiqlansa bilimlar bazasiga qo‘shiladi. Bu hozircha neyron tarmoq vaznlarini qayta o‘qitmaydi.";
   if(/(api kalit|tashqi api|ma'lumotlarim|maxfiylik|suhbatlarim)/.test(q))
     return "Hozirgi chat rejimi tashqi AI provayderiga avtomatik ulanmaydi. Serverdagi saqlash va hosting sozlamalari alohida tekshirilishi kerak.";
   return null;
