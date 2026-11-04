@@ -2,6 +2,15 @@ name: Build Android APK
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - "public/**"
+      - "server.js"
+      - "modules/**"
+      - "android-native/**"
+      - "scripts/**"
+      - "test/**"
+      - ".github/workflows/build-android.yml"
   push:
     branches:
       - main
@@ -11,6 +20,9 @@ on:
       - "public/**"
       - "package.json"
       - "server.js"
+      - "modules/**"
+      - "android-native/**"
+      - "scripts/**"
       - "test/**"
       - "capacitor.config.json"
       - ".github/workflows/build-android.yml"
@@ -52,12 +64,17 @@ jobs:
       - name: Add Android project
         run: npx cap add android
 
+      - name: Install native five-minute voice report service
+        run: node scripts/install-android-voice-report.js
+
       - name: Sync web app to Android
         run: npx cap sync android
 
       - name: Check JavaScript syntax
         run: |
-          node --check server.js\n          node --check modules/voice-report.js\n          node --check scripts/install-android-voice-report.js
+          node --check server.js
+          node --check modules/voice-report.js
+          node --check scripts/install-android-voice-report.js
           node --check public/app.js
           node --check public/admin.js
           node --check public/voice.js
