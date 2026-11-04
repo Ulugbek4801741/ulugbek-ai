@@ -23,7 +23,7 @@ test("unconfirmed search snippets are not presented as approved knowledge", () =
       content: "Kompyuter stolini yig‘ish bo‘yicha bosqichma-bosqich qo‘llanma mavjud. Unda qismlarni birma-bir ulash tavsiya etiladi." }
   ]);
   assert.match(result.reply, /hali mustaqil tasdiqlanmagan/);
-  assert.match(result.reply, /bitta dalil topildi/);
+  assert.match(result.reply, /Yakuniy xulosa:/);
 });
 
 test("approved evidence is labeled separately from unverified web material", () => {
