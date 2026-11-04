@@ -541,7 +541,11 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     let result = await answerWithOneAgent(learned);
     let webResearchUsed = false;
     if (!result.reasoning.answerable) {
-      const cognition = require("./native-cognition");\n      const searchQuestion = cognition.normalizeInput(message).replace(/\\b(bilasanmi|bilasizmi|iltimos|aytib ber|tushuntir)\\b/g, " ").replace(/\\s+/g, " ").trim();\n      const publicFindings = await nativeBrain.researchQuestion(searchQuestion || message);
+      const cognition = require("./native-cognition");
+      const searchQuestion = cognition.normalizeInput(message)
+        .replace(/\b(bilasanmi|bilasizmi|iltimos|aytib ber|tushuntir)\b/g, " ")
+        .replace(/\s+/g, " ").trim();
+      const publicFindings = await nativeBrain.researchQuestion(searchQuestion || message);
       if (publicFindings.length) {
         learned = publicFindings;
         result = await answerWithOneAgent(learned);
@@ -564,11 +568,11 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
               return { ...item, page: null };
             }
           }));
-          const pageResults = cognition.filterRelevantEvidence(message, fetchedPages.map(item => ({ title: item.page?.title || item.title, content: item.page?.content || item.snippet, source: item.page?.url || item.url, status: item.page ? "unverified-public-page-content" : "unverified-search-snippet", page: item.page })), 4);\n          const pageResults = cognition.filterRelevantEvidence(message, fetchedPages.map(item => ({
+          const pageResults = cognition.filterRelevantEvidence(message, fetchedPages.map(item => ({
             title: item.page?.title || item.title,
             content: item.page?.content || item.snippet,
             source: item.page?.url || item.url,
-            status: item.status,
+            status: item.page ? "unverified-public-page-content" : "unverified-search-snippet",
             page: item.page
           })), 4);
           const evidence = pageResults.map(item => ({
