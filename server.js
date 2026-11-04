@@ -19,7 +19,8 @@ const voiceReports = createVoiceReportService({
     images: imageGenerator.status(),
     videos: videoGenerator.status(),
     developer: developerAgent.status(),
-    tasks: agentRuntime.listTasks()
+    tasks: agentRuntime.listTasks(),
+    improvements: improvementPlanner.status()
   })
 });
 
