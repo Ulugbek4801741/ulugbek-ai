@@ -76,7 +76,7 @@ function createVoiceReportService(options = {}) {
       const report = buildReport({ ...snapshot, tasks: countTasks(snapshot.tasks) });
       reports = [report, ...reports.filter(item => item?.id !== report.id)].slice(0, MAX_REPORTS);
       await persist(); lastError = null; return report;
-    } catch (error) { lastError = String(error?.message || "report generation failed").slice(0, 180); return null; }
+    } catch (_) { lastError = "report_storage_or_generation_failed"; return null; }
     finally { inFlight = false; }
   }
   async function start() {
