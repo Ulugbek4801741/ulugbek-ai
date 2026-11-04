@@ -103,6 +103,25 @@ const adminAuth = require("./modules/admin-auth").createAdminAuth({
   sessionSecret: ADMIN_SESSION_SECRET,
   storePath: path.join(ADMIN_DATA_DIR, "admin-auth-lockouts.json")
 });
+const improvementPlanner = require("./modules/autonomous-improvement").createAutonomousImprovementPlanner({
+  dataDir: ADMIN_DATA_DIR,
+  readSnapshot: () => ({
+    health: {
+      multiInstanceSafe: false,
+      automaticFailoverReady: false,
+      trainedLanguageModelReady: false,
+      localModelConfigured: singleAgent.status().configured,
+      agentCount: 1
+    },
+    diagnostics: {
+      productionDatabase: "not-configured-task-store-uses-local-json-file",
+      automaticFailover: "not-configured-requires-authorized-backup-host",
+      securityEnforcement: "disclosure-only"
+    },
+    modules: require("./modules/catalog").listModules(),
+    agents: require("./agents/registry").listAgents()
+  })
+});
 function readCookie(req, name) {
   const item = (req.headers.cookie || "").split(";").map(x => x.trim()).find(x => x.startsWith(name + "="));
   if (!item) return "";
@@ -185,6 +204,36 @@ app.get("/api/admin/overview", requireAdmin, (_req, res) => {
     adminEmail: "local-admin",
     deployment: "manual-host-configuration-required"
   });
+});
+
+app.get("/api/admin/improvements", requireAdmin, (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({
+    ok: true,
+    planner: improvementPlanner.status(),
+    proposals: improvementPlanner.list({ limit: 100 })
+  });
+});
+app.post("/api/admin/improvements/scan", requireAdmin, async (_req, res) => {
+  const planner = await improvementPlanner.scan();
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, planner, proposals: improvementPlanner.list({ limit: 100 }) });
+});
+app.post("/api/admin/improvements/:id/decision", requireAdmin, async (req, res) => {
+  try {
+    const decision = String(req.body?.decision || "");
+    const result = await improvementPlanner.decide(req.params.id, decision, "administrator");
+    if (!result) return res.status(404).json({ error: "Taklif topilmadi." });
+    res.set("Cache-Control", "no-store");
+    res.json({
+      ok: true,
+      proposal: result,
+      execution: "disabled",
+      note: "Tasdiq faqat ishni rejalashtirishga ruxsat beradi. Kod o‘zgartirish, buyruq bajarish va deploy avtomatik bajarilmaydi."
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message || "Qaror saqlanmadi." });
+  }
 });
 
 app.get("/api/admin/autopilot/status", requireAdmin, (_req, res) => {
@@ -661,6 +710,7 @@ app.use((err, _req, res, _next) => {
   return res.status(500).json({ error: "Ichki server xatosi." });
 });
 learningWorker.start();
+improvementPlanner.start();
 if (process.env.NODE_ENV !== "test") voiceReports.start().catch(error => console.error("Ovozli hisobot xizmati ishga tushmadi:", error.message));
 agentRuntime.startWorker().then(() => {
   const server = app.listen(PORT, "0.0.0.0", () => {
