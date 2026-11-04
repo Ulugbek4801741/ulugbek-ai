@@ -29,10 +29,6 @@ Ushbu hujjat kodda mavjud bo‘lgan yo‘llar, server endpointlari, modul katalo
 3. Hisobot endi tizimda bitta chat agent faol ekanini, mutaxassis agentlar hali chatda ishga tushmaganini, lokal JSON saqlash va model/ovoz cheklovlarini ochiq aytadi.
 4. Android plugin xizmatni ishga tushirish/to‘xtatishdagi Android istisnolarini ushlab, tushunarli xato qaytaradi.
 
-## Mustaqil takomillashtirish planner’i
-
-Yangi `modules/autonomous-improvement.js` server holati va modul katalogini o‘qib, har 30 daqiqada yetishmayotgan imkoniyatlar uchun takliflar yaratadi. Takliflar administrator panelida ko‘rinadi, JSON faylga saqlanadi va har besh daqiqalik ovozli hisobotda soni aytiladi. Administrator tasdig‘i faqat reja holatini o‘zgartiradi; u kodni yozmaydi, buyruq bajarmaydi yoki deploy qilmaydi. To‘liq o‘zini-o‘zi kodlash uchun alohida izolyatsiyalangan build runner va mustaqil test/review/deploy bosqichi hali yo‘q.
-
 ## Render va deploy
 
 - `render.yaml` Render web-service uchun `plan: starter`, `branch: main`, `healthCheckPath: /api/health` va `/var/data` ostida 1 GB diskni so‘raydi.
