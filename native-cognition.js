@@ -46,7 +46,7 @@ function relevance(query, entry) {
   return {score:matched.length/q.length,matched};
 }
 function filterRelevantEvidence(query, entries, limit=4) {
-  const required=Math.min(0.34,1/Math.max(1,new Set(words(query)).size));
+  const querySize=Math.max(1,new Set(words(query)).size);\n  const required=Math.min(2,querySize)/querySize;
   return (Array.isArray(entries)?entries:[])
     .map(entry=>({...entry,...relevance(query,entry)}))
     .filter(entry=>entry.score>=required)
