@@ -403,6 +403,69 @@ app.get("/api/modules", (_req, res) => {
   res.json({ ok: true, product: "ULUGBEK AI", note: "planned modullar hali ishlaydigan integratsiya emas.", modules: capabilityCatalog.listModules() });
 });
 
+const autonomousDecision = require("./modules/autonomous-decision");
+const pendingDecisions = new Map();
+const DECISION_TTL_MS = 10 * 60 * 1000;
+
+function prunePendingDecisions() {
+  const now = Date.now();
+  for (const [id, item] of pendingDecisions) {
+    if (item.expiresAt <= now || item.used) pendingDecisions.delete(id);
+  }
+}
+
+app.post("/api/agent/decision-plan", plannerRateLimit, (req, res) => {
+  const goal = typeof req.body?.goal === "string" ? req.body.goal.trim() : "";
+  if (!goal) return res.status(400).json({ error: "Maqsad bo‘sh bo‘lmasligi kerak." });
+  if (goal.length > MAX_TASK_LENGTH) return res.status(413).json({ error: "Maqsad 4000 belgidan oshmasligi kerak." });
+  const decision = autonomousDecision.createDecision({
+    goal,
+    options: req.body?.options,
+    evidence: req.body?.evidence
+  });
+  if (!decision.selectedOption) {
+    return res.status(422).set("Cache-Control", "no-store").json({
+      ok: false, decision, error: "Qaror chiqarish uchun kamida bitta variant kerak."
+    });
+  }
+  prunePendingDecisions();
+  const decisionId = crypto.randomUUID();
+  pendingDecisions.set(decisionId, { decision, expiresAt: Date.now() + DECISION_TTL_MS, used: false });
+  res.set("Cache-Control", "no-store");
+  return res.status(201).json({
+    ok: true, decisionId, decision,
+    approvalRequired: true,
+    expiresInSeconds: Math.floor(DECISION_TTL_MS / 1000),
+    execution: "not_started",
+    note: "AI variantni mustaqil tanladi. Bu hali bajarish emas; foydalanuvchining aniq tasdig‘i talab qilinadi."
+  });
+});
+
+app.post("/api/agent/decision-approve", plannerRateLimit, (req, res) => {
+  const decisionId = typeof req.body?.decisionId === "string" ? req.body.decisionId : "";
+  const item = pendingDecisions.get(decisionId);
+  if (!item || item.expiresAt <= Date.now() || item.used) {
+    pendingDecisions.delete(decisionId);
+    return res.status(410).json({ ok: false, error: "Qaror muddati tugagan yoki avval ishlatilgan. Yangi reja tuzing." });
+  }
+  const approval = autonomousDecision.approveDecision(item.decision, {
+    confirmed: req.body?.confirmed === true,
+    optionId: req.body?.optionId,
+    goal: req.body?.goal
+  });
+  if (!approval.allowed) return res.status(403).json({ ok: false, error: approval.reason });
+  item.used = true;
+  pendingDecisions.delete(decisionId);
+  res.set("Cache-Control", "no-store");
+  return res.json({
+    ok: true,
+    approved: true,
+    approval,
+    execution: "not_started",
+    note: "Tasdiq qayd etildi. Ushbu versiyada tasdiqlangan tashqi amallarni bajaruvchi ijrochi ulanmagan; tizim bajarildi deb da'vo qilmaydi."
+  });
+});
+
 app.post("/api/agent/plan", plannerRateLimit, async (req, res) => {
   const task = typeof req.body?.task === "string" ? req.body.task.trim() : "";
   if (!task) return res.status(400).json({ error: "Vazifa matni bo‘sh bo‘lmasligi kerak." });
