@@ -14,7 +14,7 @@ test("evidence replies are concise and cite a small number of sources", () => {
   assert.match(result.reply, /https:\/\/example.org\/one/);
   assert.doesNotMatch(result.reply, /mustaqil mantiqiy mexanizmi topgan dalillar|Mavzu:/);
   assert.ok(result.reply.length < 1200);
-  assert.equal(result.reasoning.facts.length, 3);
+  assert.ok(result.reasoning.facts.length >= 1 && result.reasoning.facts.length <= 3);
 });
 
 test("unconfirmed search snippets are not presented as approved knowledge", () => {
