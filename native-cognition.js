@@ -78,7 +78,7 @@ function quickReply(query) {
     return "Men mavjud bilimlar bazasi asosida javob beraman, ochiq manbalarni qidiraman va topilgan ma’lumotlarni tekshiruvga ajrataman.";
   }
   if (/(qanday o'rganasan|qanday organasan|o'zingni o'rgat|ozingni urgat|qayta o'qit|qayta oqit)/.test(q)) {
-    return "O‘zbekcha manbalarni birinchi o‘rinda, inglizcha va ruscha manbalarni keyin qidiraman. Yangi ma’lumot tekshiruvga yuboriladi; bu model vaznlarini qayta o‘qitmaydi.";
+    return "Avval o‘zbekcha, keyin inglizcha va ruscha manbalarni qidiraman. Yangi ma’lumot tekshiruvga yuboriladi; bu model vaznlarini qayta o‘qitmaydi.";
   }
   if (/(api kalit|tashqi api|ma'lumotlarim|maxfiylik|suhbatlarim)/.test(q)) {
     return "Hozirgi chat rejimi tashqi AI API’ga ulanmaydi. Serverdagi saqlash va hosting sozlamalarini alohida tekshirish kerak.";
