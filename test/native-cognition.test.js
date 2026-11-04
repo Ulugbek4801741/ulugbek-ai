@@ -70,5 +70,5 @@ test("irrelevant evidence cannot produce an answer", () => {
       content: "LED musiqali lyustrani pult yordamida boshqarish va yig‘ish bosqichlari." }
   ]);
   assert.equal(result.reasoning.answerable, false);
-  assert.match(result.reply, /mos va ishonchli dalil topilmadi/);
+  assert.match(result.reply, /ishonchli javob topa olmadim/);
 });
