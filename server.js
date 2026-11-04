@@ -711,7 +711,7 @@ app.use((err, _req, res, _next) => {
   return res.status(500).json({ error: "Ichki server xatosi." });
 });
 learningWorker.start();
-improvementPlanner.start();
+if (process.env.NODE_ENV !== "test") improvementPlanner.start();
 if (process.env.NODE_ENV !== "test") voiceReports.start().catch(error => console.error("Ovozli hisobot xizmati ishga tushmadi:", error.message));
 agentRuntime.startWorker().then(() => {
   const server = app.listen(PORT, "0.0.0.0", () => {
