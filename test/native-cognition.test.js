@@ -37,3 +37,38 @@ test("approved evidence is labeled separately from unverified web material", () 
 test("short greeting replies remain short", () => {
   assert.equal(cognition.respond("Salom", []).reply, "Va alaykum assalom! Savolingizni yozing.");
 });
+
+test("filters out unrelated search evidence and keeps the requested topic", () => {
+  const matches = cognition.filterRelevantEvidence("ish izlash", [
+    { title: "LED musiqali lyustra", content: "Lyustrani elektr tarmog‘iga ulash va yig‘ish haqida qo‘llanma." },
+    { title: "Ish izlash bo‘yicha qo‘llanma", content: "Ish topish uchun rezyume tayyorlang va vakansiyalarga murojaat qiling." }
+  ]);
+  assert.equal(matches.length, 1);
+  assert.match(matches[0].title, /Ish izlash/);
+});
+
+test("normalizes common Uzbek typing mistakes and ChatGPT spelling", () => {
+  const normalized = cognition.normalizeInput("Chat GPT sunʼiy endilik agent bilasanmi");
+  assert.match(normalized, /chat gpt/);
+  assert.match(normalized, /intellekt/);
+  assert.match(normalized, /agent/);
+});
+
+test("one final conclusion is written instead of listing separate evidence items", () => {
+  const result = cognition.respond("kompyuter stol yig‘ish", [
+    { title: "Kompyuter stolini yig‘ish", source: "https://example.org/desk", status: "unverified-public-page-content",
+      content: "Kompyuter stolini yig‘ishda avval barcha qismlarni tekshiring. Keyin oyoqlarini mahkamlang va stol ustini o‘rnating. Yakunda vintlarni qayta tekshirib chiqing." }
+  ]);
+  assert.match(result.reply, /Yakuniy xulosa:/);
+  assert.doesNotMatch(result.reply, /1\. |2\. |Mavzu:/);
+  assert.ok(result.reply.length < 900);
+});
+
+test("irrelevant evidence cannot produce an answer", () => {
+  const result = cognition.respond("ish izlash", [
+    { title: "LED musiqali lyustra", source: "https://example.org/light", status: "unverified-public-page-content",
+      content: "LED musiqali lyustrani pult yordamida boshqarish va yig‘ish bosqichlari." }
+  ]);
+  assert.equal(result.reasoning.answerable, false);
+  assert.match(result.reply, /mos va ishonchli dalil topilmadi/);
+});
