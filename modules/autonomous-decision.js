@@ -21,14 +21,17 @@ function createDecision(input = {}) {
   const goal = cleanText(input.goal, 1000);
   const options = Array.isArray(input.options) ? input.options.slice(0, 8) : [];
   const evidence = Array.isArray(input.evidence) ? input.evidence.slice(0, 20) : [];
-  const chosen = options.map((option, index) => ({
+  const chosen = options.map((rawOption, index) => {
+    const option = rawOption && typeof rawOption === "object" && !Array.isArray(rawOption) ? rawOption : {};
+    return ({
     id: cleanText(option.id || String(index + 1), 40),
     title: cleanText(option.title, 160),
     benefit: cleanText(option.benefit, 300),
     harm: cleanText(option.harm, 300),
     risk: Object.prototype.hasOwnProperty.call(RISK, option.risk) ? option.risk : "external",
     score: Number.isFinite(option.score) ? Math.max(-100, Math.min(100, option.score)) : 0
-  })).sort((a, b) => b.score - a.score);
+    });
+  }).sort((a, b) => b.score - a.score);
   const best = chosen[0] || null;
   const risk = best ? best.risk : "external";
   const needsApproval = true;
