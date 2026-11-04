@@ -37,7 +37,7 @@ function buildReport(snapshot, now = new Date()) {
     "Agentlar: chatda bitta universal agent faol; boshqa mutaxassis agentlar mustaqil ishga tushirilmagan.",
     "Internet tadqiqoti: faqat ochiq manbalarni o‘qish va tekshirish rejimi; tashqi yozish amallari yo‘q.",
     "Bilim va xotira: serverdagi lokal fayl ombori; bir nechta server nusxasi bilan sinxron ishlash kafolatlanmagan.",
-    "Ovoz: oddiy chat ovozi qurilma/brauzer imkoniyatiga bog‘liq; fon hisobotlari maxsus Android ilovasida ishlaydi."
+    "Ovoz: oddiy chat ovozi qurilma/brauzer imkoniyatiga bog‘liq; fon hisobotlari maxsus Android ilovasida ishlaydi.",
     "Rasm yaratish moduli: " + (snapshot.images?.enabled ? "ulangan." : "serverda ulanmagan."),
     "Video yaratish moduli: " + (snapshot.videos?.enabled ? "ulangan." : "serverda ulanmagan."),
     "Vazifalar: jami " + tasks.total + ", bajarilgan " + tasks.completed + ", jarayonda " + tasks.running + ", tekshiruv kutayotgan " + tasks.awaitingReview + ", xatoli " + tasks.failed + ".",
