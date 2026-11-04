@@ -1,23 +1,19 @@
 "use strict";
 
-// Native evidence reasoning. This is a deterministic reasoning layer, not a trained neural network.
-const STOP = new Set(("
-+"the and for with that this from into about which when where what who whom whose are was were been being have has had will would could should can may might not but or nor dan yoki uchun bilan bu shu bir uning ular qanday nima qachon qayerda kim haqida orqali ham esa edi bor yoq qaysi qayerga qayerdan mi men sen siz u bu shu hamda esa bilanmi bilasanmi bilasizmi degani nima").split(/\\s+/));
+// Deterministic evidence reasoning layer; this is not a trained neural network.
+const STOP = new Set(("the and for with that this from into about which when where what who whom whose are was were been being have has had will would could should can may might not but or nor dan yoki uchun bilan bu shu bir uning ular qanday nima qachon qayerda kim haqida orqali ham esa edi bor yoq qaysi qayerga qayerdan mi men sen siz u hamda bilanmi bilasanmi bilasizmi degani").split(/\s+/));
 const CORRECTIONS = new Map([
   ["endilik", "intellekt"], ["intelik", "intellekt"], ["intellek", "intellekt"],
-  ["suniy", "suniy"], ["aqil", "aql"], ["chatgpt", "chat gpt"],
-  ["gemini", "gemini"], ["claude", "claude"], ["deepseek", "deepseek"]
+  ["aqil", "aql"], ["chatgpt", "chat gpt"]
 ]);
 function normalizeInput(value) {
   let text = String(value || "").toLocaleLowerCase("uz")
-    .replace(/[’‘ʻʼ`]/g, "'").replace(/[^\\p{L}\\p{N}\\s']/gu, " ")
-    .replace(/\\s+/g, " ").trim();
-  text = text.split(" ").flatMap(token => (CORRECTIONS.get(token) || token).split(" ")).join(" ");
-  return text;
+    .replace(/[’‘ʻʼ\`]/g, "'").replace(/[^\p{L}\p{N}\s']/gu, " ")
+    .replace(/\s+/g, " ").trim();
+  return text.split(" ").flatMap(token => (CORRECTIONS.get(token) || token).split(" ")).join(" ");
 }
 function words(text) {
-  return normalizeInput(text).split(/[^\\p{L}\\p{N}]+/u)
-    .filter(x => x.length > 2 && !STOP.has(x));
+  return normalizeInput(text).split(/[^\p{L}\p{N}]+/u).filter(x => x.length > 2 && !STOP.has(x));
 }
 function concepts(text) {
   const counts = new Map();
@@ -39,44 +35,40 @@ function similar(a,b) {
     (a.startsWith(b) || b.startsWith(a) || editDistance(a,b)<=1));
 }
 function splitFacts(text) {
-  return String(text || "").split(/(?<=[.!?])\\s+|\\n+/)
+  return String(text || "").split(/(?<=[.!?])\s+|\n+/)
     .map(x=>x.trim()).filter(x=>x.length>25 && x.length<700).slice(0,30);
 }
 function relevance(query, entry) {
   const q=[...new Set(words(query))];
   if(!q.length) return {score:0,matched:[]};
-  const contentWords=[...new Set(words(String(entry.title||"")+" "+String(entry.content||"")))];
-  const matched=q.filter(term=>contentWords.some(candidate=>similar(term,candidate)));
+  const candidates=[...new Set(words(String(entry.title||"")+" "+String(entry.content||"")))];
+  const matched=q.filter(term=>candidates.some(candidate=>similar(term,candidate)));
   return {score:matched.length/q.length,matched};
 }
 function filterRelevantEvidence(query, entries, limit=4) {
+  const required=Math.min(0.34,1/Math.max(1,new Set(words(query)).size));
   return (Array.isArray(entries)?entries:[])
     .map(entry=>({...entry,...relevance(query,entry)}))
-    .filter(entry=>entry.score>=Math.min(0.34,1/Math.max(1,new Set(words(query)).size)))
+    .filter(entry=>entry.score>=required)
     .sort((a,b)=>b.score-a.score)
     .slice(0,Math.max(1,Math.min(6,limit)));
 }
 function reason(query, entries) {
-  const q = new Set(words(query));
-  const ranked = [];
-  for (const entry of filterRelevantEvidence(query, entries, 6)) {
-    for (const fact of splitFacts(entry.content)) {
-      const f = new Set(words(fact));
-      const matched = [...q].filter(term => [...f].some(candidate=>similar(term,candidate)));
-      const score = matched.length / Math.max(1,q.size);
-      if (matched.length >= Math.min(2,q.size) && score >= 0.25) ranked.push({
-        fact, title:entry.title, source:entry.source, status:entry.status||"unknown",
-        score, matchedTerms:matched.length
+  const q=new Set(words(query)), ranked=[];
+  for(const entry of filterRelevantEvidence(query,entries,6)) {
+    for(const fact of splitFacts(entry.content)) {
+      const f=new Set(words(fact));
+      const matched=[...q].filter(term=>[...f].some(candidate=>similar(term,candidate)));
+      const score=matched.length/Math.max(1,q.size);
+      if(matched.length>=Math.min(2,q.size) && score>=0.25) ranked.push({
+        fact,title:entry.title,source:entry.source,status:entry.status||"unknown",
+        score,matchedTerms:matched.length
       });
     }
   }
   ranked.sort((a,b)=>b.score-a.score);
   const seen=new Set();
-  const facts=ranked.filter(x=>{
-    const key=x.fact.toLocaleLowerCase();
-    if(seen.has(key)) return false;
-    seen.add(key); return true;
-  }).slice(0,3);
+  const facts=ranked.filter(x=>{const key=x.fact.toLocaleLowerCase();if(seen.has(key))return false;seen.add(key);return true;}).slice(0,3);
   return {method:"native-evidence-comparison-and-relevance-ranking",answerable:facts.length>0,
     queryConcepts:concepts(query),facts,
     inference:facts.length>1?"Bir nechta mos dalil solishtirildi.":"Bitta mos dalil topildi; keng xulosa uchun dalil cheklangan."};
@@ -85,7 +77,7 @@ function quickReply(query) {
   const math=require("./modules/math-engine").findExpression(query);
   if(math) {
     const answer=require("./modules/math-engine").formatNumber(math.result);
-    return "Hisoblash: "+math.expression+" = "+answer+"\\nJavob: "+answer+".";
+    return "Hisoblash: "+math.expression+" = "+answer+"\nJavob: "+answer+".";
   }
   const q=normalizeInput(query);
   if(/^(o'zbekiston|uzbekiston|uzbekistan)$/.test(q))
@@ -108,14 +100,14 @@ function conciseEvidenceReply(result) {
   const facts=result.facts||[];
   const approved=facts.length>0 && facts.every(x=>x.status==="approved");
   const heading=approved?"Tasdiqlangan bilimlar asosida":"O‘qilgan ochiq manbalar asosida (hali mustaqil tasdiqlanmagan)";
-  const statements=facts.map(x=>x.fact.replace(/\\s+/g," ").trim());
+  const statements=facts.map(x=>x.fact.replace(/\s+/g," ").trim());
   let summary;
   if(statements.length===1) summary=statements[0];
   else if(statements.length===2) summary=statements[0]+" Bundan tashqari, "+statements[1].charAt(0).toLowerCase()+statements[1].slice(1);
   else summary=statements[0]+" Yana muhim jihatlar: "+statements.slice(1).join(" ");
   const sources=[...new Set(facts.map(x=>x.source).filter(Boolean))].slice(0,3);
-  return heading+":\\n"+summary+"\\n\\nYakuniy xulosa: topilgan mos dalillar shu fikrni qo‘llab-quvvatlaydi; ular yetarli bo‘lmagan joyda taxmin qilinmadi."+
-    (sources.length?"\\n\\nManbalar: "+sources.join(" | "):"");
+  return heading+":\n"+summary+"\n\nYakuniy xulosa: topilgan mos dalillar shu fikrni qo‘llab-quvvatlaydi; dalil yetarli bo‘lmagan joyda taxmin qilinmadi."+
+    (sources.length?"\n\nManbalar: "+sources.join(" | "):"");
 }
 function respond(query, entries) {
   const quick=quickReply(query);
