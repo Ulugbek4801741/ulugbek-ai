@@ -564,7 +564,14 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
               return { ...item, page: null };
             }
           }));
-          const pageResults = cognition.filterRelevantEvidence(message, fetchedPages.map(item => ({ title: item.page?.title || item.title, content: item.page?.content || item.snippet, source: item.page?.url || item.url, status: item.page ? "unverified-public-page-content" : "unverified-search-snippet", page: item.page })), 4);\n          const evidence = pageResults.map(item => ({
+          const pageResults = cognition.filterRelevantEvidence(message, fetchedPages.map(item => ({ title: item.page?.title || item.title, content: item.page?.content || item.snippet, source: item.page?.url || item.url, status: item.page ? "unverified-public-page-content" : "unverified-search-snippet", page: item.page })), 4);\n          const pageResults = cognition.filterRelevantEvidence(message, fetchedPages.map(item => ({
+            title: item.page?.title || item.title,
+            content: item.page?.content || item.snippet,
+            source: item.page?.url || item.url,
+            status: item.status,
+            page: item.page
+          })), 4);
+          const evidence = pageResults.map(item => ({
             title: item.page?.title || item.title,
             content: item.page?.content || item.snippet,
             source: item.page?.url || item.url,
@@ -583,11 +590,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
             };
           } else {
             result = {
-              reply: "Ochiq internet sahifalaridan ma’lumotlar topildi, ammo savolga ishonchli xulosa berish uchun dalil yetarli emas. Manbalarni tekshiring:\n\n" +
-                pageResults.map((item, index) => (index + 1) + ". " +
-                  (item.page?.title || item.title) + "\n" +
-                  (item.page?.content || item.snippet).slice(0, 700) + "\n" +
-                  (item.page?.url || item.url)).join("\n\n"),
+              reply: "Savolingizga mos manbalar ko‘rib chiqildi, ammo ishonchli yakuniy xulosa uchun dalil yetarli emas. Shu sabab taxminiy javob bermayman.",
               reasoning: { method: "public-page-research-unverified", answerable: false, facts: [] }
             };
           }
