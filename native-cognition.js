@@ -123,7 +123,7 @@ function respond(query, entries) {
   const quick=quickReply(query);
   if(quick) return {reply:quick,reasoning:{method:"built-in-uzbek-dialogue",answerable:true,facts:[]}};
   const result=reason(query,entries);
-  if(!result.answerable) return {reply:"Savolingizni tushundim, ammo hozircha unga mos va ishonchli dalil topilmadi. Noto‘g‘ri ma’lumot bermaslik uchun taxmin qilmayman.",reasoning:result};
+  if(!result.answerable) return {reply:"Savolingizni tushundim, ammo mos manbalardan hozircha ishonchli javob topa olmadim. Noto‘g‘ri ma’lumot bermaslik uchun taxmin qilmayman.",reasoning:result};
   return {reply:conciseEvidenceReply(result),reasoning:result};
 }
 module.exports={concepts,splitFacts,reason,respond,quickReply,normalizeInput,words,editDistance,relevance,filterRelevantEvidence};
