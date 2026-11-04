@@ -23,7 +23,24 @@ test("report is one Uzbek summary and does not include private task text", () =>
   assert.match(report.text, /tekshiruv kutayotgan 1/);
   assert.doesNotMatch(report.text, /private user task/);
   assert.equal(report.type, "system-summary");
+  assert.match(report.text, /bitta universal agent faol/);
+  assert.match(report.text, /lokal fayl ombori/);
+  assert.doesNotMatch(report.text, /private user task|secret-token|internal-stack-trace/);
 });
+test("report status does not expose raw filesystem errors", async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "ulugbek-report-error-"));
+  const notDirectory = path.join(root, "not-a-directory");
+  await fs.writeFile(notDirectory, "x");
+  const service = createVoiceReportService({ dataDir: notDirectory, readSnapshot: () => ({ tasks: [] }) });
+  try {
+    assert.equal(await service.generate(), null);
+    assert.equal(service.status().lastError, "report_storage_or_generation_failed");
+  } finally {
+    service.stop();
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
 test("service persists the first report and exposes latest report", async () => {
   const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), "ulugbek-voice-report-"));
   const service = createVoiceReportService({ dataDir, intervalMs: 60000, readSnapshot: () => ({
