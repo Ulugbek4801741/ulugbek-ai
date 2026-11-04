@@ -41,6 +41,7 @@ function buildReport(snapshot, now = new Date()) {
     "Rasm yaratish moduli: " + (snapshot.images?.enabled ? "ulangan." : "serverda ulanmagan."),
     "Video yaratish moduli: " + (snapshot.videos?.enabled ? "ulangan." : "serverda ulanmagan."),
     "Vazifalar: jami " + tasks.total + ", bajarilgan " + tasks.completed + ", jarayonda " + tasks.running + ", tekshiruv kutayotgan " + tasks.awaitingReview + ", xatoli " + tasks.failed + ".",
+    "Mustaqil takomillashtirish: " + (snapshot.improvements?.counts?.pendingApproval || 0) + " ta taklif administrator ko‘rigini kutmoqda; kodni o‘zgartirish va deploy avtomatik bajarilmaydi.",
     "Xavfsizlik: tashqi yozish, kodni ishga tushirish va deploy amallari alohida ruxsatsiz bajarilmaydi.",
     "Keyingi hisobot taxminan besh daqiqadan keyin tayyorlanadi."
   ];

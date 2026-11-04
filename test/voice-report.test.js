@@ -25,6 +25,7 @@ test("report is one Uzbek summary and does not include private task text", () =>
   assert.equal(report.type, "system-summary");
   assert.match(report.text, /bitta universal agent faol/);
   assert.match(report.text, /lokal fayl ombori/);
+  assert.match(report.text, /taklif administrator ko‘rigini kutmoqda/);
   assert.doesNotMatch(report.text, /private user task|secret-token|internal-stack-trace/);
 });
 test("report status does not expose raw filesystem errors", async () => {

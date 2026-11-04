@@ -53,6 +53,53 @@ async function loadAutopilot() {
     ? "Agentlar karantinda: " + (status.quarantineReason || "xavfsizlik tekshiruvi")
     : (status.lastError ? "Oxirgi xato: " + status.lastError : status.note || "");
 }
+async function loadImprovementPlanner() {
+  const data = await request("/api/admin/improvements");
+  const planner = data.planner || {};
+  const counts = planner.counts || {};
+  $("improvements-status").replaceChildren(
+    metric("Reja tuzuvchi", planner.enabled ? "Faol" : "To‘xtagan"),
+    metric("Tekshiruv oralig‘i", (planner.intervalMinutes || 30) + " daqiqa"),
+    metric("Admin ko‘rigida", counts.pendingApproval ?? 0),
+    metric("Rejaga tasdiqlangan", counts.approvedForImplementation ?? 0),
+    metric("Rad etilgan", counts.rejected ?? 0),
+    metric("Oxirgi tekshiruv", planner.lastScanAt ? new Date(planner.lastScanAt).toLocaleString() : "Hali yo‘q")
+  );
+  const list = $("improvements-list");
+  list.replaceChildren();
+  const proposals = data.proposals || [];
+  if (!proposals.length) list.textContent = "Hozircha taklif yo‘q yoki birinchi tekshiruv davom etmoqda.";
+  for (const proposal of proposals) {
+    const card = document.createElement("article"); card.className = "task-card";
+    addText(card, "strong", (proposal.priority || "normal").toUpperCase() + " · " + proposal.title);
+    addText(card, "p", proposal.reason);
+    addText(card, "p", "Keyingi qadam: " + proposal.nextStep);
+    addText(card, "p", "Tayyor deb hisoblash sharti: " + proposal.acceptance);
+    addText(card, "small", "Holat: " + proposal.status + " · Oxirgi aniqlangan: " + new Date(proposal.lastSeenAt).toLocaleString());
+    if (proposal.status === "pending_approval") {
+      const actions = document.createElement("div"); actions.className = "task-actions";
+      for (const [decision, label] of [["approve", "Ish rejasiga tasdiqlash"], ["reject", "Rad etish"]]) {
+        const button = document.createElement("button"); button.className = "secondary"; button.textContent = label;
+        button.addEventListener("click", async () => {
+          button.disabled = true;
+          try {
+            await request("/api/admin/improvements/" + encodeURIComponent(proposal.id) + "/decision", {
+              method: "POST", body: JSON.stringify({ decision })
+            });
+            await loadImprovementPlanner();
+            $("improvements-message").textContent = decision === "approve"
+              ? "Taklif ish rejasiga tasdiqlandi. Kod yoki server avtomatik o‘zgartirilmadi."
+              : "Taklif rad etildi.";
+          } catch (error) { $("improvements-message").textContent = error.message; button.disabled = false; }
+        });
+        actions.append(button);
+      }
+      card.append(actions);
+    }
+    list.append(card);
+  }
+  $("improvements-message").textContent = planner.lastError || planner.note || "";
+}
 async function loadSafety() {
   const [policyData, runtimeData, eventData] = await Promise.all([
     request("/api/security/policy"),
@@ -251,7 +298,7 @@ async function checkSession() {
     }
     if (status.authenticated) {
       showDashboard(true);
-      await Promise.all([loadOverview(), loadTasks(), loadSafety(), loadAgentPermissions(), loadDeveloperAgent(), loadAutopilot()]);
+      await Promise.all([loadOverview(), loadTasks(), loadSafety(), loadAgentPermissions(), loadDeveloperAgent(), loadAutopilot(), loadImprovementPlanner()]);
     } else {
       showDashboard(false);
     }
@@ -333,6 +380,16 @@ $("developer-run").addEventListener("click", async () => {
   } catch (error) { $("developer-message").textContent = error.message; }
   finally { button.disabled = false; }
 });
+$("improvements-scan").addEventListener("click", async () => {
+  const button = $("improvements-scan"); button.disabled = true;
+  $("improvements-message").textContent = "Kamchiliklar qayta tekshirilmoqda…";
+  try {
+    await request("/api/admin/improvements/scan", { method: "POST", body: "{}" });
+    await loadImprovementPlanner();
+    $("improvements-message").textContent = "Tekshiruv tugadi. Yangi takliflar ro‘yxatda.";
+  } catch (error) { $("improvements-message").textContent = error.message; }
+  finally { button.disabled = false; }
+});
 $("autopilot-check").addEventListener("click", async () => {
   const button = $("autopilot-check"); button.disabled = true;
   try { await request("/api/admin/autopilot/check", { method: "POST", body: "{}" }); await loadAutopilot(); }
@@ -356,6 +413,6 @@ checkSession();
 setInterval(() => {
   if (!$("dashboard").hidden) {
     request("/api/admin/status").then(data => { if (!data.authenticated) { showDashboard(false); $("login-error").textContent = "Administrator sessiyasi tugadi. Qayta kiring."; } }).catch(() => showDashboard(false));
-    loadTasks().catch(() => {}); loadOverview().catch(() => {}); loadDeveloperAgent().catch(() => {}); loadAutopilot().catch(() => {});
+    loadTasks().catch(() => {}); loadOverview().catch(() => {}); loadDeveloperAgent().catch(() => {}); loadAutopilot().catch(() => {}); loadImprovementPlanner().catch(() => {});
   }
 }, 10000);
