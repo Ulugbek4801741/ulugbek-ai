@@ -75,10 +75,10 @@ function quickReply(query) {
     return "Men ULUGBEK AI — mahalliy mantiqiy qoidalar va mavjud bilimlardan foydalanuvchi yordamchiman.";
   }
   if (/(nima qila olasan|nimalar qila olasan|imkoniyatlaring|vazifang nima)/.test(q)) {
-    return "Savollarga mavjud bilimlar asosida javob beraman, ochiq manbalarni qidiraman va topilgan ma’lumotlarni tekshiruvga ajrataman.";
+    return "Men mavjud bilimlar bazasi asosida javob beraman, ochiq manbalarni qidiraman va topilgan ma’lumotlarni tekshiruvga ajrataman.";
   }
   if (/(qanday o'rganasan|qanday organasan|o'zingni o'rgat|ozingni urgat|qayta o'qit|qayta oqit)/.test(q)) {
-    return "Ochiq manbalardan ma’lumot qidiraman, qisqa yozuv sifatida saqlashga nomzod qilaman. Tasdiqlanmagan ma’lumotni ishonchli bilim deb ko‘rsatmayman. Bu model vaznlarini qayta o‘qitish emas.";
+    return "O‘zbekcha manbalarni birinchi o‘rinda, inglizcha va ruscha manbalarni keyin qidiraman. Yangi ma’lumot tekshiruvga yuboriladi; bu model vaznlarini qayta o‘qitmaydi.";
   }
   if (/(api kalit|tashqi api|ma'lumotlarim|maxfiylik|suhbatlarim)/.test(q)) {
     return "Hozirgi chat rejimi tashqi AI API’ga ulanmaydi. Serverdagi saqlash va hosting sozlamalarini alohida tekshirish kerak.";
@@ -99,7 +99,7 @@ function respond(query, entries) {
   const quick = quickReply(query);
   if (quick) return { reply:quick, reasoning:{ method:"built-in-uzbek-dialogue", answerable:true, facts:[] } };
   const result = reason(query, entries);
-  if (!result.answerable) return { reply:"Hozircha yetarli dalil topilmadi. Savolni aniqroq yozing yoki boshqa manba so‘rang.", reasoning:result };
+  if (!result.answerable) return { reply:"Bu savolga hozircha ishonchli javob topa olmadim. Savolni aniqroq yozing yoki boshqa manba so‘rang.", reasoning:result };
   const sources = [...new Set(result.facts.map(x=>x.source).filter(Boolean))];
   return {
     reply: conciseEvidenceReply(result.facts) + (sources.length ? "\n\nManbalar: " + sources.slice(0,3).join(" | ") : ""),
