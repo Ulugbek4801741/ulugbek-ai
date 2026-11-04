@@ -541,7 +541,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     let result = await answerWithOneAgent(learned);
     let webResearchUsed = false;
     if (!result.reasoning.answerable) {
-      const publicFindings = await nativeBrain.researchQuestion(message);
+      const cognition = require("./native-cognition");\n      const searchQuestion = cognition.normalizeInput(message).replace(/\\b(bilasanmi|bilasizmi|iltimos|aytib ber|tushuntir)\\b/g, " ").replace(/\\s+/g, " ").trim();\n      const publicFindings = await nativeBrain.researchQuestion(searchQuestion || message);
       if (publicFindings.length) {
         learned = publicFindings;
         result = await answerWithOneAgent(learned);
@@ -552,11 +552,11 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       // history, profile, private memory or uploaded content is transmitted.
       if (!result.reasoning.answerable) {
         const webSearch = require("./modules/chat-web-research");
-        const searchResults = await webSearch.search(message);
+        const searchResults = await webSearch.search(searchQuestion || message);
         if (searchResults.length) {
           // Read the actual public pages, not only search-engine snippets.
           // Each page is fetched read-only with URL/DNS/redirect/size/time limits.
-          const pageResults = await Promise.all(searchResults.slice(0, 4).map(async item => {
+          const fetchedPages = await Promise.all(searchResults.slice(0, 5).map(async item => {
             try {
               const page = await webSearch.fetchPage(item.url);
               return page ? { ...item, page } : { ...item, page: null };
@@ -564,14 +564,14 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
               return { ...item, page: null };
             }
           }));
-          const evidence = pageResults.map(item => ({
+          const pageResults = cognition.filterRelevantEvidence(message, fetchedPages.map(item => ({ title: item.page?.title || item.title, content: item.page?.content || item.snippet, source: item.page?.url || item.url, status: item.page ? "unverified-public-page-content" : "unverified-search-snippet", page: item.page })), 4);\n          const evidence = pageResults.map(item => ({
             title: item.page?.title || item.title,
             content: item.page?.content || item.snippet,
             source: item.page?.url || item.url,
             status: item.page ? "unverified-public-page-content" : "unverified-search-snippet"
           }));
           const researched = await answerWithOneAgent(evidence);
-          const sourceLines = pageResults.map((item, index) =>
+          const sourceLines = pageResults.slice(0, 3).map((item, index) =>
             (index + 1) + ". " + (item.page?.title || item.title) +
             (item.page ? " (sahifa matni o‘qildi)" : " (faqat qidiruv parchasi)") +
             "\n" + (item.page?.url || item.url)
