@@ -12,8 +12,17 @@ function normalizeInput(value) {
     .replace(/\s+/g, " ").trim();
   return text.split(" ").flatMap(token => (CORRECTIONS.get(token) || token).split(" ")).join(" ");
 }
+function stem(word) {
+  const suffixes=["larining","laridan","lariga","larini","larning","ning","dagi","dan","ga","ni","da","lar","lik","ini","iga","sini","ida"];
+  for(const suffix of suffixes) {
+    if(word.length>suffix.length+3 && word.endsWith(suffix)) return word.slice(0,-suffix.length);
+  }
+  return word;
+}
 function words(text) {
-  return normalizeInput(text).split(/[^\p{L}\p{N}]+/u).filter(x => x.length > 2 && !STOP.has(x));
+  return normalizeInput(text).replace(/(?<=\p{L})'(?=\p{L})/gu,"")
+    .split(/[^\p{L}\p{N}]+/u).map(stem)
+    .filter(x => x.length > 2 && !STOP.has(x));
 }
 function concepts(text) {
   const counts = new Map();
