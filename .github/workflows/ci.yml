@@ -46,6 +46,9 @@ jobs:
       - name: Check critical JavaScript syntax
         run: |
           node --check server.js
+          node --check modules/decision-reasoner.js
+          node --check modules/autonomous-decision.js
+          node --check native-cognition.js
           node --check agent-runtime.js
           node --check developer-agent.js
           node --check public/compat.js
