@@ -140,7 +140,7 @@ function createAutonomousImprovementPlanner(options = {}) {
       const existing = new Map(proposals.map(item => [item.key, item]));
       for (const gap of gaps) {
         const previous = existing.get(gap.key);
-        if (previous && ["pending_approval", "approved_for_implementation"].includes(previous.status)) {
+        if (previous) {
           previous.lastSeenAt = now;
           previous.reason = gap.reason;
           previous.nextStep = gap.nextStep;
