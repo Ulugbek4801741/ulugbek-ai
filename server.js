@@ -16,6 +16,8 @@ const voiceReports = createVoiceReportService({
     uptimeSeconds: process.uptime(),
     model: singleAgent.status(),
     learning: learningWorkerForAdmin.status(),
+    images: imageGenerator.status(),
+    videos: videoGenerator.status(),
     developer: developerAgent.status(),
     tasks: agentRuntime.listTasks()
   })
