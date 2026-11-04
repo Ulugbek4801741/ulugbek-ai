@@ -3,6 +3,7 @@ const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const path = require("node:path");
 const crypto = require("node:crypto");
+const { createVoiceReportService } = require("./modules/voice-report");
 const agentRuntime = require("./agent-runtime");
 const singleAgent = require("./modules/single-agent").createSingleAgent();
 const developerAgent = require("./developer-agent");
@@ -10,6 +11,15 @@ const agentPermissions = require("./agent-permissions");
 const learningWorkerForAdmin = require("./lab-learning-worker");
 const { createAdminAutopilot } = require("./admin-autopilot");
 const adminAutopilot = createAdminAutopilot({ developerAgent, learningWorker: learningWorkerForAdmin, agentRuntime });
+const voiceReports = createVoiceReportService({
+  readSnapshot: () => ({
+    uptimeSeconds: process.uptime(),
+    model: singleAgent.status(),
+    learning: learningWorkerForAdmin.status(),
+    developer: developerAgent.status(),
+    tasks: agentRuntime.listTasks()
+  })
+});
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -301,6 +311,15 @@ app.post("/api/admin/tasks/:id/review", requireAdmin, (req, res) => {
 app.get("/api/ai/status", (_req, res) => {
   res.set("Cache-Control", "no-store");
   res.json({ ok: true, agentCount: 1, agentName: "ULUGBEK Universal Agent", model: singleAgent.status(), mathEngine: "native-safe-arithmetic", research: "public-read-only-with-source-checks" });
+});
+
+app.get("/api/reports/latest", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  return res.json({ ok: true, report: voiceReports.latest() });
+});
+app.get("/api/reports/status", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  return res.json({ ok: true, reports: voiceReports.status() });
 });
 
 app.get("/api/health", (_req, res) => {
@@ -640,6 +659,7 @@ app.use((err, _req, res, _next) => {
   return res.status(500).json({ error: "Ichki server xatosi." });
 });
 learningWorker.start();
+if (process.env.NODE_ENV !== "test") voiceReports.start().catch(error => console.error("Ovozli hisobot xizmati ishga tushmadi:", error.message));
 agentRuntime.startWorker().then(() => {
   const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`ULUGBEK AI serveri ${PORT}-portda ishga tushdi.`);
