@@ -97,7 +97,7 @@ const INTENT_DOMAINS = [
 ];
 function classifyIntent(query) {
   const normalized = normalizeInput(query);
-  const actionRequested = /(yordam|qilib ber|tayyorla|yozib ber|topib ber|qidirib ber|tekshir|tuzat|yarat|reja tuz|o'rgat|tushuntir|tarjima|hisobla|solishtir|tahlil qil|maslahat ber)/.test(normalized);
+  const actionRequested = /(yordam|qilib ber|tayyorla|yozib ber|topib ber|qidirib ber|tekshir|tuzat|yarat|reja tuz|tanla|o'rgat|tushuntir|tarjima|hisobla|solishtir|tahlil qil|maslahat ber)/.test(normalized);
   // More specific domains must win when a phrase contains a generic token
   // such as "ish" inside "olish" (e.g. visa olish).
   // Explicit product-selection verbs take precedence over the generic word
