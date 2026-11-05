@@ -7,7 +7,7 @@ test("research worker prioritizes Uzbek and learns from five supported languages
   const status = worker.status();
   assert.equal(status.mode, "continuous-multilingual-public-read-only-knowledge-retrieval");
   assert.deepEqual(status.languagePriority.map(item => item.language), ["uz", "en", "ru", "tr", "kk"]);
-  assert.deepEqual(status.languagePriority.map(item => item.sharePercent), [50, 20, 15, 10, 5]);
+  assert.deepEqual(status.languagePriority.map(item => item.sharePercent), [50, 20, 15, 5, 5]);
   assert.deepEqual(status.sourceAllowlist, ["uz.wikipedia.org", "en.wikipedia.org", "ru.wikipedia.org", "tr.wikipedia.org", "kk.wikipedia.org"]);
   assert.equal(status.intervalMinutes, 1);
   assert.equal(status.parallelLanguages, 5);
