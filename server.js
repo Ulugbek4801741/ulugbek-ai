@@ -22,11 +22,6 @@ const PORT = Number(process.env.PORT) || 3000;
 const MAX_TASK_LENGTH = 4000;
 
 app.disable("x-powered-by");
-// Keep the administration UI on the API origin so its HttpOnly, SameSite=Strict
-// session cookie and every privileged request use the same trusted server.
-// /admin is the stable entry point; /admin.html remains available for compatibility.
-app.get("/admin", (_req, res) => res.redirect(302, "/admin.html"));
-app.get("/admin/", (_req, res) => res.redirect(302, "/admin.html"));
 // Always allow the official GitHub Pages origin. Hosting variables are additional allowed origins,
 // not overrides, so an outdated FRONTEND_ORIGIN value cannot silently break the public website.
 const FRONTEND_ORIGINS = new Set([
@@ -751,6 +746,12 @@ app.get("/api/lab/learning/status", (_req, res) => {
   res.set("Cache-Control", "no-store");
   res.json({ ok:true, learning:learningWorker.status() });
 });
+
+// Keep the administration UI on the API origin so its HttpOnly, SameSite=Strict
+// session cookie and every privileged request use the same trusted server.
+// /admin is the stable entry point; /admin.html remains available for compatibility.
+app.get("/admin", (_req, res) => res.redirect(302, "/admin.html"));
+app.get("/admin/", (_req, res) => res.redirect(302, "/admin.html"));
 
 app.use(express.static(path.join(__dirname, "public"), {
   etag: true,
