@@ -491,7 +491,17 @@ app.get("/api/images/status", (_req, res) => {
   res.json({ ok: true, imageGeneration: imageGenerator.status() });
 });
 
-app.post("/api/images/generate", imageRateLimit, async (req, res) => {
+app.post("/api/images/generate", (req, res, next) => {
+  // Do not consume the image quota when no generation endpoint is configured.
+  if (!imageGenerator.status().enabled) {
+    res.set("Cache-Control", "no-store");
+    return res.status(503).json({
+      error: "Rasm yaratish modeli ulanmagan. Serverda IMAGE_GENERATION_URL sozlang.",
+      imageGeneration: imageGenerator.status()
+    });
+  }
+  next();
+}, imageRateLimit, async (req, res) => {
   res.set("Cache-Control", "no-store");
   try {
     const result = await imageGenerator.generate(req.body?.prompt);
