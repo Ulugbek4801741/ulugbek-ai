@@ -3,7 +3,8 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { detectSearchIntent, buildUniversalSearchQuery, buildUniversalSearchQueries, searchWeb, evidenceEntries, formatEvidenceReply } = require("../modules/universal-web-search");
-const { knowledgeContext, SYSTEM_PROMPT } = require("../modules/single-agent");\nconst { hasLocationHint, locationClarification } = require("../modules/job-search");
+const { knowledgeContext, SYSTEM_PROMPT } = require("../modules/single-agent");
+const { hasLocationHint, locationClarification } = require("../modules/job-search");
 
 test("searches only explicit discovery, job, and current-information requests", () => {
   for (const q of ["Bugun ob-havo qanday?", "Bugungi eng so'nggi yangiliklarni top", "Shveysariyada traktorchi ish topish", "Menga vakansiya qidirib ber", "YouTube kanalining linkini topib ber"]) assert.equal(detectSearchIntent(q).shouldSearch, true, q);
