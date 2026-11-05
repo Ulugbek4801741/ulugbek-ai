@@ -36,7 +36,7 @@ test("self-hosted agent prompt includes emotional and ethical context", async ()
       return { ok: true, json: async () => ({ choices: [{ message: { content: "Sizga yordam beraman." } }] }) };
     }
   });
-  const result = await agent.answer("Men juda xafaman, yordam bering");
+  const result = await agent.answer("Men juda xafaman, bugun kayfiyatim tushdi");
   assert.equal(result.reply, "Sizga yordam beraman.");
   assert.equal(result.emotion.label, "sadness");
   assert.equal(result.ethicalAssessment.risk, "ordinary");
