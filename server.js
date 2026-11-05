@@ -312,11 +312,6 @@ app.post("/api/admin/tasks/:id/review", requireAdmin, (req, res) => {
   }
 });
 
-app.get("/api/language/status", (_req, res) => {
-  res.set("Cache-Control", "no-store");
-  res.json({ ok: true, language: languageModule.status() });
-});
-
 app.post("/api/language/analyze", (req, res) => {
   const text = typeof req.body?.text === "string" ? req.body.text.trim() : "";
   if (!text) return res.status(400).json({ error: "Matn bo‘sh bo‘lmasligi kerak." });
@@ -327,7 +322,7 @@ app.post("/api/language/analyze", (req, res) => {
 
 app.get("/api/language/status", (_req, res) => {
   res.set("Cache-Control", "no-store");
-  res.json({ ok: true, languageLearning: languageLearningWorker.status() });
+  res.json({ ok: true, language: languageModule.status(), languageLearning: languageLearningWorker.status() });
 });
 
 app.get("/api/cognition/status", (_req, res) => {
