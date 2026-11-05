@@ -90,7 +90,7 @@ const INTENT_DOMAINS = [
   { id: "documents", pattern: /(hujjat|ariza|shartnoma|oferta|pdf|tarjima|xat|rasmiy)/ },
   { id: "business", pattern: /(biznes|tadbirkor|firma|kompaniya|investor|grant|loyiha|daromad|savdo)/ },
   { id: "travel", pattern: /(sayohat|safar|avia|chipta|mehmonxona|viza|yo'l|manzil)/ },
-  { id: "health", pattern: /(sog'liq|salomat|shifokor|kasallik|dori|alomat|og'riq)/ },
+  { id: "health", pattern: /(sog'liq|sog'lig|salomat|shifokor|kasallik|dori|alomat|og'riq)/ },
   { id: "finance", pattern: /(pul|qarz|budjet|byudjet|soliq|hisob|to'lov|narx|moliy)/ },
   { id: "shopping", pattern: /(sotib|xarid|mahsulot|telefon|noutbuk|narxini|taqqosla)/ },
   { id: "research", pattern: /(izlab|qidir|topib ber|ma'lumot|tekshir|solishtir|tahlil|yangilik)/ }
