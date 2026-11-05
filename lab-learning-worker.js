@@ -14,10 +14,10 @@ const REQUEST_TIMEOUT_MS = 15_000;
 const MAX_RESPONSE_BYTES = 1_000_000;
 const MAX_KNOWLEDGE_ITEMS = 2000;
 
-// O‘zbek tili ustuvor: 12/20 sikl, ingliz tili 5/20, rus tili 3/20.
+// O‘zbek tili ustuvor; ingliz, rus, turk va qozoq tillari ham navbat bilan o‘rganiladi.
 const LANGUAGE_PLAN = [
-  "uz","uz","en","uz","ru","uz","en","uz","uz","ru",
-  "uz","en","uz","uz","ru","en","uz","uz","en","uz"
+  "uz","uz","en","uz","ru","uz","en","uz","kk","ru",
+  "uz","en","uz","tr","ru","en","uz","uz","en","uz"
 ];
 const TOPICS = {
   uz: [
@@ -35,10 +35,13 @@ const TOPICS = {
     "информатика и программирование", "искусственный интеллект",
     "наука и технологии", "кибербезопасность", "математика",
     "история Узбекистана"
-  ]
+  ],
+  tr: ["Türkçe dil bilgisi", "yazılım geliştirme", "yapay zekâ", "bilim ve teknoloji"],
+  kk: ["қазақ тілі грамматикасы", "бағдарламалау негіздері", "жасанды интеллект", "ғылым мен технология"]
 };
 const ALLOWED_WIKIPEDIA_HOSTS = new Set([
-  "uz.wikipedia.org", "en.wikipedia.org", "ru.wikipedia.org"
+  "uz.wikipedia.org", "en.wikipedia.org", "ru.wikipedia.org",
+  "tr.wikipedia.org", "kk.wikipedia.org"
 ]);
 
 let state = {
@@ -48,7 +51,7 @@ let state = {
 };
 let timer = null;
 let cursor = 0;
-const topicCursors = { uz: 0, en: 0, ru: 0 };
+const topicCursors = { uz: 0, en: 0, ru: 0, tr: 0, kk: 0 };
 let inFlight = false;
 let stopRequested = false;
 let writeChain = Promise.resolve();
@@ -310,8 +313,8 @@ async function cycle() {
   state.running = true;
   state.lastCycleAt = new Date().toISOString();
 
-  // Har bir siklda 3 til parallel qidiriladi. Har til 2 tagacha qisqa
-  // ensiklopedik xulosa oladi: ko‘pi bilan 6 nomzod/sikl.
+  // Bitta mavzu tanlanadi; foydalanuvchi so‘rovida esa 5 til parallel tekshiriladi.
+  // Har tildan 2 tagacha qisqa xulosa olinadi: ko‘pi bilan 10 nomzod/sikl.
   // Bu manba cheklovlariga rioya qiladi; minglab sahifani yuklab olmaydi.
   const language = LANGUAGE_PLAN[cursor++ % LANGUAGE_PLAN.length];
   const topics = TOPICS[language];
@@ -355,12 +358,14 @@ function status() {
   return {
     ...state,
     intervalMinutes: Math.round(INTERVAL_MS / 60_000),
-    parallelLanguages: 3,
-    maxCandidatesPerCycle: 6,
+    parallelLanguages: 5,
+    maxCandidatesPerCycle: 10,
     languagePriority: [
-      { language: "uz", name: "O‘zbek", sharePercent: 60 },
-      { language: "en", name: "Ingliz", sharePercent: 25 },
-      { language: "ru", name: "Rus", sharePercent: 15 }
+      { language: "uz", name: "O‘zbek", sharePercent: 50 },
+      { language: "en", name: "Ingliz", sharePercent: 20 },
+      { language: "ru", name: "Rus", sharePercent: 15 },
+      { language: "tr", name: "Turk", sharePercent: 5 },
+      { language: "kk", name: "Qozoq", sharePercent: 5 }
     ],
     sourceAllowlist: [...ALLOWED_WIKIPEDIA_HOSTS],
     minimumRequestGapSeconds: 1,
@@ -375,7 +380,7 @@ function status() {
     chatUsesOnlyApprovedKnowledge: true,
     modelWeightsRetrained: false,
     uptimeGuarantee: "host-process-and-persistent-storage-dependent",
-    note: "Oldin ko‘rilgan sahifalar doimiy ro‘yxatda saqlanadi va qayta yuklanmaydi. Har daqiqada o‘zbek, ingliz va rus Wikipedia manbalarida parallel qidiruv; har tildan 2 tagacha nomzod (jami ko‘pi bilan 6). O‘zbek mavzulari 60%, ingliz 25%, rus 15% navbatda. Manbalar pending-review holatida saqlanadi; chat faqat tasdiqlangan yozuvlardan foydalanadi. Bu model vaznlarini o‘qitmaydi."
+    note: "Har daqiqada navbatdagi til mavzusi o‘rganiladi; foydalanuvchi so‘rovida o‘zbek, ingliz, rus, turk va qozoq Wikipedia manbalari parallel tekshiriladi. Har tildan 2 tagacha nomzod olinadi. O‘zbek tili ustuvor. Manbalar pending-review holatida saqlanadi; fakt sifatida chatda ishlatilmaydi. Bu bosqich statistik til korpusini o‘rgatadi, neyron model vaznlarini emas."
   };
 }
 async function searchKnowledge(query, limit = 5) {
@@ -393,7 +398,7 @@ async function searchKnowledge(query, limit = 5) {
 async function researchQuestion(query) {
   const question = clean(query, 500);
   if (!question || question.length < 3) return [];
-  const languages = ["uz", "en", "ru"];
+  const languages = ["uz", "en", "ru", "tr", "kk"];
   const current = await readKnowledge();
   const known = new Set(current.map(item => item.source).filter(Boolean));
   await loadVisitedPages();

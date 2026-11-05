@@ -62,3 +62,5 @@ jobs:
         run: npm install --prefer-offline --no-audit --no-fund
       - name: Run complete automated test suite
         run: npm test
+      - name: Boot server and verify live HTTP endpoints
+        run: node scripts/smoke-server.js

@@ -3,15 +3,15 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const worker = require("../lab-learning-worker");
 
-test("research worker prioritizes Uzbek, then English, then Russian", () => {
+test("research worker prioritizes Uzbek and learns from five supported languages", () => {
   const status = worker.status();
   assert.equal(status.mode, "continuous-multilingual-public-read-only-knowledge-retrieval");
-  assert.deepEqual(status.languagePriority.map(item => item.language), ["uz", "en", "ru"]);
-  assert.deepEqual(status.languagePriority.map(item => item.sharePercent), [60, 25, 15]);
-  assert.deepEqual(status.sourceAllowlist, ["uz.wikipedia.org", "en.wikipedia.org", "ru.wikipedia.org"]);
+  assert.deepEqual(status.languagePriority.map(item => item.language), ["uz", "en", "ru", "tr", "kk"]);
+  assert.deepEqual(status.languagePriority.map(item => item.sharePercent), [50, 20, 15, 5, 5]);
+  assert.deepEqual(status.sourceAllowlist, ["uz.wikipedia.org", "en.wikipedia.org", "ru.wikipedia.org", "tr.wikipedia.org", "kk.wikipedia.org"]);
   assert.equal(status.intervalMinutes, 1);
-  assert.equal(status.parallelLanguages, 3);
-  assert.equal(status.maxCandidatesPerCycle, 6);
+  assert.equal(status.parallelLanguages, 5);
+  assert.equal(status.maxCandidatesPerCycle, 10);
   assert.equal(status.writesToExternalSites, false);
   assert.equal(status.executesDownloadedCode, false);
   assert.equal(status.chatUsesOnlyApprovedKnowledge, true);

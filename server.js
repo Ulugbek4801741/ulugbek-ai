@@ -330,6 +330,42 @@ app.get("/api/language/status", (_req, res) => {
   res.json({ ok: true, language: languageModule.status(), languageLearning: languageLearningWorker.status() });
 });
 
+app.get("/api/admin/language/status", requireAdmin, (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, language: languageModule.status(), learning: languageLearningWorker.status(), research: learningWorkerForAdmin.status() });
+});
+
+app.post("/api/admin/language/train", requireAdmin, async (_req, res) => {
+  try {
+    const result = await languageLearningWorker.trainNow();
+    res.set("Cache-Control", "no-store");
+    return res.json({ ok: true, result, learning: languageLearningWorker.status() });
+  } catch (error) {
+    return res.status(500).json({ error: "Til modulini o‘qitish bajarilmadi: " + String(error.message || error).slice(0, 180) });
+  }
+});
+
+app.post("/api/admin/language/research", requireAdmin, async (req, res) => {
+  const query = typeof req.body?.query === "string" ? req.body.query.trim() : "";
+  if (query.length < 3 || query.length > 300) {
+    return res.status(400).json({ error: "Qidiruv mavzusi 3–300 belgi bo‘lishi kerak." });
+  }
+  try {
+    const findings = await learningWorkerForAdmin.researchQuestion(query);
+    const training = await languageLearningWorker.trainNow();
+    res.set("Cache-Control", "no-store");
+    return res.json({
+      ok: true,
+      collectedCandidates: findings.length,
+      training,
+      note: "Topilgan matnlar til statistikasi uchun ishlatiladi. Ular fakt sifatida avtomatik tasdiqlanmaydi.",
+      learning: languageLearningWorker.status()
+    });
+  } catch (error) {
+    return res.status(502).json({ error: "Internet orqali o‘rganish bajarilmadi: " + String(error.message || error).slice(0, 180) });
+  }
+});
+
 app.get("/api/cognition/status", (_req, res) => {
   res.set("Cache-Control", "no-store");
   res.json({ ok: true, language: languageModule.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status(), voice: { input: "browser-speech-recognition", output: "browser-speech-synthesis", requiresMicrophonePermission: true }, conversationPipeline: conversationOrchestrator.status(), independentLanguage: languageLearningWorker.status() });
@@ -776,14 +812,39 @@ app.use((err, _req, res, _next) => {
   console.error("Server xatosi:", err.message);
   return res.status(500).json({ error: "Ichki server xatosi." });
 });
-learningWorker.start();
-languageLearningWorker.start();
-agentRuntime.startWorker().then(() => {
-  const server = app.listen(PORT, "0.0.0.0", () => {
-    console.log(`ULUGBEK AI serveri ${PORT}-portda ishga tushdi.`);
-  });
-  server.on("error", error => console.error("HTTP server xatosi:", error.message));
-}).catch(error => {
-  console.error("Agent worker ishga tushmadi:", error.message);
+// Bind the HTTP port before loading optional workers. Render's health check must
+// be able to reach the process even if a JSON store or background worker is slow.
+const server = app.listen(PORT, "0.0.0.0", () => {
+  console.log(`ULUGBEK AI serveri ${PORT}-portda ishga tushdi.`);
+
+  // Background subsystems must never prevent the web service from becoming healthy.
+  Promise.resolve().then(() => learningWorker.start())
+    .catch(error => console.error("Knowledge worker ishga tushmadi:", error.message));
+  Promise.resolve().then(() => languageLearningWorker.start())
+    .catch(error => console.error("Language worker ishga tushmadi:", error.message));
+  agentRuntime.startWorker()
+    .catch(error => console.error("Agent worker ishga tushmadi; HTTP server ishlashda davom etadi:", error.message));
+});
+server.on("error", error => {
+  console.error("HTTP server xatosi:", error.message);
   process.exitCode = 1;
 });
+
+let shuttingDown = false;
+async function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(signal + " olindi; server xavfsiz yopilmoqda.");
+  learningWorker.stop?.();
+  languageLearningWorker.stop?.();
+  const forceExit = setTimeout(() => process.exit(1), 10000);
+  forceExit.unref();
+  server.close(async () => {
+    try { await agentRuntime.flush?.(); }
+    catch (error) { console.error("Agent ma’lumotlarini saqlash xatosi:", error.message); }
+    clearTimeout(forceExit);
+    process.exit(0);
+  });
+}
+process.on("SIGTERM", () => void shutdown("SIGTERM"));
+process.on("SIGINT", () => void shutdown("SIGINT"));
