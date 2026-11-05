@@ -8,7 +8,7 @@ const {createLanguageCognition,tokenize,trustedSource}=require("../modules/langu
 
 function sampleText(){
  return Array.from({length:18},(_,i)=>[
-  "Til moduli mustaqil ravishda o‘rganadi va yangi so‘zlarni tahlil qiladi.",
+  "Til moduli mustaqil ravishda o‘rganadi va yangi so‘zlarni tahlil qiladi, misol "+i+".",
   "Til moduli grammatik qoidalarni o‘rganadi va so‘zlar orasidagi bog‘lanishni kuzatadi.",
   "Har bir mashq raqami "+i+" yangi bilimni tekshiradi."
  ].join(" ")).join(" ");
