@@ -88,7 +88,7 @@ test("provides source-linked fallback when no synthesis model is configured", ()
   }]);
   assert.match(reply, /Useful source excerpt/);
   assert.match(reply, /https:\/\/example\.org/);
-  assert.match(reply, /mustaqil tasdiqlanmagan/);
+  assert.match(reply, /haqiqat deb tasdiqlanmagan/);
 });
 
 test("reports empty search results honestly", async () => {
