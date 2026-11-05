@@ -31,7 +31,7 @@ function decodeHtmlEntities(value) {
       .replace(/&lt;/gi, "<")
       .replace(/&gt;/gi, ">")
       .replace(/&nbsp;/gi, " ")
-      .replace(/&#(\\d+);/g, (_match, code) => {
+      .replace(/&#(\d+);/g, (_match, code) => {
         const point = Number(code);
         return point > 0 && point <= 0x10ffff ? String.fromCodePoint(point) : " ";
       })
@@ -45,7 +45,7 @@ function decodeHtmlEntities(value) {
   return text;
 }
 function cleanText(value, max = 650) {
-  return decodeHtmlEntities(value).replace(/<[^>]*>/g, " ").replace(/\\s+/g, " ").trim().slice(0, max);
+  return decodeHtmlEntities(value).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
 }
 
 async function searchJobs(message, webSearch, options = {}) {
