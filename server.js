@@ -5,6 +5,7 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 const agentRuntime = require("./agent-runtime");
 const singleAgent = require("./modules/single-agent").createSingleAgent();
+const languageModule = require("./modules/language-module");
 const developerAgent = require("./developer-agent");
 const agentPermissions = require("./agent-permissions");
 const learningWorkerForAdmin = require("./lab-learning-worker");
@@ -298,9 +299,22 @@ app.post("/api/admin/tasks/:id/review", requireAdmin, (req, res) => {
   }
 });
 
+app.get("/api/language/status", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, language: languageModule.status() });
+});
+
+app.post("/api/language/analyze", (req, res) => {
+  const text = typeof req.body?.text === "string" ? req.body.text.trim() : "";
+  if (!text) return res.status(400).json({ error: "Matn bo‘sh bo‘lmasligi kerak." });
+  if (text.length > 4000) return res.status(413).json({ error: "Matn 4000 belgidan oshmasligi kerak." });
+  const detected = languageModule.detectLanguage(text);
+  return res.json({ ok: true, detected, instruction: languageModule.buildLanguageInstruction(text) });
+});
+
 app.get("/api/ai/status", (_req, res) => {
   res.set("Cache-Control", "no-store");
-  res.json({ ok: true, agentCount: 1, agentName: "ULUGBEK Universal Agent", model: singleAgent.status(), mathEngine: "native-safe-arithmetic", research: "public-read-only-with-source-checks" });
+  res.json({ ok: true, agentCount: 1, agentName: "ULUGBEK Universal Agent", model: singleAgent.status(), language: languageModule.status(), mathEngine: "native-safe-arithmetic", research: "public-read-only-with-source-checks" });
 });
 
 app.get("/api/health", (_req, res) => {
