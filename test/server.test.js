@@ -113,7 +113,10 @@ test("API smoke tests", async (t) => {
       assert.equal(page.status, 200);
       assert.match(await page.text(), /ULUGBEK AI — Suhbat/);
       assert.equal(script.status, 200);
-      assert.match(await script.text(), /SpeechRecognition/);
+      const scriptText = await script.text();
+      assert.match(scriptText, /SpeechRecognition/);
+      assert.match(scriptText, /sessionId:voiceSessionId\(\)/);
+      assert.doesNotMatch(scriptText, /function localReply/);
       assert.equal(css.status, 200);
     });
 
@@ -123,6 +126,26 @@ test("API smoke tests", async (t) => {
       assert.equal(page.status, 200);
       assert.match(await page.text(), /Virtual laboratoriya/);
       assert.equal(script.status, 200);
+    });
+
+    await t.test("admin shortcut resolves to the server-hosted dashboard", async () => {
+      const response = await fetch(`${baseUrl}/admin`, { redirect: "manual" });
+      assert.equal(response.status, 302);
+      assert.equal(response.headers.get("location"), "/admin.html");
+    });
+
+    await t.test("CORS preflight permits the server's permission-management PUT route", async () => {
+      const response = await fetch(`${baseUrl}/api/admin/agent-permissions`, {
+        method: "OPTIONS",
+        headers: {
+          Origin: "https://ulugbek4801741.github.io",
+          "Access-Control-Request-Method": "PUT",
+          "Access-Control-Request-Headers": "content-type"
+        }
+      });
+      assert.equal(response.status, 204);
+      assert.match(response.headers.get("access-control-allow-methods") || "", /PUT/);
+      assert.equal(response.headers.get("access-control-allow-origin"), "https://ulugbek4801741.github.io");
     });
 
     await t.test("admin dashboard assets are served", async () => {
