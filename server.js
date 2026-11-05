@@ -163,6 +163,7 @@ app.get("/api/admin/overview", requireAdmin, (_req, res) => {
     aiConfigured: singleAgent.status().configured,
     nativeReasoningReady: true,
     trainedLanguageModelReady: false,
+    languageModuleReady: languageModule.status().ready,
     localModelConfigured: singleAgent.status().configured,
     externalAiApiEnabled: false,
     model: singleAgent.status(),
@@ -327,6 +328,7 @@ app.get("/api/health", (_req, res) => {
     aiConfigured: singleAgent.status().configured,
     nativeReasoningReady: true,
     trainedLanguageModelReady: false,
+    languageModuleReady: languageModule.status().ready,
     localModelConfigured: singleAgent.status().configured,
     externalAiApiEnabled: false,
     agentCount: 1,
@@ -360,6 +362,7 @@ app.get("/api/diagnostics", (_req, res) => {
     nativeReasoning: "ulugbek-native-rule-reasoner-v1; deterministic symbolic planning; not a trained neural language model",
     externalAiApiEnabled: false,
     trainedLanguageModelReady: false,
+    languageModule: languageModule.status(),
     note: "Agent navbati server jarayoni ishlayotganida bajariladi. Hosting qayta ishga tushsa yoki uxlab qolsa 24/7 kafolatlanmaydi. JSON saqlash vaqtinchalik; doimiy ishlab chiqarish uchun PostgreSQL/Redis va alohida worker kerak. Bu diagnostika end-to-end sinov o‘rnini bosmaydi."
   });
 });
@@ -606,6 +609,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       platformSearch: searchIntent.platforms,
       webResults: found.results,
       synthesisModelConfigured: singleAgent.status().configured,
+      detectedLanguage: languageModule.detectLanguage(message),
       researchIntent: searchIntent.reason
     });
   }
