@@ -5,8 +5,9 @@ const assert = require("node:assert/strict");
 const { detectSearchIntent, buildUniversalSearchQuery, buildUniversalSearchQueries, searchWeb, evidenceEntries, formatEvidenceReply } = require("../modules/universal-web-search");
 const { knowledgeContext, SYSTEM_PROMPT } = require("../modules/single-agent");
 
-test("searches substantive questions from all common domains", () => {
-  for (const q of ["Bugun ob-havo qanday?", "JavaScriptda API server qanday yoziladi?", "O'zbekistonda kichik biznesni qanday boshlash mumkin?", "Fotosintez nima?", "Shveysariyada traktorchi ish topish", "Qonuniy shartnoma qanday tuziladi?"]) assert.equal(detectSearchIntent(q).shouldSearch, true, q);
+test("searches only explicit discovery, job, and current-information requests", () => {
+  for (const q of ["Bugun ob-havo qanday?", "Bugungi eng so'nggi yangiliklarni top", "Shveysariyada traktorchi ish topish", "Menga vakansiya qidirib ber", "YouTube kanalining linkini topib ber"]) assert.equal(detectSearchIntent(q).shouldSearch, true, q);
+  for (const q of ["JavaScriptda API server qanday yoziladi?", "O'zbekistonda kichik biznesni qanday boshlash mumkin?", "Fotosintez nima?", "Qonuniy shartnoma qanday tuziladi?", "Menga ingliz tilidan yordam ber", "Menga dasturlashda yordam ber"]) assert.equal(detectSearchIntent(q).shouldSearch, false, q);
 });
 test("keeps greetings, thanks and arithmetic local", () => {
   assert.equal(detectSearchIntent("Assalomu alaykum").shouldSearch, false);
