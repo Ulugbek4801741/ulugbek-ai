@@ -7,18 +7,53 @@ function validHttpUrl(value) {
   } catch (_) { return null; }
 }
 
-function configuration(env = process.env) {
-  const legacyUrl = String(env.ULUGBEK_LOCAL_MODEL_URL || "").trim();
-  const legacyModel = String(env.ULUGBEK_LOCAL_MODEL_NAME || "").trim();
-  const provider = String(env.ULUGBEK_AI_PROVIDER || (legacyUrl && legacyModel ? "openai-compatible" : "none")).trim().toLowerCase();
-  const model = String(env.ULUGBEK_AI_MODEL || legacyModel || "").trim();
-  const token = String(env.ULUGBEK_AI_TOKEN || env.ULUGBEK_LOCAL_MODEL_TOKEN || "").trim();
+function providerFor(env) {
+  const explicit = String(env.ULUGBEK_AI_PROVIDER || "").trim().toLowerCase();
+  if (explicit) return explicit;
+  if (String(env.ULUGBEK_LOCAL_MODEL_URL || "").trim() && String(env.ULUGBEK_LOCAL_MODEL_NAME || "").trim()) return "openai-compatible";
+  if (String(env.GEMINI_API_KEY || "").trim()) return "gemini";
+  if (String(env.OPENAI_API_KEY || "").trim() && String(env.OPENAI_BASE_URL || "").trim() && String(env.OPENAI_MODEL || "").trim()) return "openai-compatible";
+  if (String(env.ANTHROPIC_API_KEY || "").trim()) return "anthropic";
+  return "none";
+}
 
+function modelFor(provider, env) {
+  if (env.ULUGBEK_AI_MODEL) return String(env.ULUGBEK_AI_MODEL).trim();
+  if (provider === "openai-compatible") return String(env.ULUGBEK_LOCAL_MODEL_NAME || env.OPENAI_MODEL || "").trim();
+  if (provider === "gemini") return String(env.GEMINI_MODEL || "").trim();
+  if (provider === "anthropic") return String(env.ANTHROPIC_MODEL || "").trim();
+  return "";
+}
+
+function tokenFor(provider, env) {
+  if (env.ULUGBEK_AI_TOKEN || env.ULUGBEK_LOCAL_MODEL_TOKEN) {
+    return String(env.ULUGBEK_AI_TOKEN || env.ULUGBEK_LOCAL_MODEL_TOKEN).trim();
+  }
+  if (provider === "gemini") return String(env.GEMINI_API_KEY || "").trim();
+  if (provider === "openai-compatible") return String(env.OPENAI_API_KEY || "").trim();
+  if (provider === "anthropic") return String(env.ANTHROPIC_API_KEY || "").trim();
+  return "";
+}
+
+function endpointFor(provider, env) {
+  if (provider === "openai-compatible") {
+    const configured = String(env.ULUGBEK_AI_BASE_URL || env.ULUGBEK_LOCAL_MODEL_URL || "").trim();
+    if (configured) return configured;
+    const base = String(env.OPENAI_BASE_URL || "").trim().replace(/\/+$/, "");
+    return base ? base + "/chat/completions" : "";
+  }
+  if (provider === "anthropic") return String(env.ULUGBEK_AI_BASE_URL || "https://api.anthropic.com/v1/messages").trim();
+  return "";
+}
+
+function configuration(env = process.env) {
+  const provider = providerFor(env);
+  const model = modelFor(provider, env);
+  const token = tokenFor(provider, env);
   if (provider === "none" || !provider) return { configured: false, provider: "not-configured", apiKeyRequired: false };
   if (!model) return { configured: false, provider, reason: "model-name-missing", apiKeyRequired: provider !== "openai-compatible" };
   if (provider === "openai-compatible") {
-    const raw = String(env.ULUGBEK_AI_BASE_URL || legacyUrl).trim();
-    const url = validHttpUrl(raw);
+    const url = validHttpUrl(endpointFor(provider, env));
     if (!url) return { configured: false, provider, reason: "endpoint-invalid", apiKeyRequired: false };
     return { configured: true, provider, model, endpoint: url.toString(), apiKeyRequired: false, tokenConfigured: Boolean(token) };
   }
@@ -31,9 +66,9 @@ function request(prompt, systemPrompt, env = process.env) {
   const config = configuration(env);
   if (!config.configured) throw new Error("AI provider sozlanmagan yoki konfiguratsiya to‘liq emas.");
   const userText = String(prompt || "");
+  const token = tokenFor(config.provider, env);
   if (config.provider === "openai-compatible") {
     const headers = { "Content-Type": "application/json", Accept: "application/json" };
-    const token = String(env.ULUGBEK_AI_TOKEN || env.ULUGBEK_LOCAL_MODEL_TOKEN || "").trim();
     if (token) headers.Authorization = "Bearer " + token;
     return {
       url: config.endpoint,
@@ -46,7 +81,7 @@ function request(prompt, systemPrompt, env = process.env) {
   }
   if (config.provider === "gemini") {
     const url = "https://generativelanguage.googleapis.com/v1beta/models/" +
-      encodeURIComponent(config.model) + ":generateContent?key=" + encodeURIComponent(String(env.ULUGBEK_AI_TOKEN));
+      encodeURIComponent(config.model) + ":generateContent?key=" + encodeURIComponent(token);
     return {
       url,
       options: { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
@@ -57,14 +92,14 @@ function request(prompt, systemPrompt, env = process.env) {
         }) }
     };
   }
-  const url = String(env.ULUGBEK_AI_BASE_URL || "https://api.anthropic.com/v1/messages").trim();
+  const url = endpointFor(config.provider, env);
   const parsed = validHttpUrl(url);
   if (!parsed || parsed.hostname !== "api.anthropic.com") throw new Error("Anthropic endpoint faqat rasmiy api.anthropic.com bo‘lishi mumkin.");
   return {
     url: parsed.toString(),
     options: { method: "POST", headers: {
       "Content-Type": "application/json", Accept: "application/json",
-      "x-api-key": String(env.ULUGBEK_AI_TOKEN),
+      "x-api-key": token,
       "anthropic-version": "2023-06-01"
     }, body: JSON.stringify({
       model: config.model, system: systemPrompt,
