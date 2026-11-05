@@ -148,6 +148,38 @@ test("API smoke tests", async (t) => {
       assert.equal(response.headers.get("access-control-allow-origin"), "https://ulugbek4801741.github.io");
     });
 
+    await t.test("Capacitor Android WebView origin is allowed by CORS", async () => {
+      const response = await fetch(`${baseUrl}/api/health`, {
+        headers: { Origin: "https://localhost" }
+      });
+      assert.equal(response.status, 200);
+      assert.equal(response.headers.get("access-control-allow-origin"), "https://localhost");
+      const preflight = await fetch(`${baseUrl}/api/chat`, {
+        method: "OPTIONS",
+        headers: {
+          Origin: "https://localhost",
+          "Access-Control-Request-Method": "POST",
+          "Access-Control-Request-Headers": "content-type,authorization"
+        }
+      });
+      assert.equal(preflight.status, 204);
+      assert.equal(preflight.headers.get("access-control-allow-origin"), "https://localhost");
+      assert.match(preflight.headers.get("access-control-allow-headers") || "", /authorization/i);
+    });
+
+    await t.test("unconfigured video service returns 503 without consuming rate limit", async () => {
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const response = await fetch(`${baseUrl}/api/videos/generate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: "cinematic mountain sunset" })
+        });
+        assert.equal(response.status, 503);
+        const body = await response.json();
+        assert.match(body.error, /VIDEO_COMFYUI_URL/);
+      }
+    });
+
     await t.test("admin dashboard assets are served", async () => {
       const page = await fetch(`${baseUrl}/admin.html`);
       const script = await fetch(`${baseUrl}/admin.js`);
