@@ -159,3 +159,23 @@ The backend sends only the current user message and up to five relevant knowledg
 Check `GET /api/ai/status` to see whether the local model is configured. If it is not configured or is temporarily unavailable, chat falls back to the built-in arithmetic and evidence-based native reasoning. A regular CPU VPS may be too slow or too small for a useful language model; model size and hardware must be chosen for the available RAM/VRAM.
 
 The local model is an inference engine, not automatic model training. New web findings remain unverified until reviewed. Code execution, automatic source-file edits and deployment remain disabled; code proposals must be reviewed and tested separately.
+
+
+## Universal cognition, emotion, ethics and voice (current implementation)
+
+- `modules/language-module.js`: Uzbek-first language detection (Latin/Cyrillic), plus English, Russian, Turkish and Kazakh; applies a shared language policy to the universal agent.
+- `modules/emotional-intelligence.js`: estimates conversational cues such as distress, anger, sadness, joy, confusion and curiosity, then selects a suitable response tone. This is rule-based affect estimation; it does not mean the software has subjective feelings.
+- `modules/ethical-reasoning.js`: screens for selected high-risk requests and gives the agent explicit harm-reduction, honesty, consent/privacy, fairness, accountability and human-oversight principles. It is a safety aid, not a complete moral authority.
+- `modules/single-agent.js`: injects language, emotional-context and ethical guidance into the configured self-hosted model prompt.
+- `GET /api/cognition/status` and `POST /api/cognition/analyze`: report the active language, emotion and ethics modules.
+- `POST /api/chat`: includes a compact `cognition` result. A detected self-harm request receives a supportive safety response rather than instructions.
+- Browser voice input uses SpeechRecognition where the browser supports it. The microphone button now submits the recognized utterance to chat. Replies can be read aloud with SpeechSynthesis; automatic speech is controlled by the existing setting. Browser/device voice availability and microphone permission are required.
+- Helmet's Permissions-Policy allows microphone access on the same origin; camera and geolocation remain disabled.
+
+### Render deployment and model requirements
+
+The Render Blueprint uses a persistent disk at `/var/data` and a paid Starter web-service plan because persistent disks are not available on the free web-service tier. Review current Render pricing before applying the blueprint. The deployment still requires the administrator to set `ADMIN_ACCESS_CODE`; set `FRONTEND_ORIGIN` to the exact frontend origin if hosting the UI separately.
+
+The optional model adapter requires all of `ULUGBEK_LOCAL_MODEL_URL` and `ULUGBEK_LOCAL_MODEL_NAME` to point to a reachable OpenAI-compatible model server; `ULUGBEK_LOCAL_MODEL_TOKEN` is optional. The repository does not contain model weights and this change does not train a neural model. Without a configured model, language/emotion/ethics routing and deterministic fallback features work, but open-ended human-like reasoning and fluent universal answers remain limited. Do not put secrets in GitHub files.
+
+Voice recognition and speech output are browser/device capabilities, not a server-side telephony service. Continuous background listening while the phone is locked is not provided by this web app.
