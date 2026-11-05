@@ -530,26 +530,70 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       safety: { blocked: true, category: shieldDecision.reason, quarantined: shieldDecision.quarantined === true }
     });
   }
-  // Explicit web/link and job-search requests are handled by ULUGBEK AI's universal web-search capability.
+  // Universal research-first flow: every substantive request is searched on the public web.
+  // Greetings, thanks and plain arithmetic remain local to avoid unnecessary network calls.
   const universalSearch = require("./modules/universal-web-search");
   const searchIntent = universalSearch.detectSearchIntent(message);
   if (searchIntent.shouldSearch) {
     const webSearch = require("./modules/chat-web-research");
+    const nativeBrain = require("./lab-learning-worker");
+    let found = { ok: false, results: [], reply: "Internet qidiruvi hozircha ishlamadi." };
     try {
-      const found = await universalSearch.searchWeb(message, webSearch, { limit: 6 });
-      return res.json({
-        reply: found.reply,
-        mode: "native-universal-public-web-search-single-agent-no-external-ai",
-        agents: ["ULUGBEK Universal Agent"],
-        reasoning: { method: "universal-public-web-search-with-source-links", answerable: found.results.length > 0, facts: [] },
-        webSearchUsed: true,
-        jobSearchUsed: searchIntent.isJobSearch,
-        platformSearch: searchIntent.platforms,
-        webResults: found.results
-      });
+      found = await universalSearch.searchWeb(message, webSearch, { limit: 5 });
     } catch (_) {
-      return res.status(502).json({ error: "ULUGBEK AI internet qidiruvini yakunlay olmadi. Qidiruv manbasini tekshiring." });
+      // Search failure must not crash chat; try the local knowledge and configured local model.
     }
+
+    const evidence = universalSearch.evidenceEntries(found.results);
+    let result = null;
+    try {
+      // If configured, the self-hosted language model synthesizes one answer from the question and evidence.
+      // No hosted AI provider or external API key is called by this path.
+      result = await singleAgent.answer(message, evidence);
+    } catch (_) {}
+
+    if (!result) {
+      try {
+        const localKnowledge = await nativeBrain.searchKnowledge(message, 5);
+        const combined = [...evidence, ...localKnowledge].slice(0, 8);
+        result = nativeBrain.buildLocalReply(message, combined);
+      } catch (_) {}
+    }
+
+    const sourceLines = found.results.map((item, index) =>
+      (index + 1) + ". " + item.title + "\n" + item.url +
+      (item.pageRead ? "\nOchiq sahifa matni olindi; faktlar mustaqil tasdiqlanmagan." : "\nFaqat qidiruv parchasi olindi; sahifa to‘liq o‘qilmadi.")
+    ).join("\n\n");
+
+    let reply;
+    let reasoning;
+    if (result?.reasoning?.answerable && result.reply) {
+      reply = result.reply;
+      reasoning = result.reasoning;
+      if (sourceLines) reply += "\n\nInternet manbalari:\n" + sourceLines;
+    } else {
+      reply = universalSearch.formatEvidenceReply(found.results,
+        found.ok ? "" : "Internet qidiruvi vaqtincha ishlamadi; mahalliy bilimlardan ham ishonchli javob topilmadi.");
+      reasoning = result?.reasoning || {
+        method: found.ok ? "public-web-research-no-language-model-synthesis" : "local-fallback-search-unavailable",
+        answerable: false,
+        facts: []
+      };
+    }
+
+    return res.json({
+      reply,
+      mode: result?.modelUsed ? "self-hosted-universal-research-agent" : "native-universal-research-single-agent-no-external-ai",
+      agents: ["ULUGBEK Universal Agent"],
+      reasoning,
+      webSearchUsed: found.ok,
+      webSearchSucceeded: found.ok,
+      jobSearchUsed: searchIntent.isJobSearch,
+      platformSearch: searchIntent.platforms,
+      webResults: found.results,
+      synthesisModelConfigured: singleAgent.status().configured,
+      researchIntent: searchIntent.reason
+    });
   }
   // One-agent chat mode: optional self-hosted model only; never call a hosted AI provider.
   try {
