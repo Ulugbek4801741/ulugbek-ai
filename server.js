@@ -3,19 +3,26 @@ const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const path = require("node:path");
 const crypto = require("node:crypto");
+const { createVoiceReportService } = require("./modules/voice-report");
 const agentRuntime = require("./agent-runtime");
 const singleAgent = require("./modules/single-agent").createSingleAgent();
-const languageModule = require("./modules/language-module");
-const emotionalIntelligence = require("./modules/emotional-intelligence");
-const ethicalReasoning = require("./modules/ethical-reasoning");
-const conversationOrchestrator = require("./modules/conversation-orchestrator");
-const languageCognition = require("./modules/language-cognition");
-const languageLearningWorker = require("./modules/language-learning-worker");
 const developerAgent = require("./developer-agent");
 const agentPermissions = require("./agent-permissions");
 const learningWorkerForAdmin = require("./lab-learning-worker");
 const { createAdminAutopilot } = require("./admin-autopilot");
 const adminAutopilot = createAdminAutopilot({ developerAgent, learningWorker: learningWorkerForAdmin, agentRuntime });
+const voiceReports = createVoiceReportService({
+  readSnapshot: () => ({
+    uptimeSeconds: process.uptime(),
+    model: singleAgent.status(),
+    learning: learningWorkerForAdmin.status(),
+    images: imageGenerator.status(),
+    videos: videoGenerator.status(),
+    developer: developerAgent.status(),
+    tasks: agentRuntime.listTasks(),
+    improvements: improvementPlanner.status()
+  })
+});
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -28,6 +35,7 @@ const FRONTEND_ORIGINS = new Set([
   "https://ulugbek4801741.github.io",
   ...(process.env.FRONTEND_ORIGIN || "").split(",").map(value => value.trim().replace(/\/$/, "")).filter(Boolean)
 ]);
+const FRONTEND_ORIGIN = [...FRONTEND_ORIGINS][0];
 app.use((req, res, next) => {
   const origin = req.headers.origin || "";
   if (origin && FRONTEND_ORIGINS.has(origin)) {
@@ -50,16 +58,13 @@ app.use(helmet({
       styleSrc: ["'self'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
       imgSrc: ["'self'", "data:", "blob:"],
-      connectSrc: ["'self'", ...FRONTEND_ORIGINS],
+      connectSrc: ["'self'", ...(FRONTEND_ORIGIN ? [FRONTEND_ORIGIN] : [])],
       manifestSrc: ["'self'"],
       workerSrc: ["'self'"],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
       frameAncestors: ["'none'"]
     }
-  },
-  permissionsPolicy: {
-    directives: { microphone: ["self"], camera: [], geolocation: [] }
   }
 }));
 app.use(express.json({ limit: "20kb", strict: true, type: "application/json" }));
@@ -98,6 +103,25 @@ const adminAuth = require("./modules/admin-auth").createAdminAuth({
   accessCode: process.env.ADMIN_ACCESS_CODE,
   sessionSecret: ADMIN_SESSION_SECRET,
   storePath: path.join(ADMIN_DATA_DIR, "admin-auth-lockouts.json")
+});
+const improvementPlanner = require("./modules/autonomous-improvement").createAutonomousImprovementPlanner({
+  dataDir: ADMIN_DATA_DIR,
+  readSnapshot: () => ({
+    health: {
+      multiInstanceSafe: false,
+      automaticFailoverReady: false,
+      trainedLanguageModelReady: false,
+      localModelConfigured: singleAgent.status().configured,
+      agentCount: 1
+    },
+    diagnostics: {
+      productionDatabase: "not-configured-task-store-uses-local-json-file",
+      automaticFailover: "not-configured-requires-authorized-backup-host",
+      securityEnforcement: "disclosure-only"
+    },
+    modules: require("./modules/catalog").listModules(),
+    agents: require("./agents/registry").listAgents()
+  })
 });
 function readCookie(req, name) {
   const item = (req.headers.cookie || "").split(";").map(x => x.trim()).find(x => x.startsWith(name + "="));
@@ -170,12 +194,6 @@ app.get("/api/admin/overview", requireAdmin, (_req, res) => {
     aiConfigured: singleAgent.status().configured,
     nativeReasoningReady: true,
     trainedLanguageModelReady: false,
-    languageModuleReady: languageModule.status().ready,
-    emotionalIntelligenceReady: emotionalIntelligence.status().ready,
-    ethicalReasoningReady: ethicalReasoning.status().ready,
-    conversationPipelineReady: conversationOrchestrator.status().ready,
-    independentLanguageReady: languageCognition.status().ready,
-    independentLanguageModelTrained: languageCognition.status().modelTrained,
     localModelConfigured: singleAgent.status().configured,
     externalAiApiEnabled: false,
     model: singleAgent.status(),
@@ -187,6 +205,36 @@ app.get("/api/admin/overview", requireAdmin, (_req, res) => {
     adminEmail: "local-admin",
     deployment: "manual-host-configuration-required"
   });
+});
+
+app.get("/api/admin/improvements", requireAdmin, (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({
+    ok: true,
+    planner: improvementPlanner.status(),
+    proposals: improvementPlanner.list({ limit: 100 })
+  });
+});
+app.post("/api/admin/improvements/scan", requireAdmin, async (_req, res) => {
+  const planner = await improvementPlanner.scan();
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, planner, proposals: improvementPlanner.list({ limit: 100 }) });
+});
+app.post("/api/admin/improvements/:id/decision", requireAdmin, async (req, res) => {
+  try {
+    const decision = String(req.body?.decision || "");
+    const result = await improvementPlanner.decide(req.params.id, decision, "administrator");
+    if (!result) return res.status(404).json({ error: "Taklif topilmadi." });
+    res.set("Cache-Control", "no-store");
+    res.json({
+      ok: true,
+      proposal: result,
+      execution: "disabled",
+      note: "Tasdiq faqat ishni rejalashtirishga ruxsat beradi. Kod o‘zgartirish, buyruq bajarish va deploy avtomatik bajarilmaydi."
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message || "Qaror saqlanmadi." });
+  }
 });
 
 app.get("/api/admin/autopilot/status", requireAdmin, (_req, res) => {
@@ -312,34 +360,18 @@ app.post("/api/admin/tasks/:id/review", requireAdmin, (req, res) => {
   }
 });
 
-app.post("/api/language/analyze", (req, res) => {
-  const text = typeof req.body?.text === "string" ? req.body.text.trim() : "";
-  if (!text) return res.status(400).json({ error: "Matn bo‘sh bo‘lmasligi kerak." });
-  if (text.length > 4000) return res.status(413).json({ error: "Matn 4000 belgidan oshmasligi kerak." });
-  const detected = languageModule.detectLanguage(text);
-  return res.json({ ok: true, detected, linguistic: languageCognition.analyze(text), instruction: languageModule.buildLanguageInstruction(text) });
-});
-
-app.get("/api/language/status", (_req, res) => {
-  res.set("Cache-Control", "no-store");
-  res.json({ ok: true, language: languageModule.status(), languageLearning: languageLearningWorker.status() });
-});
-
-app.get("/api/cognition/status", (_req, res) => {
-  res.set("Cache-Control", "no-store");
-  res.json({ ok: true, language: languageModule.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status(), voice: { input: "browser-speech-recognition", output: "browser-speech-synthesis", requiresMicrophonePermission: true }, conversationPipeline: conversationOrchestrator.status(), independentLanguage: languageLearningWorker.status() });
-});
-
-app.post("/api/cognition/analyze", (req, res) => {
-  const text = typeof req.body?.text === "string" ? req.body.text.trim() : "";
-  if (!text) return res.status(400).json({ error: "Matn bo‘sh bo‘lmasligi kerak." });
-  if (text.length > 4000) return res.status(413).json({ error: "Matn 4000 belgidan oshmasligi kerak." });
-  return res.json({ ok: true, language: languageModule.detectLanguage(text), linguistic: languageCognition.analyze(text), emotion: emotionalIntelligence.responseGuidance(text), ethics: ethicalReasoning.evaluate(text) });
-});
-
 app.get("/api/ai/status", (_req, res) => {
   res.set("Cache-Control", "no-store");
-  res.json({ ok: true, agentCount: 1, agentName: "ULUGBEK Universal Agent", model: singleAgent.status(), language: languageModule.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status(), conversationPipeline: conversationOrchestrator.status(), independentLanguage: languageLearningWorker.status(), mathEngine: "native-safe-arithmetic", research: "public-read-only-with-source-checks" });
+  res.json({ ok: true, agentCount: 1, agentName: "ULUGBEK Universal Agent", model: singleAgent.status(), mathEngine: "native-safe-arithmetic", research: "public-read-only-with-source-checks" });
+});
+
+app.get("/api/reports/latest", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  return res.json({ ok: true, report: voiceReports.latest() });
+});
+app.get("/api/reports/status", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  return res.json({ ok: true, reports: voiceReports.status() });
 });
 
 app.get("/api/health", (_req, res) => {
@@ -352,10 +384,6 @@ app.get("/api/health", (_req, res) => {
     aiConfigured: singleAgent.status().configured,
     nativeReasoningReady: true,
     trainedLanguageModelReady: false,
-    languageModuleReady: languageModule.status().ready,
-    emotionalIntelligenceReady: emotionalIntelligence.status().ready,
-    ethicalReasoningReady: ethicalReasoning.status().ready,
-    conversationPipelineReady: conversationOrchestrator.status().ready,
     localModelConfigured: singleAgent.status().configured,
     externalAiApiEnabled: false,
     agentCount: 1,
@@ -387,11 +415,8 @@ app.get("/api/diagnostics", (_req, res) => {
     productionDatabase: "not-configured-task-store-uses-local-json-file",
     agentExecution: "one universal agent with optional self-hosted local model; no multi-agent delegation; source writes and deploy remain disabled",
     nativeReasoning: "ulugbek-native-rule-reasoner-v1; deterministic symbolic planning; not a trained neural language model",
-    cognition: { language: languageModule.status(), languageLearning: languageLearningWorker.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status(), conversationPipeline: conversationOrchestrator.status() },
     externalAiApiEnabled: false,
     trainedLanguageModelReady: false,
-    languageModule: languageModule.status(),
-    independentLanguage: languageLearningWorker.status(),
     note: "Agent navbati server jarayoni ishlayotganida bajariladi. Hosting qayta ishga tushsa yoki uxlab qolsa 24/7 kafolatlanmaydi. JSON saqlash vaqtinchalik; doimiy ishlab chiqarish uchun PostgreSQL/Redis va alohida worker kerak. Bu diagnostika end-to-end sinov o‘rnini bosmaydi."
   });
 });
@@ -576,97 +601,22 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       safety: { blocked: true, category: shieldDecision.reason, quarantined: shieldDecision.quarantined === true }
     });
   }
-  const conversationContext = conversationOrchestrator.analyze(message);
-  const cognition = conversationContext.cognition;
-  const safetyReply = conversationOrchestrator.safetyReply(conversationContext);
-  if (safetyReply) {
-    return res.json({
-      reply: safetyReply,
-      mode: "integrated-safety-response",
-      agents: ["ULUGBEK Universal Agent"],
-      cognition,
-      safety: { intervention: true, category: conversationContext.ethics.category }
-    });
-  }
-  // Universal research-first flow: every substantive request is searched on the public web.
-  // Greetings, thanks and plain arithmetic remain local to avoid unnecessary network calls.
-  const universalSearch = require("./modules/universal-web-search");
-  const searchIntent = universalSearch.detectSearchIntent(message);
-  if (searchIntent.shouldSearch) {
-    const webSearch = require("./modules/chat-web-research");
-    const nativeBrain = require("./lab-learning-worker");
-    let found = { ok: false, results: [], reply: "Internet qidiruvi hozircha ishlamadi." };
-    try {
-      found = await universalSearch.searchWeb(message, webSearch, { limit: 8 });
-    } catch (_) {
-      // Search failure must not crash chat; try the local knowledge and configured local model.
-    }
-
-    const evidence = universalSearch.evidenceEntries(found.results);
-    let result = null;
-    try {
-      // If configured, the self-hosted language model synthesizes one answer from the question and evidence.
-      // No hosted AI provider or external API key is called by this path.
-      result = await singleAgent.answer(message, evidence, conversationContext);
-    } catch (_) {}
-
-    if (!result) {
-      try {
-        const localKnowledge = await nativeBrain.searchKnowledge(message, 5);
-        const combined = [...evidence, ...localKnowledge].slice(0, 8);
-        result = nativeBrain.buildLocalReply(message, combined, conversationContext);
-      } catch (_) {}
-    }
-
-    const sourceLines = found.results.map((item, index) =>
-      (index + 1) + ". " + item.title + "\n" + item.url +
-      (item.pageRead ? "\nOchiq sahifa matni olindi; faktlar mustaqil tasdiqlanmagan." : "\nFaqat qidiruv parchasi olindi; sahifa to‘liq o‘qilmadi.")
-    ).join("\n\n");
-
-    let reply;
-    let reasoning;
-    if (result?.reasoning?.answerable && result.reply) {
-      reply = result.reply;
-      reasoning = result.reasoning;
-      if (sourceLines) reply += "\n\nInternet manbalari:\n" + sourceLines;
-    } else {
-      reply = universalSearch.formatEvidenceReply(found.results,
-        found.ok ? "" : "Internet qidiruvi vaqtincha ishlamadi; mahalliy bilimlardan ham ishonchli javob topilmadi.");
-      reasoning = result?.reasoning || {
-        method: found.ok ? "public-web-research-no-language-model-synthesis" : "local-fallback-search-unavailable",
-        answerable: false,
-        facts: []
-      };
-    }
-
-    return res.json({
-      reply,
-      mode: result?.modelUsed ? "self-hosted-universal-research-agent" : "native-universal-research-single-agent-no-external-ai",
-      agents: ["ULUGBEK Universal Agent"],
-      reasoning,
-      webSearchUsed: found.ok,
-      webSearchSucceeded: found.ok,
-      jobSearchUsed: searchIntent.isJobSearch,
-      platformSearch: searchIntent.platforms,
-      webResults: found.results,
-      synthesisModelConfigured: singleAgent.status().configured,
-      detectedLanguage: languageModule.detectLanguage(message),
-      researchIntent: searchIntent.reason,
-      cognition
-    });
-  }
   // One-agent chat mode: optional self-hosted model only; never call a hosted AI provider.
   try {
     const nativeBrain = require("./lab-learning-worker");
     const answerWithOneAgent = async entries => {
-      const modelAnswer = await singleAgent.answer(message, entries, conversationContext);
-      return modelAnswer || nativeBrain.buildLocalReply(message, entries, conversationContext);
+      const modelAnswer = await singleAgent.answer(message, entries);
+      return modelAnswer || nativeBrain.buildLocalReply(message, entries);
     };
     let learned = await nativeBrain.searchKnowledge(message, 5);
     let result = await answerWithOneAgent(learned);
     let webResearchUsed = false;
     if (!result.reasoning.answerable) {
-      const publicFindings = await nativeBrain.researchQuestion(message);
+      const cognition = require("./native-cognition");
+      const searchQuestion = cognition.normalizeInput(message)
+        .replace(/\b(bilasanmi|bilasizmi|iltimos|aytib ber|tushuntir)\b/g, " ")
+        .replace(/\s+/g, " ").trim();
+      const publicFindings = await nativeBrain.researchQuestion(searchQuestion || message);
       if (publicFindings.length) {
         learned = publicFindings;
         result = await answerWithOneAgent(learned);
@@ -677,11 +627,11 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       // history, profile, private memory or uploaded content is transmitted.
       if (!result.reasoning.answerable) {
         const webSearch = require("./modules/chat-web-research");
-        const searchResults = await webSearch.search(message);
+        const searchResults = await webSearch.search(searchQuestion || message);
         if (searchResults.length) {
           // Read the actual public pages, not only search-engine snippets.
           // Each page is fetched read-only with URL/DNS/redirect/size/time limits.
-          const pageResults = await Promise.all(searchResults.slice(0, 4).map(async item => {
+          const fetchedPages = await Promise.all(searchResults.slice(0, 5).map(async item => {
             try {
               const page = await webSearch.fetchPage(item.url);
               return page ? { ...item, page } : { ...item, page: null };
@@ -689,6 +639,13 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
               return { ...item, page: null };
             }
           }));
+          const pageResults = cognition.filterRelevantEvidence(message, fetchedPages.map(item => ({
+            title: item.page?.title || item.title,
+            content: item.page?.content || item.snippet,
+            source: item.page?.url || item.url,
+            status: item.page ? "unverified-public-page-content" : "unverified-search-snippet",
+            page: item.page
+          })), 4);
           const evidence = pageResults.map(item => ({
             title: item.page?.title || item.title,
             content: item.page?.content || item.snippet,
@@ -696,7 +653,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
             status: item.page ? "unverified-public-page-content" : "unverified-search-snippet"
           }));
           const researched = await answerWithOneAgent(evidence);
-          const sourceLines = pageResults.map((item, index) =>
+          const sourceLines = pageResults.slice(0, 3).map((item, index) =>
             (index + 1) + ". " + (item.page?.title || item.title) +
             (item.page ? " (sahifa matni o‘qildi)" : " (faqat qidiruv parchasi)") +
             "\n" + (item.page?.url || item.url)
@@ -708,11 +665,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
             };
           } else {
             result = {
-              reply: "Ochiq internet sahifalaridan ma’lumotlar topildi, ammo savolga ishonchli xulosa berish uchun dalil yetarli emas. Manbalarni tekshiring:\n\n" +
-                pageResults.map((item, index) => (index + 1) + ". " +
-                  (item.page?.title || item.title) + "\n" +
-                  (item.page?.content || item.snippet).slice(0, 700) + "\n" +
-                  (item.page?.url || item.url)).join("\n\n"),
+              reply: "Savolingizga mos manbalar ko‘rib chiqildi, ammo ishonchli yakuniy xulosa uchun dalil yetarli emas. Shu sabab taxminiy javob bermayman.",
               reasoning: { method: "public-page-research-unverified", answerable: false, facts: [] }
             };
           }
@@ -728,7 +681,6 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       knowledgeUsed: learned.length,
       webResearchUsed,
       learning: nativeBrain.status(),
-      cognition,
       receivedCharacters: message.length
     });
   } catch (error) {
@@ -747,9 +699,6 @@ app.get("/api/lab/learning/status", (_req, res) => {
   res.json({ ok:true, learning:learningWorker.status() });
 });
 
-// Keep the administration UI on the API origin so its HttpOnly, SameSite=Strict
-// session cookie and every privileged request use the same trusted server.
-// /admin is the stable entry point; /admin.html remains available for compatibility.
 app.get("/admin", (_req, res) => res.redirect(302, "/admin.html"));
 app.get("/admin/", (_req, res) => res.redirect(302, "/admin.html"));
 
@@ -765,7 +714,8 @@ app.use((err, _req, res, _next) => {
   return res.status(500).json({ error: "Ichki server xatosi." });
 });
 learningWorker.start();
-languageLearningWorker.start();
+if (process.env.NODE_ENV !== "test") improvementPlanner.start();
+if (process.env.NODE_ENV !== "test") voiceReports.start().catch(error => console.error("Ovozli hisobot xizmati ishga tushmadi:", error.message));
 agentRuntime.startWorker().then(() => {
   const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`ULUGBEK AI serveri ${PORT}-portda ishga tushdi.`);
