@@ -3,7 +3,15 @@ const $ = (id) => document.getElementById(id);
 const messages = $("messages"), status = $("status"), orb = $("orb");
 const STORE = "ulugbek_voice_profile_v1", CHAT = "ulugbek_voice_chat_v1";
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-let recognizer = null, lastReply = "", objectUrl = "", micStream = null;
+let recognizer = null, lastReply = "", objectUrl = "", micStream = null, sending = false;
+const SESSION_KEY = "ulugbek_voice_session_v1";
+function voiceSessionId(){
+  try {
+    let id=localStorage.getItem(SESSION_KEY)||"";
+    if(!/^[a-zA-Z0-9_-]{8,80}$/.test(id)){id=(crypto.randomUUID?crypto.randomUUID().replace(/-/g,""):"v"+Date.now().toString(36)+Math.random().toString(36).slice(2));localStorage.setItem(SESSION_KEY,id);}
+    return "voice-"+id;
+  } catch (_) { return "voice-"+Date.now().toString(36)+Math.random().toString(36).slice(2); }
+}
 function setStatus(text){status.textContent=text;}
 function apiUrl(path){
  const base=typeof window.ULUGBEK_API_BASE_URL==="string"?window.ULUGBEK_API_BASE_URL.trim().replace(/\/$/,""):"";
@@ -37,40 +45,35 @@ function speak(text){
   u.onerror=()=>{orb.classList.remove("speaking");setStatus("Ovoz chiqarilmadi; matn javobi mavjud.");};
   window.speechSynthesis.speak(u);
 }
-function tokens(s){return String(s||"").toLocaleLowerCase("uz").normalize("NFD").replace(/[\u0300-\u036f]/g,"").split(/[^\p{L}\p{N}]+/u).filter(w=>w.length>2);}
-async function knowledgeReply(question){
-  try{
-    const response=await fetch(apiUrl("/api/lab/knowledge"));
-    if(!response.ok)return null;
-    const data=await response.json();const entries=Array.isArray(data.entries)?data.entries:[];
-    const q=tokens(question);if(!q.length)return null;
-    const ranked=entries.map(e=>{const hay=tokens([e.title,e.content,e.agent].join(" "));const set=new Set(hay);return {e,score:q.reduce((n,w)=>n+(set.has(w)?1:0),0)};}).filter(x=>x.score>0).sort((a,b)=>b.score-a.score).slice(0,3);
-    if(!ranked.length)return null;
-    return "Bilimlar bazasidan topilgan ma’lumot (moslik bo‘yicha):\n\n"+ranked.map((x,i)=>(i+1)+". "+x.e.title+"\n"+x.e.content+(x.e.source?"\nManba: "+x.e.source:"")).join("\n\n")+"\n\nEslatma: bu saqlangan yozuvlar bo‘yicha qidiruv; ma’lumotning yangiligi va to‘g‘riligini manbadan tekshiring.";
-  }catch(_){return null;}
-}
-function localReply(text){
- const q=text.toLocaleLowerCase("uz");
- if(/salom|assalomu|hello|hi\b/.test(q))return "Salom! Men "+avatarName()+". Savolingizni yozishingiz yoki mikrofon orqali aytishingiz mumkin.";
- if(/isming|kimsan|who are you/.test(q))return "Mening nomim "+avatarName()+".";
- if(/vaqt|soat|time/.test(q))return "Qurilmangizdagi vaqt: "+new Date().toLocaleTimeString()+".";
- if(/sana|bugun|date/.test(q))return "Qurilmangizdagi sana: "+new Date().toLocaleDateString()+".";
- if(/rahmat|thanks/.test(q))return "Marhamat! Yana savolingiz bo‘lsa, yozing.";
- return "Bu savolga mahalliy bilimlar bazasidan aniq javob topilmadi. Bilim laboratoriyasida ishonchli manbalarni izlab, tekshirib saqlashingiz mumkin. Bu demo hozir katta til modeliga ulanmagan; men o‘zimni o‘qitdim deb da’vo qilmayman.";
-}
 async function send(text){
- const clean=text.trim();if(!clean)return;
- $("welcome").hidden=true;addMessage(clean,"user");$("message").value="";setStatus("Javob izlanmoqda…");
- let reply=null;
+ const clean=String(text||"").trim();
+ if(!clean||sending)return;
+ sending=true;
+ $("welcome").hidden=true;
+ addMessage(clean,"user");
+ $("message").value="";
+ setStatus("ULUGBEK AI serveriga yuborilmoqda…");
  try{
-  const response=await fetch(apiUrl("/api/chat"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:clean})});
-  const data=await response.json();
-  if(response.ok&&data.mode!=="demo"&&typeof data.reply==="string"&&data.reply.trim())reply=data.reply.trim();
- }catch(_){}
- if(!reply)reply=await knowledgeReply(clean);
- if(!reply)reply=localReply(clean);
- lastReply=reply;addMessage(reply,"assistant");setStatus("Javob tayyor");
- if(document.visibilityState!=="hidden")speak(reply);
+  const response=await fetch(apiUrl("/api/chat"),{
+   method:"POST",
+   headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({message:clean,sessionId:voiceSessionId()}),
+   cache:"no-store"
+  });
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(data.error||("Server HTTP "+response.status));
+  if(typeof data.reply!=="string"||!data.reply.trim())throw new Error("Server javob matnini qaytarmadi.");
+  lastReply=data.reply.trim();
+  addMessage(lastReply,"assistant");
+  setStatus(data.mode==="native-only-error"?"Server AI xatosi":"Server javobi tayyor");
+  if(document.visibilityState!=="hidden")speak(lastReply);
+ }catch(error){
+  const message=error&&error.message?error.message:"Noma’lum ulanish xatosi";
+  addMessage("Server bilan aloqa amalga oshmadi: "+message,"assistant");
+  setStatus("Serverga ulanish xatosi — qayta urinib ko‘ring");
+ }finally{
+  sending=false;
+ }
 }
 $("form").addEventListener("submit",e=>{e.preventDefault();send($("message").value);});
 $("name").addEventListener("input",()=>{$("greeting").textContent="Salom! Men "+avatarName();saveProfile();});

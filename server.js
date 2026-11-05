@@ -33,7 +33,7 @@ app.use((req, res, next) => {
   if (origin && FRONTEND_ORIGINS.has(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Vary", "Origin");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   }
   if (req.method === "OPTIONS") {
@@ -746,6 +746,12 @@ app.get("/api/lab/learning/status", (_req, res) => {
   res.set("Cache-Control", "no-store");
   res.json({ ok:true, learning:learningWorker.status() });
 });
+
+// Keep the administration UI on the API origin so its HttpOnly, SameSite=Strict
+// session cookie and every privileged request use the same trusted server.
+// /admin is the stable entry point; /admin.html remains available for compatibility.
+app.get("/admin", (_req, res) => res.redirect(302, "/admin.html"));
+app.get("/admin/", (_req, res) => res.redirect(302, "/admin.html"));
 
 app.use(express.static(path.join(__dirname, "public"), {
   etag: true,
