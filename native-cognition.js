@@ -107,7 +107,7 @@ function classifyIntent(query) {
 }
 function actionFallbackReply(query) {
   const intent = classifyIntent(query);
-  const directWorkRequest = /\\b(ish kerak|ish top|ishga joylash|vakansiya)\\b/.test(intent.normalized);
+  const directWorkRequest = /\b(ish kerak|ish top|ishga joylash|vakansiya)\b/.test(intent.normalized);
   if (!intent.actionRequested && !directWorkRequest) return null;
   const prompts = {
     work: "Albatta, ish topishga yordam beraman. Qaysi davlat yoki shaharda ish qidiramiz? Qaysi kasb yoki ish turini xohlaysiz?",
