@@ -74,7 +74,7 @@ async function searchWeb(message, webSearch, options = {}) {
     candidates.push(item);
   }
   if (!candidates.length) return {
-    ok: failedQueries < queries.length, results: [], queries,
+    ok: true, searchFailed: failedQueries === queries.length, results: [], queries,
     error: failedQueries === queries.length ? "all-search-providers-failed" : undefined,
     reply: failedQueries === queries.length
       ? "Internet qidiruv manbalari hozircha javob bermadi. Keyinroq qayta urinib ko'ring."
