@@ -27,7 +27,7 @@ function normalize(value) {
 function inferIntent(prompt) {
   const text = normalize(prompt);
   if (/\b(ish|vakansiya|job|работа)\b/.test(text)) return "job-search";
-  if (/\b(kod|dastur|dasturlash\\w*|python|javascript|debug|xato)\b/.test(text)) return "programming";
+  if (/\b(kod|dastur|dasturlash\w*|python|javascript|debug|xato)\b/.test(text)) return "programming";
   if (/\b(reja|rejalashtir|bosqich|plan|roadmap)\b/.test(text)) return "planning";
   if (/\b(yarat|create|modul|ai|si)\b/.test(text)) return "creation";
   if (/\b(kogon|buxoro|toshkent|samarqand)\b/.test(text)) return "location-context";
