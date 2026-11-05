@@ -83,13 +83,9 @@ async function loadImprovementPlanner() {
         button.addEventListener("click", async () => {
           button.disabled = true;
           try {
-            await request("/api/admin/improvements/" + encodeURIComponent(proposal.id) + "/decision", {
-              method: "POST", body: JSON.stringify({ decision })
-            });
+            await request("/api/admin/improvements/" + encodeURIComponent(proposal.id) + "/decision", { method: "POST", body: JSON.stringify({ decision }) });
             await loadImprovementPlanner();
-            $("improvements-message").textContent = decision === "approve"
-              ? "Taklif ish rejasiga tasdiqlandi. Kod yoki server avtomatik o‘zgartirilmadi."
-              : "Taklif rad etildi.";
+            $("improvements-message").textContent = decision === "approve" ? "Taklif ish rejasiga tasdiqlandi. Kod yoki server avtomatik o‘zgartirilmadi." : "Taklif rad etildi.";
           } catch (error) { $("improvements-message").textContent = error.message; button.disabled = false; }
         });
         actions.append(button);
