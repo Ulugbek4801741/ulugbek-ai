@@ -83,6 +83,52 @@ function reason(query, entries) {
     queryConcepts:concepts(query),facts,
     inference:facts.length>1?"Bir nechta mos dalil solishtirildi.":"Bitta mos dalil topildi; keng xulosa uchun dalil cheklangan."};
 }
+const INTENT_DOMAINS = [
+  { id: "work", pattern: /(ish|vakansiya|kasb|rezyume|resume|maosh|ishchi)/ },
+  { id: "education", pattern: /(o'qish|oqish|dars|kurs|imtihon|uy vazifa|o'rgan|organ|o'rgat|talim)/ },
+  { id: "technology", pattern: /(dastur|kod|sayt|ilova|telefon|kompyuter|server|github|render|xato|texnik)/ },
+  { id: "documents", pattern: /(hujjat|ariza|shartnoma|oferta|pdf|tarjima|xat|rasmiy)/ },
+  { id: "business", pattern: /(biznes|tadbirkor|firma|kompaniya|investor|grant|loyiha|daromad|savdo)/ },
+  { id: "travel", pattern: /(sayohat|safar|avia|chipta|mehmonxona|viza|yo'l|manzil)/ },
+  { id: "health", pattern: /(sog'liq|sog'lig|salomat|shifokor|kasallik|dori|alomat|og'riq)/ },
+  { id: "finance", pattern: /(pul|qarz|budjet|byudjet|soliq|hisob|to'lov|narx|moliy)/ },
+  { id: "shopping", pattern: /(sotib|xarid|mahsulot|telefon|noutbuk|narxini|taqqosla)/ },
+  { id: "research", pattern: /(izlab|qidir|topib ber|ma'lumot|tekshir|solishtir|tahlil|yangilik)/ }
+];
+function classifyIntent(query) {
+  const normalized = normalizeInput(query);
+  const actionRequested = /(yordam|qilib ber|tayyorla|yozib ber|topib ber|qidirib ber|tekshir|tuzat|yarat|reja tuz|tanla|o'rgat|tushuntir|tarjima|hisobla|solishtir|tahlil qil|maslahat ber)/.test(normalized);
+  // More specific domains must win when a phrase contains a generic token
+  // such as "ish" inside "olish" (e.g. visa olish).
+  // Explicit product-selection verbs take precedence over the generic word
+  // "telefon", which also appears in technical-support requests.
+  const shoppingAction = /(tanla|sotib|xarid|mahsulot|noutbuk|narxini|taqqosla)/.test(normalized);
+  const priority = ["travel", "health", "technology", "documents", "education", "business", "finance", "shopping", "work", "research"];
+  const domain = shoppingAction
+    ? INTENT_DOMAINS.find(item => item.id === "shopping")
+    : priority.map(id => INTENT_DOMAINS.find(item => item.id === id))
+      .find(item => item && item.pattern.test(normalized));
+  return { actionRequested, domain: domain ? domain.id : "general", normalized };
+}
+function actionFallbackReply(query) {
+  const intent = classifyIntent(query);
+  const directWorkRequest = /\b(ish kerak|ish top|ishga joylash|vakansiya)\b/.test(intent.normalized);
+  if (!intent.actionRequested && !directWorkRequest) return null;
+  const prompts = {
+    work: "Albatta, ish topishga yordam beraman. Qaysi davlat yoki shaharda ish qidiramiz? Qaysi kasb yoki ish turini xohlaysiz?",
+    education: "Ta’lim bo‘yicha yordam beraman. Qaysi fan yoki ko‘nikmani o‘rganmoqchisiz?",
+    technology: "Texnik vazifani ko‘rib chiqaman. Qaysi dastur, qurilma yoki kodda muammo bor?",
+    documents: "Hujjat bilan yordam beraman. Hujjatni yuboring yoki qanday hujjat kerakligini ayting.",
+    business: "Biznes va loyiha bo‘yicha yordam beraman. Maqsad, soha va kerakli natijani yozing.",
+    travel: "Safar bo‘yicha yordam beraman. Qayerdan qayerga va qachon borishni rejalashtiryapsiz?",
+    health: "Sog‘liq mavzusini tushunishga yordam beraman. Qanday alomat yoki savol bor? Shoshilinch holatda tez yordamga murojaat qiling.",
+    finance: "Moliyaviy masalani tartibga solishga yordam beraman. Qaysi hisob-kitob yoki masala?",
+    shopping: "Mahsulot tanlashga yordam beraman. Qaysi mahsulot va taxminiy budjet?",
+    research: "Ma’lumotni qidirib, manbalarni solishtirishga yordam beraman. Aynan nimani izlaymiz?",
+    general: "Albatta, yordam beraman. Qaysi masala bo‘yicha qanday natijaga erishmoqchisiz?"
+  };
+  return prompts[intent.domain];
+}
 function quickReply(query) {
   const math=require("./modules/math-engine").findExpression(query);
   if(math) {
@@ -102,12 +148,8 @@ function quickReply(query) {
     return "Men mavjud bilimlar bazasi va ochiq manbalardan foydalanib savollarga javob beraman, dalillarni solishtiraman va bitta qisqa xulosa tuzaman. Dalil yetarli bo‘lmasa, buni aytaman.";
   if(/(qanday o'rganasan|qanday organasan|o'zingni o'rgat|ozingni urgat|qayta o'qit|qayta oqit)/.test(q))
     return "Avval o‘zbekcha, keyin inglizcha va ruscha ochiq manbalardan ma’lumot yig‘aman. Yangi ma’lumot tekshiruvga ajratiladi va tasdiqlansa bilimlar bazasiga qo‘shiladi. Bu hozircha neyron tarmoq vaznlarini qayta o‘qitmaydi.";
-  // Job-search intent must work even when no language model is configured.
-  // Ask for the minimum missing detail instead of returning a native-engine error.
-  if(/\b(ish|ishga|vakansiya|ishchi|ish o'rin|ish orin|ish top|ish izla|ish qidir|ishlash)\b/.test(q) &&
-     /(top|izla|qidir|kerak|yordam|ber|qidirib)/.test(q)) {
-    return "Albatta, ish topishga yordam beraman. Qaysi davlat yoki shaharda ish qidiramiz?";
-  }
+  const actionReply = actionFallbackReply(query);
+  if (actionReply) return actionReply;
   if(/(api kalit|tashqi api|ma'lumotlarim|maxfiylik|suhbatlarim)/.test(q))
     return "Hozirgi chat rejimi tashqi AI provayderiga avtomatik ulanmaydi. Serverdagi saqlash va hosting sozlamalari alohida tekshirilishi kerak.";
   return null;
@@ -132,4 +174,4 @@ function respond(query, entries) {
   if(!result.answerable) return {reply:"Savolingizni tushundim, ammo mos manbalardan hozircha ishonchli javob topa olmadim. Noto‘g‘ri ma’lumot bermaslik uchun taxmin qilmayman.",reasoning:result};
   return {reply:conciseEvidenceReply(result),reasoning:result};
 }
-module.exports={concepts,splitFacts,reason,respond,quickReply,normalizeInput,words,editDistance,relevance,filterRelevantEvidence};
+module.exports={concepts,splitFacts,reason,respond,quickReply,normalizeInput,words,editDistance,relevance,filterRelevantEvidence,classifyIntent,actionFallbackReply};

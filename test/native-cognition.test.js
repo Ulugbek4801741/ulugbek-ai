@@ -82,3 +82,24 @@ test("job-search requests get a useful clarification without a language model", 
     assert.equal(result.reasoning.method, "built-in-uzbek-dialogue");
   }
 });
+
+test("universal intent router recognizes different fields without a model", () => {
+  const cases = [
+    ["Ish topib ber", "work"],
+    ["Menga matematika o‘rgat", "education"],
+    ["Saytimdagi xatoni tuzatib ber", "technology"],
+    ["Ariza yozib ber", "documents"],
+    ["Biznes loyihamga yordam ber", "business"],
+    ["Viza olishga yordam ber", "travel"],
+    ["Sog‘lig‘im bo‘yicha tushuntirib ber", "health"],
+    ["Qarzlarimni hisoblab ber", "finance"],
+    ["Telefon tanlab ber", "shopping"],
+    ["Internetdan ma’lumot qidirib ber", "research"],
+    ["Menga yordam ber", "general"]
+  ];
+  for (const [prompt, expected] of cases) {
+    const intent = cognition.classifyIntent(prompt);
+    assert.equal(intent.domain, expected, prompt);
+    assert.ok(cognition.actionFallbackReply(prompt));
+  }
+});
