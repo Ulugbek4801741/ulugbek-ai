@@ -66,7 +66,7 @@ function createLanguageCognition(options={}){
  let model=null, writeQueue=Promise.resolve();
  async function readJson(file,fallback){try{return JSON.parse(await fs.readFile(file,"utf8"));}catch(e){if(e.code==="ENOENT")return fallback;throw e;}}
  async function atomicWrite(file,value){
-  writeQueue=writeQueue.then(async()=>{await fs.mkdir(dataDir,{recursive:true});const temp=file+".tmp";await fs.writeFile(temp,JSON.stringify(value),{mode:0o600});await fs.rename(temp,file);});
+  writeQueue=writeQueue.catch(()=>{}).then(async()=>{await fs.mkdir(dataDir,{recursive:true});const temp=file+".tmp";await fs.writeFile(temp,JSON.stringify(value),{mode:0o600});await fs.rename(temp,file);});
   return writeQueue;
  }
  async function initialize(){model=await readJson(modelFile,null);return status();}
@@ -142,7 +142,7 @@ function createLanguageCognition(options={}){
  }
  function rankEvidence(query,entries){return(Array.isArray(entries)?entries:[]).map(entry=>{const score=scoreText(query,String(entry.title||"")+" "+String(entry.content||""),entry.language);return{...entry,languageScore:score.score,matchedLanguageTerms:score.matchedTerms};}).sort((a,b)=>b.languageScore-a.languageScore);}
  function status(){
-  const languages=model?.languages||{};return{ready:true,module:"ulugbek-independent-language-cognition",modelType:model?.modelType||"not-trained-yet",trainingMode:"incremental-local-word-ngram-from-allowlisted-public-corpus",
+  const languages=model?.languages||{},trained=Boolean(model?.sourceCount>0&&model?.sentenceCount>0);return{ready:true,module:"ulugbek-independent-language-cognition",modelType:trained?model.modelType:"not-trained-yet",modelTrained:trained,trainingMode:"incremental-local-word-ngram-from-allowlisted-public-corpus",
    selfTrainingEnabled:true,internetSourceWorker:"lab-learning-worker",corpusSources:model?.sourceCount||0,sentenceCount:model?.sentenceCount||0,
    languages:Object.fromEntries(Object.entries(languages).map(([code,d])=>[code,{vocabularySize:d.vocabularySize,tokenCount:d.tokenCount,sentenceCount:d.sentenceCount,predictionReady:d.suggestionsReady,validation:d.validation}])),
    neuralWeightsTrained:false,factualAutoApproval:false,persistence:"server-side-json-atomic-write",dataDirectory:path.basename(dataDir)};
