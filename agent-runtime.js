@@ -4,6 +4,7 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const singleAgent = require("./modules/single-agent").createSingleAgent();
+const languageModule = require("./modules/language-module");
 
 const MAX_TASKS = 200;
 const MAX_PROMPT_LENGTH = 4000;
@@ -65,6 +66,8 @@ function modelConfig() {
 }
 async function runModel(task) {
   try {
+    const language = languageModule.detectLanguage(task.prompt);
+    addLog(task, "Umumiy til moduli vazifa tilini aniqladi: " + language.code + " (" + language.script + ").");
     addLog(task, "ULUGBEK AI mahalliy fikrlash mexanizmi vazifani tahlil qilmoqda.");
     const engine = require("./native-reasoning-engine");
     const knowledgeBridge = require("./agent-knowledge-bridge");
