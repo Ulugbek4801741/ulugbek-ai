@@ -87,7 +87,7 @@ function quickReply(query) {
     return "Men savollarga mavjud bilimlar bazasi asosida javob berish, mavzular bo‘yicha ochiq manbalardan ma’lumot yig‘ish va ularni tekshiruvga yuborishga mo‘ljallanganman. Hozircha barcha mavzularni bilmayman; bilmagan narsamni aniq aytaman.";
   }
   if (/(ingliz|english|английск).*(til|language|язык)|((til|language|язык).*(ingliz|english|английск))/.test(q) && /(yordam|o'rgan|organ|dars|boshlash|help|learn)/.test(q)) {
-    return "Albatta, ingliz tilini noldan o‘rganamiz. Bugungi 1-dars: salomlashish.\\n\\n1. Hello — Salom.\\n2. My name is ... — Mening ismim ...\\n3. How are you? — Qalaysiz?\\n4. I am fine, thank you. — Yaxshiman, rahmat.\\n\\nMashq: “My name is ...” jumlasidagi bo‘sh joyga ismingizni yozing. Men javobingizni tekshiraman.";
+    return "Albatta, ingliz tilini noldan o‘rganamiz. Bugungi 1-dars: salomlashish.\n\n1. Hello — Salom.\n2. My name is ... — Mening ismim ...\n3. How are you? — Qalaysiz?\n4. I am fine, thank you. — Yaxshiman, rahmat.\n\nMashq: “My name is ...” jumlasidagi bo‘sh joyga ismingizni yozing. Men javobingizni tekshiraman.";
   }
   if (/(dasturlash|programming|programmer|kod yoz|coding|программир)/.test(q) && /(yordam|help|o'rgan|organ|boshlash|masala|kod)/.test(q)) {
     return "Albatta, dasturlashda bosqichma-bosqich yordam beraman. Kodni yozish, xatoni topish va har bir qatorni tushuntirishdan boshlaymiz. Qaysi dasturlash tilida ishlayapsiz — Python, JavaScript yoki Kotlin? Agar hali tanlamagan bo‘lsangiz, boshlash uchun Pythonni tavsiya qilaman.";
