@@ -180,6 +180,19 @@ test("API smoke tests", async (t) => {
       }
     });
 
+    await t.test("unconfigured image service returns 503 without consuming rate limit", async () => {
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const response = await fetch(`${baseUrl}/api/images/generate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: "a mountain at sunset" })
+        });
+        assert.equal(response.status, 503);
+        const body = await response.json();
+        assert.match(body.error, /IMAGE_GENERATION_URL/);
+      }
+    });
+
     await t.test("admin dashboard assets are served", async () => {
       const page = await fetch(`${baseUrl}/admin.html`);
       const script = await fetch(`${baseUrl}/admin.js`);
