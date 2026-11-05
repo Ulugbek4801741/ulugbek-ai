@@ -11,6 +11,7 @@ const ethicalReasoning = require("./modules/ethical-reasoning");
 const conversationOrchestrator = require("./modules/conversation-orchestrator");
 const languageCognition = require("./modules/language-cognition");
 const languageLearningWorker = require("./modules/language-learning-worker");
+const errorLearning = require("./modules/error-learning");
 const developerAgent = require("./developer-agent");
 const agentPermissions = require("./agent-permissions");
 const learningWorkerForAdmin = require("./lab-learning-worker");
@@ -68,6 +69,8 @@ app.use(helmet({
   }
 }));
 app.use(express.json({ limit: "20kb", strict: true, type: "application/json" }));
+// Capture only failure metadata automatically; raw chat text is not stored without explicit feedback.
+app.use("/api/chat", errorLearning.middleware());
 app.use("/api/", rateLimit({
   windowMs: 60 * 1000,
   limit: 120,
@@ -115,6 +118,39 @@ function requireAdmin(req, res, next) {
   }
   next();
 }
+
+app.get("/api/learning/status", async (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  try { return res.json({ ok: true, learning: await errorLearning.status() }); }
+  catch (_) { return res.status(503).json({ error: "Xatolarni o‘rganish holatini o‘qib bo‘lmadi." }); }
+});
+app.post("/api/learning/feedback", async (req, res) => {
+  try {
+    const result = await errorLearning.submitFeedback({
+      prompt: req.body?.prompt,
+      correction: req.body?.correction || "",
+      rating: req.body?.rating || "negative",
+      category: req.body?.category || "incorrect-answer"
+    });
+    res.set("Cache-Control", "no-store");
+    return res.status(201).json({ ok: true, ...result, note: "Tuzatish administrator tekshiruvigacha kutilmoqda." });
+  } catch (error) {
+    return res.status(error.statusCode || 503).json({ error: error.statusCode ? error.message : "Fikr-mulohazani saqlab bo‘lmadi." });
+  }
+});
+app.get("/api/admin/learning/candidates", requireAdmin, async (_req, res) => {
+  try { return res.json({ ok: true, ...(await errorLearning.listCandidates()) }); }
+  catch (_) { return res.status(503).json({ error: "O‘rganish nomzodlarini o‘qib bo‘lmadi." }); }
+});
+app.post("/api/admin/learning/:id/review", requireAdmin, async (req, res) => {
+  try {
+    const updated = await errorLearning.reviewFeedback(req.params.id, req.body?.decision);
+    if (!updated) return res.status(404).json({ error: "Tuzatish topilmadi." });
+    return res.json({ ok: true, reviewStatus: req.body.decision });
+  } catch (error) {
+    return res.status(error.statusCode || 503).json({ error: error.statusCode ? error.message : "Tekshiruv holatini saqlab bo‘lmadi." });
+  }
+});
 app.post("/api/admin/login", async (req, res) => {
   try {
     const result = await adminAuth.login({ code: req.body?.code, identifier: req.ip });
