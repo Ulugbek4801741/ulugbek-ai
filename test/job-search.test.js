@@ -4,7 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { detectSearchIntent, buildUniversalSearchQuery, buildUniversalSearchQueries, searchWeb, evidenceEntries, formatEvidenceReply } = require("../modules/universal-web-search");
 const { knowledgeContext, SYSTEM_PROMPT } = require("../modules/single-agent");
-const { isJobSearchRequest, hasLocationHint, locationClarification, searchJobs } = require("../modules/job-search");
+const { isJobSearchRequest, hasLocationHint, locationClarification, searchJobs, cleanText, decodeHtmlEntities } = require("../modules/job-search");
 
 test("searches only explicit discovery, job, and current-information requests", () => {
   for (const q of ["Bugun ob-havo qanday?", "Bugungi eng so'nggi yangiliklarni top", "Shveysariyada traktorchi ish topish", "Menga vakansiya qidirib ber", "YouTube kanalining linkini topib ber"]) assert.equal(detectSearchIntent(q).shouldSearch, true, q);
@@ -89,4 +89,10 @@ test("job search detects job intent and returns read public listing details", as
   assert.equal(result.results.length, 1);
   assert.match(result.reply, /Tractor operator vacancy/);
   assert.match(result.reply, /https:\/\/jobs\.example\.org\/tractor/);
+});
+
+test("job search output decodes nested HTML entities from search snippets", () => {
+  assert.equal(decodeHtmlEntities("bo&amp;#x27;sh ish o&amp;#x27;rni"), "bo'sh ish o'rni");
+  assert.equal(cleanText("Buxoroda bo&amp;#x27;sh ish o&amp;#x27;rinlari"), "Buxoroda bo'sh ish o'rinlari");
+  assert.equal(cleanText("A &amp;amp; B"), "A & B");
 });
