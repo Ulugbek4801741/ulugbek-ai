@@ -5,6 +5,7 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 const agentRuntime = require("./agent-runtime");
 const singleAgent = require("./modules/single-agent").createSingleAgent();
+const languageModule = require("./modules/language-module");
 const developerAgent = require("./developer-agent");
 const agentPermissions = require("./agent-permissions");
 const learningWorkerForAdmin = require("./lab-learning-worker");
@@ -162,6 +163,7 @@ app.get("/api/admin/overview", requireAdmin, (_req, res) => {
     aiConfigured: singleAgent.status().configured,
     nativeReasoningReady: true,
     trainedLanguageModelReady: false,
+    languageModuleReady: languageModule.status().ready,
     localModelConfigured: singleAgent.status().configured,
     externalAiApiEnabled: false,
     model: singleAgent.status(),
@@ -298,9 +300,22 @@ app.post("/api/admin/tasks/:id/review", requireAdmin, (req, res) => {
   }
 });
 
+app.get("/api/language/status", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, language: languageModule.status() });
+});
+
+app.post("/api/language/analyze", (req, res) => {
+  const text = typeof req.body?.text === "string" ? req.body.text.trim() : "";
+  if (!text) return res.status(400).json({ error: "Matn bo‘sh bo‘lmasligi kerak." });
+  if (text.length > 4000) return res.status(413).json({ error: "Matn 4000 belgidan oshmasligi kerak." });
+  const detected = languageModule.detectLanguage(text);
+  return res.json({ ok: true, detected, instruction: languageModule.buildLanguageInstruction(text) });
+});
+
 app.get("/api/ai/status", (_req, res) => {
   res.set("Cache-Control", "no-store");
-  res.json({ ok: true, agentCount: 1, agentName: "ULUGBEK Universal Agent", model: singleAgent.status(), mathEngine: "native-safe-arithmetic", research: "public-read-only-with-source-checks" });
+  res.json({ ok: true, agentCount: 1, agentName: "ULUGBEK Universal Agent", model: singleAgent.status(), language: languageModule.status(), mathEngine: "native-safe-arithmetic", research: "public-read-only-with-source-checks" });
 });
 
 app.get("/api/health", (_req, res) => {
@@ -313,6 +328,7 @@ app.get("/api/health", (_req, res) => {
     aiConfigured: singleAgent.status().configured,
     nativeReasoningReady: true,
     trainedLanguageModelReady: false,
+    languageModuleReady: languageModule.status().ready,
     localModelConfigured: singleAgent.status().configured,
     externalAiApiEnabled: false,
     agentCount: 1,
@@ -346,6 +362,7 @@ app.get("/api/diagnostics", (_req, res) => {
     nativeReasoning: "ulugbek-native-rule-reasoner-v1; deterministic symbolic planning; not a trained neural language model",
     externalAiApiEnabled: false,
     trainedLanguageModelReady: false,
+    languageModule: languageModule.status(),
     note: "Agent navbati server jarayoni ishlayotganida bajariladi. Hosting qayta ishga tushsa yoki uxlab qolsa 24/7 kafolatlanmaydi. JSON saqlash vaqtinchalik; doimiy ishlab chiqarish uchun PostgreSQL/Redis va alohida worker kerak. Bu diagnostika end-to-end sinov o‘rnini bosmaydi."
   });
 });
@@ -539,7 +556,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     const nativeBrain = require("./lab-learning-worker");
     let found = { ok: false, results: [], reply: "Internet qidiruvi hozircha ishlamadi." };
     try {
-      found = await universalSearch.searchWeb(message, webSearch, { limit: 5 });
+      found = await universalSearch.searchWeb(message, webSearch, { limit: 8 });
     } catch (_) {
       // Search failure must not crash chat; try the local knowledge and configured local model.
     }
@@ -592,6 +609,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       platformSearch: searchIntent.platforms,
       webResults: found.results,
       synthesisModelConfigured: singleAgent.status().configured,
+      detectedLanguage: languageModule.detectLanguage(message),
       researchIntent: searchIntent.reason
     });
   }
