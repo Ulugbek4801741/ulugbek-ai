@@ -12,6 +12,8 @@ const JOB_INTENT = /\bish\s*(?:top(?:ib)?(?:\s*ber)?|qidir(?:ib)?\s*ber|kerak|o\
 const LINK_INTENT = /(?:\blink\w*|\bssilka\w*|\bhavola\w*|\bmanzil\w*|\bwebsite\w*|\bweb.?sayt\w*|\bsayt\w*|\bkanal\w*|\bakkaunt\w*|\bprofil\w*|\bvideo\w*|\btop(?:ib)?(?:\s*ber)?|\bqidir(?:ib)?(?:\s*ber)?|\bfind\b|\bsearch\b|\bwhere\s+can\s+i\b)/iu;
 const LOCAL_ONLY = /^(?:salom|assalomu alaykum|assalom alaykum|salom alaykum|hello|hi|hayrli tong|hayrli kun|hayrli kech|rahmat|katta rahmat|tashakkur|xayr|hayr|ko'rishguncha|ko'rishamiz|sen kimsan|siz kimsiz|isming nima|o'zing kimsan|nima qila olasan|nimalar qila olasan)[!.?\s]*$/iu;
 const MATH_ONLY = /^\s*[\d\s.,()+*/%^-]+\s*(?:=|\?)*\s*$/u;
+const CURRENT_INFO_INTENT = /(?:bugun|bugungi|hozir|ayni paytda|so'nggi|eng yangi|joriy|ob[- ]?havo|weather|today|right now|current|latest|breaking|сегодня|сейчас|последн\w*)/iu;
+const EXPLICIT_RESEARCH_INTENT = /(?:\bqidir(?:ib)?\b|\bizlab\b|\btop(?:ib)?\b|\bsearch\b|\bfind\b|\blook up\b|\bнайди\b|\bпоищи\b)/iu;
 
 function detectSearchIntent(value) {
   const text = String(value || "").trim();
@@ -19,8 +21,11 @@ function detectSearchIntent(value) {
   const isLinkSearch = LINK_INTENT.test(text);
   const platforms = PLATFORM_HINTS.filter(item => item.pattern.test(text)).map(item => item.domain);
   const localOnly = !text || LOCAL_ONLY.test(text) || MATH_ONLY.test(text);
-  return { shouldSearch: !localOnly, isJobSearch, isLinkSearch, platforms,
-    reason: localOnly ? "local-dialogue-or-arithmetic" : isJobSearch ? "job-search" : isLinkSearch ? "link-discovery" : "general-question-research" };
+  const currentInfo = CURRENT_INFO_INTENT.test(text);
+  const explicitResearch = EXPLICIT_RESEARCH_INTENT.test(text);
+  const shouldSearch = !localOnly && (isJobSearch || isLinkSearch || currentInfo || explicitResearch);
+  return { shouldSearch, isJobSearch, isLinkSearch, platforms, currentInfo,
+    reason: localOnly ? "local-dialogue-or-arithmetic" : isJobSearch ? "job-search" : isLinkSearch ? "link-discovery" : currentInfo ? "current-information" : explicitResearch ? "explicit-research-request" : "direct-assistant-response" };
 }
 function cleanText(value, max = 1200) {
   return String(value || "").replace(/\s+/g, " ").trim().slice(0, max);
