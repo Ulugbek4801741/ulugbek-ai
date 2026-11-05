@@ -11,13 +11,22 @@ const PLATFORM_HINTS = [
 
 const JOB_INTENT = /\bish\s*(?:top(?:ib)?(?:\s*ber)?|qidir(?:ib)?\s*ber|kerak|o\s*rin(?:lar)?|vakans(?:iya|iyalar)?|izlay(?:apman|man)?|qidir)|\bvakans(?:iya|iyalar)\b|\bjob\s*(?:search|opening|vacanc(?:y|ies))\b|\bfind\s+(?:me\s+)?a?\s*jobs?\b|\bemployment\s+(?:opportunit|jobs?)|\bработ(?:а|у)\s*(?:найти|ищу|нужна)|\bваканси/iu;
 const LINK_INTENT = /(?:\blink\b|\bssilka\b|\bhavola\b|\bmanzilini\b|\bwebsite\b|\bweb.?sayt\b|\bsaytini\b|\bkanal(?:ini)?\b|\bakkaunt(?:ini)?\b|\bprofil(?:ini)?\b|\bvideo(?:sini)?\b|\btop(?:ib)?\s*ber|\bqidir(?:ib)?\s*ber|\bfind\b|\bsearch\b|\bwhere\s+can\s+i\b)/iu;
+const LOCAL_ONLY = /^(?:salom|assalomu alaykum|assalom alaykum|salom alaykum|hello|hi|hayrli tong|hayrli kun|hayrli kech|rahmat|katta rahmat|tashakkur|xayr|hayr|ko'rishguncha|ko'rishamiz|sen kimsan|siz kimsiz|isming nima|o'zing kimsan|nima qila olasan|nimalar qila olasan)[!.?\s]*$/iu;
+const MATH_ONLY = /^\s*[\d\s.,()+*/%^-]+\s*(?:=|\?)*\s*$/u;
 
 function detectSearchIntent(value) {
   const text = String(value || "").trim();
   const isJobSearch = JOB_INTENT.test(text);
   const isLinkSearch = LINK_INTENT.test(text);
   const platforms = PLATFORM_HINTS.filter(item => item.pattern.test(text)).map(item => item.domain);
-  return { shouldSearch: isJobSearch || isLinkSearch, isJobSearch, isLinkSearch, platforms };
+  const localOnly = !text || LOCAL_ONLY.test(text) || MATH_ONLY.test(text);
+  return {
+    shouldSearch: !localOnly,
+    isJobSearch,
+    isLinkSearch,
+    platforms,
+    reason: localOnly ? "local-dialogue-or-arithmetic" : isJobSearch ? "job-search" : isLinkSearch ? "link-discovery" : "general-question-research"
+  };
 }
 
 function buildUniversalSearchQuery(value) {
@@ -36,14 +45,14 @@ function cleanText(value, max = 650) {
 
 async function searchWeb(message, webSearch, options = {}) {
   if (!webSearch || typeof webSearch.search !== "function") {
-    return { ok: false, results: [], reply: "ULUGBEK AI internet qidiruv moduliga ulana olmadi." };
+    return { ok: false, results: [], reply: "ULUGBEK AI internet qidiruv moduliga ulana olmadi.", error: "search-adapter-unavailable" };
   }
-  const limit = Math.max(1, Math.min(8, Number(options.limit) || 6));
+  const limit = Math.max(1, Math.min(6, Number(options.limit) || 5));
   let found;
   try {
     found = await webSearch.search(buildUniversalSearchQuery(message));
-  } catch (_) {
-    return { ok: false, results: [], reply: "ULUGBEK AI internet qidiruv manbasiga ulana olmadi. Keyinroq qayta urinib ko'ring." };
+  } catch (error) {
+    return { ok: false, results: [], reply: "ULUGBEK AI internet qidiruv manbasiga ulana olmadi. Keyinroq qayta urinib ko'ring.", error: cleanText(error?.message || "search-failed", 180) };
   }
   const candidates = Array.isArray(found) ? found.slice(0, limit) : [];
   const results = await Promise.all(candidates.map(async item => {
@@ -70,14 +79,42 @@ async function searchWeb(message, webSearch, options = {}) {
     (index + 1) + ". " + item.title,
     item.snippet || "Sahifa tafsilotlarini havola orqali ko'ring.",
     "Havola: " + item.url,
-    "Manba holati: " + (item.pageRead ? "sahifa ochildi; mazmuni ko'rib chiqildi" : "qidiruv parchasi; sahifa to'liq tekshirilmagan")
+    "Manba holati: " + (item.pageRead ? "ochiq sahifa matni olindi, mazmuni hali mustaqil tasdiqlanmagan" : "faqat qidiruv parchasi; sahifa to'liq tekshirilmagan")
   ].join("\n")).join("\n\n");
   const label = detectSearchIntent(message).isJobSearch ? "ish va vakansiya" : "internet";
   return {
     ok: true,
     results: usable,
-    reply: "ULUGBEK AI " + label + " qidiruvida " + usable.length + " ta ochiq manba topdi. Muhim ma'lumotlarni manbaning o'zida qayta tekshiring.\n\n" + lines
+    reply: "ULUGBEK AI " + label + " qidiruvida " + usable.length + " ta ochiq manba topdi. Quyidagi ma'lumotlar manbalardan olingan; muhim faktlarni manbaning o'zida tekshiring.\n\n" + lines
   };
 }
 
-module.exports = { detectSearchIntent, buildUniversalSearchQuery, searchWeb, cleanText };
+function evidenceEntries(results) {
+  return (Array.isArray(results) ? results : []).map(item => ({
+    title: item.title,
+    content: item.snippet,
+    source: item.url,
+    status: item.pageRead ? "unverified-public-page-content" : "unverified-search-snippet"
+  }));
+}
+
+function formatEvidenceReply(results, reason = "") {
+  const items = Array.isArray(results) ? results : [];
+  if (!items.length) {
+    return "Ochiq internet qidiruvida hozircha mos natija topilmadi. Savolni boshqacha ifodalab qayta qidirish mumkin. Men topilmagan ma'lumotni to'qib aytmayman.";
+  }
+  const lines = items.map((item, index) =>
+    (index + 1) + ". " + item.title + "\n" +
+    (item.snippet || "Manba sahifasini havola orqali ko'ring.") + "\n" +
+    "Manba: " + item.url + "\n" +
+    "Tekshiruv: " + (item.pageRead ? "ochiq sahifa matni olindi, mustaqil tasdiq talab etiladi" : "qidiruv parchasi, to'liq sahifa o'qilmadi")
+  );
+  return "Savolingiz bo'yicha ochiq internetdan topilgan ma'lumotlar:\n\n" + lines.join("\n\n") +
+    (reason ? "\n\nIzoh: " + reason : "") +
+    "\n\nEslatma: bu natijalar avtomatik ravishda haqiqat deb tasdiqlanmagan. Muhim qaror oldidan birlamchi manbani tekshiring.";
+}
+
+module.exports = {
+  detectSearchIntent, buildUniversalSearchQuery, searchWeb, cleanText,
+  evidenceEntries, formatEvidenceReply
+};
