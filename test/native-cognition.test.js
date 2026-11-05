@@ -72,3 +72,13 @@ test("irrelevant evidence cannot produce an answer", () => {
   assert.equal(result.reasoning.answerable, false);
   assert.match(result.reply, /ishonchli javob topa olmadim/);
 });
+
+
+test("job-search requests get a useful clarification without a language model", () => {
+  for (const prompt of ["Ish topib ber", "Ish topishga yordam ber", "Ish kerak", "Vakansiya topib ber"]) {
+    const result = cognition.respond(prompt, []);
+    assert.equal(result.reasoning.answerable, true, prompt);
+    assert.match(result.reply, /Qaysi davlat yoki shaharda ish qidiramiz/, prompt);
+    assert.equal(result.reasoning.method, "built-in-uzbek-dialogue");
+  }
+});

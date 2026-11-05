@@ -102,6 +102,12 @@ function quickReply(query) {
     return "Men mavjud bilimlar bazasi va ochiq manbalardan foydalanib savollarga javob beraman, dalillarni solishtiraman va bitta qisqa xulosa tuzaman. Dalil yetarli bo‘lmasa, buni aytaman.";
   if(/(qanday o'rganasan|qanday organasan|o'zingni o'rgat|ozingni urgat|qayta o'qit|qayta oqit)/.test(q))
     return "Avval o‘zbekcha, keyin inglizcha va ruscha ochiq manbalardan ma’lumot yig‘aman. Yangi ma’lumot tekshiruvga ajratiladi va tasdiqlansa bilimlar bazasiga qo‘shiladi. Bu hozircha neyron tarmoq vaznlarini qayta o‘qitmaydi.";
+  // Job-search intent must work even when no language model is configured.
+  // Ask for the minimum missing detail instead of returning a native-engine error.
+  if(/\b(ish|ishga|vakansiya|ishchi|ish o'rin|ish orin|ish top|ish izla|ish qidir|ishlash)\b/.test(q) &&
+     /(top|izla|qidir|kerak|yordam|ber|qidirib)/.test(q)) {
+    return "Albatta, ish topishga yordam beraman. Qaysi davlat yoki shaharda ish qidiramiz?";
+  }
   if(/(api kalit|tashqi api|ma'lumotlarim|maxfiylik|suhbatlarim)/.test(q))
     return "Hozirgi chat rejimi tashqi AI provayderiga avtomatik ulanmaydi. Serverdagi saqlash va hosting sozlamalari alohida tekshirilishi kerak.";
   return null;
