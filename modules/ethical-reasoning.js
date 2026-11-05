@@ -1,11 +1,12 @@
 "use strict";
 
-// A transparent, conservative ethical/safety decision aid, not a moral authority.
+// Transparent risk screening. Protective/educational requests are not treated as harmful intent.
+const PROTECTIVE_CONTEXT = /(?:oldini olish|himoyalanish|himoya qilish|aniqlash|fosh etish|xabar berish|qanday saqlanish|xavfsizligini tekshirish|firibgarlikdan|hujumdan himoya|zararni kamaytirish|prevention|prevent|protect|defend|detect|report|recover|secure|safety|avoid harm|защитить|защита|предотвратить|выявить|сообщить|восстановить|безопасност)/iu;
 const RULES = [
-  { category: "violence", level: "high", pattern: /\b(odam o'ldirish|odam o‘ldirish|jarohatlash|portlatish|bomb yasash|qurol bilan hujum|kill someone|make a bomb|attack them|убить человека|сделать бомбу)\b/i },
-  { category: "fraud", level: "high", pattern: /\b(firibgarlik|aldab pul olish|soxta hujjat|parol o'g'irlash|parol o‘g‘irlash|scam|steal password|fake identity|мошенничество|украсть пароль)\b/i },
-  { category: "privacy_abuse", level: "high", pattern: /\b(birovni yashirin kuzat|ruxsatsiz kuzat|josus dastur|stalk them|spy on someone|track without consent|шпионить|следить без согласия)\b/i },
-  { category: "self_harm", level: "critical", pattern: /\b(o'zimni o'ldir|o‘zimni o‘ldir|jonimga qasd|o'zimga zarar|o‘zimga zarar|suicide|kill myself|self harm|покончить с собой|навредить себе)\b/i }
+  { category: "violence", level: "high", pattern: /(?:odam\s+o['’‘ʻʼ]?ldirish|jarohatlash|portlatish|bomb\s+yasash|qurol\s+bilan\s+hujum|kill\s+someone|make\s+a\s+bomb|attack\s+them|убить\s+человека|сделать\s+бомбу)/iu },
+  { category: "fraud", level: "high", pattern: /(?:firibgarlik|aldab\s+pul\s+olish|soxta\s+hujjat|parol\s+o['’‘ʻʼ]?g['’‘ʻʼ]?irlash|scam|steal\s+password|fake\s+identity|мошенничество|украсть\s+пароль)/iu },
+  { category: "privacy_abuse", level: "high", pattern: /(?:birovni\s+yashirin\s+kuzat|ruxsatsiz\s+kuzat|josus\s+dastur|stalk\s+them|spy\s+on\s+someone|track\s+without\s+consent|шпионить|следить\s+без\s+согласия)/iu },
+  { category: "self_harm", level: "critical", pattern: /(?:o['’‘ʻʼ]?zimni\s+o['’‘ʻʼ]?ldir|jonimga\s+qasd|o['’‘ʻʼ]?zimga\s+zarar|suicide|kill\s+myself|self\s*harm|покончить\s+с\s+собой|навредить\s+себе)/iu }
 ];
 const PRINCIPLES = [
   "Zararni kamaytirish: odamlar, hayvonlar va jamoaga jismoniy, ruhiy yoki moliyaviy zarar yetkazmaslik.",
@@ -19,6 +20,9 @@ function evaluate(input) {
   const text = String(input || "").trim();
   const match = RULES.find(rule => rule.pattern.test(text));
   if (!match) return { allowed: true, risk: "ordinary", category: "none", principles: PRINCIPLES, guidance: "Savolga yordam bering; dalillar, qonuniylik va ehtimoliy oqibatlarni hisobga oling." };
+  if (match.category !== "self_harm" && PROTECTIVE_CONTEXT.test(text)) {
+    return { allowed: true, risk: "low", category: "prevention", detectedCategory: match.category, principles: PRINCIPLES, guidance: "Himoyalanish, oldini olish, aniqlash va qonuniy xabar berish bo‘yicha xavfsiz yordam bering; hujum yoki suiiste’mol qilish usullarini bermang." };
+  }
   if (match.category === "self_harm") return { allowed: false, risk: match.level, category: match.category, principles: PRINCIPLES, guidance: "O‘ziga zarar yetkazish bo‘yicha usul yoki ko‘rsatma bermang. Hamdardlik bildiring, hozirgi xavfsizlikni so‘rang, yaqin ishonchli inson va mahalliy shoshilinch yordam bilan bog‘lanishga undang." };
   return { allowed: false, risk: match.level, category: match.category, principles: PRINCIPLES, guidance: "Zararli yoki noqonuniy bajarish ko‘rsatmalarini bermang. Xavfsiz, qonuniy va profilaktik muqobil taklif qiling." };
 }
