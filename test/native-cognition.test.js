@@ -73,7 +73,8 @@ test("irrelevant evidence cannot produce an answer", () => {
   assert.match(result.reply, /ishonchli javob topa olmadim/);
 });
 
-\ntest("job-search requests get a useful clarification without a language model", () => {
+
+test("job-search requests get a useful clarification without a language model", () => {
   for (const prompt of ["Ish topib ber", "Ish topishga yordam ber", "Ish kerak", "Vakansiya topib ber"]) {
     const result = cognition.respond(prompt, []);
     assert.equal(result.reasoning.answerable, true, prompt);
