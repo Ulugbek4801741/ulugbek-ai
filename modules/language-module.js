@@ -11,6 +11,8 @@ const LANGUAGE_RULES = {
   unknown: { name: "Aniqlanmagan til", script: "foydalanuvchi yozuvi", instruction: "Til aniq bo‘lmasa, foydalanuvchi ishlatgan til va yozuvni saqlang; tushunarsiz bo‘lsa bitta qisqa aniqlashtiruvchi savol bering." }
 };
 
+const UZ_CYRILLIC_WORDS = /(?:менга|ёрдам|қандай|керак|билан|учун|сиз|биз|ишлайди|беринг|нима|қиласиз)/giu;
+const RU_CYRILLIC_WORDS = /(?:что|как|пожалуйста|помоги|помогите|для|это|мне|нужно|можно|спасибо|здравствуйте|привет|почему|где|когда)/giu;
 const WORDS = {
   uz: /\b(salom|assalomu|alaykum|uchun|qanday|qil|kerak|menga|ber|bilan|haqida|yozib|tushuntir|iltimos|rahmat|o'zbek|o‘zbek|bo'lishi|bo‘lishi|mumkin|emas|men|siz|biz)\b/giu,
   en: /\b(the|and|what|how|please|help|with|from|this|that|you|your|can|could|would|should|hello|thanks|about|for)\b/giu,
@@ -39,12 +41,12 @@ function detectLanguage(value) {
   const cyrillic = (text.match(/[\u0400-\u04FF]/g) || []).length;
   const latin = (text.match(/[A-Za-z]/g) || []).length;
   const uzCyrillic = (text.match(/[ўқғҳЎҚҒҲ]/g) || []).length;
-  const kkCyrillic = (text.match(/[әіңғүұқөһӘІҢҒҮҰҚӨҺ]/g) || []).length;
+  const kkCyrillic = (text.match(/[әіңүұөһӘІҢҮҰӨҺ]/g) || []).length;
   if (cyrillic > 0 && cyrillic >= latin) {
     if (kkCyrillic > 0) return { code: "kk", confidence: 0.82, script: "cyrillic", explicit: false };
     if (uzCyrillic > 0) return { code: "uz", confidence: 0.86, script: "cyrillic", explicit: false };
-    const ruScore = countMatches(lower, WORDS.ru);
-    const uzScore = countMatches(lower, WORDS.uz);
+    const ruScore = countMatches(lower, RU_CYRILLIC_WORDS);
+    const uzScore = countMatches(lower, UZ_CYRILLIC_WORDS);
     return ruScore > uzScore ? { code: "ru", confidence: 0.78, script: "cyrillic", explicit: false } :
       uzScore > 0 ? { code: "uz", confidence: 0.72, script: "cyrillic", explicit: false } :
       { code: "unknown", confidence: 0.35, script: "cyrillic", explicit: false };
