@@ -330,6 +330,42 @@ app.get("/api/language/status", (_req, res) => {
   res.json({ ok: true, language: languageModule.status(), languageLearning: languageLearningWorker.status() });
 });
 
+app.get("/api/admin/language/status", requireAdmin, (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, language: languageModule.status(), learning: languageLearningWorker.status(), research: learningWorkerForAdmin.status() });
+});
+
+app.post("/api/admin/language/train", requireAdmin, async (_req, res) => {
+  try {
+    const result = await languageLearningWorker.trainNow();
+    res.set("Cache-Control", "no-store");
+    return res.json({ ok: true, result, learning: languageLearningWorker.status() });
+  } catch (error) {
+    return res.status(500).json({ error: "Til modulini o‘qitish bajarilmadi: " + String(error.message || error).slice(0, 180) });
+  }
+});
+
+app.post("/api/admin/language/research", requireAdmin, async (req, res) => {
+  const query = typeof req.body?.query === "string" ? req.body.query.trim() : "";
+  if (query.length < 3 || query.length > 300) {
+    return res.status(400).json({ error: "Qidiruv mavzusi 3–300 belgi bo‘lishi kerak." });
+  }
+  try {
+    const findings = await learningWorkerForAdmin.researchQuestion(query);
+    const training = await languageLearningWorker.trainNow();
+    res.set("Cache-Control", "no-store");
+    return res.json({
+      ok: true,
+      collectedCandidates: findings.length,
+      training,
+      note: "Topilgan matnlar til statistikasi uchun ishlatiladi. Ular fakt sifatida avtomatik tasdiqlanmaydi.",
+      learning: languageLearningWorker.status()
+    });
+  } catch (error) {
+    return res.status(502).json({ error: "Internet orqali o‘rganish bajarilmadi: " + String(error.message || error).slice(0, 180) });
+  }
+});
+
 app.get("/api/cognition/status", (_req, res) => {
   res.set("Cache-Control", "no-store");
   res.json({ ok: true, language: languageModule.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status(), voice: { input: "browser-speech-recognition", output: "browser-speech-synthesis", requiresMicrophonePermission: true }, conversationPipeline: conversationOrchestrator.status(), independentLanguage: languageLearningWorker.status() });
