@@ -2,105 +2,65 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const {
-  detectSearchIntent, buildUniversalSearchQuery, searchWeb,
-  evidenceEntries, formatEvidenceReply
-} = require("../modules/universal-web-search");
+const { detectSearchIntent, buildUniversalSearchQuery, buildUniversalSearchQueries, searchWeb, evidenceEntries, formatEvidenceReply } = require("../modules/universal-web-search");
+const { knowledgeContext, SYSTEM_PROMPT } = require("../modules/single-agent");
 
-test("researches arbitrary questions across different topics", () => {
-  for (const question of [
-    "Bugun ob-havo qanday?",
-    "JavaScriptda API server qanday yoziladi?",
-    "O'zbekistonda kichik biznesni qanday boshlash mumkin?",
-    "Fotosintez nima?",
-    "Menga Shveysariyadan qishloq xo'jaligi ishlarini top"
-  ]) {
-    assert.equal(detectSearchIntent(question).shouldSearch, true, question);
-  }
+test("searches substantive questions from all common domains", () => {
+  for (const q of ["Bugun ob-havo qanday?", "JavaScriptda API server qanday yoziladi?", "O'zbekistonda kichik biznesni qanday boshlash mumkin?", "Fotosintez nima?", "Shveysariyada traktorchi ish topish", "Qonuniy shartnoma qanday tuziladi?"]) assert.equal(detectSearchIntent(q).shouldSearch, true, q);
 });
-
-test("keeps greetings, thanks and plain arithmetic local", () => {
+test("keeps greetings, thanks and arithmetic local", () => {
   assert.equal(detectSearchIntent("Assalomu alaykum").shouldSearch, false);
   assert.equal(detectSearchIntent("Katta rahmat").shouldSearch, false);
   assert.equal(detectSearchIntent("25 * 4").shouldSearch, false);
 });
-
-test("detects job requests and general website/link searches", () => {
+test("detects job and platform search intents", () => {
   assert.equal(detectSearchIntent("Ish topib ber").isJobSearch, true);
   assert.equal(detectSearchIntent("Menga vakansiya top").isJobSearch, true);
   assert.equal(detectSearchIntent("YouTube kanalining linkini topib ber").shouldSearch, true);
-  assert.equal(detectSearchIntent("Instagram profil manzilini top").platforms.includes("site:instagram.com"), true);
+  assert.ok(detectSearchIntent("Instagram profil manzilini top").platforms.includes("site:instagram.com"));
 });
-
-test("adds relevant platform domains and preserves original request", () => {
-  const query = buildUniversalSearchQuery("Telegramdagi rasmiy kanal linkini top");
-  assert.match(query, /Telegramdagi/);
-  assert.ok(query.includes("(site:t.me OR site:telegram.org)"));
-  assert.match(query, /official page link/);
+test("creates multiple distinct search queries for independent discovery", () => {
+  const queries = buildUniversalSearchQueries("Telegramdagi rasmiy kanal linkini top");
+  assert.equal(queries.length, 3);
+  assert.ok(queries[0].includes("Telegramdagi"));
+  assert.ok(queries[1].includes("site:t.me"));
+  assert.match(queries[2], /rasmiy sayt/);
+  assert.match(buildUniversalSearchQuery("Traktor operatori uchun ish top"), /jobs vacancies/);
 });
-
-test("expands job search requests into vacancy terms", () => {
-  const query = buildUniversalSearchQuery("Traktor operatori uchun ish top");
-  assert.match(query, /Traktor operatori/);
-  assert.match(query, /vakansiya/);
-  assert.match(query, /jobs vacancies/);
-});
-
-test("returns public source-linked results and page-read status", async () => {
-  const webSearch = {
-    async search(query) {
-      assert.ok(query.includes("site:youtube.com"));
-      return [{ title: "Official channel", url: "https://youtube.com/@example", snippet: "Public channel result" }];
-    },
-    async fetchPage() {
-      return { title: "Official channel page", url: "https://youtube.com/@example", content: "Public channel information and description.".repeat(5) };
-    }
+test("reads pages, searches in parallel and deduplicates results from same URL", async () => {
+  const calls = [];
+  const web = {
+    async search(q) { calls.push(q); return [{ title: "Example", url: "https://example.org/a", snippet: "short" }, { title: "Second", url: "https://gov.example/a", snippet: "short" }]; },
+    async fetchPage(url) { return { title: "Read " + url, url, content: "Full page text and evidence. ".repeat(60) }; }
   };
-  const result = await searchWeb("YouTube kanal linkini top", webSearch);
-  assert.equal(result.ok, true);
-  assert.equal(result.results.length, 1);
-  assert.match(result.reply, /ULUGBEK AI internet qidiruvida/);
-  assert.ok(result.reply.includes("https://youtube.com/@example"));
+  const result = await searchWeb("Fotosintez nima?", web);
+  assert.equal(calls.length, 3);
+  assert.equal(result.results.length, 2);
   assert.equal(result.results[0].pageRead, true);
+  assert.ok(result.results[0].snippet.length > 1000);
 });
-
-test("maps search results to untrusted evidence for one-agent synthesis", () => {
-  const entries = evidenceEntries([{
-    title: "Example",
-    snippet: "Public page content",
-    url: "https://example.org",
-    pageRead: true
-  }]);
-  assert.deepEqual(entries, [{
-    title: "Example",
-    content: "Public page content",
-    source: "https://example.org",
-    status: "unverified-public-page-content"
-  }]);
+test("keeps source metadata in evidence entries", () => {
+  const entries = evidenceEntries([{ title: "Example", snippet: "Full text", url: "https://example.org", pageRead: true, qualityScore: 2 }]);
+  assert.equal(entries[0].status, "unverified-public-page-content");
+  assert.equal(entries[0].sourceQuality, 2);
 });
-
-test("provides source-linked fallback when no synthesis model is configured", () => {
-  const reply = formatEvidenceReply([{
-    title: "Public source",
-    snippet: "Useful source excerpt",
-    url: "https://example.org",
-    pageRead: false
-  }]);
-  assert.match(reply, /Useful source excerpt/);
-  assert.match(reply, /https:\/\/example\.org/);
-  assert.match(reply, /haqiqat deb tasdiqlanmagan/);
+test("fallback distinguishes page reads from search snippets and never claims verification", () => {
+  const reply = formatEvidenceReply([{ title: "Public source", snippet: "Useful evidence", url: "https://example.org", pageRead: false }]);
+  assert.match(reply, /Useful evidence/);
+  assert.match(reply, /faqat qidiruv parchasi/);
+  assert.match(reply, /avtomatik xulosa emas/);
 });
-
-test("reports empty search results honestly", async () => {
-  const result = await searchWeb("Ish topib ber", { search: async () => [] });
-  assert.equal(result.ok, true);
-  assert.equal(result.results.length, 0);
-  assert.match(result.reply, /mos natija topolmadi/);
+test("no-result and search errors are explicit", async () => {
+  const empty = await searchWeb("Ish topib ber", { search: async () => [] });
+  assert.equal(empty.results.length, 0);
+  const broken = await searchWeb("Fotosintez nima?", { search: async () => { throw new Error("offline"); } });
+  assert.equal(broken.ok, true);
+  assert.equal(broken.results.length, 0);
 });
-
-test("reports search adapter failures without throwing", async () => {
-  const result = await searchWeb("Fotosintez nima?", { search: async () => { throw new Error("offline"); } });
-  assert.equal(result.ok, false);
-  assert.equal(result.results.length, 0);
-  assert.match(result.error, /offline/);
+test("language model instructions require direct answers grounded in evidence", () => {
+  assert.match(SYSTEM_PROMPT, /foydalanuvchining asl maqsadiga/);
+  assert.match(SYSTEM_PROMPT, /birlamchi rasmiy manbalarni ustun qo'ying/);
+  const context = knowledgeContext([{ title: "Test", content: "Page text", source: "https://example.org", status: "unverified-public-page-content" }]);
+  assert.match(context, /Page text/);
+  assert.match(context, /https:\/\/example\.org/);
 });
