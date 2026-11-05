@@ -21,8 +21,31 @@ function buildJobSearchQuery(value) {
   return [original, "vakansiya ish o'rinlari ish beruvchi maosh ishga qabul", "jobs vacancies employer salary hiring"].filter(Boolean).join(" ");
 }
 
+function decodeHtmlEntities(value) {
+  let text = String(value || "");
+  for (let i = 0; i < 3; i += 1) {
+    const decoded = text
+      .replace(/&amp;/gi, "&")
+      .replace(/&quot;/gi, '"')
+      .replace(/&apos;|&#39;/gi, "'")
+      .replace(/&lt;/gi, "<")
+      .replace(/&gt;/gi, ">")
+      .replace(/&nbsp;/gi, " ")
+      .replace(/&#(\d+);/g, (_match, code) => {
+        const point = Number(code);
+        return point > 0 && point <= 0x10ffff ? String.fromCodePoint(point) : " ";
+      })
+      .replace(/&#x([0-9a-f]+);/gi, (_match, code) => {
+        const point = parseInt(code, 16);
+        return point > 0 && point <= 0x10ffff ? String.fromCodePoint(point) : " ";
+      });
+    if (decoded === text) break;
+    text = decoded;
+  }
+  return text;
+}
 function cleanText(value, max = 650) {
-  return String(value || "").replace(/\s+/g, " ").trim().slice(0, max);
+  return decodeHtmlEntities(value).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
 }
 
 async function searchJobs(message, webSearch, options = {}) {
@@ -70,4 +93,4 @@ async function searchJobs(message, webSearch, options = {}) {
   };
 }
 
-module.exports = { isJobSearchRequest, hasLocationHint, locationClarification, buildJobSearchQuery, searchJobs };
+module.exports = { isJobSearchRequest, hasLocationHint, locationClarification, buildJobSearchQuery, searchJobs, cleanText, decodeHtmlEntities };

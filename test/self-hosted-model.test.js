@@ -11,11 +11,11 @@ let appProcess;
 let mockServer;
 let providerRequests = 0;
 
-test("native-only mode ignores configured external AI endpoints", async (t) => {
+test("configured OpenAI-compatible provider serves chat while planner remains native", async (t) => {
   mockServer = http.createServer((_req, res) => {
     providerRequests++;
     res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ choices: [{ message: { content: "This must never be used." } }] }));
+    res.end(JSON.stringify({ choices: [{ message: { content: "Provider test response." } }] }));
   });
   await new Promise(resolve => mockServer.listen(mockPort, "127.0.0.1", resolve));
 
@@ -26,25 +26,31 @@ test("native-only mode ignores configured external AI endpoints", async (t) => {
       PORT: String(appPort),
       TASK_STORE_PATH: require("node:path").join(require("node:os").tmpdir(), `ulugbek-tasks-${appPort}.json`),
       AGENT_MEMORY_PATH: require("node:path").join(require("node:os").tmpdir(), `ulugbek-memory-${appPort}.json`),
-      OPENAI_BASE_URL: `http://127.0.0.1:${mockPort}/v1`,
-      OPENAI_MODEL: "test-local-model",
-      OPENAI_API_KEY: "intentionally-unused"
+      ULUGBEK_AI_PROVIDER: "openai-compatible",
+      ULUGBEK_AI_BASE_URL: `http://127.0.0.1:${mockPort}/v1/chat/completions`,
+      ULUGBEK_AI_MODEL: "test-local-model",
+      ULUGBEK_AI_TOKEN: "test-token",
+      OPENAI_BASE_URL: "",
+      OPENAI_MODEL: "",
+      OPENAI_API_KEY: ""
     },
     stdio: "ignore"
   });
 
   try {
     const deadline = Date.now() + 10000;
+    let ready = false;
     while (Date.now() < deadline) {
       if (appProcess.exitCode !== null) throw new Error("ULUGBEK AI server exited before becoming ready.");
       try {
-        const ready = await fetch(`${appUrl}/api/health`);
-        if (ready.ok) break;
+        const response = await fetch(`${appUrl}/api/health`);
+        if (response.ok) { ready = true; break; }
       } catch {}
       await new Promise(resolve => setTimeout(resolve, 150));
     }
+    assert.equal(ready, true, "ULUGBEK AI server did not become ready.");
 
-    await t.test("chat never calls the configured provider", async () => {
+    await t.test("chat calls the configured compatible provider", async () => {
       const response = await fetch(`${appUrl}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -52,12 +58,12 @@ test("native-only mode ignores configured external AI endpoints", async (t) => {
       });
       assert.equal(response.status, 200);
       const data = await response.json();
-      assert.equal(data.mode, "native-single-agent-fallback-no-external-ai");
-      assert.match(data.reply, /yetarli dalil topilmadi|Salom/i);
-      assert.equal(providerRequests, 0);
+      assert.equal(data.mode, "self-hosted-single-agent-no-external-ai");
+      assert.equal(data.reply, "Provider test response.");
+      assert.equal(providerRequests, 1);
     });
 
-    await t.test("planner stays on native rules even when a model endpoint exists", async () => {
+    await t.test("planner stays on native rules and does not call the model", async () => {
       const response = await fetch(`${appUrl}/api/agent/plan`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -66,7 +72,7 @@ test("native-only mode ignores configured external AI endpoints", async (t) => {
       assert.equal(response.status, 200);
       const data = await response.json();
       assert.equal(data.mode, "native-rules");
-      assert.equal(providerRequests, 0);
+      assert.equal(providerRequests, 1);
     });
   } finally {
     appProcess?.kill("SIGTERM");

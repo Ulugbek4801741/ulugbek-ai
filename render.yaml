@@ -39,6 +39,18 @@ services:
         sync: false
       - key: ULUGBEK_LOCAL_MODEL_TOKEN
         sync: false
+      - key: ULUGBEK_AI_PROVIDER
+        sync: false
+      - key: ULUGBEK_AI_MODEL
+        sync: false
+      - key: ULUGBEK_AI_TOKEN
+        sync: false
+      - key: ULUGBEK_AI_BASE_URL
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: ANTHROPIC_MODEL
+        sync: false
       - key: LANGUAGE_TRAINING_INTERVAL_MS
         value: "300000"
       - key: GEMINI_API_KEY
