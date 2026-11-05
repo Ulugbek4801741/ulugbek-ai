@@ -1,7 +1,7 @@
 "use strict";
 
 // Transparent risk screening. Defensive and educational requests are not treated as harmful intent.
-const PROTECTIVE_CONTEXT = /(?:oldini olish|himoyalanish|himoya qilish|aniqlash|fosh etish|xabar berish|qanday saqlanish|xavfsizligini tekshirish|firibgarlikdan|hujumdan himoya|zararni kamaytirish|to'xtatish|stop|prevention|prevent|protect|defend|detect|report|recover|secure|safety|avoid harm|защитить|защита|предотвратить|выявить|сообщить|восстановить|безопасност|остановить)/iu;
+const PROTECTIVE_CONTEXT = /(?:oldini olish|himoyalanish|himoya qilish|aniqlash|fosh etish|xabar berish|qanday saqlanish|xavfsizligini tekshirish|firibgarlikdan|hujumdan himoya|zararni kamaytirish|\bhow\s+(?:can|do)\s+i\s+(?:prevent|protect|defend|detect|report|recover|stop)\b|\bhow\s+to\s+(?:prevent|protect|defend|detect|report|recover|stop)\b|\b(?:prevention|preventing|defense against|protect(?:ion)? from|defend against|account recovery)\b|как\s+(?:защититься|предотвратить|выявить|сообщить)|защита\s+от|предотвращение|восстановление\s+аккаунта)/iu;
 const RULES = [
   { category: "violence", level: "high", pattern: /(?:odam\s+o'?ldirish|jarohatlash|pichoqlash|otib\s+tashlash|zaharlash|portlatish|bomb\s+yasash|qurol\s+bilan\s+hujum|kill\s+someone|shoot\s+someone|stab\s+someone|poison\s+someone|make\s+a\s+bomb|attack\s+them|убить\s+человека|застрелить|зарезать|отравить|сделать\s+бомбу)/iu },
   { category: "fraud", level: "high", pattern: /(?:firibgarlik|aldab\s+pul\s+olish|soxta\s+hujjat|parol\s+o'?g'?irlash|kartadan\s+pul\s+o'?g'?irlash|phishing|carding|scam|steal\s+(?:password|credentials)|fake\s+identity|мошенничество|фишинг|украсть\s+пароль)/iu },
