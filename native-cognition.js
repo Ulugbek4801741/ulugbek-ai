@@ -105,7 +105,7 @@ function actionFallbackReply(query) {
   const intent = classifyIntent(query);
   if (!intent.actionRequested && intent.domain === "general") return null;
   const prompts = {
-    work: "Ish bo‘yicha yordam beraman. Qaysi kasb yoki ish turini izlayapsiz va qaysi davlat/shaharda?",
+    work: "Albatta, ish topishga yordam beraman. Qaysi davlat yoki shaharda ish qidiramiz? Qaysi kasb yoki ish turini xohlaysiz?",
     education: "Ta’lim bo‘yicha yordam beraman. Qaysi fan yoki ko‘nikmani o‘rganmoqchisiz?",
     technology: "Texnik vazifani ko‘rib chiqaman. Qaysi dastur, qurilma yoki kodda muammo bor?",
     documents: "Hujjat bilan yordam beraman. Hujjatni yuboring yoki qanday hujjat kerakligini ayting.",
