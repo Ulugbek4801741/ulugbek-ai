@@ -21,8 +21,13 @@ function analyze(message) {
 
 function safetyReply(context) {
   const category = context?.ethics?.category;
-  if (!category || category === "none" || context.ethics.allowed) return null;
   const lang = context?.language?.code || "uz";
+  if (category === "prevention" && context?.ethics?.detectedCategory === "self_harm") {
+    if (lang === "ru") return "Если вы хотите помочь человеку, который может причинить себе вред: спокойно выслушайте его, не оставляйте одного при непосредственной опасности, помогите отойти от опасных предметов и свяжитесь с близким человеком или местной экстренной службой. Спросить прямо о риске самоубийства не усиливает его. Если опасность срочная, обратитесь за экстренной помощью.";
+    if (lang === "en") return "If you’re trying to help someone who may hurt themselves: listen calmly, don’t leave them alone if danger is immediate, help them move away from dangerous items, and contact someone they trust or local emergency services. Asking directly about suicide does not increase the risk. If danger is imminent, seek emergency help now.";
+    return "Agar o‘ziga zarar yetkazishi mumkin bo‘lgan insonga yordam bermoqchi bo‘lsangiz: uni hukm qilmasdan tinglang, xavf yaqin bo‘lsa yolg‘iz qoldirmang, xavfli buyumlardan uzoqlashishiga yordam bering va ishonchli yaqin inson yoki mahalliy shoshilinch yordam bilan bog‘laning. O‘z joniga qasd haqida to‘g‘ridan-to‘g‘ri so‘rash xavfni oshirmaydi. Xavf darhol bo‘lsa, shoshilinch yordam chaqiring.";
+  }
+  if (!category || category === "none" || context.ethics.allowed) return null;
   if (category === "self_harm") {
     if (lang === "ru") return "Мне жаль, что вам сейчас так тяжело. Пожалуйста, не оставайтесь в одиночестве. Отойдите от предметов, которыми можно причинить себе вред, и свяжитесь с близким человеком, которому доверяете. Если опасность непосредственная, обратитесь в местную экстренную службу. Вы сейчас в безопасном месте?";
     if (lang === "en") return "I’m sorry you’re facing this. Please don’t stay alone right now. Move away from anything you could use to hurt yourself and contact someone you trust who can stay with you. If you may act on this soon, contact local emergency services now. Are you somewhere safe at this moment?";
