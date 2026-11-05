@@ -530,22 +530,25 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       safety: { blocked: true, category: shieldDecision.reason, quarantined: shieldDecision.quarantined === true }
     });
   }
-  // Dedicated job-search intent: ULUGBEK AI searches public job listings itself.
-  if (require("./modules/job-search").isJobSearchRequest(message)) {
-    const jobSearch = require("./modules/job-search");
+  // Explicit web/link and job-search requests are handled by ULUGBEK AI's universal web-search capability.
+  const universalSearch = require("./modules/universal-web-search");
+  const searchIntent = universalSearch.detectSearchIntent(message);
+  if (searchIntent.shouldSearch) {
     const webSearch = require("./modules/chat-web-research");
     try {
-      const jobs = await jobSearch.searchJobs(message, webSearch, { limit: 5 });
+      const found = await universalSearch.searchWeb(message, webSearch, { limit: 6 });
       return res.json({
-        reply: jobs.reply,
-        mode: "native-public-job-search-single-agent-no-external-ai",
+        reply: found.reply,
+        mode: "native-universal-public-web-search-single-agent-no-external-ai",
         agents: ["ULUGBEK Universal Agent"],
-        reasoning: { method: "public-job-search-with-source-links", answerable: jobs.results.length > 0, facts: [] },
-        jobSearchUsed: true,
-        jobResults: jobs.results
+        reasoning: { method: "universal-public-web-search-with-source-links", answerable: found.results.length > 0, facts: [] },
+        webSearchUsed: true,
+        jobSearchUsed: searchIntent.isJobSearch,
+        platformSearch: searchIntent.platforms,
+        webResults: found.results
       });
     } catch (_) {
-      return res.status(502).json({ error: "ULUGBEK AI ish qidiruvini yakunlay olmadi. Internet qidiruv manbasini tekshiring." });
+      return res.status(502).json({ error: "ULUGBEK AI internet qidiruvini yakunlay olmadi. Qidiruv manbasini tekshiring." });
     }
   }
   // One-agent chat mode: optional self-hosted model only; never call a hosted AI provider.
