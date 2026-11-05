@@ -618,6 +618,48 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   const universalSearch = require("./modules/universal-web-search");
   const searchIntent = universalSearch.detectSearchIntent(message);
   if (searchIntent.shouldSearch) {
+    if (searchIntent.isJobSearch) {
+      const jobSearch = require("./modules/job-search");
+      if (!jobSearch.hasLocationHint(message)) {
+        return res.json({
+          reply: jobSearch.locationClarification(),
+          mode: "job-search-needs-location",
+          agents: ["ULUGBEK Universal Agent"],
+          jobSearchUsed: false,
+          cognition
+        });
+      }
+      const jobWebSearch = require("./modules/chat-web-research");
+      const jobs = await jobSearch.searchJobs(message, jobWebSearch, { limit: 5 });
+      let jobReply = jobs.reply;
+      let jobModelUsed = false;
+      if (jobs.results.length && singleAgent.status().configured) {
+        try {
+          const evidence = jobs.results.map(item => ({
+            title: item.title,
+            content: item.snippet,
+            source: item.url,
+            status: item.pageRead ? "unverified-public-job-page" : "unverified-job-search-snippet"
+          }));
+          const synthesized = await singleAgent.answer(message, evidence, conversationContext);
+          if (synthesized?.reply) {
+            jobReply = synthesized.reply + "\\n\\nVakansiyalar manbalari:\\n" +
+              jobs.results.map((item, index) => (index + 1) + ". " + item.title + "\\n" + item.url).join("\\n");
+            jobModelUsed = true;
+          }
+        } catch (_) {}
+      }
+      return res.json({
+        reply: jobReply,
+        mode: jobModelUsed ? "self-hosted-job-search-agent" : "native-job-search-results",
+        agents: ["ULUGBEK Universal Agent"],
+        jobSearchUsed: true,
+        webSearchUsed: jobs.ok,
+        webResults: jobs.results,
+        synthesisModelConfigured: singleAgent.status().configured,
+        cognition
+      });
+    }
     const webSearch = require("./modules/chat-web-research");
     const nativeBrain = require("./lab-learning-worker");
     let found = { ok: false, results: [], reply: "Internet qidiruvi hozircha ishlamadi." };
