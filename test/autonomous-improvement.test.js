@@ -43,7 +43,7 @@ test("planner persists, deduplicates, and requires admin decision without execut
 
     const proposal = planner.list({ limit: 100 })[0];
     assert.equal(proposal.status, "pending_approval");
-    assert.throws(() => planner.decide(proposal.id, "execute"), /approve yoki reject/);
+    await assert.rejects(planner.decide(proposal.id, "execute"), /approve yoki reject/);
 
     const approved = await planner.decide(proposal.id, "approve", "test-admin");
     assert.equal(approved.status, "approved_for_implementation");
