@@ -378,7 +378,7 @@ test("API smoke tests", async (t) => {
       const body = await response.json();
       assert.equal(response.status, 200);
       assert.match(body.reply, /Hello — Salom/);
-      assert.equal(body.webResearchUsed, undefined);
+      assert.equal(body.webResearchUsed, false);
       assert.doesNotMatch(body.reply, /Grokipedia|StudyX|Instagram/);
     });
 
