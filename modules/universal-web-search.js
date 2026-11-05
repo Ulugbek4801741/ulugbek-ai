@@ -3,7 +3,7 @@
 const PLATFORM_HINTS = [
   { pattern: /\b(youtube|ютуб)\b|youtube\.com/i, domain: "site:youtube.com" },
   { pattern: /\b(facebook|фейсбук)\b|facebook\.com/i, domain: "site:facebook.com" },
-  { pattern: /\b(telegram|телеграм)\b|t\.me/i, domain: "(site:t.me OR site:telegram.org)" },
+  { pattern: /(?:\btelegram\w*|\bтелеграм\w*)|t\.me/i, domain: "(site:t.me OR site:telegram.org)" },
   { pattern: /\b(instagram|инстаграм)\b|instagram\.com/i, domain: "site:instagram.com" },
   { pattern: /\b(tiktok|тик-ток)\b|tiktok\.com/i, domain: "site:tiktok.com" },
   { pattern: /\b(google|гугл)\b|google\.com/i, domain: "site:google.com" }
