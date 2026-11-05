@@ -55,6 +55,9 @@ app.use(helmet({
       baseUri: ["'self'"],
       frameAncestors: ["'none'"]
     }
+  },
+  permissionsPolicy: {
+    directives: { microphone: ["self"], camera: [], geolocation: [] }
   }
 }));
 app.use(express.json({ limit: "20kb", strict: true, type: "application/json" }));
