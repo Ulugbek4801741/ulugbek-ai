@@ -35,3 +35,35 @@ test("does not allow custom untrusted Anthropic API hosts", () => {
     ULUGBEK_AI_TOKEN: "secret", ULUGBEK_AI_BASE_URL: "https://attacker.example/messages"
   }));
 });
+
+test("uses existing Render Gemini variables without requiring renamed secrets", () => {
+  const env = { GEMINI_API_KEY: "render-gemini-secret", GEMINI_MODEL: "gemini-flash-latest" };
+  const config = provider.configuration(env);
+  assert.equal(config.configured, true);
+  assert.equal(config.provider, "gemini");
+  assert.equal(config.model, "gemini-flash-latest");
+  const request = provider.request("Salom", "System", env);
+  assert.match(request.url, /key=render-gemini-secret/);
+});
+
+test("uses existing Render OpenAI variables as an OpenAI-compatible endpoint", () => {
+  const env = { OPENAI_API_KEY: "render-openai-secret", OPENAI_BASE_URL: "https://api.openai.com/v1/", OPENAI_MODEL: "gpt-test" };
+  const config = provider.configuration(env);
+  assert.equal(config.configured, true);
+  assert.equal(config.provider, "openai-compatible");
+  assert.equal(config.endpoint, "https://api.openai.com/v1/chat/completions");
+  const request = provider.request("Hi", "System", env);
+  assert.equal(request.options.headers.Authorization, "Bearer render-openai-secret");
+});
+
+test("explicit provider selection takes precedence over legacy Render credentials", () => {
+  const env = {
+    ULUGBEK_AI_PROVIDER: "anthropic",
+    ULUGBEK_AI_MODEL: "claude-test",
+    ULUGBEK_AI_TOKEN: "explicit-secret",
+    GEMINI_API_KEY: "other-secret",
+    GEMINI_MODEL: "gemini-flash-latest"
+  };
+  assert.equal(provider.configuration(env).provider, "anthropic");
+  assert.equal(provider.request("Hi", "System", env).options.headers["x-api-key"], "explicit-secret");
+});
