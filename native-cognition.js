@@ -20,7 +20,7 @@ function splitFacts(text) {
 }
 function reason(query, entries) {
   const linguistic = languageCognition.analyze(query);
-  const languageCode = linguistic.language.code;
+  const languageCode = ["uz", "en", "ru", "tr", "kk"].includes(linguistic.language.code) ? linguistic.language.code : "uz";
   const q = new Set([...words(query).map(word => languageCognition.stemToken(word, languageCode)), ...linguistic.concepts]);
   const ranked = [];
   for (const entry of entries || []) {
