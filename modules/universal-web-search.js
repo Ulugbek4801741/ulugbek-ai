@@ -9,7 +9,7 @@ const PLATFORM_HINTS = [
   { pattern: /\b(google|гугл)\b|google\.com/i, domain: "site:google.com" }
 ];
 
-const JOB_INTENT = /\bish\s*(?:top(?:ib)?\s*ber|qidir(?:ib)?\s*ber|kerak|o\s*rin(?:lar)?|vakans(?:iya|iyalar)?|izlay(?:apman|man)?|qidir)|\bvakans(?:iya|iyalar)\b|\bjob\s*(?:search|opening|vacanc(?:y|ies))\b|\bfind\s+(?:me\s+)?a?\s*jobs?\b|\bemployment\s+(?:opportunit|jobs?)|\bработ(?:а|у)\s*(?:найти|ищу|нужна)|\bваканси/iu;
+const JOB_INTENT = /\bish\s*(?:top(?:ib)?(?:\s*ber)?|qidir(?:ib)?\s*ber|kerak|o\s*rin(?:lar)?|vakans(?:iya|iyalar)?|izlay(?:apman|man)?|qidir)|\bvakans(?:iya|iyalar)\b|\bjob\s*(?:search|opening|vacanc(?:y|ies))\b|\bfind\s+(?:me\s+)?a?\s*jobs?\b|\bemployment\s+(?:opportunit|jobs?)|\bработ(?:а|у)\s*(?:найти|ищу|нужна)|\bваканси/iu;
 const LINK_INTENT = /(?:\blink\b|\bssilka\b|\bhavola\b|\bmanzilini\b|\bwebsite\b|\bweb.?sayt\b|\bsaytini\b|\bkanal(?:ini)?\b|\bakkaunt(?:ini)?\b|\bprofil(?:ini)?\b|\bvideo(?:sini)?\b|\btop(?:ib)?\s*ber|\bqidir(?:ib)?\s*ber|\bfind\b|\bsearch\b|\bwhere\s+can\s+i\b)/iu;
 
 function detectSearchIntent(value) {
