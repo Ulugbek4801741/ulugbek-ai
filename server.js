@@ -627,6 +627,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   const message = typeof req.body?.message === "string" ? req.body.message.trim() : "";
   const suppliedSessionId = typeof req.body?.sessionId === "string" ? req.body.sessionId : "";
   const sessionId = /^[a-zA-Z0-9_-]{8,80}$/.test(suppliedSessionId) ? suppliedSessionId : crypto.randomUUID().replace(/-/g, "");
+  req.chatSessionId = sessionId;
   res.set("Cache-Control", "no-store");
   if (!message) return res.status(400).json({ error: "Xabar bo‘sh bo‘lmasligi kerak." });
   if (message.length > MAX_TASK_LENGTH) return res.status(413).json({ error: "Xabar 4000 belgidan oshmasligi kerak." });
@@ -703,7 +704,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     const nativeBrain = require("./lab-learning-worker");
     let found = { ok: false, results: [], reply: "Internet qidiruvi hozircha ishlamadi." };
     try {
-      found = await universalSearch.searchWeb(message, webSearch, { limit: 8 });
+      found = await universalSearch.searchWeb(conversationMessage, webSearch, { limit: 8 });
     } catch (_) {
       // Search failure must not crash chat; try the local knowledge and configured local model.
     }
@@ -713,7 +714,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     try {
       // If configured, the self-hosted language model synthesizes one answer from the question and evidence.
       // No hosted AI provider or external API key is called by this path.
-      result = await singleAgent.answer(message, evidence, conversationContext);
+      result = await singleAgent.answer(conversationMessage, evidence, conversationContext);
     } catch (_) {}
 
     if (!result) {
@@ -765,10 +766,10 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   try {
     const nativeBrain = require("./lab-learning-worker");
     const answerWithOneAgent = async entries => {
-      const modelAnswer = await singleAgent.answer(message, entries, conversationContext);
+      const modelAnswer = await singleAgent.answer(conversationMessage, entries, conversationContext);
       return modelAnswer || nativeBrain.buildLocalReply(conversationMessage, entries, conversationContext);
     };
-    let learned = await nativeBrain.searchKnowledge(message, 5);
+    let learned = await nativeBrain.searchKnowledge(conversationMessage, 5);
     let result = await answerWithOneAgent(learned);
     const webResearchUsed = false;
     return res.json({
