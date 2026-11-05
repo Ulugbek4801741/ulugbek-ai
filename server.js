@@ -175,7 +175,7 @@ app.get("/api/admin/overview", requireAdmin, (_req, res) => {
     ethicalReasoningReady: ethicalReasoning.status().ready,
     conversationPipelineReady: conversationOrchestrator.status().ready,
     independentLanguageReady: languageCognition.status().ready,
-    independentLanguageModelTrained: languageCognition.status().modelType !== "not-trained-yet",
+    independentLanguageModelTrained: languageCognition.status().modelTrained,
     localModelConfigured: singleAgent.status().configured,
     externalAiApiEnabled: false,
     model: singleAgent.status(),
