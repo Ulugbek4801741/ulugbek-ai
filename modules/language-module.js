@@ -12,7 +12,7 @@ const LANGUAGE_RULES = {
 };
 
 const UZ_CYRILLIC_WORDS = /(?:менга|ёрдам|қандай|керак|билан|учун|сиз|биз|ишлайди|беринг|нима|қиласиз)/giu;
-const RU_CYRILLIC_WORDS = /(?:что|как|пожалуйста|помоги|помогите|для|это|мне|нужно|можно|спасибо|здравствуйте|привет|почему|где|когда)/giu;
+const RU_CYRILLIC_WORDS = /(?:что|как|пожалуйста|помоги|помогите|для|это|мне|нужно|можно|спасибо|здравствуйте|привет|почему|где|когда|хочу|умереть|самоубийство|навредить|себе|защитить|мошенничество)/giu;
 const WORDS = {
   uz: /\b(salom|assalomu|alaykum|uchun|qanday|qil|kerak|menga|ber|bilan|haqida|yozib|tushuntir|iltimos|rahmat|o'zbek|o‘zbek|bo'lishi|bo‘lishi|mumkin|emas|men|siz|biz)\b/giu,
   en: /\b(the|and|what|how|please|help|with|from|this|that|you|your|can|could|would|should|hello|thanks|about|for)\b/giu,
