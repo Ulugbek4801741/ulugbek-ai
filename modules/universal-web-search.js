@@ -56,11 +56,12 @@ async function searchWeb(message, webSearch, options = {}) {
   };
   const limit = Math.max(3, Math.min(10, Number(options.limit) || 8));
   const queries = buildUniversalSearchQueries(message);
+  let failedQueries = 0;
   const batches = await Promise.all(queries.map(async query => {
     try {
       const found = await webSearch.search(query);
       return Array.isArray(found) ? found : [];
-    } catch (_) { return []; }
+    } catch (_) { failedQueries += 1; return []; }
   }));
   const candidates = [];
   const seenUrls = new Set();
@@ -70,7 +71,11 @@ async function searchWeb(message, webSearch, options = {}) {
     candidates.push(item);
   }
   if (!candidates.length) return {
-    ok: true, results: [], queries, reply: "ULUGBEK AI bir nechta qidiruv so'rovi bilan izlandi, ammo hozircha mos ochiq manba topilmadi. Bu ma'lumot mavjud emas degani emas."
+    ok: failedQueries < queries.length, results: [], queries,
+    error: failedQueries === queries.length ? "all-search-providers-failed" : undefined,
+    reply: failedQueries === queries.length
+      ? "Internet qidiruv manbalari hozircha javob bermadi. Keyinroq qayta urinib ko'ring."
+      : "ULUGBEK AI bir nechta qidiruv so'rovi bilan izlandi, ammo hozircha mos ochiq manba topilmadi. Bu ma'lumot mavjud emas degani emas."
   };
   const pages = await Promise.all(candidates.slice(0, Math.min(15, limit * 2)).map(async item => {
     let page = null;
