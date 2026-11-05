@@ -183,3 +183,19 @@ Voice recognition and speech output are browser/device capabilities, not a serve
 ### Unified conversation pipeline
 
 Every chat request passes through one shared conversation orchestrator before web search, local knowledge retrieval or model inference. It creates a consistent language, emotion and ethics context. The same safety decision is applied before research or model calls, and the native knowledge fallback uses that same context rather than bypassing it. Defensive and prevention questions are distinguished from harmful intent where the rule-based classifier can identify that context. These checks are conservative heuristics, not a complete safety system or a substitute for human judgment.
+
+ 
+## Mustaqil til va tafakkur moduli
+
+`modules/language-cognition.js` is the independent local language-learning core. It tokenizes Uzbek/English/Russian/Turkish/Kazakh text, extracts concepts, estimates intent and sentence structure, creates a step-by-step reasoning plan, ranks evidence with learned vocabulary statistics, and predicts likely next words from its local n-gram model.
+
+`modules/language-learning-worker.js` runs in the backend process and periodically reads the existing public-research knowledge store. It learns language patterns from sourced Wikipedia summaries in `pending-review` or `approved` state, but it never promotes factual notes to approved. The independent library is stored as `language-cognition-corpus.json` and `language-cognition-model.json` under `ULUGBEK_DATA_DIR` using atomic file replacement. The training set is bounded and only accepts HTTPS article pages from the configured Wikipedia language domains.
+
+The learned language statistics are connected to the shared conversation orchestrator, the self-hosted model prompt, and native evidence ranking. The native reasoner can use learned terms to rank existing approved evidence; it does not turn unverified training text into factual answers. The model is a locally trained word-level unigram/bigram/trigram statistical model, **not a neural foundation model**; it does not acquire human consciousness or general reasoning by itself. Better open-ended conversation still needs an adequately sized model running on hardware with enough RAM/VRAM.
+
+Endpoints:
+- `GET /api/language/status` — worker, corpus, vocabulary and validation status.
+- `POST /api/language/analyze` with `{"text":"..."}` — language, intent, concepts, structure and local next-word predictions.
+- `GET /api/cognition/status` — includes the independent language-learning module.
+
+The background learner does not need a paid API key. Internet collection remains subject to the existing source allowlist, robots.txt, rate limits and server uptime. Only language patterns are learned from pending candidates; factual answers still require approved knowledge or separately verified research.

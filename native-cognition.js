@@ -1,6 +1,7 @@
 "use strict";
 
 const conversationOrchestrator = require("./modules/conversation-orchestrator");
+const languageCognition = require("./modules/language-cognition");
 
 // Native symbolic cognition: no hosted AI, no model weights, no API key.
 const STOP = new Set(("the and for with that this from into about which when where what who whom whose are was were been being have has had will would could should can may might not but or nor dan yoki uchun bilan bu shu bir uning ular qanday nima qachon qayerda kim haqida orqali ham esa edi bor yo‘q qaysi qayerda qayerga qayerdan").split(/\s+/));
@@ -18,11 +19,13 @@ function splitFacts(text) {
     .map(x=>x.trim()).filter(x=>x.length > 25 && x.length < 700).slice(0,20);
 }
 function reason(query, entries) {
-  const q = new Set(words(query));
+  const linguistic = languageCognition.analyze(query);
+  const languageCode = ["uz", "en", "ru", "tr", "kk"].includes(linguistic.language.code) ? linguistic.language.code : "uz";
+  const q = new Set([...words(query).map(word => languageCognition.stemToken(word, languageCode)), ...linguistic.concepts]);
   const ranked = [];
   for (const entry of entries || []) {
     for (const fact of splitFacts(entry.content)) {
-      const f = new Set(words(fact));
+      const f = new Set(words(fact).map(word => languageCognition.stemToken(word, languageCode)));
       let common = 0;
       for (const term of q) {
         const matched = [...f].some(candidate =>
@@ -33,11 +36,12 @@ function reason(query, entries) {
         );
         if (matched) common++;
       }
+      const learnedScore = languageCognition.scoreText(query, fact, linguistic.language.code);
       const requiredOverlap = Math.min(2, q.size);
       if (common >= requiredOverlap && q.size > 0) ranked.push({
         fact, title: entry.title, source: entry.source,
-        score: (common/q.size) + Math.min(common,5)*0.03,
-        matchedTerms: common
+        score: (common/q.size) + learnedScore.score * 0.2 + Math.min(common,5)*0.03,
+        matchedTerms: common, learnedMatchedTerms: learnedScore.matchedTerms
       });
     }
   }
@@ -48,8 +52,8 @@ function reason(query, entries) {
     if (seen.has(key)) return false;
     seen.add(key); return true;
   }).slice(0,5);
-  return { method:"symbolic-retrieval-and-evidence-ranking", answerable:facts.length>0,
-    queryConcepts:concepts(query), facts,
+  return { method:"symbolic-retrieval-language-model-and-evidence-ranking", answerable:facts.length>0,
+    queryConcepts:concepts(query), intent:linguistic.intent, cognitivePlan:linguistic.plan, facts,
     inference:facts.length>1 ? "Bir nechta dalil solishtirildi." : "Bitta mos dalil topildi; keng xulosa uchun dalil yetarli emas." };
 }
 function normalizeInput(value) {
