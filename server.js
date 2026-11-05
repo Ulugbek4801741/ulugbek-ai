@@ -26,7 +26,6 @@ const FRONTEND_ORIGINS = new Set([
   "https://ulugbek4801741.github.io",
   ...(process.env.FRONTEND_ORIGIN || "").split(",").map(value => value.trim().replace(/\/$/, "")).filter(Boolean)
 ]);
-const FRONTEND_ORIGIN = [...FRONTEND_ORIGINS][0];
 app.use((req, res, next) => {
   const origin = req.headers.origin || "";
   if (origin && FRONTEND_ORIGINS.has(origin)) {
@@ -49,7 +48,7 @@ app.use(helmet({
       styleSrc: ["'self'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
       imgSrc: ["'self'", "data:", "blob:"],
-      connectSrc: ["'self'", ...(FRONTEND_ORIGIN ? [FRONTEND_ORIGIN] : [])],
+      connectSrc: ["'self'", ...FRONTEND_ORIGINS],
       manifestSrc: ["'self'"],
       workerSrc: ["'self'"],
       objectSrc: ["'none'"],
