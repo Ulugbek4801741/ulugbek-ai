@@ -169,6 +169,8 @@ app.get("/api/admin/overview", requireAdmin, (_req, res) => {
     nativeReasoningReady: true,
     trainedLanguageModelReady: false,
     languageModuleReady: languageModule.status().ready,
+    emotionalIntelligenceReady: emotionalIntelligence.status().ready,
+    ethicalReasoningReady: ethicalReasoning.status().ready,
     localModelConfigured: singleAgent.status().configured,
     externalAiApiEnabled: false,
     model: singleAgent.status(),
@@ -377,6 +379,7 @@ app.get("/api/diagnostics", (_req, res) => {
     productionDatabase: "not-configured-task-store-uses-local-json-file",
     agentExecution: "one universal agent with optional self-hosted local model; no multi-agent delegation; source writes and deploy remain disabled",
     nativeReasoning: "ulugbek-native-rule-reasoner-v1; deterministic symbolic planning; not a trained neural language model",
+    cognition: { language: languageModule.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status() },
     externalAiApiEnabled: false,
     trainedLanguageModelReady: false,
     languageModule: languageModule.status(),
@@ -569,8 +572,10 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   const cognition = { language: languageModule.detectLanguage(message), emotion: emotionalContext.emotion, ethics: { risk: ethicalAssessment.risk, category: ethicalAssessment.category } };
   if (ethicalAssessment.category === "self_harm") {
     const uz = cognition.language.code === "uz";
+    const ru = cognition.language.code === "ru";
     const reply = uz
       ? "Buni boshdan kechirayotganingizdan afsusdaman. Siz hozir yolg‘iz qolmasligingiz muhim. O‘zingizga zarar yetkazishi mumkin bo‘lgan buyumlardan uzoqlashing va hozir ishonadigan yaqin insoningizga qo‘ng‘iroq qiling yoki yoniga boring. Agar o‘zingizga zarar yetkazish xavfi yaqin bo‘lsa, mahalliy shoshilinch yordam xizmatiga murojaat qiling. Hozir xavfsiz joydamisiz? O‘zingizga zarar yetkazish rejangiz yoki yoningizda xavfli vosita bormi?"
+      : ru ? "Мне жаль, что вам сейчас так тяжело. Пожалуйста, не оставайтесь в одиночестве. Отойдите от предметов, которыми можно причинить себе вред, и свяжитесь с близким человеком, которому доверяете. Если опасность непосредственная, обратитесь в местную экстренную службу. Вы сейчас в безопасном месте?"
       : "I’m sorry you’re facing this. Please don’t stay alone right now. Move away from anything you could use to hurt yourself and contact someone you trust who can stay with you. If you may act on this soon, contact local emergency services now. Are you somewhere safe at this moment?";
     return res.json({ reply, mode: "safety-support-response", agents: ["ULUGBEK Universal Agent"], cognition, safety: { intervention: true, category: "self_harm" } });
   }
