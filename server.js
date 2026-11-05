@@ -218,8 +218,8 @@ app.get("/api/admin/overview", requireAdmin, (_req, res) => {
     conversationPipelineReady: conversationOrchestrator.status().ready,
     independentLanguageReady: languageCognition.status().ready,
     independentLanguageModelTrained: languageCognition.status().modelTrained,
-    localModelConfigured: singleAgent.status().configured,
-    externalAiApiEnabled: false,
+    localModelConfigured: singleAgent.status().configured && singleAgent.status().provider === "openai-compatible",
+    externalAiApiEnabled: singleAgent.status().configured && singleAgent.status().provider !== "openai-compatible",
     model: singleAgent.status(),
     cognition: "one-universal-agent-with-native-fallback",
     agentWorker: "single-process-queue",
@@ -546,6 +546,12 @@ app.post("/api/images/generate", (req, res, next) => {
   } catch (error) {
     return res.status(error.status || 502).json({ error: error.message || "Rasm yaratib bo‘lmadi." });
   }
+});
+
+app.get("/api/ai/status", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  const model = singleAgent.status();
+  return res.json({ ok: true, configured: model.configured, provider: model.provider, model: model.model || null, apiKeyRequired: model.apiKeyRequired, tokenConfigured: model.tokenConfigured || false });
 });
 
 app.get("/api/videos/status", (_req, res) => {
