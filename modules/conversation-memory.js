@@ -36,7 +36,7 @@ function middleware() {
     const originalJson = res.json.bind(res);
     res.json = payload => {
       const prompt = req.chatContextMessage || req.body?.message || "";
-      if (typeof prompt === "string" && prompt.trim()) remember(req.body?.sessionId, prompt);
+      if (typeof prompt === "string" && prompt.trim()) remember(req.chatSessionId || req.body?.sessionId, prompt);
       return originalJson(payload);
     };
     next();
