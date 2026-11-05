@@ -1,16 +1,16 @@
 "use strict";
 
 const PLATFORM_HINTS = [
-  { pattern: /\\b(youtube|ютуб)\\b|youtube\\.com/i, domain: "site:youtube.com" },
-  { pattern: /\\b(facebook|фейсбук)\\b|facebook\\.com/i, domain: "site:facebook.com" },
-  { pattern: /\\b(telegram|телеграм)\\b|t\\.me/i, domain: "(site:t.me OR site:telegram.org)" },
-  { pattern: /\\b(instagram|инстаграм)\\b|instagram\\.com/i, domain: "site:instagram.com" },
-  { pattern: /\\b(tiktok|тик-ток)\\b|tiktok\\.com/i, domain: "site:tiktok.com" },
-  { pattern: /\\b(google|гугл)\\b|google\\.com/i, domain: "site:google.com" }
+  { pattern: /\b(youtube|ютуб)\b|youtube\.com/i, domain: "site:youtube.com" },
+  { pattern: /\b(facebook|фейсбук)\b|facebook\.com/i, domain: "site:facebook.com" },
+  { pattern: /\b(telegram|телеграм)\b|t\.me/i, domain: "(site:t.me OR site:telegram.org)" },
+  { pattern: /\b(instagram|инстаграм)\b|instagram\.com/i, domain: "site:instagram.com" },
+  { pattern: /\b(tiktok|тик-ток)\b|tiktok\.com/i, domain: "site:tiktok.com" },
+  { pattern: /\b(google|гугл)\b|google\.com/i, domain: "site:google.com" }
 ];
 
-const JOB_INTENT = /\\bish\\s*(?:top(?:ib)?\\s*ber|qidir(?:ib)?\\s*ber|kerak|o\\s*rin(?:lar)?|vakans(?:iya|iyalar)?|izlay(?:apman|man)?|qidir)|\\bvakans(?:iya|iyalar)\\b|\\bjob\\s*(?:search|opening|vacanc(?:y|ies))\\b|\\bfind\\s+(?:me\\s+)?a?\\s*jobs?\\b|\\bemployment\\s+(?:opportunit|jobs?)|\\bработ(?:а|у)\\s*(?:найти|ищу|нужна)|\\bваканси/iu;
-const LINK_INTENT = /(?:\\blink\\b|\\bssilka\\b|\\bhavola\\b|\\bmanzilini\\b|\\bwebsite\\b|\\bweb.?sayt\\b|\\bsaytini\\b|\\bkanal(?:ini)?\\b|\\bakkaunt(?:ini)?\\b|\\bprofil(?:ini)?\\b|\\bvideo(?:sini)?\\b|\\btop(?:ib)?\\s*ber|\\bqidir(?:ib)?\\s*ber|\\bfind\\b|\\bsearch\\b|\\bwhere\\s+can\\s+i\\b)/iu;
+const JOB_INTENT = /\bish\s*(?:top(?:ib)?\s*ber|qidir(?:ib)?\s*ber|kerak|o\s*rin(?:lar)?|vakans(?:iya|iyalar)?|izlay(?:apman|man)?|qidir)|\bvakans(?:iya|iyalar)\b|\bjob\s*(?:search|opening|vacanc(?:y|ies))\b|\bfind\s+(?:me\s+)?a?\s*jobs?\b|\bemployment\s+(?:opportunit|jobs?)|\bработ(?:а|у)\s*(?:найти|ищу|нужна)|\bваканси/iu;
+const LINK_INTENT = /(?:\blink\b|\bssilka\b|\bhavola\b|\bmanzilini\b|\bwebsite\b|\bweb.?sayt\b|\bsaytini\b|\bkanal(?:ini)?\b|\bakkaunt(?:ini)?\b|\bprofil(?:ini)?\b|\bvideo(?:sini)?\b|\btop(?:ib)?\s*ber|\bqidir(?:ib)?\s*ber|\bfind\b|\bsearch\b|\bwhere\s+can\s+i\b)/iu;
 
 function detectSearchIntent(value) {
   const text = String(value || "").trim();
@@ -21,7 +21,7 @@ function detectSearchIntent(value) {
 }
 
 function buildUniversalSearchQuery(value) {
-  const original = String(value || "").replace(/\\s+/g, " ").trim().slice(0, 180);
+  const original = String(value || "").replace(/\s+/g, " ").trim().slice(0, 180);
   const intent = detectSearchIntent(original);
   const hints = [];
   if (intent.isJobSearch) hints.push("vakansiya ish o'rinlari ish beruvchi maosh ishga qabul jobs vacancies employer salary hiring");
@@ -31,7 +31,7 @@ function buildUniversalSearchQuery(value) {
 }
 
 function cleanText(value, max = 650) {
-  return String(value || "").replace(/\\s+/g, " ").trim().slice(0, max);
+  return String(value || "").replace(/\s+/g, " ").trim().slice(0, max);
 }
 
 async function searchWeb(message, webSearch, options = {}) {
@@ -71,12 +71,12 @@ async function searchWeb(message, webSearch, options = {}) {
     item.snippet || "Sahifa tafsilotlarini havola orqali ko'ring.",
     "Havola: " + item.url,
     "Manba holati: " + (item.pageRead ? "sahifa ochildi; mazmuni ko'rib chiqildi" : "qidiruv parchasi; sahifa to'liq tekshirilmagan")
-  ].join("\\n")).join("\\n\\n");
+  ].join("\n")).join("\n\n");
   const label = detectSearchIntent(message).isJobSearch ? "ish va vakansiya" : "internet";
   return {
     ok: true,
     results: usable,
-    reply: "ULUGBEK AI " + label + " qidiruvida " + usable.length + " ta ochiq manba topdi. Muhim ma'lumotlarni manbaning o'zida qayta tekshiring.\\n\\n" + lines
+    reply: "ULUGBEK AI " + label + " qidiruvida " + usable.length + " ta ochiq manba topdi. Muhim ma'lumotlarni manbaning o'zida qayta tekshiring.\n\n" + lines
   };
 }
 
