@@ -9,6 +9,8 @@ const languageModule = require("./modules/language-module");
 const emotionalIntelligence = require("./modules/emotional-intelligence");
 const ethicalReasoning = require("./modules/ethical-reasoning");
 const conversationOrchestrator = require("./modules/conversation-orchestrator");
+const languageCognition = require("./modules/language-cognition");
+const languageLearningWorker = require("./modules/language-learning-worker");
 const developerAgent = require("./developer-agent");
 const agentPermissions = require("./agent-permissions");
 const learningWorkerForAdmin = require("./lab-learning-worker");
@@ -171,7 +173,7 @@ app.get("/api/admin/overview", requireAdmin, (_req, res) => {
     languageModuleReady: languageModule.status().ready,
     emotionalIntelligenceReady: emotionalIntelligence.status().ready,
     ethicalReasoningReady: ethicalReasoning.status().ready,
-    conversationPipelineReady: conversationOrchestrator.status().ready,
+    conversationPipelineReady: conversationOrchestrator.status().ready,\n    independentLanguageReady: languageCognition.status().ready,\n    independentLanguageModelTrained: languageCognition.status().modelType !== "not-trained-yet",
     localModelConfigured: singleAgent.status().configured,
     externalAiApiEnabled: false,
     model: singleAgent.status(),
@@ -318,12 +320,12 @@ app.post("/api/language/analyze", (req, res) => {
   if (!text) return res.status(400).json({ error: "Matn bo‘sh bo‘lmasligi kerak." });
   if (text.length > 4000) return res.status(413).json({ error: "Matn 4000 belgidan oshmasligi kerak." });
   const detected = languageModule.detectLanguage(text);
-  return res.json({ ok: true, detected, instruction: languageModule.buildLanguageInstruction(text) });
+  return res.json({ ok: true, detected, linguistic: languageCognition.analyze(text), instruction: languageModule.buildLanguageInstruction(text) });
 });
 
-app.get("/api/cognition/status", (_req, res) => {
+app.get("/api/language/status", (_req, res) => {\n  res.set("Cache-Control", "no-store");\n  res.json({ ok: true, languageLearning: languageLearningWorker.status() });\n});\n\napp.get("/api/cognition/status", (_req, res) => {
   res.set("Cache-Control", "no-store");
-  res.json({ ok: true, language: languageModule.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status(), voice: { input: "browser-speech-recognition", output: "browser-speech-synthesis", requiresMicrophonePermission: true }, conversationPipeline: conversationOrchestrator.status() });
+  res.json({ ok: true, language: languageModule.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status(), voice: { input: "browser-speech-recognition", output: "browser-speech-synthesis", requiresMicrophonePermission: true }, conversationPipeline: conversationOrchestrator.status(), independentLanguage: languageLearningWorker.status() });
 });
 
 app.post("/api/cognition/analyze", (req, res) => {
@@ -335,7 +337,7 @@ app.post("/api/cognition/analyze", (req, res) => {
 
 app.get("/api/ai/status", (_req, res) => {
   res.set("Cache-Control", "no-store");
-  res.json({ ok: true, agentCount: 1, agentName: "ULUGBEK Universal Agent", model: singleAgent.status(), language: languageModule.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status(), conversationPipeline: conversationOrchestrator.status(), mathEngine: "native-safe-arithmetic", research: "public-read-only-with-source-checks" });
+  res.json({ ok: true, agentCount: 1, agentName: "ULUGBEK Universal Agent", model: singleAgent.status(), language: languageModule.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status(), conversationPipeline: conversationOrchestrator.status(), independentLanguage: languageLearningWorker.status(), mathEngine: "native-safe-arithmetic", research: "public-read-only-with-source-checks" });
 });
 
 app.get("/api/health", (_req, res) => {
@@ -383,10 +385,10 @@ app.get("/api/diagnostics", (_req, res) => {
     productionDatabase: "not-configured-task-store-uses-local-json-file",
     agentExecution: "one universal agent with optional self-hosted local model; no multi-agent delegation; source writes and deploy remain disabled",
     nativeReasoning: "ulugbek-native-rule-reasoner-v1; deterministic symbolic planning; not a trained neural language model",
-    cognition: { language: languageModule.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status(), conversationPipeline: conversationOrchestrator.status() },
+    cognition: { language: languageModule.status(), languageLearning: languageLearningWorker.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status(), conversationPipeline: conversationOrchestrator.status() },
     externalAiApiEnabled: false,
     trainedLanguageModelReady: false,
-    languageModule: languageModule.status(),
+    languageModule: languageModule.status(),\n    independentLanguage: languageLearningWorker.status(),
     note: "Agent navbati server jarayoni ishlayotganida bajariladi. Hosting qayta ishga tushsa yoki uxlab qolsa 24/7 kafolatlanmaydi. JSON saqlash vaqtinchalik; doimiy ishlab chiqarish uchun PostgreSQL/Redis va alohida worker kerak. Bu diagnostika end-to-end sinov o‘rnini bosmaydi."
   });
 });
@@ -753,8 +755,7 @@ app.use((err, _req, res, _next) => {
   console.error("Server xatosi:", err.message);
   return res.status(500).json({ error: "Ichki server xatosi." });
 });
-learningWorker.start();
-agentRuntime.startWorker().then(() => {
+learningWorker.start();\nlanguageLearningWorker.start();\nagentRuntime.startWorker().then(() => {
   const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`ULUGBEK AI serveri ${PORT}-portda ishga tushdi.`);
   });
