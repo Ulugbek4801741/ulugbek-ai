@@ -100,7 +100,7 @@ function classifyIntent(query) {
   const actionRequested = /(yordam|qilib ber|tayyorla|yozib ber|topib ber|qidirib ber|tekshir|tuzat|yarat|reja tuz|o'rgat|tushuntir|tarjima|hisobla|solishtir|tahlil qil|maslahat ber)/.test(normalized);
   // More specific domains must win when a phrase contains a generic token
   // such as "ish" inside "olish" (e.g. visa olish).
-  const priority = ["travel", "health", "technology", "documents", "education", "business", "finance", "shopping", "research", "work"];
+  const priority = ["travel", "health", "technology", "documents", "education", "business", "finance", "shopping", "work", "research"];
   const domain = priority.map(id => INTENT_DOMAINS.find(item => item.id === id))
     .find(item => item && item.pattern.test(normalized));
   return { actionRequested, domain: domain ? domain.id : "general", normalized };
