@@ -15,7 +15,7 @@ test("detects job requests and general website/link searches", () => {
 test("adds relevant platform domains and preserves original request", () => {
   const query = buildUniversalSearchQuery("Telegramdagi rasmiy kanal linkini top");
   assert.match(query, /Telegramdagi/);
-  assert.match(query, /site:t\\.me/);
+  assert.ok(query.includes("(site:t.me OR site:telegram.org)"));
   assert.match(query, /official page link/);
 });
 
@@ -29,7 +29,7 @@ test("expands job search requests into vacancy terms", () => {
 test("returns public source-linked results and page-read status", async () => {
   const webSearch = {
     async search(query) {
-      assert.match(query, /site:youtube\\.com/);
+      assert.ok(query.includes("site:youtube.com"));
       return [{ title: "Official channel", url: "https://youtube.com/@example", snippet: "Public channel result" }];
     },
     async fetchPage() {
@@ -40,7 +40,7 @@ test("returns public source-linked results and page-read status", async () => {
   assert.equal(result.ok, true);
   assert.equal(result.results.length, 1);
   assert.match(result.reply, /ULUGBEK AI internet qidiruvida/);
-  assert.match(result.reply, /https:\\/\\/youtube.com\\/@example/);
+  assert.ok(result.reply.includes("https://youtube.com/@example"));
   assert.equal(result.results[0].pageRead, true);
 });
 
