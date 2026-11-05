@@ -759,3 +759,6 @@ agentRuntime.startWorker().then(() => {
   });
   server.on("error", error => console.error("HTTP server xatosi:", error.message));
 }).catch(error => {
+  console.error("Agent worker ishga tushmadi:", error.message);
+  process.exitCode = 1;
+});
