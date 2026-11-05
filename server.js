@@ -348,6 +348,8 @@ app.get("/api/health", (_req, res) => {
     nativeReasoningReady: true,
     trainedLanguageModelReady: false,
     languageModuleReady: languageModule.status().ready,
+    emotionalIntelligenceReady: emotionalIntelligence.status().ready,
+    ethicalReasoningReady: ethicalReasoning.status().ready,
     localModelConfigured: singleAgent.status().configured,
     externalAiApiEnabled: false,
     agentCount: 1,
