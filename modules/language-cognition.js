@@ -2,7 +2,7 @@
 const fs=require("node:fs/promises"), path=require("node:path"), crypto=require("node:crypto");
 const languageModule=require("./language-module");
 const LANGUAGES=new Set(["uz","en","ru","tr","kk"]);
-const SOURCE_HOSTS=new Set(["uz.wikipedia.org","en.wikipedia.org","ru.wikipedia.org"]);
+const SOURCE_HOSTS=new Set(["uz.wikipedia.org","en.wikipedia.org","ru.wikipedia.org","tr.wikipedia.org","kk.wikipedia.org"]);
 const STOPWORDS={
  uz:new Set("va yoki ham bilan uchun bu shu bir men sen siz biz ular u nima qanday qachon qayerda kim haqida orqali esa edi bor yoq emas mumkin kerak".split(" ")),
  en:new Set("the a an and or but if then with for from into about this that these those is are was were be been being to of in on at by as it its i you we they he she".split(" ")),
