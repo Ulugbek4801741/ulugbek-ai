@@ -98,12 +98,17 @@ const INTENT_DOMAINS = [
 function classifyIntent(query) {
   const normalized = normalizeInput(query);
   const actionRequested = /(yordam|qilib ber|tayyorla|yozib ber|topib ber|qidirib ber|tekshir|tuzat|yarat|reja tuz|o'rgat|tushuntir|tarjima|hisobla|solishtir|tahlil qil|maslahat ber)/.test(normalized);
-  const domain = INTENT_DOMAINS.find(item => item.pattern.test(normalized));
+  // More specific domains must win when a phrase contains a generic token
+  // such as "ish" inside "olish" (e.g. visa olish).
+  const priority = ["travel", "health", "technology", "documents", "education", "business", "finance", "shopping", "research", "work"];
+  const domain = priority.map(id => INTENT_DOMAINS.find(item => item.id === id))
+    .find(item => item && item.pattern.test(normalized));
   return { actionRequested, domain: domain ? domain.id : "general", normalized };
 }
 function actionFallbackReply(query) {
   const intent = classifyIntent(query);
-  if (!intent.actionRequested && intent.domain === "general") return null;
+  const directWorkRequest = /\\b(ish kerak|ish top|ishga joylash|vakansiya)\\b/.test(intent.normalized);
+  if (!intent.actionRequested && !directWorkRequest) return null;
   const prompts = {
     work: "Albatta, ish topishga yordam beraman. Qaysi davlat yoki shaharda ish qidiramiz? Qaysi kasb yoki ish turini xohlaysiz?",
     education: "Ta’lim bo‘yicha yordam beraman. Qaysi fan yoki ko‘nikmani o‘rganmoqchisiz?",
