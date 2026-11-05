@@ -37,7 +37,7 @@ function reason(query, entries) {
       }
       const learnedScore = languageCognition.scoreText(query, fact, linguistic.language.code);
       const requiredOverlap = Math.min(2, q.size);
-      if ((common >= requiredOverlap || learnedScore.matchedTerms.length >= 1) && q.size > 0) ranked.push({
+      if (common >= requiredOverlap && q.size > 0) ranked.push({
         fact, title: entry.title, source: entry.source,
         score: (common/q.size) + learnedScore.score * 0.2 + Math.min(common,5)*0.03,
         matchedTerms: common, learnedMatchedTerms: learnedScore.matchedTerms
