@@ -172,6 +172,7 @@ app.get("/api/admin/overview", requireAdmin, (_req, res) => {
     languageModuleReady: languageModule.status().ready,
     emotionalIntelligenceReady: emotionalIntelligence.status().ready,
     ethicalReasoningReady: ethicalReasoning.status().ready,
+    conversationPipelineReady: conversationOrchestrator.status().ready,
     localModelConfigured: singleAgent.status().configured,
     externalAiApiEnabled: false,
     model: singleAgent.status(),
@@ -323,7 +324,7 @@ app.post("/api/language/analyze", (req, res) => {
 
 app.get("/api/cognition/status", (_req, res) => {
   res.set("Cache-Control", "no-store");
-  res.json({ ok: true, language: languageModule.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status(), voice: { input: "browser-speech-recognition", output: "browser-speech-synthesis", requiresMicrophonePermission: true } });
+  res.json({ ok: true, language: languageModule.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status(), voice: { input: "browser-speech-recognition", output: "browser-speech-synthesis", requiresMicrophonePermission: true }, conversationPipeline: conversationOrchestrator.status() });
 });
 
 app.post("/api/cognition/analyze", (req, res) => {
@@ -382,7 +383,7 @@ app.get("/api/diagnostics", (_req, res) => {
     productionDatabase: "not-configured-task-store-uses-local-json-file",
     agentExecution: "one universal agent with optional self-hosted local model; no multi-agent delegation; source writes and deploy remain disabled",
     nativeReasoning: "ulugbek-native-rule-reasoner-v1; deterministic symbolic planning; not a trained neural language model",
-    cognition: { language: languageModule.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status() },
+    cognition: { language: languageModule.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status(), conversationPipeline: conversationOrchestrator.status() },
     externalAiApiEnabled: false,
     trainedLanguageModelReady: false,
     languageModule: languageModule.status(),
