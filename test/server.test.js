@@ -394,6 +394,19 @@ test("API smoke tests", async (t) => {
       assert.doesNotMatch(body.reply, /Grokipedia|StudyX|Instagram/);
     });
 
+    await t.test("vague job request asks for location instead of returning generic job sites", async () => {
+      const response = await fetch(`${baseUrl}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: "Ish topib ber" })
+      });
+      const body = await response.json();
+      assert.equal(response.status, 200);
+      assert.equal(body.mode, "job-search-needs-location");
+      assert.match(body.reply, /qaysi davlat yoki shaharda/);
+      assert.equal(body.jobSearchUsed, false);
+    });
+
     await t.test("agent planner creates a structured plan", async () => {
       const response = await fetch(`${baseUrl}/api/agent/plan`, {
         method: "POST",

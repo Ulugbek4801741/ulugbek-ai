@@ -4,6 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { detectSearchIntent, buildUniversalSearchQuery, buildUniversalSearchQueries, searchWeb, evidenceEntries, formatEvidenceReply } = require("../modules/universal-web-search");
 const { knowledgeContext, SYSTEM_PROMPT } = require("../modules/single-agent");
+const { isJobSearchRequest, hasLocationHint, locationClarification, searchJobs } = require("../modules/job-search");
 
 test("searches only explicit discovery, job, and current-information requests", () => {
   for (const q of ["Bugun ob-havo qanday?", "Bugungi eng so'nggi yangiliklarni top", "Shveysariyada traktorchi ish topish", "Menga vakansiya qidirib ber", "YouTube kanalining linkini topib ber"]) assert.equal(detectSearchIntent(q).shouldSearch, true, q);
@@ -64,4 +65,28 @@ test("language model instructions require direct answers grounded in evidence", 
   const context = knowledgeContext([{ title: "Test", content: "Page text", source: "https://example.org", status: "unverified-public-page-content" }]);
   assert.match(context, /Page text/);
   assert.match(context, /https:\/\/example\.org/);
+});
+
+test("asks for a target location before searching a vague job request", () => {
+  assert.equal(hasLocationHint("Ish topib ber"), false);
+  assert.equal(hasLocationHint("Shveysariyada traktorchi ish topish"), true);
+  assert.equal(hasLocationHint("O'zbekistonda ish topib ber"), true);
+  assert.equal(hasLocationHint("Buxoroda ish qidirib ber"), true);
+  assert.match(locationClarification(), /qaysi davlat yoki shaharda/);
+});
+
+test("job search detects job intent and returns read public listing details", async () => {
+  assert.equal(isJobSearchRequest("Ish topib ber"), true);
+  const result = await searchJobs("Shveysariyada traktorchi ish topish", {
+    async search(query) {
+      assert.match(query, /Shveysariyada/);
+      return [{ title: "Tractor operator vacancy", url: "https://jobs.example.org/tractor", snippet: "Tractor operator role, full time." }];
+    },
+    async fetchPage(url) {
+      return { title: "Tractor operator vacancy", url, content: "Employer listing with role, location and application details.".repeat(3) };
+    }
+  });
+  assert.equal(result.results.length, 1);
+  assert.match(result.reply, /Tractor operator vacancy/);
+  assert.match(result.reply, /https:\/\/jobs\.example\.org\/tractor/);
 });
