@@ -57,11 +57,25 @@ test("HTTP health and diagnostics endpoints report real single-instance limits",
     assert.equal(health.automaticFailoverReady, false);
     assert.ok(Number.isFinite(health.processUptimeSeconds));
 
+    const reportResponse = await fetch(`${base}/api/reports/status`, { signal: AbortSignal.timeout(2000) });
+    assert.equal(reportResponse.status, 200);
+    const reportStatus = await reportResponse.json();
+    assert.equal(reportStatus.ok, true);
+    assert.equal(reportStatus.reports.intervalMinutes, 5);
+
     const diagnosticsResponse = await fetch(`${base}/api/diagnostics`, { signal: AbortSignal.timeout(2000) });
     assert.equal(diagnosticsResponse.status, 200);
     const diagnostics = await diagnosticsResponse.json();
     assert.match(diagnostics.productionDatabase, /not-configured/i);
     assert.match(diagnostics.automaticFailover, /not-configured/i);
+
+    const protectedImprovements = await fetch(`${base}/api/admin/improvements`, { signal: AbortSignal.timeout(2000) });
+    assert.equal(protectedImprovements.status, 401, "improvement proposals must require administrator authentication");
+    const protectedScan = await fetch(`${base}/api/admin/improvements/scan`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: "{}",
+      signal: AbortSignal.timeout(2000)
+    });
+    assert.equal(protectedScan.status, 401, "manual scans must require administrator authentication");
   } finally {
     child.kill("SIGTERM");
     await Promise.race([
