@@ -62,7 +62,7 @@ function addLog(task, message) {
   task.updatedAt = new Date().toISOString();
 }
 function modelConfig() {
-  return { ...singleAgent.status(), agentCount: 1, apiUsed: false, trainedLanguageModel: singleAgent.status().configured };
+  return { ...singleAgent.status(), agentCount: 1, apiUsed: false, trainedLanguageModel: false, localModelConfigured: singleAgent.status().configured };
 }
 async function runModel(task) {
   try {
