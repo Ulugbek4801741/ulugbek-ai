@@ -70,6 +70,7 @@ test("language model instructions require direct answers grounded in evidence", 
 test("asks for a target location before searching a vague job request", () => {
   assert.equal(hasLocationHint("Ish topib ber"), false);
   assert.equal(hasLocationHint("Shveysariyada traktorchi ish topish"), true);
+  assert.equal(hasLocationHint("O'zbekistonda ish topib ber"), true);
   assert.equal(hasLocationHint("Buxoroda ish qidirib ber"), true);
   assert.match(locationClarification(), /qaysi davlat yoki shaharda/);
 });
