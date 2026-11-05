@@ -30,7 +30,7 @@ class VideoGenerator(nn.Module):
         super().__init__()
         self.embedding = nn.Embedding(vocab_size, text_dim, padding_idx=0)
         self.noise_dim = noise_dim
-        self.project = nn.Linear(text_dim + noise_dim, 256 * 2 * 4 * 4)
+        self.project = nn.Linear(text_dim + noise_dim, 256 * 1 * 4 * 4)
         self.network = nn.Sequential(
             nn.BatchNorm3d(256),
             nn.ConvTranspose3d(256, 128, 4, 2, 1),
@@ -49,7 +49,7 @@ class VideoGenerator(nn.Module):
         if noise is None:
             noise = torch.randn(batch, self.noise_dim, device=token_ids.device)
         latent = self.project(torch.cat((text, noise), dim=1))
-        latent = latent.view(batch, 256, 2, 4, 4)
+        latent = latent.view(batch, 256, 1, 4, 4)
         return self.network(latent)
 
 
