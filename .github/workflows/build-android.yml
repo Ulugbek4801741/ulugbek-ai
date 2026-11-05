@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - fix/android-cors-video-gate-2026-11
       - mvp/initial-scaffold
       - security/chat-agent-isolation
     paths:
