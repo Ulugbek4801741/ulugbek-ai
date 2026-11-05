@@ -1,6 +1,13 @@
-name: ULUGBEK AI Extended Tests (manual)
+name: ULUGBEK AI Extended Tests
 
 on:
+  push:
+    branches:
+      - main
+      - "feature/**"
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -21,14 +28,16 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.npm
-          key: npm-${{ runner.os }}-node-22-${{ hashFiles('package.json') }}
+          key: npm-\${{ runner.os }}-node-22-\${{ hashFiles('package.json') }}
           restore-keys: |
-            npm-${{ runner.os }}-node-22-
+            npm-\${{ runner.os }}-node-22-
       - name: Install dependencies
         run: npm install --prefer-offline --no-audit --no-fund
       - name: Check JavaScript syntax
         run: |
           node --check server.js
+          node --check modules/universal-web-search.js
+          node --check test/job-search.test.js
           node --check developer-agent.js
           node --check test/developer-agent.test.js
           node --check modules/catalog.js
