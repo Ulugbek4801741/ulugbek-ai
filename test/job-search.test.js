@@ -62,5 +62,5 @@ test("language model instructions require direct answers grounded in evidence", 
   assert.match(SYSTEM_PROMPT, /birlamchi rasmiy manbalarni ustun qo'ying/);
   const context = knowledgeContext([{ title: "Test", content: "Page text", source: "https://example.org", status: "unverified-public-page-content" }]);
   assert.match(context, /Page text/);
-  assert.match(context, /https:\\/\\/example\\.org/);
+  assert.match(context, /https:\/\/example\.org/);
 });
