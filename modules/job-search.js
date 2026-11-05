@@ -6,6 +6,16 @@ function isJobSearchRequest(value) {
   return JOB_INTENT.test(String(value || "").trim());
 }
 
+const LOCATION_HINT = /(?:\\b(?:uzbekistan|uzbekiston|o'zbekiston|shveysariya|shveytsariya|switzerland|aqsh|amerika|usa|united states|germaniya|germany|kanada|canada|polsha|poland|rossiya|russia|qozog'iston|kazakhstan|turkiya|turkey|baa|uae|saudiya|saudi arabia|qatar|koreya|korea|yaponiya|japan|buyuk britaniya|britaniya|angliya|uk|united kingdom|fransiya|france|italiya|italy|ispaniya|spain|norvegiya|norway|shvetsiya|sweden|finlyandiya|finland|niderlandiya|netherlands|avstraliya|australia|chexiya|czechia|litva|lithuania|latviya|latvia|estoniya|estonia|ruminiya|romania|irlandiya|ireland|buxoro|kogon|toshkent|samarqand|navoiy|qarshi|andijon|farg'ona|namangan|nukus|urganch|jizzax|termiz|guliston|denov|olot|g'ijduvon)\\b|\\bnear me\\b|\\byaqin(?:imda| atrofda)\\b|\\bрядом со мной\\b/iu;
+
+function hasLocationHint(value) {
+  return LOCATION_HINT.test(String(value || ""));
+}
+
+function locationClarification() {
+  return "Ish qidirishni boshlashim uchun qaysi davlat yoki shaharda ish kerakligini yozing. Masalan: O‘zbekistonda, Buxoroda yoki Shveysariyada. Shundan keyin mos vakansiyalarni qidiraman.";
+}
+
 function buildJobSearchQuery(value) {
   const original = String(value || "").replace(/\\s+/g, " ").trim().slice(0, 180);
   return [original, "vakansiya ish o'rinlari ish beruvchi maosh ishga qabul", "jobs vacancies employer salary hiring"].filter(Boolean).join(" ");
@@ -60,4 +70,4 @@ async function searchJobs(message, webSearch, options = {}) {
   };
 }
 
-module.exports = { isJobSearchRequest, buildJobSearchQuery, searchJobs };
+module.exports = { isJobSearchRequest, hasLocationHint, locationClarification, buildJobSearchQuery, searchJobs };
