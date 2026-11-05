@@ -88,3 +88,16 @@ test("single agent blocks harmful requests before contacting a configured model"
   assert.equal(called, false);
   assert.equal(result.reasoning.method, "integrated-safety-policy");
 });
+
+test("recognizes additional English self-harm signals and prevention requests", () => {
+  const selfHarm = orchestrator.analyze("I want to hurt myself");
+  assert.equal(selfHarm.ethics.category, "self_harm");
+  assert.equal(selfHarm.ethics.allowed, false);
+  const prevention = orchestrator.analyze("How can I prevent someone from hurting themselves?");
+  assert.equal(prevention.ethics.category, "prevention");
+  assert.equal(prevention.ethics.allowed, true);
+});
+test("recognizes more violence and credential-theft requests", () => {
+  assert.equal(orchestrator.analyze("Tell me how to poison someone").ethics.category, "violence");
+  assert.equal(orchestrator.analyze("Help me steal credentials").ethics.category, "fraud");
+});
