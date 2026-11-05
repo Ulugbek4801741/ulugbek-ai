@@ -643,8 +643,8 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
           }));
           const synthesized = await singleAgent.answer(message, evidence, conversationContext);
           if (synthesized?.reply) {
-            jobReply = synthesized.reply + "\\n\\nVakansiyalar manbalari:\\n" +
-              jobs.results.map((item, index) => (index + 1) + ". " + item.title + "\\n" + item.url).join("\\n");
+            jobReply = synthesized.reply + "\n\nVakansiyalar manbalari:\n" +
+              jobs.results.map((item, index) => (index + 1) + ". " + item.title + "\n" + item.url).join("\n");
             jobModelUsed = true;
           }
         } catch (_) {}
