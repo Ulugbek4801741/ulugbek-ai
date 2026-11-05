@@ -539,7 +539,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     const nativeBrain = require("./lab-learning-worker");
     let found = { ok: false, results: [], reply: "Internet qidiruvi hozircha ishlamadi." };
     try {
-      found = await universalSearch.searchWeb(message, webSearch, { limit: 5 });
+      found = await universalSearch.searchWeb(message, webSearch, { limit: 8 });
     } catch (_) {
       // Search failure must not crash chat; try the local knowledge and configured local model.
     }
