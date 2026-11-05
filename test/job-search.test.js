@@ -2,14 +2,34 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { detectSearchIntent, buildUniversalSearchQuery, searchWeb } = require("../modules/universal-web-search");
+const {
+  detectSearchIntent, buildUniversalSearchQuery, searchWeb,
+  evidenceEntries, formatEvidenceReply
+} = require("../modules/universal-web-search");
+
+test("researches arbitrary questions across different topics", () => {
+  for (const question of [
+    "Bugun ob-havo qanday?",
+    "JavaScriptda API server qanday yoziladi?",
+    "O'zbekistonda kichik biznesni qanday boshlash mumkin?",
+    "Fotosintez nima?",
+    "Menga Shveysariyadan qishloq xo'jaligi ishlarini top"
+  ]) {
+    assert.equal(detectSearchIntent(question).shouldSearch, true, question);
+  }
+});
+
+test("keeps greetings, thanks and plain arithmetic local", () => {
+  assert.equal(detectSearchIntent("Assalomu alaykum").shouldSearch, false);
+  assert.equal(detectSearchIntent("Katta rahmat").shouldSearch, false);
+  assert.equal(detectSearchIntent("25 * 4").shouldSearch, false);
+});
 
 test("detects job requests and general website/link searches", () => {
   assert.equal(detectSearchIntent("Ish topib ber").isJobSearch, true);
   assert.equal(detectSearchIntent("Menga vakansiya top").isJobSearch, true);
   assert.equal(detectSearchIntent("YouTube kanalining linkini topib ber").shouldSearch, true);
   assert.equal(detectSearchIntent("Instagram profil manzilini top").platforms.includes("site:instagram.com"), true);
-  assert.equal(detectSearchIntent("Bugun ob-havo qanday?").shouldSearch, false);
 });
 
 test("adds relevant platform domains and preserves original request", () => {
@@ -44,9 +64,43 @@ test("returns public source-linked results and page-read status", async () => {
   assert.equal(result.results[0].pageRead, true);
 });
 
+test("maps search results to untrusted evidence for one-agent synthesis", () => {
+  const entries = evidenceEntries([{
+    title: "Example",
+    snippet: "Public page content",
+    url: "https://example.org",
+    pageRead: true
+  }]);
+  assert.deepEqual(entries, [{
+    title: "Example",
+    content: "Public page content",
+    source: "https://example.org",
+    status: "unverified-public-page-content"
+  }]);
+});
+
+test("provides source-linked fallback when no synthesis model is configured", () => {
+  const reply = formatEvidenceReply([{
+    title: "Public source",
+    snippet: "Useful source excerpt",
+    url: "https://example.org",
+    pageRead: false
+  }]);
+  assert.match(reply, /Useful source excerpt/);
+  assert.match(reply, /https:\/\/example\.org/);
+  assert.match(reply, /mustaqil tasdiqlanmagan/);
+});
+
 test("reports empty search results honestly", async () => {
   const result = await searchWeb("Ish topib ber", { search: async () => [] });
   assert.equal(result.ok, true);
   assert.equal(result.results.length, 0);
   assert.match(result.reply, /mos natija topolmadi/);
+});
+
+test("reports search adapter failures without throwing", async () => {
+  const result = await searchWeb("Fotosintez nima?", { search: async () => { throw new Error("offline"); } });
+  assert.equal(result.ok, false);
+  assert.equal(result.results.length, 0);
+  assert.match(result.error, /offline/);
 });
