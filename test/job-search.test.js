@@ -2,43 +2,51 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { isJobSearchRequest, buildJobSearchQuery, searchJobs } = require("../modules/job-search");
+const { detectSearchIntent, buildUniversalSearchQuery, searchWeb } = require("../modules/universal-web-search");
 
-test("detects Uzbek and English job-search requests", () => {
-  assert.equal(isJobSearchRequest("Ish topib ber"), true);
-  assert.equal(isJobSearchRequest("Menga vakansiya top"), true);
-  assert.equal(isJobSearchRequest("Find me a job"), true);
-  assert.equal(isJobSearchRequest("Bugun ob-havo qanday?"), false);
+test("detects job requests and general website/link searches", () => {
+  assert.equal(detectSearchIntent("Ish topib ber").isJobSearch, true);
+  assert.equal(detectSearchIntent("Menga vakansiya top").isJobSearch, true);
+  assert.equal(detectSearchIntent("YouTube kanalining linkini topib ber").shouldSearch, true);
+  assert.equal(detectSearchIntent("Instagram profil manzilini top").platforms.includes("site:instagram.com"), true);
+  assert.equal(detectSearchIntent("Bugun ob-havo qanday?").shouldSearch, false);
 });
 
-test("expands job queries without discarding the user's original request", () => {
-  const query = buildJobSearchQuery("Traktor operatori uchun ish top");
+test("adds relevant platform domains and preserves original request", () => {
+  const query = buildUniversalSearchQuery("Telegramdagi rasmiy kanal linkini top");
+  assert.match(query, /Telegramdagi/);
+  assert.match(query, /site:t\\.me/);
+  assert.match(query, /official page link/);
+});
+
+test("expands job search requests into vacancy terms", () => {
+  const query = buildUniversalSearchQuery("Traktor operatori uchun ish top");
   assert.match(query, /Traktor operatori/);
   assert.match(query, /vakansiya/);
   assert.match(query, /jobs vacancies/);
 });
 
-test("returns source-linked job results and marks page verification status", async () => {
+test("returns public source-linked results and page-read status", async () => {
   const webSearch = {
     async search(query) {
-      assert.match(query, /vakansiya/);
-      return [{ title: "Farm equipment operator", url: "https://jobs.example.org/1", snippet: "Seasonal farm role" }];
+      assert.match(query, /site:youtube\\.com/);
+      return [{ title: "Official channel", url: "https://youtube.com/@example", snippet: "Public channel result" }];
     },
     async fetchPage() {
-      return { title: "Farm equipment operator vacancy", url: "https://jobs.example.org/1", content: "Employer details and application information.".repeat(5) };
+      return { title: "Official channel page", url: "https://youtube.com/@example", content: "Public channel information and description.".repeat(5) };
     }
   };
-  const result = await searchJobs("Ish topib ber", webSearch);
+  const result = await searchWeb("YouTube kanal linkini top", webSearch);
   assert.equal(result.ok, true);
   assert.equal(result.results.length, 1);
-  assert.match(result.reply, /ULUGBEK AI internetdan/);
-  assert.match(result.reply, /https:\/\/jobs.example.org\/1/);
+  assert.match(result.reply, /ULUGBEK AI internet qidiruvida/);
+  assert.match(result.reply, /https:\\/\\/youtube.com\\/@example/);
   assert.equal(result.results[0].pageRead, true);
 });
 
-test("reports an empty search honestly instead of inventing vacancies", async () => {
-  const result = await searchJobs("Ish topib ber", { search: async () => [] });
+test("reports empty search results honestly", async () => {
+  const result = await searchWeb("Ish topib ber", { search: async () => [] });
   assert.equal(result.ok, true);
   assert.equal(result.results.length, 0);
-  assert.match(result.reply, /Bu ish yo'q degani emas/);
+  assert.match(result.reply, /mos natija topolmadi/);
 });
