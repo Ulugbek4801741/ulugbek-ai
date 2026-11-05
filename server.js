@@ -8,6 +8,7 @@ const singleAgent = require("./modules/single-agent").createSingleAgent();
 const languageModule = require("./modules/language-module");
 const emotionalIntelligence = require("./modules/emotional-intelligence");
 const ethicalReasoning = require("./modules/ethical-reasoning");
+const conversationOrchestrator = require("./modules/conversation-orchestrator");
 const developerAgent = require("./developer-agent");
 const agentPermissions = require("./agent-permissions");
 const learningWorkerForAdmin = require("./lab-learning-worker");
@@ -569,17 +570,17 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       safety: { blocked: true, category: shieldDecision.reason, quarantined: shieldDecision.quarantined === true }
     });
   }
-  const ethicalAssessment = ethicalReasoning.evaluate(message);
-  const emotionalContext = emotionalIntelligence.responseGuidance(message);
-  const cognition = { language: languageModule.detectLanguage(message), emotion: emotionalContext.emotion, ethics: { risk: ethicalAssessment.risk, category: ethicalAssessment.category } };
-  if (ethicalAssessment.category === "self_harm") {
-    const uz = cognition.language.code === "uz";
-    const ru = cognition.language.code === "ru";
-    const reply = uz
-      ? "Buni boshdan kechirayotganingizdan afsusdaman. Siz hozir yolg‘iz qolmasligingiz muhim. O‘zingizga zarar yetkazishi mumkin bo‘lgan buyumlardan uzoqlashing va hozir ishonadigan yaqin insoningizga qo‘ng‘iroq qiling yoki yoniga boring. Agar o‘zingizga zarar yetkazish xavfi yaqin bo‘lsa, mahalliy shoshilinch yordam xizmatiga murojaat qiling. Hozir xavfsiz joydamisiz? O‘zingizga zarar yetkazish rejangiz yoki yoningizda xavfli vosita bormi?"
-      : ru ? "Мне жаль, что вам сейчас так тяжело. Пожалуйста, не оставайтесь в одиночестве. Отойдите от предметов, которыми можно причинить себе вред, и свяжитесь с близким человеком, которому доверяете. Если опасность непосредственная, обратитесь в местную экстренную службу. Вы сейчас в безопасном месте?"
-      : "I’m sorry you’re facing this. Please don’t stay alone right now. Move away from anything you could use to hurt yourself and contact someone you trust who can stay with you. If you may act on this soon, contact local emergency services now. Are you somewhere safe at this moment?";
-    return res.json({ reply, mode: "safety-support-response", agents: ["ULUGBEK Universal Agent"], cognition, safety: { intervention: true, category: "self_harm" } });
+  const conversationContext = conversationOrchestrator.analyze(message);
+  const cognition = conversationContext.cognition;
+  const safetyReply = conversationOrchestrator.safetyReply(conversationContext);
+  if (safetyReply) {
+    return res.json({
+      reply: safetyReply,
+      mode: "integrated-safety-response",
+      agents: ["ULUGBEK Universal Agent"],
+      cognition,
+      safety: { intervention: true, category: conversationContext.ethics.category }
+    });
   }
   // Universal research-first flow: every substantive request is searched on the public web.
   // Greetings, thanks and plain arithmetic remain local to avoid unnecessary network calls.
@@ -600,14 +601,14 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     try {
       // If configured, the self-hosted language model synthesizes one answer from the question and evidence.
       // No hosted AI provider or external API key is called by this path.
-      result = await singleAgent.answer(message, evidence);
+      result = await singleAgent.answer(message, evidence, conversationContext);
     } catch (_) {}
 
     if (!result) {
       try {
         const localKnowledge = await nativeBrain.searchKnowledge(message, 5);
         const combined = [...evidence, ...localKnowledge].slice(0, 8);
-        result = nativeBrain.buildLocalReply(message, combined);
+        result = nativeBrain.buildLocalReply(message, combined, conversationContext);
       } catch (_) {}
     }
 
@@ -652,8 +653,8 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   try {
     const nativeBrain = require("./lab-learning-worker");
     const answerWithOneAgent = async entries => {
-      const modelAnswer = await singleAgent.answer(message, entries);
-      return modelAnswer || nativeBrain.buildLocalReply(message, entries);
+      const modelAnswer = await singleAgent.answer(message, entries, conversationContext);
+      return modelAnswer || nativeBrain.buildLocalReply(message, entries, conversationContext);
     };
     let learned = await nativeBrain.searchKnowledge(message, 5);
     let result = await answerWithOneAgent(learned);
@@ -758,6 +759,3 @@ agentRuntime.startWorker().then(() => {
   });
   server.on("error", error => console.error("HTTP server xatosi:", error.message));
 }).catch(error => {
-  console.error("Agent worker ishga tushmadi:", error.message);
-  process.exitCode = 1;
-});
