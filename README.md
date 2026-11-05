@@ -179,3 +179,7 @@ The Render Blueprint uses a persistent disk at `/var/data` and a paid Starter we
 The optional model adapter requires all of `ULUGBEK_LOCAL_MODEL_URL` and `ULUGBEK_LOCAL_MODEL_NAME` to point to a reachable OpenAI-compatible model server; `ULUGBEK_LOCAL_MODEL_TOKEN` is optional. The repository does not contain model weights and this change does not train a neural model. Without a configured model, language/emotion/ethics routing and deterministic fallback features work, but open-ended human-like reasoning and fluent universal answers remain limited. Do not put secrets in GitHub files.
 
 Voice recognition and speech output are browser/device capabilities, not a server-side telephony service. Continuous background listening while the phone is locked is not provided by this web app.
+
+### Unified conversation pipeline
+
+Every chat request passes through one shared conversation orchestrator before web search, local knowledge retrieval or model inference. It creates a consistent language, emotion and ethics context. The same safety decision is applied before research or model calls, and the native knowledge fallback uses that same context rather than bypassing it. Defensive and prevention questions are distinguished from harmful intent where the rule-based classifier can identify that context. These checks are conservative heuristics, not a complete safety system or a substitute for human judgment.

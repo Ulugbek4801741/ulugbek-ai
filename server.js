@@ -8,6 +8,7 @@ const singleAgent = require("./modules/single-agent").createSingleAgent();
 const languageModule = require("./modules/language-module");
 const emotionalIntelligence = require("./modules/emotional-intelligence");
 const ethicalReasoning = require("./modules/ethical-reasoning");
+const conversationOrchestrator = require("./modules/conversation-orchestrator");
 const developerAgent = require("./developer-agent");
 const agentPermissions = require("./agent-permissions");
 const learningWorkerForAdmin = require("./lab-learning-worker");
@@ -25,7 +26,6 @@ const FRONTEND_ORIGINS = new Set([
   "https://ulugbek4801741.github.io",
   ...(process.env.FRONTEND_ORIGIN || "").split(",").map(value => value.trim().replace(/\/$/, "")).filter(Boolean)
 ]);
-const FRONTEND_ORIGIN = [...FRONTEND_ORIGINS][0];
 app.use((req, res, next) => {
   const origin = req.headers.origin || "";
   if (origin && FRONTEND_ORIGINS.has(origin)) {
@@ -48,7 +48,7 @@ app.use(helmet({
       styleSrc: ["'self'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
       imgSrc: ["'self'", "data:", "blob:"],
-      connectSrc: ["'self'", ...(FRONTEND_ORIGIN ? [FRONTEND_ORIGIN] : [])],
+      connectSrc: ["'self'", ...FRONTEND_ORIGINS],
       manifestSrc: ["'self'"],
       workerSrc: ["'self'"],
       objectSrc: ["'none'"],
@@ -171,6 +171,7 @@ app.get("/api/admin/overview", requireAdmin, (_req, res) => {
     languageModuleReady: languageModule.status().ready,
     emotionalIntelligenceReady: emotionalIntelligence.status().ready,
     ethicalReasoningReady: ethicalReasoning.status().ready,
+    conversationPipelineReady: conversationOrchestrator.status().ready,
     localModelConfigured: singleAgent.status().configured,
     externalAiApiEnabled: false,
     model: singleAgent.status(),
@@ -322,7 +323,7 @@ app.post("/api/language/analyze", (req, res) => {
 
 app.get("/api/cognition/status", (_req, res) => {
   res.set("Cache-Control", "no-store");
-  res.json({ ok: true, language: languageModule.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status(), voice: { input: "browser-speech-recognition", output: "browser-speech-synthesis", requiresMicrophonePermission: true } });
+  res.json({ ok: true, language: languageModule.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status(), voice: { input: "browser-speech-recognition", output: "browser-speech-synthesis", requiresMicrophonePermission: true }, conversationPipeline: conversationOrchestrator.status() });
 });
 
 app.post("/api/cognition/analyze", (req, res) => {
@@ -334,7 +335,7 @@ app.post("/api/cognition/analyze", (req, res) => {
 
 app.get("/api/ai/status", (_req, res) => {
   res.set("Cache-Control", "no-store");
-  res.json({ ok: true, agentCount: 1, agentName: "ULUGBEK Universal Agent", model: singleAgent.status(), language: languageModule.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status(), mathEngine: "native-safe-arithmetic", research: "public-read-only-with-source-checks" });
+  res.json({ ok: true, agentCount: 1, agentName: "ULUGBEK Universal Agent", model: singleAgent.status(), language: languageModule.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status(), conversationPipeline: conversationOrchestrator.status(), mathEngine: "native-safe-arithmetic", research: "public-read-only-with-source-checks" });
 });
 
 app.get("/api/health", (_req, res) => {
@@ -350,6 +351,7 @@ app.get("/api/health", (_req, res) => {
     languageModuleReady: languageModule.status().ready,
     emotionalIntelligenceReady: emotionalIntelligence.status().ready,
     ethicalReasoningReady: ethicalReasoning.status().ready,
+    conversationPipelineReady: conversationOrchestrator.status().ready,
     localModelConfigured: singleAgent.status().configured,
     externalAiApiEnabled: false,
     agentCount: 1,
@@ -381,7 +383,7 @@ app.get("/api/diagnostics", (_req, res) => {
     productionDatabase: "not-configured-task-store-uses-local-json-file",
     agentExecution: "one universal agent with optional self-hosted local model; no multi-agent delegation; source writes and deploy remain disabled",
     nativeReasoning: "ulugbek-native-rule-reasoner-v1; deterministic symbolic planning; not a trained neural language model",
-    cognition: { language: languageModule.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status() },
+    cognition: { language: languageModule.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status(), conversationPipeline: conversationOrchestrator.status() },
     externalAiApiEnabled: false,
     trainedLanguageModelReady: false,
     languageModule: languageModule.status(),
@@ -569,17 +571,17 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       safety: { blocked: true, category: shieldDecision.reason, quarantined: shieldDecision.quarantined === true }
     });
   }
-  const ethicalAssessment = ethicalReasoning.evaluate(message);
-  const emotionalContext = emotionalIntelligence.responseGuidance(message);
-  const cognition = { language: languageModule.detectLanguage(message), emotion: emotionalContext.emotion, ethics: { risk: ethicalAssessment.risk, category: ethicalAssessment.category } };
-  if (ethicalAssessment.category === "self_harm") {
-    const uz = cognition.language.code === "uz";
-    const ru = cognition.language.code === "ru";
-    const reply = uz
-      ? "Buni boshdan kechirayotganingizdan afsusdaman. Siz hozir yolg‘iz qolmasligingiz muhim. O‘zingizga zarar yetkazishi mumkin bo‘lgan buyumlardan uzoqlashing va hozir ishonadigan yaqin insoningizga qo‘ng‘iroq qiling yoki yoniga boring. Agar o‘zingizga zarar yetkazish xavfi yaqin bo‘lsa, mahalliy shoshilinch yordam xizmatiga murojaat qiling. Hozir xavfsiz joydamisiz? O‘zingizga zarar yetkazish rejangiz yoki yoningizda xavfli vosita bormi?"
-      : ru ? "Мне жаль, что вам сейчас так тяжело. Пожалуйста, не оставайтесь в одиночестве. Отойдите от предметов, которыми можно причинить себе вред, и свяжитесь с близким человеком, которому доверяете. Если опасность непосредственная, обратитесь в местную экстренную службу. Вы сейчас в безопасном месте?"
-      : "I’m sorry you’re facing this. Please don’t stay alone right now. Move away from anything you could use to hurt yourself and contact someone you trust who can stay with you. If you may act on this soon, contact local emergency services now. Are you somewhere safe at this moment?";
-    return res.json({ reply, mode: "safety-support-response", agents: ["ULUGBEK Universal Agent"], cognition, safety: { intervention: true, category: "self_harm" } });
+  const conversationContext = conversationOrchestrator.analyze(message);
+  const cognition = conversationContext.cognition;
+  const safetyReply = conversationOrchestrator.safetyReply(conversationContext);
+  if (safetyReply) {
+    return res.json({
+      reply: safetyReply,
+      mode: "integrated-safety-response",
+      agents: ["ULUGBEK Universal Agent"],
+      cognition,
+      safety: { intervention: true, category: conversationContext.ethics.category }
+    });
   }
   // Universal research-first flow: every substantive request is searched on the public web.
   // Greetings, thanks and plain arithmetic remain local to avoid unnecessary network calls.
@@ -600,14 +602,14 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     try {
       // If configured, the self-hosted language model synthesizes one answer from the question and evidence.
       // No hosted AI provider or external API key is called by this path.
-      result = await singleAgent.answer(message, evidence);
+      result = await singleAgent.answer(message, evidence, conversationContext);
     } catch (_) {}
 
     if (!result) {
       try {
         const localKnowledge = await nativeBrain.searchKnowledge(message, 5);
         const combined = [...evidence, ...localKnowledge].slice(0, 8);
-        result = nativeBrain.buildLocalReply(message, combined);
+        result = nativeBrain.buildLocalReply(message, combined, conversationContext);
       } catch (_) {}
     }
 
@@ -652,8 +654,8 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   try {
     const nativeBrain = require("./lab-learning-worker");
     const answerWithOneAgent = async entries => {
-      const modelAnswer = await singleAgent.answer(message, entries);
-      return modelAnswer || nativeBrain.buildLocalReply(message, entries);
+      const modelAnswer = await singleAgent.answer(message, entries, conversationContext);
+      return modelAnswer || nativeBrain.buildLocalReply(message, entries, conversationContext);
     };
     let learned = await nativeBrain.searchKnowledge(message, 5);
     let result = await answerWithOneAgent(learned);

@@ -454,7 +454,7 @@ async function researchQuestion(query) {
   }
   return additions;
 }
-function buildLocalReply(query, hits) {
-  return require("./native-cognition").respond(query, hits);
+function buildLocalReply(query, hits, context) {
+  return require("./native-cognition").respond(query, hits, context);
 }
 module.exports = { start, stop, status, cycle, learnTopic, searchKnowledge, researchQuestion, buildLocalReply, loadVisitedPages, robotsAllows };

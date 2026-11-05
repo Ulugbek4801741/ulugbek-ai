@@ -174,6 +174,7 @@ test("API smoke tests", async (t) => {
       assert.equal(response.status, 200);
       assert.equal(body.ok, true);
       assert.equal(body.app, "ULUGBEK AI");
+      assert.equal(body.conversationPipelineReady, true);
     });
 
     await t.test("module catalogue endpoint lists capabilities and labels planned integrations honestly", async () => {
