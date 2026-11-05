@@ -30,6 +30,27 @@ test("API smoke tests", async (t) => {
   try {
     await waitForServer();
 
+    await t.test("independent language learner status endpoint is available", async () => {
+      const response = await fetch(`${baseUrl}/api/language/status`);
+      const body = await response.json();
+      assert.equal(response.status, 200);
+      assert.equal(body.ok, true);
+      assert.equal(body.languageLearning.module, "ulugbek-independent-language-cognition");
+      assert.equal(body.languageLearning.selfTrainingEnabled, true);
+      assert.equal(body.languageLearning.neuralWeightsTrained, false);
+    });
+
+    await t.test("language analysis exposes intent and a reasoning plan", async () => {
+      const response = await fetch(`${baseUrl}/api/language/analyze`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: "Bu kodni tushuntirib ber, iltimos." })
+      });
+      const body = await response.json();
+      assert.equal(response.status, 200);
+      assert.equal(body.linguistic.intent, "explain");
+      assert.ok(Array.isArray(body.linguistic.plan.steps));
+    });
+
     await t.test("virtual lab status endpoint works without provider API keys", async () => {
       const response = await fetch(`${baseUrl}/api/lab/status`);
       const body = await response.json();
