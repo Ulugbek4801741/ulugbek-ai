@@ -51,7 +51,7 @@ let state = {
 };
 let timer = null;
 let cursor = 0;
-const topicCursors = { uz: 0, en: 0, ru: 0 };
+const topicCursors = { uz: 0, en: 0, ru: 0, tr: 0, kk: 0 };
 let inFlight = false;
 let stopRequested = false;
 let writeChain = Promise.resolve();
@@ -364,7 +364,7 @@ function status() {
       { language: "uz", name: "O‘zbek", sharePercent: 50 },
       { language: "en", name: "Ingliz", sharePercent: 20 },
       { language: "ru", name: "Rus", sharePercent: 15 },
-      { language: "tr", name: "Turk", sharePercent: 10 },
+      { language: "tr", name: "Turk", sharePercent: 5 },
       { language: "kk", name: "Qozoq", sharePercent: 5 }
     ],
     sourceAllowlist: [...ALLOWED_WIKIPEDIA_HOSTS],
