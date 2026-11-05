@@ -15,7 +15,7 @@ const UZ_CYRILLIC_WORDS = /(?:менга|ёрдам|қандай|керак|би
 const RU_CYRILLIC_WORDS = /(?:что|как|пожалуйста|помоги|помогите|для|это|мне|нужно|можно|спасибо|здравствуйте|привет|почему|где|когда|хочу|умереть|самоубийство|навредить|себе|защитить|мошенничество)/giu;
 const WORDS = {
   uz: /\b(salom|assalomu|alaykum|uchun|qanday|qil|kerak|menga|ber|bilan|haqida|yozib|tushuntir|iltimos|rahmat|o'zbek|o‘zbek|bo'lishi|bo‘lishi|mumkin|emas|men|siz|biz)\b/giu,
-  en: /\b(the|and|what|how|please|help|with|from|this|that|you|your|can|could|would|should|hello|thanks|about|for)\b/giu,
+  en: /\b(the|and|what|how|please|help|with|from|this|that|you|your|can|could|would|should|hello|thanks|about|for|want|myself|hurt|suicide|die|prevent|someone|steal|credentials|poison|fraud|i|my|is|are|do|does)\b/giu,
   ru: /\b(что|как|пожалуйста|помоги|помогите|для|это|мне|нужно|можно|спасибо|здравствуйте|привет|почему|где|когда)\b/giu,
   tr: /\b(merhaba|nasıl|lütfen|yardım|için|nedir|teşekkür|ben|sen|siz|ile)\b/giu,
   kk: /\b(сәлем|қалай|өтінемін|көмек|үшін|рақмет|маған|керек|бұл)\b/giu
