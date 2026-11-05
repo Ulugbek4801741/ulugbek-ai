@@ -679,62 +679,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     };
     let learned = await nativeBrain.searchKnowledge(message, 5);
     let result = await answerWithOneAgent(learned);
-    let webResearchUsed = false;
-    if (!result.reasoning.answerable) {
-      const publicFindings = await nativeBrain.researchQuestion(message);
-      if (publicFindings.length) {
-        learned = publicFindings;
-        result = await answerWithOneAgent(learned);
-        webResearchUsed = result.reasoning.answerable;
-      }
-      // If the local knowledge and encyclopedia search are insufficient, use
-      // a public search provider. Only the current question is sent; no chat
-      // history, profile, private memory or uploaded content is transmitted.
-      if (!result.reasoning.answerable) {
-        const webSearch = require("./modules/chat-web-research");
-        const searchResults = await webSearch.search(message);
-        if (searchResults.length) {
-          // Read the actual public pages, not only search-engine snippets.
-          // Each page is fetched read-only with URL/DNS/redirect/size/time limits.
-          const pageResults = await Promise.all(searchResults.slice(0, 4).map(async item => {
-            try {
-              const page = await webSearch.fetchPage(item.url);
-              return page ? { ...item, page } : { ...item, page: null };
-            } catch (_) {
-              return { ...item, page: null };
-            }
-          }));
-          const evidence = pageResults.map(item => ({
-            title: item.page?.title || item.title,
-            content: item.page?.content || item.snippet,
-            source: item.page?.url || item.url,
-            status: item.page ? "unverified-public-page-content" : "unverified-search-snippet"
-          }));
-          const researched = await answerWithOneAgent(evidence);
-          const sourceLines = pageResults.map((item, index) =>
-            (index + 1) + ". " + (item.page?.title || item.title) +
-            (item.page ? " (sahifa matni o‘qildi)" : " (faqat qidiruv parchasi)") +
-            "\n" + (item.page?.url || item.url)
-          ).join("\n");
-          if (researched.reasoning.answerable) {
-            result = {
-              ...researched,
-              reply: researched.reply + "\n\nInternet manbalari (ochib tekshiring):\n" + sourceLines
-            };
-          } else {
-            result = {
-              reply: "Ochiq internet sahifalaridan ma’lumotlar topildi, ammo savolga ishonchli xulosa berish uchun dalil yetarli emas. Manbalarni tekshiring:\n\n" +
-                pageResults.map((item, index) => (index + 1) + ". " +
-                  (item.page?.title || item.title) + "\n" +
-                  (item.page?.content || item.snippet).slice(0, 700) + "\n" +
-                  (item.page?.url || item.url)).join("\n\n"),
-              reasoning: { method: "public-page-research-unverified", answerable: false, facts: [] }
-            };
-          }
-          webResearchUsed = true;
-        }
-      }
-    }
+    const webResearchUsed = false;
     return res.json({
       reply: result.reply,
       mode: result.modelUsed ? "self-hosted-single-agent-no-external-ai" : webResearchUsed ? "native-public-research-single-agent-fallback-no-external-ai" : "native-single-agent-fallback-no-external-ai",
