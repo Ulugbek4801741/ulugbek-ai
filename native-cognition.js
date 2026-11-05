@@ -20,11 +20,12 @@ function splitFacts(text) {
 }
 function reason(query, entries) {
   const linguistic = languageCognition.analyze(query);
-  const q = new Set([...words(query), ...linguistic.concepts]);
+  const languageCode = linguistic.language.code;
+  const q = new Set([...words(query).map(word => languageCognition.stemToken(word, languageCode)), ...linguistic.concepts]);
   const ranked = [];
   for (const entry of entries || []) {
     for (const fact of splitFacts(entry.content)) {
-      const f = new Set(words(fact));
+      const f = new Set(words(fact).map(word => languageCognition.stemToken(word, languageCode)));
       let common = 0;
       for (const term of q) {
         const matched = [...f].some(candidate =>
