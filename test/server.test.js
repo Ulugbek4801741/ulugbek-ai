@@ -356,6 +356,31 @@ test("API smoke tests", async (t) => {
       assert.equal(body.receivedCharacters, 5);
     });
 
+    await t.test("English-learning request gets a direct lesson instead of unrelated web snippets", async () => {
+      const response = await fetch(`${baseUrl}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: "Menga ingliz tilidan yordam ber" })
+      });
+      const body = await response.json();
+      assert.equal(response.status, 200);
+      assert.match(body.reply, /Hello — Salom/);
+      assert.equal(body.webResearchUsed, undefined);
+      assert.doesNotMatch(body.reply, /Grokipedia|StudyX|Instagram/);
+    });
+
+    await t.test("programming-help request returns a relevant next step without unrelated search", async () => {
+      const response = await fetch(`${baseUrl}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: "Menga dasturlashda yordam ber" })
+      });
+      const body = await response.json();
+      assert.equal(response.status, 200);
+      assert.match(body.reply, /Python, JavaScript yoki Kotlin/);
+      assert.doesNotMatch(body.reply, /Grokipedia|StudyX|Instagram/);
+    });
+
     await t.test("agent planner creates a structured plan", async () => {
       const response = await fetch(`${baseUrl}/api/agent/plan`, {
         method: "POST",
