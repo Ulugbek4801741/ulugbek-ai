@@ -3,16 +3,19 @@
 const languageModule = require("./language-module");
 const emotionalIntelligence = require("./emotional-intelligence");
 const ethicalReasoning = require("./ethical-reasoning");
+const languageCognition = require("./language-cognition");
 
 function analyze(message) {
   const text = String(message || "").trim();
   const language = languageModule.detectLanguage(text);
   const emotion = emotionalIntelligence.responseGuidance(text);
   const ethics = ethicalReasoning.evaluate(text);
+  const linguistic = languageCognition.analyze(text);
   return {
-    language, emotion, ethics,
+    language, emotion, ethics, linguistic,
     cognition: {
       language,
+      linguistic: { intent: linguistic.intent, concepts: linguistic.concepts, learnedLanguage: linguistic.learnedLanguage },
       emotion: emotion.emotion,
       ethics: { risk: ethics.risk, category: ethics.category }
     }
