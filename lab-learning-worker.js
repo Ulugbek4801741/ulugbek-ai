@@ -14,7 +14,7 @@ const REQUEST_TIMEOUT_MS = 15_000;
 const MAX_RESPONSE_BYTES = 1_000_000;
 const MAX_KNOWLEDGE_ITEMS = 2000;
 
-// O‘zbek tili ustuvor: 12/20 sikl, ingliz tili 5/20, rus tili 3/20.
+// O‘zbek tili ustuvor; ingliz, rus, turk va qozoq tillari ham navbat bilan o‘rganiladi.
 const LANGUAGE_PLAN = [
   "uz","uz","en","uz","ru","uz","en","uz","kk","ru",
   "uz","en","uz","tr","ru","en","uz","uz","en","uz"
