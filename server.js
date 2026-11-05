@@ -812,14 +812,39 @@ app.use((err, _req, res, _next) => {
   console.error("Server xatosi:", err.message);
   return res.status(500).json({ error: "Ichki server xatosi." });
 });
-learningWorker.start();
-languageLearningWorker.start();
-agentRuntime.startWorker().then(() => {
-  const server = app.listen(PORT, "0.0.0.0", () => {
-    console.log(`ULUGBEK AI serveri ${PORT}-portda ishga tushdi.`);
-  });
-  server.on("error", error => console.error("HTTP server xatosi:", error.message));
-}).catch(error => {
-  console.error("Agent worker ishga tushmadi:", error.message);
+// Bind the HTTP port before loading optional workers. Render's health check must
+// be able to reach the process even if a JSON store or background worker is slow.
+const server = app.listen(PORT, "0.0.0.0", () => {
+  console.log(`ULUGBEK AI serveri ${PORT}-portda ishga tushdi.`);
+
+  // Background subsystems must never prevent the web service from becoming healthy.
+  Promise.resolve().then(() => learningWorker.start())
+    .catch(error => console.error("Knowledge worker ishga tushmadi:", error.message));
+  Promise.resolve().then(() => languageLearningWorker.start())
+    .catch(error => console.error("Language worker ishga tushmadi:", error.message));
+  agentRuntime.startWorker()
+    .catch(error => console.error("Agent worker ishga tushmadi; HTTP server ishlashda davom etadi:", error.message));
+});
+server.on("error", error => {
+  console.error("HTTP server xatosi:", error.message);
   process.exitCode = 1;
 });
+
+let shuttingDown = false;
+async function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(signal + " olindi; server xavfsiz yopilmoqda.");
+  learningWorker.stop?.();
+  languageLearningWorker.stop?.();
+  const forceExit = setTimeout(() => process.exit(1), 10000);
+  forceExit.unref();
+  server.close(async () => {
+    try { await agentRuntime.flush?.(); }
+    catch (error) { console.error("Agent ma’lumotlarini saqlash xatosi:", error.message); }
+    clearTimeout(forceExit);
+    process.exit(0);
+  });
+}
+process.on("SIGTERM", () => void shutdown("SIGTERM"));
+process.on("SIGINT", () => void shutdown("SIGINT"));
