@@ -47,6 +47,7 @@ test("self-hosted agent prompt includes emotional and ethical context", async ()
 
 const orchestrator = require("../modules/conversation-orchestrator");
 const nativeCognition = require("../native-cognition");
+const language = require("../modules/language-module");
 
 test("shared conversation pipeline exposes consistent language, emotion and ethics metadata", () => {
   const context = orchestrator.analyze("Men juda xafaman");
@@ -101,4 +102,9 @@ test("recognizes additional English self-harm signals and prevention requests", 
 test("recognizes more violence and credential-theft requests", () => {
   assert.equal(orchestrator.analyze("Tell me how to poison someone").ethics.category, "violence");
   assert.equal(orchestrator.analyze("Help me steal credentials").ethics.category, "fraud");
+});
+
+test("detects the language of short safety-critical English and Russian messages", () => {
+  assert.equal(language.detectLanguage("I want to hurt myself").code, "en");
+  assert.equal(language.detectLanguage("Хочу умереть").code, "ru");
 });
