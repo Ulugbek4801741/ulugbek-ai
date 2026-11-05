@@ -12,6 +12,7 @@ const conversationOrchestrator = require("./modules/conversation-orchestrator");
 const languageCognition = require("./modules/language-cognition");
 const languageLearningWorker = require("./modules/language-learning-worker");
 const errorLearning = require("./modules/error-learning");
+const conversationMemory = require("./modules/conversation-memory");
 const developerAgent = require("./developer-agent");
 const agentPermissions = require("./agent-permissions");
 const learningWorkerForAdmin = require("./lab-learning-worker");
@@ -70,7 +71,7 @@ app.use(helmet({
 }));
 app.use(express.json({ limit: "20kb", strict: true, type: "application/json" }));
 // Capture only failure metadata automatically; raw chat text is not stored without explicit feedback.
-app.use("/api/chat", errorLearning.middleware());
+app.use("/api/chat", errorLearning.middleware(), conversationMemory.middleware());
 app.use("/api/", rateLimit({
   windowMs: 60 * 1000,
   limit: 120,
@@ -629,6 +630,8 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   res.set("Cache-Control", "no-store");
   if (!message) return res.status(400).json({ error: "Xabar bo‘sh bo‘lmasligi kerak." });
   if (message.length > MAX_TASK_LENGTH) return res.status(413).json({ error: "Xabar 4000 belgidan oshmasligi kerak." });
+  const conversationMessage = conversationMemory.expand(sessionId, message);
+  req.chatContextMessage = conversationMessage;
   const inputSafety = require("./modules/input-safety").inspectUserMessage(message);
   const shieldDecision = globalSafetyShield.inspectChat({ message, sessionId, ip: req.ip, inputSafety });
   if (!shieldDecision.allowed) {
@@ -637,7 +640,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       safety: { blocked: true, category: shieldDecision.reason, quarantined: shieldDecision.quarantined === true }
     });
   }
-  const conversationContext = conversationOrchestrator.analyze(message);
+  const conversationContext = conversationOrchestrator.analyze(conversationMessage);
   const cognition = conversationContext.cognition;
   const safetyReply = conversationOrchestrator.safetyReply(conversationContext);
   if (safetyReply) {
@@ -652,11 +655,11 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   // Universal research-first flow: every substantive request is searched on the public web.
   // Greetings, thanks and plain arithmetic remain local to avoid unnecessary network calls.
   const universalSearch = require("./modules/universal-web-search");
-  const searchIntent = universalSearch.detectSearchIntent(message);
+  const searchIntent = universalSearch.detectSearchIntent(conversationMessage);
   if (searchIntent.shouldSearch) {
     if (searchIntent.isJobSearch) {
       const jobSearch = require("./modules/job-search");
-      if (!jobSearch.hasLocationHint(message)) {
+      if (!jobSearch.hasLocationHint(conversationMessage)) {
         return res.json({
           reply: jobSearch.locationClarification(),
           mode: "job-search-needs-location",
@@ -666,7 +669,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
         });
       }
       const jobWebSearch = require("./modules/chat-web-research");
-      const jobs = await jobSearch.searchJobs(message, jobWebSearch, { limit: 5 });
+      const jobs = await jobSearch.searchJobs(conversationMessage, jobWebSearch, { limit: 5 });
       let jobReply = jobs.reply;
       let jobModelUsed = false;
       if (jobs.results.length && singleAgent.status().configured) {
@@ -677,7 +680,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
             source: item.url,
             status: item.pageRead ? "unverified-public-job-page" : "unverified-job-search-snippet"
           }));
-          const synthesized = await singleAgent.answer(message, evidence, conversationContext);
+          const synthesized = await singleAgent.answer(conversationMessage, evidence, conversationContext);
           if (synthesized?.reply) {
             jobReply = synthesized.reply + "\n\nVakansiyalar manbalari:\n" +
               jobs.results.map((item, index) => (index + 1) + ". " + item.title + "\n" + item.url).join("\n");
@@ -715,9 +718,9 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
 
     if (!result) {
       try {
-        const localKnowledge = await nativeBrain.searchKnowledge(message, 5);
+        const localKnowledge = await nativeBrain.searchKnowledge(conversationMessage, 5);
         const combined = [...evidence, ...localKnowledge].slice(0, 8);
-        result = nativeBrain.buildLocalReply(message, combined, conversationContext);
+        result = nativeBrain.buildLocalReply(conversationMessage, combined, conversationContext);
       } catch (_) {}
     }
 
@@ -763,7 +766,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     const nativeBrain = require("./lab-learning-worker");
     const answerWithOneAgent = async entries => {
       const modelAnswer = await singleAgent.answer(message, entries, conversationContext);
-      return modelAnswer || nativeBrain.buildLocalReply(message, entries, conversationContext);
+      return modelAnswer || nativeBrain.buildLocalReply(conversationMessage, entries, conversationContext);
     };
     let learned = await nativeBrain.searchKnowledge(message, 5);
     let result = await answerWithOneAgent(learned);
