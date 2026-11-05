@@ -1,17 +1,17 @@
 "use strict";
 
 const PLATFORM_HINTS = [
-  { pattern: /\\b(youtube|ютуб)\\b|youtube\\.com/i, domain: "site:youtube.com" },
-  { pattern: /\\b(facebook|фейсбук)\\b|facebook\\.com/i, domain: "site:facebook.com" },
-  { pattern: /(?:\\btelegram\\w*|\\bтелеграм\\w*)|t\\.me/i, domain: "(site:t.me OR site:telegram.org)" },
-  { pattern: /\\b(instagram|инстаграм)\\b|instagram\\.com/i, domain: "site:instagram.com" },
-  { pattern: /\\b(tiktok|тик-ток)\\b|tiktok\\.com/i, domain: "site:tiktok.com" },
-  { pattern: /\\b(google|гугл)\\b|google\\.com/i, domain: "site:google.com" }
+  { pattern: /\b(youtube|ютуб)\b|youtube\.com/i, domain: "site:youtube.com" },
+  { pattern: /\b(facebook|фейсбук)\b|facebook\.com/i, domain: "site:facebook.com" },
+  { pattern: /(?:\btelegram\w*|\bтелеграм\w*)|t\.me/i, domain: "(site:t.me OR site:telegram.org)" },
+  { pattern: /\b(instagram|инстаграм)\b|instagram\.com/i, domain: "site:instagram.com" },
+  { pattern: /\b(tiktok|тик-ток)\b|tiktok\.com/i, domain: "site:tiktok.com" },
+  { pattern: /\b(google|гугл)\b|google\.com/i, domain: "site:google.com" }
 ];
-const JOB_INTENT = /\\bish\\s*(?:top(?:ib)?(?:\\s*ber)?|qidir(?:ib)?\\s*ber|kerak|o\\s*rin(?:lar)?|vakans(?:iya|iyalar)?|izlay(?:apman|man)?|qidir)|\\bvakans(?:iya|iyalar)\\b|\\bjob\\s*(?:search|opening|vacanc(?:y|ies))\\b|\\bfind\\s+(?:me\\s+)?a?\\s*jobs?\\b|\\bemployment\\s+(?:opportunit|jobs?)|\\bработ(?:а|у)\\s*(?:найти|ищу|нужна)|\\bваканси/iu;
-const LINK_INTENT = /(?:\\blink\\w*|\\bssilka\\w*|\\bhavola\\w*|\\bmanzil\\w*|\\bwebsite\\w*|\\bweb.?sayt\\w*|\\bsayt\\w*|\\bkanal\\w*|\\bakkaunt\\w*|\\bprofil\\w*|\\bvideo\\w*|\\btop(?:ib)?(?:\\s*ber)?|\\bqidir(?:ib)?(?:\\s*ber)?|\\bfind\\b|\\bsearch\\b|\\bwhere\\s+can\\s+i\\b)/iu;
-const LOCAL_ONLY = /^(?:salom|assalomu alaykum|assalom alaykum|salom alaykum|hello|hi|hayrli tong|hayrli kun|hayrli kech|rahmat|katta rahmat|tashakkur|xayr|hayr|ko'rishguncha|ko'rishamiz|sen kimsan|siz kimsiz|isming nima|o'zing kimsan|nima qila olasan|nimalar qila olasan)[!.?\\s]*$/iu;
-const MATH_ONLY = /^\\s*[\\d\\s.,()+*/%^-]+\\s*(?:=|\\?)*\\s*$/u;
+const JOB_INTENT = /\bish\s*(?:top(?:ib)?(?:\s*ber)?|qidir(?:ib)?\s*ber|kerak|o\s*rin(?:lar)?|vakans(?:iya|iyalar)?|izlay(?:apman|man)?|qidir)|\bvakans(?:iya|iyalar)\b|\bjob\s*(?:search|opening|vacanc(?:y|ies))\b|\bfind\s+(?:me\s+)?a?\s*jobs?\b|\bemployment\s+(?:opportunit|jobs?)|\bработ(?:а|у)\s*(?:найти|ищу|нужна)|\bваканси/iu;
+const LINK_INTENT = /(?:\blink\w*|\bssilka\w*|\bhavola\w*|\bmanzil\w*|\bwebsite\w*|\bweb.?sayt\w*|\bsayt\w*|\bkanal\w*|\bakkaunt\w*|\bprofil\w*|\bvideo\w*|\btop(?:ib)?(?:\s*ber)?|\bqidir(?:ib)?(?:\s*ber)?|\bfind\b|\bsearch\b|\bwhere\s+can\s+i\b)/iu;
+const LOCAL_ONLY = /^(?:salom|assalomu alaykum|assalom alaykum|salom alaykum|hello|hi|hayrli tong|hayrli kun|hayrli kech|rahmat|katta rahmat|tashakkur|xayr|hayr|ko'rishguncha|ko'rishamiz|sen kimsan|siz kimsiz|isming nima|o'zing kimsan|nima qila olasan|nimalar qila olasan)[!.?\s]*$/iu;
+const MATH_ONLY = /^\s*[\d\s.,()+*/%^-]+\s*(?:=|\?)*\s*$/u;
 
 function detectSearchIntent(value) {
   const text = String(value || "").trim();
@@ -23,7 +23,7 @@ function detectSearchIntent(value) {
     reason: localOnly ? "local-dialogue-or-arithmetic" : isJobSearch ? "job-search" : isLinkSearch ? "link-discovery" : "general-question-research" };
 }
 function cleanText(value, max = 1200) {
-  return String(value || "").replace(/\\s+/g, " ").trim().slice(0, max);
+  return String(value || "").replace(/\s+/g, " ").trim().slice(0, max);
 }
 function buildUniversalSearchQueries(value) {
   const original = cleanText(value, 220);
@@ -40,14 +40,14 @@ function buildUniversalSearchQueries(value) {
 }
 function buildUniversalSearchQuery(value) { return buildUniversalSearchQueries(value)[1] || cleanText(value, 500); }
 function hostOf(value) {
-  try { return new URL(value).hostname.toLowerCase().replace(/^www\\./, ""); } catch (_) { return ""; }
+  try { return new URL(value).hostname.toLowerCase().replace(/^www\./, ""); } catch (_) { return ""; }
 }
 function sourceQuality(item) {
   const host = hostOf(item.url);
-  if (/\\.gov(?:\\.|$)|\\.gov\\.[a-z]{2,}$|\\.go\\.[a-z]{2,}$/.test(host)) return 5;
-  if (/\\.edu(?:\\.|$)|\\.ac\\.[a-z]{2,}$/.test(host)) return 4;
-  if (/who\\.int$|un\\.org$|europa\\.eu$|worldbank\\.org$|oecd\\.org$/.test(host)) return 4;
-  if (/wikipedia\\.org$/.test(host)) return 2;
+  if (/\.gov(?:\.|$)|\.gov\.[a-z]{2,}$|\.go\.[a-z]{2,}$/.test(host)) return 5;
+  if (/\.edu(?:\.|$)|\.ac\.[a-z]{2,}$/.test(host)) return 4;
+  if (/who\.int$|un\.org$|europa\.eu$|worldbank\.org$|oecd\.org$/.test(host)) return 4;
+  if (/wikipedia\.org$/.test(host)) return 2;
   return item.pageRead ? 2 : 1;
 }
 async function searchWeb(message, webSearch, options = {}) {
@@ -114,11 +114,11 @@ function formatEvidenceReply(results, reason = "") {
   const items = Array.isArray(results) ? results : [];
   if (!items.length) return "Savol bo'yicha bir nechta ochiq manbada izlandim, ammo hozircha ishonchli dalil topilmadi. Savolni aniqlashtirish yoki boshqa manba turini tekshirish kerak. Men javobni to'qib aytmayman.";
   const lines = items.map((item, index) =>
-    (index + 1) + ". " + item.title + "\\n" + (item.snippet || "Sahifa matni olinmadi.") +
-    "\\nManba: " + item.url + "\\nHolati: " + (item.pageRead ? "sahifa matni o'qildi, faktlar mustaqil tekshirilishi kerak" : "faqat qidiruv parchasi")
+    (index + 1) + ". " + item.title + "\n" + (item.snippet || "Sahifa matni olinmadi.") +
+    "\nManba: " + item.url + "\nHolati: " + (item.pageRead ? "sahifa matni o'qildi, faktlar mustaqil tekshirilishi kerak" : "faqat qidiruv parchasi")
   );
-  return "Savolga javobni ishonchli shakllantirish uchun quyidagi dalillar topildi:\\n\\n" + lines.join("\\n\\n") +
-    (reason ? "\\n\\nIzoh: " + reason : "") +
-    "\\n\\nBu avtomatik xulosa emas: til modeli ulanmagan yoki dalillar yetarli bo'lmagan holatda manbalarni ko'rsataman, tasdiqlanmagan fikrni aniq javob deb bermayman.";
+  return "Savolga javobni ishonchli shakllantirish uchun quyidagi dalillar topildi:\n\n" + lines.join("\n\n") +
+    (reason ? "\n\nIzoh: " + reason : "") +
+    "\n\nBu avtomatik xulosa emas: til modeli ulanmagan yoki dalillar yetarli bo'lmagan holatda manbalarni ko'rsataman, tasdiqlanmagan fikrni aniq javob deb bermayman.";
 }
 module.exports = { detectSearchIntent, buildUniversalSearchQuery, buildUniversalSearchQueries, searchWeb, cleanText, evidenceEntries, formatEvidenceReply };
