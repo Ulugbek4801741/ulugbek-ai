@@ -68,7 +68,7 @@ test("single agent can use Gemini through the provider adapter", async () => {
   assert.equal(result.reply, "Gemini javobi");
   assert.equal(result.provider, "gemini");
   assert.equal(result.externalProviderUsed, true);
-  assert.match(sentUrl, /generativelanguage\\.googleapis\\.com/);
+  assert.ok(sentUrl.includes("generativelanguage.googleapis.com"));
   assert.equal(sentBody.contents[0].parts[0].text.includes("Kotlin nima?"), true);
 });
 test("single agent can use Claude through the provider adapter", async () => {
