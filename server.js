@@ -26,6 +26,11 @@ app.disable("x-powered-by");
 // not overrides, so an outdated FRONTEND_ORIGIN value cannot silently break the public website.
 const FRONTEND_ORIGINS = new Set([
   "https://ulugbek4801741.github.io",
+  // Capacitor Android WebView uses https://localhost with androidScheme: "https".
+  // capacitor://localhost is retained for compatible iOS/native builds.
+  "https://localhost",
+  "capacitor://localhost",
+  "http://localhost",
   ...(process.env.FRONTEND_ORIGIN || "").split(",").map(value => value.trim().replace(/\/$/, "")).filter(Boolean)
 ]);
 app.use((req, res, next) => {
@@ -34,7 +39,7 @@ app.use((req, res, next) => {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Vary", "Origin");
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   }
   if (req.method === "OPTIONS") {
     if (origin && FRONTEND_ORIGINS.has(origin)) return res.status(204).end();
@@ -501,7 +506,17 @@ app.get("/api/videos/status", (_req, res) => {
   res.json({ ok: true, videoGeneration: videoGenerator.status() });
 });
 
-app.post("/api/videos/generate", videoRateLimit, async (req, res) => {
+app.post("/api/videos/generate", (req, res, next) => {
+  // Do not consume the one-per-minute generation quota when no model/workflow is configured.
+  if (!videoGenerator.status().enabled) {
+    res.set("Cache-Control", "no-store");
+    return res.status(503).json({
+      error: "Video modeli ulanmagan. Serverda VIDEO_COMFYUI_URL va VIDEO_COMFYUI_WORKFLOW sozlang.",
+      videoGeneration: videoGenerator.status()
+    });
+  }
+  next();
+}, videoRateLimit, async (req, res) => {
   res.set("Cache-Control", "no-store");
   try {
     const result = await videoGenerator.generate(req.body?.prompt);
