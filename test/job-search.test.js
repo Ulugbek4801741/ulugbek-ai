@@ -3,7 +3,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { detectSearchIntent, buildUniversalSearchQuery, buildUniversalSearchQueries, searchWeb, evidenceEntries, formatEvidenceReply } = require("../modules/universal-web-search");
-const { knowledgeContext, SYSTEM_PROMPT } = require("../modules/single-agent");
+const { knowledgeContext, SYSTEM_PROMPT } = require("../modules/single-agent");\nconst { hasLocationHint, locationClarification } = require("../modules/job-search");
 
 test("searches only explicit discovery, job, and current-information requests", () => {
   for (const q of ["Bugun ob-havo qanday?", "Bugungi eng so'nggi yangiliklarni top", "Shveysariyada traktorchi ish topish", "Menga vakansiya qidirib ber", "YouTube kanalining linkini topib ber"]) assert.equal(detectSearchIntent(q).shouldSearch, true, q);
@@ -64,4 +64,11 @@ test("language model instructions require direct answers grounded in evidence", 
   const context = knowledgeContext([{ title: "Test", content: "Page text", source: "https://example.org", status: "unverified-public-page-content" }]);
   assert.match(context, /Page text/);
   assert.match(context, /https:\/\/example\.org/);
+});
+
+test("asks for a target location before searching a vague job request", () => {
+  assert.equal(hasLocationHint("Ish topib ber"), false);
+  assert.equal(hasLocationHint("Shveysariyada traktorchi ish topish"), true);
+  assert.equal(hasLocationHint("Buxoroda ish qidirib ber"), true);
+  assert.match(locationClarification(), /qaysi davlat yoki shaharda/);
 });
