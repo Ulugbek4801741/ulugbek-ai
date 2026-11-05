@@ -1,5 +1,7 @@
 "use strict";
 
+const conversationOrchestrator = require("./modules/conversation-orchestrator");
+
 // Native symbolic cognition: no hosted AI, no model weights, no API key.
 const STOP = new Set(("the and for with that this from into about which when where what who whom whose are was were been being have has had will would could should can may might not but or nor dan yoki uchun bilan bu shu bir uning ular qanday nima qachon qayerda kim haqida orqali ham esa edi bor yo‘q qaysi qayerda qayerga qayerdan").split(/\s+/));
 function words(text) {
@@ -88,11 +90,15 @@ function quickReply(query) {
   }
   return null;
 }
-function respond(query, entries) {
+function respond(query, entries, suppliedContext = null) {
+  const context = suppliedContext || conversationOrchestrator.analyze(query);
+  const safe = conversationOrchestrator.safetyReply(context);
+  if (safe) return { reply: safe, cognition: context.cognition, reasoning: { method: "integrated-safety-policy", answerable: true, facts: [] } };
+  const opening = conversationOrchestrator.emotionalOpening(context);
   const quick = quickReply(query);
-  if (quick) return { reply:quick, reasoning:{ method:"built-in-uzbek-dialogue", answerable:true, facts:[] } };
+  if (quick) return { reply: opening ? opening + "\\n\\n" + quick : quick, cognition: context.cognition, reasoning:{ method:"built-in-uzbek-dialogue", answerable:true, facts:[] } };
   const result = reason(query, entries);
-  if (!result.answerable) return { reply:"Bu savolga hozircha tasdiqlangan bilimlar bazamdan ishonchli javob topa olmadim. Savolni boshqacha yoki aniqroq yozib ko‘ring. Bilmagan narsamni to‘qib aytmayman.", reasoning:result };
+  if (!result.answerable) return { reply:(opening ? opening + "\\n\\n" : "") + "Bu savolga hozircha tasdiqlangan bilimlar bazamdan ishonchli javob topa olmadim. Savolni boshqacha yoki aniqroq yozib ko‘ring. Bilmagan narsamni to‘qib aytmayman.", cognition: context.cognition, reasoning:result };
   const lines = result.facts.map((x,i)=>(i+1)+". "+x.fact+"\n   Mavzu: "+x.title);
   const sources = [...new Set(result.facts.map(x=>x.source).filter(Boolean))];
   return { reply:"ULUGBEK AI mustaqil mantiqiy mexanizmi topgan dalillar:\n\n"+lines.join("\n\n")+
