@@ -96,13 +96,17 @@ function respond(query, entries, suppliedContext = null) {
   if (safe) return { reply: safe, cognition: context.cognition, reasoning: { method: "integrated-safety-policy", answerable: true, facts: [] } };
   const opening = conversationOrchestrator.emotionalOpening(context);
   const quick = quickReply(query);
-  if (quick) return { reply: opening ? opening + "\\n\\n" + quick : quick, cognition: context.cognition, reasoning:{ method:"built-in-uzbek-dialogue", answerable:true, facts:[] } };
+  if (quick) return { reply: opening ? opening + "\n\n" + quick : quick, cognition: context.cognition, reasoning: { method: "built-in-dialogue", answerable: true, facts: [] } };
   const result = reason(query, entries);
-  if (!result.answerable) return { reply:(opening ? opening + "\\n\\n" : "") + "Bu savolga hozircha tasdiqlangan bilimlar bazamdan ishonchli javob topa olmadim. Savolni boshqacha yoki aniqroq yozib ko‘ring. Bilmagan narsamni to‘qib aytmayman.", cognition: context.cognition, reasoning:result };
-  const lines = result.facts.map((x,i)=>(i+1)+". "+x.fact+"\n   Mavzu: "+x.title);
-  const sources = [...new Set(result.facts.map(x=>x.source).filter(Boolean))];
-  return { reply:"ULUGBEK AI mustaqil mantiqiy mexanizmi topgan dalillar:\n\n"+lines.join("\n\n")+
-    (sources.length ? "\n\nManbalar:\n"+sources.join("\n") : "")+
-    "\n\nXulosa faqat topilgan dalillarga asoslandi; dalil yetishmasa taxmin qilinmadi.", reasoning:result };
+  if (!result.answerable) {
+    const fallback = "Bu savolga hozircha tasdiqlangan bilimlar bazamdan ishonchli javob topa olmadim. Savolni boshqacha yoki aniqroq yozib ko‘ring. Bilmagan narsamni to‘qib aytmayman.";
+    return { reply: (opening ? opening + "\n\n" : "") + fallback, cognition: context.cognition, reasoning: result };
+  }
+  const lines = result.facts.map((x, i) => (i + 1) + ". " + x.fact + "\n   Mavzu: " + x.title);
+  const sources = [...new Set(result.facts.map(x => x.source).filter(Boolean))];
+  const reply = "ULUGBEK AI mustaqil mantiqiy mexanizmi topgan dalillar:\n\n" + lines.join("\n\n") +
+    (sources.length ? "\n\nManbalar:\n" + sources.join("\n") : "") +
+    "\n\nXulosa faqat topilgan dalillarga asoslandi; dalil yetishmasa taxmin qilinmadi.";
+  return { reply: (opening ? opening + "\n\n" : "") + reply, cognition: context.cognition, reasoning: result };
 }
 module.exports = { concepts, splitFacts, reason, respond, quickReply, normalizeInput };
