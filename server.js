@@ -26,6 +26,11 @@ app.disable("x-powered-by");
 // not overrides, so an outdated FRONTEND_ORIGIN value cannot silently break the public website.
 const FRONTEND_ORIGINS = new Set([
   "https://ulugbek4801741.github.io",
+  // Capacitor Android WebView uses https://localhost with androidScheme: "https".
+  // capacitor://localhost is retained for compatible iOS/native builds.
+  "https://localhost",
+  "capacitor://localhost",
+  "http://localhost",
   ...(process.env.FRONTEND_ORIGIN || "").split(",").map(value => value.trim().replace(/\/$/, "")).filter(Boolean)
 ]);
 app.use((req, res, next) => {
@@ -34,7 +39,7 @@ app.use((req, res, next) => {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Vary", "Origin");
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   }
   if (req.method === "OPTIONS") {
     if (origin && FRONTEND_ORIGINS.has(origin)) return res.status(204).end();
@@ -486,7 +491,17 @@ app.get("/api/images/status", (_req, res) => {
   res.json({ ok: true, imageGeneration: imageGenerator.status() });
 });
 
-app.post("/api/images/generate", imageRateLimit, async (req, res) => {
+app.post("/api/images/generate", (req, res, next) => {
+  // Do not consume the image quota when no generation endpoint is configured.
+  if (!imageGenerator.status().enabled) {
+    res.set("Cache-Control", "no-store");
+    return res.status(503).json({
+      error: "Rasm yaratish modeli ulanmagan. Serverda IMAGE_GENERATION_URL sozlang.",
+      imageGeneration: imageGenerator.status()
+    });
+  }
+  next();
+}, imageRateLimit, async (req, res) => {
   res.set("Cache-Control", "no-store");
   try {
     const result = await imageGenerator.generate(req.body?.prompt);
@@ -501,7 +516,17 @@ app.get("/api/videos/status", (_req, res) => {
   res.json({ ok: true, videoGeneration: videoGenerator.status() });
 });
 
-app.post("/api/videos/generate", videoRateLimit, async (req, res) => {
+app.post("/api/videos/generate", (req, res, next) => {
+  // Do not consume the one-per-minute generation quota when no model/workflow is configured.
+  if (!videoGenerator.status().enabled) {
+    res.set("Cache-Control", "no-store");
+    return res.status(503).json({
+      error: "Video modeli ulanmagan. Serverda VIDEO_COMFYUI_URL va VIDEO_COMFYUI_WORKFLOW sozlang.",
+      videoGeneration: videoGenerator.status()
+    });
+  }
+  next();
+}, videoRateLimit, async (req, res) => {
   res.set("Cache-Control", "no-store");
   try {
     const result = await videoGenerator.generate(req.body?.prompt);
@@ -664,62 +689,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     };
     let learned = await nativeBrain.searchKnowledge(message, 5);
     let result = await answerWithOneAgent(learned);
-    let webResearchUsed = false;
-    if (!result.reasoning.answerable) {
-      const publicFindings = await nativeBrain.researchQuestion(message);
-      if (publicFindings.length) {
-        learned = publicFindings;
-        result = await answerWithOneAgent(learned);
-        webResearchUsed = result.reasoning.answerable;
-      }
-      // If the local knowledge and encyclopedia search are insufficient, use
-      // a public search provider. Only the current question is sent; no chat
-      // history, profile, private memory or uploaded content is transmitted.
-      if (!result.reasoning.answerable) {
-        const webSearch = require("./modules/chat-web-research");
-        const searchResults = await webSearch.search(message);
-        if (searchResults.length) {
-          // Read the actual public pages, not only search-engine snippets.
-          // Each page is fetched read-only with URL/DNS/redirect/size/time limits.
-          const pageResults = await Promise.all(searchResults.slice(0, 4).map(async item => {
-            try {
-              const page = await webSearch.fetchPage(item.url);
-              return page ? { ...item, page } : { ...item, page: null };
-            } catch (_) {
-              return { ...item, page: null };
-            }
-          }));
-          const evidence = pageResults.map(item => ({
-            title: item.page?.title || item.title,
-            content: item.page?.content || item.snippet,
-            source: item.page?.url || item.url,
-            status: item.page ? "unverified-public-page-content" : "unverified-search-snippet"
-          }));
-          const researched = await answerWithOneAgent(evidence);
-          const sourceLines = pageResults.map((item, index) =>
-            (index + 1) + ". " + (item.page?.title || item.title) +
-            (item.page ? " (sahifa matni o‘qildi)" : " (faqat qidiruv parchasi)") +
-            "\n" + (item.page?.url || item.url)
-          ).join("\n");
-          if (researched.reasoning.answerable) {
-            result = {
-              ...researched,
-              reply: researched.reply + "\n\nInternet manbalari (ochib tekshiring):\n" + sourceLines
-            };
-          } else {
-            result = {
-              reply: "Ochiq internet sahifalaridan ma’lumotlar topildi, ammo savolga ishonchli xulosa berish uchun dalil yetarli emas. Manbalarni tekshiring:\n\n" +
-                pageResults.map((item, index) => (index + 1) + ". " +
-                  (item.page?.title || item.title) + "\n" +
-                  (item.page?.content || item.snippet).slice(0, 700) + "\n" +
-                  (item.page?.url || item.url)).join("\n\n"),
-              reasoning: { method: "public-page-research-unverified", answerable: false, facts: [] }
-            };
-          }
-          webResearchUsed = true;
-        }
-      }
-    }
+    const webResearchUsed = false;
     return res.json({
       reply: result.reply,
       mode: result.modelUsed ? "self-hosted-single-agent-no-external-ai" : webResearchUsed ? "native-public-research-single-agent-fallback-no-external-ai" : "native-single-agent-fallback-no-external-ai",

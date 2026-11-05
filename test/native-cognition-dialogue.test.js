@@ -30,3 +30,13 @@ test("tasdiqlangan bilimdan manbali dalil qaytaradi", () => {
   assert.equal(result.reasoning.answerable, true);
   assert.match(result.reply, /Manbalar:/);
 });
+
+test("ingliz tilini o‘rganish so‘roviga amaliy birinchi dars beradi", () => {
+  const reply = cognition.respond("Menga ingliz tilidan yordam ber", []).reply;
+  assert.match(reply, /Hello — Salom/);
+  assert.match(reply, /Mashq:/);
+});
+test("dasturlash yordam so‘roviga aniq keyingi qadamni so‘raydi", () => {
+  const reply = cognition.respond("Menga dasturlashda yordam ber", []).reply;
+  assert.match(reply, /Python, JavaScript yoki Kotlin/);
+});
