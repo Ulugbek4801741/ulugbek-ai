@@ -35,7 +35,10 @@ function buildUniversalSearchQueries(value) {
   const queries = [original, [original, ...suffix].join(" ")];
   if (intent.isJobSearch) queries.push(original + " official employer careers application requirements");
   else if (intent.isLinkSearch) queries.push(original + " rasmiy sayt official contact");
-  else queries.push(original + " official information facts explanation");
+  else {
+    queries.push(original + " official information facts explanation");
+    queries.push(original + " evidence research detailed answer");
+  }
   return [...new Set(queries.map(q => cleanText(q, 500)).filter(Boolean))].slice(0, 3);
 }
 function buildUniversalSearchQuery(value) { return buildUniversalSearchQueries(value)[1] || cleanText(value, 500); }
