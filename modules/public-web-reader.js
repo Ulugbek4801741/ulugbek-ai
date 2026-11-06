@@ -140,6 +140,7 @@ async function fetchRobots(url, address) {
   if (robotsCache.has(url.hostname)) return robotsCache.get(url.hostname);
   const promise = (async () => {
     const result = await requestPinned(url, address, "/robots.txt");
+    hostLastRequest.set(url.hostname, Date.now());
     if (result.status === 404) return { text: "", denied: false };
     if (result.status === 401 || result.status === 403 || result.status === 429 ||
         result.status < 200 || result.status >= 300) {
@@ -179,7 +180,7 @@ async function readPublicPage(inputUrl) {
     const address = await resolvePublicHost(url.hostname);
     const robots = await fetchRobots(url, address);
     if (robots.denied) throw new Error("Sayt robots.txt yoki HTTP qoidasi bu sahifani o‘qishga ruxsat bermadi.");
-    const policy = robotsAllows(robots.text, url.pathname);
+    const policy = robotsAllows(robots.text, url.pathname + url.search);
     if (!policy.allowed) throw new Error("Sayt robots.txt bu sahifani o‘qishga ruxsat bermadi.");
     const last = hostLastRequest.get(url.hostname) || 0;
     const waitMs = Math.max(0, last + Math.max(1000, policy.delayMs) - Date.now());
