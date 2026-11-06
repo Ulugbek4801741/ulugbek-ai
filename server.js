@@ -751,8 +751,13 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   } catch (_) {}
   // Search the public web when the local approved knowledge and persistent research cache
   // cannot answer the user's question. Explicit/current searches always refresh evidence.
-  const hasLocalKnowledge = localKnowledge.length > 0 || cachedKnowledge.length > 0;
-  if (searchIntent.shouldSearch || !hasLocalKnowledge) {
+  const localCandidate = nativeBrain.buildLocalReply(
+    conversationMessage, [...localKnowledge, ...cachedKnowledge], conversationContext
+  );
+  const hasLocalAnswer = localCandidate?.reasoning?.answerable === true;
+  // Preserve quick, built-in answers (greetings, arithmetic, starter lessons).
+  // Research every other knowledge gap; explicit/current research always refreshes sources.
+  if (searchIntent.shouldSearch || !hasLocalAnswer) {
     if (searchIntent.isJobSearch) {
       const jobSearch = require("./modules/job-search");
       if (!jobSearch.hasLocationHint(conversationMessage)) {
