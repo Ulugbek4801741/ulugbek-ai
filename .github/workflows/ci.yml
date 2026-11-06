@@ -46,6 +46,8 @@ jobs:
       - name: Check critical JavaScript syntax
         run: |
           node --check server.js
+          node --check lab.js
+          node --check modules/public-web-reader.js
           node --check agent-runtime.js
           node --check developer-agent.js
           node --check public/compat.js
