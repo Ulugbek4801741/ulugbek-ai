@@ -420,7 +420,7 @@ async function cycle() {
   state.cycles += 1;
   state.lastTopic = topic;
   state.lastLanguage = language;
-  if (findings || openWebFindings) {
+  if ((Array.isArray(findings) ? findings.length : findings) || openWebFindings) {
     state.lastSuccessAt = new Date().toISOString();
     state.lastError = null;
   } else if (wikipediaError || state.lastOpenWebError) {
