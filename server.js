@@ -660,6 +660,15 @@ app.get("/api/admin/media/status", requireAdmin, async (_req, res) => {
   return res.json({ ok: true, mediaLibrary: await mediaLibrary.status() });
 });
 
+app.get("/api/research/status", async (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  try {
+    return res.json({ ok: true, researchCache: await researchCache.status() });
+  } catch (_) {
+    return res.status(503).json({ ok: false, error: "Tadqiqot bilim bazasi holatini o‘qib bo‘lmadi." });
+  }
+});
+
 app.post("/api/chat", chatRateLimit, async (req, res) => {
   const message = typeof req.body?.message === "string" ? req.body.message.trim() : "";
   const suppliedSessionId = typeof req.body?.sessionId === "string" ? req.body.sessionId : "";
@@ -861,7 +870,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       const modelAnswer = await singleAgent.answer(conversationMessage, entries, conversationContext);
       return modelAnswer || nativeBrain.buildLocalReply(conversationMessage, entries, conversationContext);
     };
-    let learned = await nativeBrain.searchKnowledge(conversationMessage, 5);
+    let learned = [...localKnowledge, ...cachedKnowledge].slice(0, 8);
     let result = await answerWithOneAgent(learned);
     const webResearchUsed = false;
     return res.json({
