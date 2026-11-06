@@ -34,13 +34,23 @@ test("public HTTPS sources are accepted and local sources are rejected",async t=
  assert.equal(trustedSource("https://127.0.0.1/wiki/Ozbek_tili"),false);
  assert.equal(trustedSource("https://localhost/wiki/Ozbek_tili"),false);
  const result=await engine.trainFromEntries([
-  {title:"Til",content:sampleText(),source:"https://uz.wikipedia.org/wiki/Til",language:"uz",status:"pending-review"},
+  {title:"Til",content:sampleText(),source:"https://uz.wikipedia.org/wiki/Til",language:"uz",status:"approved"},
   {title:"Private",content:sampleText(),source:"https://127.0.0.1/wiki/Til",language:"uz",status:"approved"}
  ]);
  assert.equal(result.addedSources,1);
  assert.equal(result.corpusSources,1);
  assert.equal(engine.status().factualAutoApproval,false);
 });
+test("pending review knowledge is excluded from autonomous language training",async t=>{
+ const engine=await temporaryEngine(t);
+ const result=await engine.trainFromEntries([
+  {title:"Unreviewed",content:sampleText(),source:"https://example.org/unreviewed-language",language:"uz",status:"pending-review"}
+ ]);
+ assert.equal(result.addedSources,0);
+ assert.equal(result.corpusSources,0);
+ assert.equal(engine.status().modelTrained,false);
+});
+
 test("independent language model learns local n-grams and predicts next words",async t=>{
  const engine=await temporaryEngine(t);
  const result=await engine.trainFromEntries([
