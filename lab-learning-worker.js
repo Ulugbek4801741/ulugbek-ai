@@ -45,7 +45,8 @@ const ALLOWED_WIKIPEDIA_HOSTS = new Set([
 let state = {
   enabled: true, running: false, startedAt: null, lastCycleAt: null,
   lastSuccessAt: null, cycles: 0, saved: 0, lastError: null,
-  lastTopic: null, lastLanguage: null
+  lastTopic: null, lastLanguage: null, openWebSaved: 0,
+  lastOpenWebAt: null, lastOpenWebError: null
 };
 let timer = null;
 let cursor = 0;
@@ -307,7 +308,7 @@ async function learnTopic(topic, language = "uz") {
 }
 function parseOpenWebResults(html) {
   const results = [];
-  const pattern = /<a[^>]*class=["'][^"']*result__a[^"']*["'][^>]*href=["']([^"']+)["'][^>]*>([\\s\\S]*?)<\\/a>/gi;
+  const pattern = /<a[^>]*class=["'][^"']*result__a[^"']*["'][^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
   let match;
   while ((match = pattern.exec(String(html || ""))) && results.length < 5) {
     try {
@@ -392,14 +393,14 @@ async function cycle() {
   state.running = true;
   state.lastCycleAt = new Date().toISOString();
 
-  // Har bir siklda 3 til parallel qidiriladi. Har til 2 tagacha qisqa
-  // ensiklopedik xulosa oladi: ko‘pi bilan 6 nomzod/sikl.
-  // Bu manba cheklovlariga rioya qiladi; minglab sahifani yuklab olmaydi.
+  // Har siklda bitta til tanlanadi; Wikipedia va umumiy ochiq internetdan
+  // cheklangan miqdorda sahifa olinadi. HTTP so‘rovlari ketma-ket bajariladi.
   const language = LANGUAGE_PLAN[cursor++ % LANGUAGE_PLAN.length];
   const topics = TOPICS[language];
   const topic = topics[topicCursors[language]++ % topics.length];
   try {
     const findings = await researchQuestion(topic);
+    const openWebFindings = await researchOpenWeb(topic, language);
     state.cycles += 1;
     state.lastTopic = topic;
     state.lastLanguage = language;
