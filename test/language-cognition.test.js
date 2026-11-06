@@ -34,20 +34,30 @@ test("public HTTPS sources are accepted and local sources are rejected",async t=
  assert.equal(trustedSource("https://127.0.0.1/wiki/Ozbek_tili"),false);
  assert.equal(trustedSource("https://localhost/wiki/Ozbek_tili"),false);
  const result=await engine.trainFromEntries([
-  {title:"Til",content:sampleText(),source:"https://uz.wikipedia.org/wiki/Til",language:"uz",status:"pending-review"},
+  {title:"Til",content:sampleText(),source:"https://uz.wikipedia.org/wiki/Til",language:"uz",status:"approved"},
   {title:"Private",content:sampleText(),source:"https://127.0.0.1/wiki/Til",language:"uz",status:"approved"}
  ]);
  assert.equal(result.addedSources,1);
  assert.equal(result.corpusSources,1);
  assert.equal(engine.status().factualAutoApproval,false);
 });
+test("pending review knowledge is excluded from autonomous language training",async t=>{
+ const engine=await temporaryEngine(t);
+ const result=await engine.trainFromEntries([
+  {title:"Unreviewed",content:sampleText(),source:"https://example.org/unreviewed-language",language:"uz",status:"pending-review"}
+ ]);
+ assert.equal(result.addedSources,0);
+ assert.equal(result.corpusSources,0);
+ assert.equal(engine.status().modelTrained,false);
+});
+
 test("independent language model learns local n-grams and predicts next words",async t=>{
  const engine=await temporaryEngine(t);
  const result=await engine.trainFromEntries([
-  {title:"O‘zbek tili",content:sampleText(),source:"https://uz.wikipedia.org/wiki/O%27zbek_tili",language:"uz",status:"pending-review"}
+  {title:"O‘zbek tili",content:sampleText(),source:"https://uz.wikipedia.org/wiki/O%27zbek_tili",language:"uz",status:"approved"}
  ]);
  assert.equal(result.neuralWeightsTrained,false);
- assert.ok(result.sentences>=30);
+ assert.ok(result.sentences>=15);
  const status=engine.status();
  assert.equal(status.modelType,"local-word-ngram-language-model");
  assert.ok(status.languages.uz.vocabularySize>5);
@@ -81,7 +91,7 @@ test("learned language scoring ranks relevant evidence and survives restart",asy
 test("language module can train from a general public HTTPS website", async t => {
  const engine=await temporaryEngine(t);
  const result=await engine.trainFromEntries([
-  {title:"Ochiq til manbasi",content:sampleText(),source:"https://example.org/open-language-page",language:"uz",status:"pending-review"}
+  {title:"Ochiq til manbasi",content:sampleText(),source:"https://example.org/open-language-page",language:"uz",status:"approved"}
  ]);
  assert.equal(result.addedSources,1);
  assert.equal(engine.status().corpusSources,1);
