@@ -55,35 +55,38 @@ async function save(results, query = "") {
     item.snippet.trim().length >= 120
   ).slice(0, 8);
   if (!candidates.length) return { saved: 0 };
-  const current = await readAll();
-  const known = new Set(current.map(item => item.source));
-  const additions = [];
-  for (const item of candidates) {
-    if (known.has(item.url)) continue;
-    known.add(item.url);
-    additions.push({
-      id: crypto.randomUUID(),
-      title: String(item.title || "Ochiq manba").slice(0, 220),
-      content: item.snippet.slice(0, MAX_CONTENT),
-      source: item.url,
-      query: String(query || "").slice(0, 500),
-      sourceHost: String(item.host || ""),
-      sourceQuality: Number(item.qualityScore) || 1,
-      status: "retrieved-unverified",
-      fetchedAt: new Date().toISOString()
-    });
-  }
-  if (!additions.length) return { saved: 0 };
-  const next = [...current, ...additions].slice(-MAX_ITEMS);
-  const snapshot = JSON.stringify(next, null, 2);
-  writeChain = writeChain.then(async () => {
+  let saved = 0;
+  const operation = writeChain.then(async () => {
+    const current = await readAll();
+    const known = new Set(current.map(item => item.source));
+    const additions = [];
+    for (const item of candidates) {
+      if (known.has(item.url)) continue;
+      known.add(item.url);
+      additions.push({
+        id: crypto.randomUUID(),
+        title: String(item.title || "Ochiq manba").slice(0, 220),
+        content: item.snippet.slice(0, MAX_CONTENT),
+        source: item.url,
+        query: String(query || "").slice(0, 500),
+        sourceHost: String(item.host || ""),
+        sourceQuality: Number(item.qualityScore) || 1,
+        status: "retrieved-unverified",
+        fetchedAt: new Date().toISOString()
+      });
+    }
+    if (!additions.length) return;
+    const next = [...current, ...additions].slice(-MAX_ITEMS);
+    const snapshot = JSON.stringify(next, null, 2);
     await fs.mkdir(DATA_DIR, { recursive: true });
     const temp = FILE + ".tmp";
     await fs.writeFile(temp, snapshot, { mode: 0o600 });
     await fs.rename(temp, FILE);
+    saved = additions.length;
   });
-  await writeChain;
-  return { saved: additions.length };
+  writeChain = operation.catch(() => {});
+  await operation;
+  return { saved };
 }
 async function search(query, limit = 5) {
   const items = await readAll();
