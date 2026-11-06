@@ -123,32 +123,16 @@ function requestPinned(url, addresses, timeoutMs = TIMEOUT_MS) {
   });
 }
 async function fetchPage(value) {
-  let current = safePublicUrl(value);
-  if (!current) return null;
-  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    const url = new URL(current);
-    try {
-      const addresses = await resolvePublicHost(url.hostname.replace("[", "").replace("]", ""));
-      const response = await requestPinned(url, addresses);
-      if ([301, 302, 303, 307, 308].includes(response.status)) {
-        const location = response.headers.location;
-        if (!location || hop === MAX_REDIRECTS) return null;
-        current = safePublicUrl(new URL(location, current).href);
-        if (!current) return null;
-        continue;
-      }
-      if (response.status < 200 || response.status >= 300) return null;
-      const type = String(response.headers["content-type"] || "").toLowerCase();
-      if (!type.includes("text/html") && !type.includes("text/plain") && !type.includes("application/xhtml+xml")) return null;
-      const titleMatch = response.body.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-      const title = titleMatch ? clean(titleMatch[1], 240) : url.hostname;
-      const content = type.includes("text/plain") ? clean(response.body, MAX_PAGE_CHARS) : stripHtml(response.body);
-      if (content.length < 120) return null;
-      return { title, url: current, content };
-    } catch (_) { return null; }
+  // Use the shared reader so every search-result fetch observes robots.txt,
+  // crawl-delay, HTTPS-only policy, DNS pinning, and site access restrictions.
+  try {
+    const page = await require("./public-web-reader").readPublicPage(value);
+    return { title: page.title, url: page.source, content: page.content };
+  } catch (_) {
+    return null;
   }
-  return null;
 }
+
 async function search(query) {
   const q = clean(query, MAX_QUERY);
   if (q.length < 3) return [];

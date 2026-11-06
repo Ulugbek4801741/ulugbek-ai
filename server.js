@@ -14,6 +14,7 @@ const languageCognition = require("./modules/language-cognition");
 const languageLearningWorker = require("./modules/language-learning-worker");
 const errorLearning = require("./modules/error-learning");
 const conversationMemory = require("./modules/conversation-memory");
+const researchCache = require("./modules/research-cache");
 const developerAgent = require("./developer-agent");
 const agentPermissions = require("./agent-permissions");
 const learningWorkerForAdmin = require("./lab-learning-worker");
@@ -659,6 +660,15 @@ app.get("/api/admin/media/status", requireAdmin, async (_req, res) => {
   return res.json({ ok: true, mediaLibrary: await mediaLibrary.status() });
 });
 
+app.get("/api/research/status", async (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  try {
+    return res.json({ ok: true, researchCache: await researchCache.status() });
+  } catch (_) {
+    return res.status(503).json({ ok: false, error: "Tadqiqot bilim bazasi holatini o‘qib bo‘lmadi." });
+  }
+});
+
 app.post("/api/chat", chatRateLimit, async (req, res) => {
   const message = typeof req.body?.message === "string" ? req.body.message.trim() : "";
   const suppliedSessionId = typeof req.body?.sessionId === "string" ? req.body.sessionId : "";
@@ -730,7 +740,24 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   // Greetings, thanks and plain arithmetic remain local to avoid unnecessary network calls.
   const universalSearch = require("./modules/universal-web-search");
   const searchIntent = universalSearch.detectSearchIntent(conversationMessage);
-  if (searchIntent.shouldSearch) {
+  const nativeBrain = require("./lab-learning-worker");
+  let localKnowledge = [];
+  let cachedKnowledge = [];
+  try {
+    [localKnowledge, cachedKnowledge] = await Promise.all([
+      nativeBrain.searchKnowledge(conversationMessage, 5),
+      researchCache.search(conversationMessage, 5)
+    ]);
+  } catch (_) {}
+  // Search the public web when the local approved knowledge and persistent research cache
+  // cannot answer the user's question. Explicit/current searches always refresh evidence.
+  const localCandidate = nativeBrain.buildLocalReply(
+    conversationMessage, [...localKnowledge, ...cachedKnowledge], conversationContext
+  );
+  const hasLocalAnswer = localCandidate?.reasoning?.answerable === true;
+  // Preserve quick, built-in answers (greetings, arithmetic, starter lessons).
+  // Research every other knowledge gap; explicit/current research always refreshes sources.
+  if (searchIntent.shouldSearch || (!hasLocalAnswer && searchIntent.reason !== "local-dialogue-or-arithmetic")) {
     if (searchIntent.isJobSearch) {
       const jobSearch = require("./modules/job-search");
       if (!jobSearch.hasLocationHint(conversationMessage)) {
@@ -782,7 +809,15 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       // Search failure must not crash chat; try the local knowledge and configured local model.
     }
 
-    const evidence = universalSearch.evidenceEntries(found.results);
+    try { await researchCache.save(found.results, conversationMessage); } catch (_) {}
+    const evidence = [
+      ...universalSearch.evidenceEntries(found.results),
+      ...cachedKnowledge,
+      ...localKnowledge.map(item => ({
+        title: item.title, content: item.content, source: item.source,
+        status: "approved-local-knowledge", sourceQuality: 3
+      }))
+    ].slice(0, 12);
     let result = null;
     try {
       // If configured, the self-hosted language model synthesizes one answer from the question and evidence.
@@ -792,9 +827,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
 
     if (!result) {
       try {
-        const localKnowledge = await nativeBrain.searchKnowledge(conversationMessage, 5);
-        const combined = [...evidence, ...localKnowledge].slice(0, 8);
-        result = nativeBrain.buildLocalReply(conversationMessage, combined, conversationContext);
+        result = nativeBrain.buildLocalReply(conversationMessage, evidence.slice(0, 8), conversationContext);
       } catch (_) {}
     }
 
@@ -842,7 +875,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       const modelAnswer = await singleAgent.answer(conversationMessage, entries, conversationContext);
       return modelAnswer || nativeBrain.buildLocalReply(conversationMessage, entries, conversationContext);
     };
-    let learned = await nativeBrain.searchKnowledge(conversationMessage, 5);
+    let learned = [...localKnowledge, ...cachedKnowledge].slice(0, 8);
     let result = await answerWithOneAgent(learned);
     const webResearchUsed = false;
     return res.json({
