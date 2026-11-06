@@ -220,7 +220,9 @@ app.get("/api/admin/overview", requireAdmin, (_req, res) => {
     independentLanguageReady: languageCognition.status().ready,
     independentLanguageModelTrained: languageCognition.status().modelTrained,
     localModelConfigured: singleAgent.status().configured && singleAgent.status().provider === "openai-compatible",
-    externalAiApiEnabled: singleAgent.status().configured && singleAgent.status().provider !== "openai-compatible",
+    externalAiApiEnabled: singleAgent.status().configured && ["gemini", "anthropic"].includes(singleAgent.status().provider),
+    modelProvider: singleAgent.status().provider,
+    modelName: singleAgent.status().model || null,
     model: singleAgent.status(),
     cognition: "one-universal-agent-with-native-fallback",
     agentWorker: "single-process-queue",
@@ -418,10 +420,13 @@ app.get("/api/health", (_req, res) => {
     emotionalIntelligenceReady: emotionalIntelligence.status().ready,
     ethicalReasoningReady: ethicalReasoning.status().ready,
     conversationPipelineReady: conversationOrchestrator.status().ready,
-    localModelConfigured: singleAgent.status().configured,
-    externalAiApiEnabled: false,
+    localModelConfigured: singleAgent.status().configured && singleAgent.status().provider === "openai-compatible",
+    externalAiApiEnabled: singleAgent.status().configured && ["gemini", "anthropic"].includes(singleAgent.status().provider),
+    modelProvider: singleAgent.status().provider,
+    modelName: singleAgent.status().model || null,
     agentCount: 1,
-    mode: singleAgent.status().configured ? "self-hosted-single-agent" : "native-single-agent-fallback-no-external-ai",
+    mode: !singleAgent.status().configured ? "native-single-agent-fallback-no-model" :
+      singleAgent.status().provider === "openai-compatible" ? "openai-compatible-model" : "external-ai-provider",
     storageMode: "local-json",
     workerConcurrency: 1,
     multiInstanceSafe: false,
@@ -435,7 +440,8 @@ app.get("/api/diagnostics", (_req, res) => {
     ok: true,
     app: "ULUGBEK AI",
     backend: "running",
-    ai: singleAgent.status().configured ? "self-hosted-single-agent-no-external-ai" : "native-single-agent-fallback-no-external-ai",
+    ai: !singleAgent.status().configured ? "native-single-agent-fallback-no-model" :
+      singleAgent.status().provider === "openai-compatible" ? "openai-compatible-model" : "external-ai-provider",
     agentCount: 1,
     model: singleAgent.status(),
     publicWebResearch: "available-through-lab-route-when-server-has-internet",
@@ -450,7 +456,7 @@ app.get("/api/diagnostics", (_req, res) => {
     agentExecution: "one universal agent with optional self-hosted local model; no multi-agent delegation; source writes and deploy remain disabled",
     nativeReasoning: "ulugbek-native-rule-reasoner-v1; deterministic symbolic planning; not a trained neural language model",
     cognition: { language: languageModule.status(), languageLearning: languageLearningWorker.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status(), conversationPipeline: conversationOrchestrator.status() },
-    externalAiApiEnabled: false,
+    externalAiApiEnabled: singleAgent.status().configured && ["gemini", "anthropic"].includes(singleAgent.status().provider),
     trainedLanguageModelReady: false,
     languageModule: languageModule.status(),
     independentLanguage: languageLearningWorker.status(),
@@ -754,7 +760,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       }
       return res.json({
         reply: jobReply,
-        mode: jobModelUsed ? "self-hosted-job-search-agent" : "native-job-search-results",
+        mode: jobModelUsed ? (singleAgent.status().provider === "openai-compatible" ? "openai-compatible-job-search-agent" : "external-ai-job-search-agent") : "native-job-search-results",
         agents: ["ULUGBEK Universal Agent"],
         jobSearchUsed: true,
         webSearchUsed: jobs.ok,
@@ -811,7 +817,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
 
     return res.json({
       reply,
-      mode: result?.modelUsed ? "self-hosted-universal-research-agent" : "native-universal-research-single-agent-no-external-ai",
+      mode: result?.modelUsed ? (result.provider === "openai-compatible" ? "openai-compatible-universal-research-agent" : "external-ai-universal-research-agent") : "native-universal-research-single-agent-no-model",
       agents: ["ULUGBEK Universal Agent"],
       reasoning,
       webSearchUsed: found.ok,
@@ -837,7 +843,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     const webResearchUsed = false;
     return res.json({
       reply: result.reply,
-      mode: result.modelUsed ? "self-hosted-single-agent-no-external-ai" : webResearchUsed ? "native-public-research-single-agent-fallback-no-external-ai" : "native-single-agent-fallback-no-external-ai",
+      mode: result.modelUsed ? (result.provider === "openai-compatible" ? "openai-compatible-single-agent" : "external-ai-single-agent") : webResearchUsed ? "native-public-research-single-agent-fallback-no-model" : "native-single-agent-fallback-no-model",
       agents: ["ULUGBEK Universal Agent"],
       reasoning: result.reasoning,
       knowledgeUsed: learned.length,
