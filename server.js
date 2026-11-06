@@ -420,8 +420,10 @@ app.get("/api/health", (_req, res) => {
     emotionalIntelligenceReady: emotionalIntelligence.status().ready,
     ethicalReasoningReady: ethicalReasoning.status().ready,
     conversationPipelineReady: conversationOrchestrator.status().ready,
-    localModelConfigured: singleAgent.status().configured,
-    externalAiApiEnabled: false,
+    localModelConfigured: singleAgent.status().configured && singleAgent.status().provider === "openai-compatible",
+    externalAiApiEnabled: singleAgent.status().configured && ["gemini", "anthropic"].includes(singleAgent.status().provider),
+    modelProvider: singleAgent.status().provider,
+    modelName: singleAgent.status().model || null,
     agentCount: 1,
     mode: !singleAgent.status().configured ? "native-single-agent-fallback-no-model" :
       singleAgent.status().provider === "openai-compatible" ? "openai-compatible-model" : "external-ai-provider",
