@@ -97,7 +97,7 @@ function requestPinned(url, address, pathName) {
 function robotsAllows(text, pathname) {
   const groups = [];
   let group = null;
-  for (const raw of String(text || "").split(/\\r?\\n/)) {
+  for (const raw of String(text || "").split(/\r?\n/)) {
     const line = raw.split("#", 1)[0].trim();
     const i = line.indexOf(":");
     if (!line || i < 0) continue;
