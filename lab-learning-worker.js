@@ -483,11 +483,13 @@ async function researchQuestion(query) {
   const languages = ["uz", "en", "ru"];
   const current = await readKnowledge();
   const known = new Set(current.map(item => item.source).filter(Boolean));
+  const collected = [];
   await loadVisitedPages();
 
-  // Three language searches run in parallel; each has its own 15-second timeout.
-  const batches = await Promise.all(languages.map(async language => {
-    if (stopRequested) return [];
+  // Sequential requests are important: each timeout starts only when its
+  // request reaches the queue, so one slow language cannot cancel later ones.
+  for (const language of languages) {
+    if (stopRequested) break;
     const base = "https://" + language + ".wikipedia.org";
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -499,47 +501,40 @@ async function researchQuestion(query) {
       }).toString();
       const payload = await fetchPublicJson(searchUrl.href, controller.signal);
       const hits = Array.isArray(payload?.query?.search) ? payload.query.search.slice(0, 2) : [];
-      return (await Promise.all(hits.map(async hit => {
+      for (const hit of hits) {
+        if (stopRequested) break;
         const title = clean(hit.title, 180);
-        if (!title) return null;
+        if (!title) continue;
         const url = base + "/api/rest_v1/page/summary/" + encodeURIComponent(title.replace(/ /g, "_"));
         const pageKey = base + "/wiki/" + encodeURIComponent(title.replace(/ /g, "_"));
-        await loadVisitedPages();
-        if (visitedPages.has(pageKey)) return null;
+        if (visitedPages.has(pageKey)) continue;
         const item = await fetchPublicJson(url, controller.signal);
         const content = clean(item.extract, 4000);
         const source = item.content_urls?.desktop?.page;
-        if (!content || typeof source !== "string" || !source.startsWith(base + "/wiki/")) return null;
+        if (!content || typeof source !== "string" || !source.startsWith(base + "/wiki/") || known.has(source)) continue;
         await markPageVisited(pageKey);
-        return {
+        known.add(source);
+        collected.push({
           id: crypto.randomUUID(), title: clean(item.title || title, 180),
           content, source, language, agent: "OnDemandResearchAgent",
           status: "pending-review", quality: "live-public-summary-unverified",
           createdAt: new Date().toISOString()
-        };
-      }))).filter(Boolean);
+        });
+      }
     } catch (error) {
       state.lastError = clean(error.name === "AbortError" ? "Internet qidiruvi vaqti tugadi." : error.message, 240);
-      return [];
     } finally {
       clearTimeout(timeout);
     }
-  }));
-
-  const collected = batches.flat();
-  const additions = collected.filter(item => {
-    if (!item.source || known.has(item.source)) return false;
-    known.add(item.source);
-    current.push(item);
-    return true;
-  });
-  if (additions.length) {
-    await writeKnowledge(current);
-    state.saved += additions.length;
-    state.lastOnDemandSearchAt = new Date().toISOString();
-    state.lastOnDemandSearchLanguages = [...new Set(additions.map(item => item.language))];
   }
-  return additions;
+
+  if (collected.length) {
+    await writeKnowledge([...current, ...collected]);
+    state.saved += collected.length;
+    state.lastOnDemandSearchAt = new Date().toISOString();
+    state.lastOnDemandSearchLanguages = [...new Set(collected.map(item => item.language))];
+  }
+  return collected;
 }
 function buildLocalReply(query, hits, context) {
   return require("./native-cognition").respond(query, hits, context);
