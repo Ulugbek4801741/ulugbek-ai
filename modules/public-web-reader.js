@@ -122,12 +122,12 @@ async function fetchRobots(url, address) {
   if (robotsCache.has(url.hostname)) return robotsCache.get(url.hostname);
   const promise = (async () => {
     const result = await requestPinned(url, address, "/robots.txt");
-    if (result.status === 404) return { allowed: true, delayMs: 0 };
+    if (result.status === 404) return { text: "", denied: false };
     if (result.status === 401 || result.status === 403 || result.status === 429 ||
         result.status < 200 || result.status >= 300) {
-      return { allowed: false, delayMs: 0, reason: "robots.txt yoki server cheklovi" };
+      return { text: "", denied: true, reason: "robots.txt yoki server cheklovi" };
     }
-    return robotsAllows(result.body, url.pathname);
+    return { text: result.body, denied: false };
   })();
   robotsCache.set(url.hostname, promise);
   try { return await promise; } catch (error) { robotsCache.delete(url.hostname); throw error; }
@@ -159,8 +159,10 @@ async function readPublicPage(inputUrl) {
   if (!url) throw new Error("Faqat HTTPS orqali ochiq, oddiy domenli sahifalar qabul qilinadi.");
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     const address = await resolvePublicHost(url.hostname);
-    const policy = await fetchRobots(url, address);
-    if (!policy.allowed) throw new Error("Sayt robots.txt yoki HTTP qoidasi bu sahifani o‘qishga ruxsat bermadi.");
+    const robots = await fetchRobots(url, address);
+    if (robots.denied) throw new Error("Sayt robots.txt yoki HTTP qoidasi bu sahifani o‘qishga ruxsat bermadi.");
+    const policy = robotsAllows(robots.text, url.pathname);
+    if (!policy.allowed) throw new Error("Sayt robots.txt bu sahifani o‘qishga ruxsat bermadi.");
     const last = hostLastRequest.get(url.hostname) || 0;
     const waitMs = Math.max(0, last + Math.max(1000, policy.delayMs) - Date.now());
     if (waitMs) await new Promise(resolve => setTimeout(resolve, waitMs));
