@@ -92,7 +92,7 @@ async function search(query, limit = 5) {
   const items = await readAll();
   return items.map(item => ({ ...item, score: scoreEntry(query, item) }))
     .filter(item => item.score > 0 && item.status === "retrieved-unverified")
-    .sort((a, b) => b.score - a.score || b.fetchedAt.localeCompare(a.fetchedAt))
+    .sort((a, b) => b.score - a.score || b.sourceQuality - a.sourceQuality || b.fetchedAt.localeCompare(a.fetchedAt))
     .slice(0, Math.max(1, Math.min(10, Number(limit) || 5)));
 }
 async function status() {
