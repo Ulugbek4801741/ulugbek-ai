@@ -84,7 +84,7 @@ function status() {
   return {
     ready: true,
     module: "ulugbek-language-router-v1",
-    mode: "deterministic-language-detection-and-shared-agent-instructions",
+    mode: "uzbek-core-with-translation-adapter; no separate foreign-language training",
     neuralModelTraining: false,
     supportedLanguages: Object.keys(LANGUAGE_RULES).filter(code => code !== "unknown"),
     defaultLanguage: "uz",
