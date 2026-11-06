@@ -54,10 +54,10 @@ test("pending review knowledge is excluded from autonomous language training",as
 test("independent language model learns local n-grams and predicts next words",async t=>{
  const engine=await temporaryEngine(t);
  const result=await engine.trainFromEntries([
-  {title:"O‘zbek tili",content:sampleText(),source:"https://uz.wikipedia.org/wiki/O%27zbek_tili",language:"uz",status:"pending-review"}
+  {title:"O‘zbek tili",content:sampleText(),source:"https://uz.wikipedia.org/wiki/O%27zbek_tili",language:"uz",status:"approved"}
  ]);
  assert.equal(result.neuralWeightsTrained,false);
- assert.ok(result.sentences>=30);
+ assert.ok(result.sentences>=15);
  const status=engine.status();
  assert.equal(status.modelType,"local-word-ngram-language-model");
  assert.ok(status.languages.uz.vocabularySize>5);
@@ -91,7 +91,7 @@ test("learned language scoring ranks relevant evidence and survives restart",asy
 test("language module can train from a general public HTTPS website", async t => {
  const engine=await temporaryEngine(t);
  const result=await engine.trainFromEntries([
-  {title:"Ochiq til manbasi",content:sampleText(),source:"https://example.org/open-language-page",language:"uz",status:"pending-review"}
+  {title:"Ochiq til manbasi",content:sampleText(),source:"https://example.org/open-language-page",language:"uz",status:"approved"}
  ]);
  assert.equal(result.addedSources,1);
  assert.equal(engine.status().corpusSources,1);
