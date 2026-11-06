@@ -1,3 +1,3 @@
 "use strict";
-// Active Render backend origin. app.js appends /api/chat and other API paths.
-window.ULUGBEK_API_BASE_URL = "https://ulugbek-ai-1.onrender.com";
+// Render serves this frontend and API from the same origin; avoid stale service URLs.
+window.ULUGBEK_API_BASE_URL = window.location.origin;
