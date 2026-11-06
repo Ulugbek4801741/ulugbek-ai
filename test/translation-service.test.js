@@ -11,7 +11,7 @@ function fakeFetch(responseText) {
 }
 test("translates text to Uzbek and restores protected URLs", async () => {
   const service = createTranslationService({
-    env: { ULUGBEK_AI_PROVIDER: "openai-compatible", ULUGBEK_AI_MODEL: "test", ULUGBEK_AI_BASE_URL: "https://model.example/v1/chat/completions" },
+    env: { ULUGBEK_AI_PROVIDER: "openai-compatible", ULUGBEK_AI_MODEL: "test", ULUGBEK_AI_BASE_URL: "http://127.0.0.1:12345/v1/chat/completions" },
     fetchImpl: fakeFetch('{"sourceLanguage":"en","translatedText":"Salom ULUGBEKTOKEN0ENDTOKEN"}')
   });
   const result = await service.translate("Hello https://example.com", { sourceLanguage: "en", targetLanguage: "uz" });
@@ -29,6 +29,16 @@ test("fails clearly when translation provider is not configured", async () => {
   const service = createTranslationService({ env: {}, fetchImpl: async () => { throw new Error("must not call"); } });
   await assert.rejects(service.translate("Hello", { sourceLanguage: "en", targetLanguage: "uz" }), { code: "translation-provider-not-configured", statusCode: 503 });
 });
+test("does not send translation text to hosted AI providers", async () => {
+  const service = createTranslationService({
+    env: { ULUGBEK_AI_PROVIDER: "openai-compatible", ULUGBEK_AI_MODEL: "test", ULUGBEK_AI_BASE_URL: "https://api.example.com/v1/chat/completions" },
+    fetchImpl: async () => { throw new Error("hosted endpoint must not be called"); }
+  });
+  await assert.rejects(service.translate("Hello", { sourceLanguage: "en", targetLanguage: "uz" }), {
+    code: "translation-provider-not-configured", statusCode: 503
+  });
+});
+
 test("rejects empty and oversized input", async () => {
   const service = createTranslationService({ env: {}, fetchImpl: async () => { throw new Error("must not call"); } });
   await assert.rejects(service.translate(""), { statusCode: 400 });
