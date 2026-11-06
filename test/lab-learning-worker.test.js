@@ -16,6 +16,8 @@ test("research worker prioritizes Uzbek, then English, then Russian", () => {
   assert.equal(status.executesDownloadedCode, false);
   assert.equal(status.chatUsesOnlyApprovedKnowledge, true);
   assert.equal(status.modelWeightsRetrained, false);
+  assert.equal(status.genericPublicHttpsWeb, true);
+  assert.equal(status.requestConcurrency, 1);
 });
 
 test("unsupported languages are rejected before network access", async () => {
@@ -47,4 +49,16 @@ test("robots crawl-delay is respected as a minimum request interval", () => {
 
 test("empty robots policy does not invent restrictions", () => {
   assert.equal(worker.robotsAllows("", "https://uz.wikipedia.org/w/api.php").allowed, true);
+});
+
+test("public web result parser keeps only public HTTPS destinations", () => {
+  const html = [
+    '<a class="result__a" href="https://example.org/learning">Open learning page</a>',
+    '<a class="result__a" href="http://example.net/insecure">Insecure page</a>',
+    '<a class="result__a" href="https://127.0.0.1/private">Local page</a>'
+  ].join("");
+  const results = worker.parseOpenWebResults(html);
+  assert.equal(results.length, 1);
+  assert.equal(results[0].url, "https://example.org/learning");
+  assert.equal(results[0].title, "Open learning page");
 });
