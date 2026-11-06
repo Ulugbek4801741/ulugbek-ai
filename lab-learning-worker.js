@@ -333,18 +333,10 @@ async function researchOpenWeb(topic, language) {
   const timeout = setTimeout(() => controller.abort(), 12000);
   try {
     const endpoint = "https://html.duckduckgo.com/html/?q=" + encodeURIComponent(topic);
-    const response = await fetch(endpoint, {
-      headers: {
-        "User-Agent": "ULUGBEK-AI-OpenKnowledge/2.0 (public read-only research)",
-        "Accept": "text/html"
-      },
-      signal: controller.signal,
-      redirect: "error"
-    });
-    if (!response.ok) throw new Error("Ochiq qidiruv HTTP " + response.status);
-    const html = await response.text();
-    if (Buffer.byteLength(html, "utf8") > 1_000_000) throw new Error("Qidiruv javobi hajmi limitdan oshdi.");
-    const results = parseOpenWebResults(html);
+    // Search pages use the same HTTPS, DNS, robots.txt, redirect, timeout,
+    // response-size and per-host pacing checks as destination pages.
+    const searchPage = await readPublicPage(endpoint);
+    const results = parseOpenWebResults(searchPage.html);
     const current = await readKnowledge();
     const known = new Set(current.map(item => item.source).filter(Boolean));
     const additions = [];
