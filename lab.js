@@ -253,6 +253,66 @@ router.post("/learn-url", searchRateLimit, async (req, res) => {
   }
 });
 
+// Search the public web, read up to three result pages, and store sourced candidates.
+router.post("/research", searchRateLimit, async (req, res) => {
+  if (!requireLabAdmin(req, res)) return;
+  const query = typeof req.body?.query === "string" ? req.body.query.trim() : "";
+  if (!query) return res.status(400).json({ error: "Qidiruv mavzusini kiriting." });
+  if (query.length > MAX_QUERY) return res.status(413).json({ error: "Qidiruv 240 belgidan oshmasin." });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    const endpoint = "https://html.duckduckgo.com/html/?q=" + encodeURIComponent(query);
+    const response = await fetch(endpoint, {
+      headers: { "User-Agent": "ULUGBEK-AI-Research-Lab/0.2 (public read-only research)", "Accept": "text/html" },
+      signal: controller.signal,
+      redirect: "error"
+    });
+    if (!response.ok) return res.status(502).json({ error: "Ochiq qidiruv xizmati HTTP " + response.status + " qaytardi." });
+    const html = await response.text();
+    if (Buffer.byteLength(html, "utf8") > 1_000_000) return res.status(502).json({ error: "Qidiruv javobi hajmi limitdan oshdi." });
+    const results = parseSearchResults(html).slice(0, 3);
+    const entries = await readJson(KNOWLEDGE_FILE, []);
+    const current = Array.isArray(entries) ? entries : [];
+    const known = new Set(current.map(item => item.source).filter(Boolean));
+    const saved = [], skipped = [];
+    for (const result of results) {
+      if (known.has(result.url)) { skipped.push({ url: result.url, reason: "duplicate" }); continue; }
+      try {
+        const page = await readPublicPage(result.url);
+        if (known.has(page.source)) { skipped.push({ url: page.source, reason: "duplicate" }); continue; }
+        const entry = {
+          id: require("node:crypto").randomUUID(),
+          title: page.title || result.title,
+          content: page.content,
+          source: page.source,
+          contentType: page.contentType,
+          agent: "OpenWebResearch",
+          status: "pending-review",
+          quality: "public-web-page-unverified",
+          fetchedAt: page.fetchedAt,
+          createdAt: new Date().toISOString(),
+          reviewNote: "Internetdan olingan ma’lumot; tasdiqlanmaguncha chatda fakt sifatida ishlatilmaydi."
+        };
+        saved.push(entry);
+        known.add(page.source);
+      } catch (error) {
+        skipped.push({ url: result.url, reason: String(error?.message || "read failed").slice(0, 180) });
+      }
+    }
+    if (saved.length) await writeJson(KNOWLEDGE_FILE, [...current, ...saved].slice(-MAX_ITEMS));
+    return res.json({
+      ok: true, query, searchResults: results.length, fetched: saved.length,
+      saved: saved.length, skipped, entries: saved,
+      note: "Ochiq saytlardan olingan matnlar manbasi bilan saqlandi. Ular tasdiqlanmaguncha chat javoblarida ishlatilmaydi."
+    });
+  } catch (error) {
+    return res.status(502).json({ ok: false, error: String(error?.message || "Internet tadqiqoti bajarilmadi.").slice(0, 220) });
+  } finally {
+    clearTimeout(timeout);
+  }
+});
+
 router.get("/knowledge", async (req, res) => {
   if (!requireLabAdmin(req, res)) return;
   res.set("Cache-Control", "no-store");
