@@ -95,29 +95,43 @@ function requestPinned(url, address, pathName) {
 }
 
 function robotsAllows(text, pathname) {
-  let active = false, specific = false, delayMs = 0;
-  const rules = [];
-  for (const raw of String(text || "").split(/\r?\n/)) {
+  const groups = [];
+  let group = null;
+  for (const raw of String(text || "").split(/\\r?\\n/)) {
     const line = raw.split("#", 1)[0].trim();
     const i = line.indexOf(":");
     if (!line || i < 0) continue;
     const key = line.slice(0, i).trim().toLowerCase();
     const value = line.slice(i + 1).trim();
     if (key === "user-agent") {
-      active = value === "*" || "ulugbek-ai-openknowledge".startsWith(value.toLowerCase());
-      if (active && value !== "*") specific = true;
-    } else if (active && (key === "allow" || key === "disallow") && value) {
-      rules.push({ allow: key === "allow", path: value });
-    } else if (active && key === "crawl-delay") {
+      if (!group || group.rulesStarted) {
+        group = { agents: [], rules: [], delayMs: 0, rulesStarted: false };
+        groups.push(group);
+      }
+      group.agents.push(value.toLowerCase());
+    } else if (group && (key === "allow" || key === "disallow")) {
+      group.rulesStarted = true;
+      if (value) group.rules.push({ allow: key === "allow", path: value });
+    } else if (group && key === "crawl-delay") {
       const seconds = Number(value);
-      if (Number.isFinite(seconds) && seconds >= 0) delayMs = Math.max(delayMs, Math.min(seconds * 1000, 3600000));
+      if (Number.isFinite(seconds) && seconds >= 0) {
+        group.delayMs = Math.max(group.delayMs, Math.min(seconds * 1000, 3600000));
+      }
     }
   }
-  const matches = rules.filter(rule => pathname.startsWith(rule.path))
-    .sort((a,b) => b.path.length - a.path.length);
-  return { allowed: !matches.length || matches[0].allow, delayMs, specific };
+  const token = "ulugbek-ai-openknowledge";
+  const specific = groups.filter(g => g.agents.some(a => a !== "*" && token.startsWith(a)));
+  const selected = specific.length ? specific : groups.filter(g => g.agents.includes("*"));
+  if (!selected.length) return { allowed: true, delayMs: 0 };
+  const rules = selected.flatMap(g => g.rules).filter(rule => {
+    const escaped = rule.path.replace(/[.+?^{}()|[\\]\\\\]/g, "\\\\$&")
+      .replace(/\\*/g, ".*");
+    const anchored = escaped.endsWith("$") ? "^" + escaped.slice(0, -1) + "$" : "^" + escaped;
+    return new RegExp(anchored).test(pathname);
+  }).sort((a,b) => b.path.replace(/[\\*$]/g, "").length - a.path.replace(/[\\*$]/g, "").length);
+  const best = rules[0];
+  return { allowed: !best || best.allow, delayMs: Math.max(0, ...selected.map(g => g.delayMs)) };
 }
-
 async function fetchRobots(url, address) {
   if (robotsCache.has(url.hostname)) return robotsCache.get(url.hostname);
   const promise = (async () => {
