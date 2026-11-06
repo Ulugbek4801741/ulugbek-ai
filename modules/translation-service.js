@@ -50,7 +50,7 @@ function parseResult(raw, requestedSource) {
 function isPrivateModelEndpoint(config) {
   if (config?.provider !== "openai-compatible" || !config.endpoint) return false;
   let hostname;
-  try { hostname = new URL(config.endpoint).hostname.toLowerCase().replace(/^\\[|\\]$/g, ""); } catch (_) { return false; }
+  try { hostname = new URL(config.endpoint).hostname.toLowerCase(); if (hostname.startsWith("[") && hostname.endsWith("]")) hostname = hostname.slice(1, -1); } catch (_) { return false; }
   if (hostname === "localhost" || hostname.endsWith(".localhost") || hostname.endsWith(".internal")) return true;
   const family = net.isIP(hostname);
   if (family === 4) {
