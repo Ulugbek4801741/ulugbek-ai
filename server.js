@@ -669,14 +669,17 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   }
   const detectedForTranslation = languageModule.detectLanguage(message);
   let chatReplyLanguage = detectedForTranslation.code;
-  if (detectedForTranslation.code !== "uz") {
+  const sourceLanguageForTranslation = detectedForTranslation.code === "unknown" || (detectedForTranslation.code === "uz" && detectedForTranslation.confidence < 0.7)
+    ? "auto" : detectedForTranslation.code;
+  const shouldTranslateChat = sourceLanguageForTranslation !== "uz";
+  if (shouldTranslateChat) {
     try {
       const translatedInput = await translationService.translate(conversationMessage, {
         targetLanguage: "uz",
-        sourceLanguage: detectedForTranslation.code === "unknown" ? "auto" : detectedForTranslation.code
+        sourceLanguage: sourceLanguageForTranslation
       });
       conversationMessage = translatedInput.text;
-      if (detectedForTranslation.code === "unknown") chatReplyLanguage = translatedInput.sourceLanguage;
+      chatReplyLanguage = translatedInput.sourceLanguage;
     } catch (error) {
       return res.status(503).json({
         error: "Boshqa tildagi xabarni o‘zbekchaga tarjima qilib bo‘lmadi. Tarjima uchun ULUGBEK AI model provayderini sozlang va qayta urinib ko‘ring.",
