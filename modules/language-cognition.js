@@ -42,8 +42,13 @@ function stemToken(token,language){
 function countInto(map,key,limit=MAX_NGRAMS){if(!map.has(key)&&map.size>=limit)return;map.set(key,(map.get(key)||0)+1);}
 function hashIndex(value){return crypto.createHash("sha1").update(value).digest().readUInt32BE(0);}
 function trustedSource(value){
- try{const u=new URL(String(value||""));return u.protocol==="https:"&&SOURCE_HOSTS.has(u.hostname)&&u.pathname.startsWith("/wiki/")&&!u.username&&!u.password;}
- catch(_){return false;}
+ try{
+  const u=new URL(String(value||"")),host=u.hostname.toLowerCase();
+  const ipv4=/^(?:\\d{1,3}\\.){3}\\d{1,3}$/.test(host);
+  return u.protocol==="https:"&&!u.username&&!u.password&&!ipv4&&!host.includes(":")&&
+   host.includes(".")&&host!=="localhost"&&!host.endsWith(".localhost")&&
+   !host.endsWith(".local")&&!host.endsWith(".internal");
+ }catch(_){return false;}
 }
 function intentOf(text){for(const [intent,pattern] of INTENT_RULES)if(pattern.test(text))return{intent,confidence:.82};if(/[?؟]/u.test(text))return{intent:"question",confidence:.72};return{intent:"general",confidence:.48};}
 function extractEntities(text){
