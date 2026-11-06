@@ -1,5 +1,6 @@
 "use strict";
 const providerRouter = require("./provider-router");
+const net = require("node:net");
 const MAX_TEXT_LENGTH = 4000;
 const SYSTEM_PROMPT = [
   "You are a professional translation engine for ULUGBEK AI.",
@@ -46,6 +47,23 @@ function parseResult(raw, requestedSource) {
   return { translatedText, sourceLanguage };
 }
 
+function isPrivateModelEndpoint(config) {
+  if (config?.provider !== "openai-compatible" || !config.endpoint) return false;
+  let hostname;
+  try { hostname = new URL(config.endpoint).hostname.toLowerCase().replace(/^\\[|\\]$/g, ""); } catch (_) { return false; }
+  if (hostname === "localhost" || hostname.endsWith(".localhost") || hostname.endsWith(".internal")) return true;
+  const family = net.isIP(hostname);
+  if (family === 4) {
+    const octets = hostname.split(".").map(Number);
+    return octets[0] === 10 ||
+      (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) ||
+      (octets[0] === 192 && octets[1] === 168) ||
+      (octets[0] === 127);
+  }
+  if (family === 6) return hostname === "::1" || hostname.startsWith("fc") || hostname.startsWith("fd") || hostname.startsWith("fe80:");
+  return false;
+}
+
 function createTranslationService(options = {}) {
   const env = options.env || process.env;
   const fetchImpl = options.fetchImpl || globalThis.fetch;
@@ -61,7 +79,7 @@ function createTranslationService(options = {}) {
     }
     if (sourceLanguage === targetLanguage) return { text: input, sourceLanguage, targetLanguage, translated: false };
     const config = providerRouter.configuration(env);
-    if (!config.configured || typeof fetchImpl !== "function") {
+    if (!config.configured || !isPrivateModelEndpoint(config) || typeof fetchImpl !== "function") {
       const error = new Error("Tarjima uchun AI model provayderi sozlanmagan.");
       error.code = "translation-provider-not-configured"; error.statusCode = 503; throw error;
     }
@@ -100,11 +118,12 @@ function createTranslationService(options = {}) {
     const config = providerRouter.configuration(env);
     return {
       ready: true, module: "ulugbek-translation-v1", coreLanguage: "uz",
-      mode: "provider-assisted-translation-no-separate-language-training",
-      available: config.configured, provider: config.provider, requiresConfiguredModel: true,
+      mode: "private-local-model-translation-no-separate-language-training",
+      available: config.configured && isPrivateModelEndpoint(config), provider: config.provider,
+      requiresConfiguredPrivateModel: true,
       supportedByModel: "provider-dependent", maximumCharacters: MAX_TEXT_LENGTH
     };
   }
   return { translate, status };
 }
-module.exports = { createTranslationService, protectTokens, parseResult };
+module.exports = { createTranslationService, protectTokens, parseResult, isPrivateModelEndpoint };
