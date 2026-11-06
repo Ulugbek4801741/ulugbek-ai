@@ -5,6 +5,7 @@
 const fs = require("node:fs/promises");
 const path = require("node:path");
 const crypto = require("node:crypto");
+const { readPublicPage, normalizePublicUrl } = require("./modules/public-web-reader");
 
 const DATA_DIR = path.resolve(process.env.ULUGBEK_DATA_DIR || path.join(__dirname, "data"));
 const FILE = path.join(DATA_DIR, "knowledge.json");
@@ -44,7 +45,8 @@ const ALLOWED_WIKIPEDIA_HOSTS = new Set([
 let state = {
   enabled: true, running: false, startedAt: null, lastCycleAt: null,
   lastSuccessAt: null, cycles: 0, saved: 0, lastError: null,
-  lastTopic: null, lastLanguage: null
+  lastTopic: null, lastLanguage: null, openWebSaved: 0,
+  lastOpenWebAt: null, lastOpenWebError: null
 };
 let timer = null;
 let cursor = 0;
@@ -304,25 +306,106 @@ async function learnTopic(topic, language = "uz") {
     clearTimeout(timeout);
   }
 }
+function parseOpenWebResults(html) {
+  const results = [];
+  const pattern = /<a[^>]*class=["'][^"']*result__a[^"']*["'][^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  let match;
+  while ((match = pattern.exec(String(html || ""))) && results.length < 5) {
+    try {
+      let href = match[1].replace(/&amp;/g, "&").replace(/&quot;/g, '"');
+      const candidate = new URL(href, "https://html.duckduckgo.com");
+      if (candidate.hostname.endsWith("duckduckgo.com")) {
+        const target = candidate.searchParams.get("uddg");
+        if (target) href = target;
+      }
+      const safe = normalizePublicUrl(href);
+      const title = clean(match[2].replace(/<[^>]*>/g, " "), 180);
+      if (safe && title && !results.some(item => item.url === safe.href)) {
+        results.push({ title, url: safe.href });
+      }
+    } catch (_) {}
+  }
+  return results;
+}
+
+async function researchOpenWeb(topic, language) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12000);
+  try {
+    const endpoint = "https://html.duckduckgo.com/html/?q=" + encodeURIComponent(topic);
+    const response = await fetch(endpoint, {
+      headers: {
+        "User-Agent": "ULUGBEK-AI-OpenKnowledge/2.0 (public read-only research)",
+        "Accept": "text/html"
+      },
+      signal: controller.signal,
+      redirect: "error"
+    });
+    if (!response.ok) throw new Error("Ochiq qidiruv HTTP " + response.status);
+    const html = await response.text();
+    if (Buffer.byteLength(html, "utf8") > 1_000_000) throw new Error("Qidiruv javobi hajmi limitdan oshdi.");
+    const results = parseOpenWebResults(html);
+    const current = await readKnowledge();
+    const known = new Set(current.map(item => item.source).filter(Boolean));
+    const additions = [];
+    for (const result of results.slice(0, 2)) {
+      if (stopRequested) break;
+      try {
+        const page = await readPublicPage(result.url);
+        if (known.has(page.source)) continue;
+        const entry = {
+          id: crypto.randomUUID(),
+          title: clean(page.title || result.title, 180),
+          content: clean(page.content, 8000),
+          source: page.source,
+          language,
+          agent: "AutonomousOpenWebResearchAgent",
+          status: "pending-review",
+          quality: "public-web-page-unverified",
+          fetchedAt: page.fetchedAt,
+          contentType: page.contentType,
+          createdAt: new Date().toISOString()
+        };
+        known.add(page.source);
+        additions.push(entry);
+      } catch (error) {
+        state.lastOpenWebError = clean(error.message, 200);
+      }
+    }
+    if (additions.length) {
+      await writeKnowledge([...current, ...additions]);
+      state.saved += additions.length;
+      state.openWebSaved += additions.length;
+    }
+    state.lastOpenWebAt = new Date().toISOString();
+    return additions.length;
+  } catch (error) {
+    state.lastOpenWebError = clean(error.name === "AbortError" ? "Ochiq internet qidiruvi vaqti tugadi." : error.message, 200);
+    return 0;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function cycle() {
   if (!state.enabled || stopRequested || inFlight) return;
   inFlight = true;
   state.running = true;
   state.lastCycleAt = new Date().toISOString();
 
-  // Har bir siklda 3 til parallel qidiriladi. Har til 2 tagacha qisqa
-  // ensiklopedik xulosa oladi: ko‘pi bilan 6 nomzod/sikl.
-  // Bu manba cheklovlariga rioya qiladi; minglab sahifani yuklab olmaydi.
+  // Har siklda bitta til tanlanadi; Wikipedia va umumiy ochiq internetdan
+  // cheklangan miqdorda sahifa olinadi. HTTP so‘rovlari ketma-ket bajariladi.
   const language = LANGUAGE_PLAN[cursor++ % LANGUAGE_PLAN.length];
   const topics = TOPICS[language];
   const topic = topics[topicCursors[language]++ % topics.length];
   try {
     const findings = await researchQuestion(topic);
+    const openWebFindings = await researchOpenWeb(topic, language);
     state.cycles += 1;
     state.lastTopic = topic;
     state.lastLanguage = language;
     state.lastSuccessAt = new Date().toISOString();
-    if (findings.length) state.lastError = null;
+    if (findings.length || openWebFindings) state.lastError = null;
   } catch (error) {
     state.lastError = clean(error.name === "AbortError" ? "Ochiq manba so‘rovi vaqti tugadi." : error.message, 240);
   } finally {
@@ -363,6 +446,10 @@ function status() {
       { language: "ru", name: "Rus", sharePercent: 15 }
     ],
     sourceAllowlist: [...ALLOWED_WIKIPEDIA_HOSTS],
+    genericPublicHttpsWeb: true,
+    openWebPagesSaved: state.openWebSaved,
+    lastOpenWebAt: state.lastOpenWebAt,
+    lastOpenWebError: state.lastOpenWebError,
     minimumRequestGapSeconds: 1,
     requestConcurrency: 1,
     robotsTxtEnforced: true,
@@ -375,7 +462,7 @@ function status() {
     chatUsesOnlyApprovedKnowledge: true,
     modelWeightsRetrained: false,
     uptimeGuarantee: "host-process-and-persistent-storage-dependent",
-    note: "Oldin ko‘rilgan sahifalar doimiy ro‘yxatda saqlanadi va qayta yuklanmaydi. Har daqiqada o‘zbek, ingliz va rus Wikipedia manbalarida qidiruv; HTTP so‘rovlari bitta navbatda ketma-ket yuboriladi; har tildan 2 tagacha nomzod (jami ko‘pi bilan 6). O‘zbek mavzulari 60%, ingliz 25%, rus 15% navbatda. Manbalar pending-review holatida saqlanadi; chat faqat tasdiqlangan yozuvlardan foydalanadi. Bu model vaznlarini o‘qitmaydi."
+    note: "Har siklda o‘zbek, ingliz yoki rus mavzusi bo‘yicha Wikipedia va umumiy ochiq HTTPS internet qidiriladi. Umumiy internetdan ko‘pi bilan 2 sahifa olinadi; robots.txt, DNS va HTTP cheklovlari tekshiriladi. Olingan yozuvlar pending-review holatida saqlanadi; chat faqat tasdiqlangan bilimlardan foydalanadi. Bu model vaznlarini o‘qitmaydi."
   };
 }
 async function searchKnowledge(query, limit = 5) {
@@ -396,11 +483,13 @@ async function researchQuestion(query) {
   const languages = ["uz", "en", "ru"];
   const current = await readKnowledge();
   const known = new Set(current.map(item => item.source).filter(Boolean));
+  const collected = [];
   await loadVisitedPages();
 
-  // Three language searches run in parallel; each has its own 15-second timeout.
-  const batches = await Promise.all(languages.map(async language => {
-    if (stopRequested) return [];
+  // Sequential requests are important: each timeout starts only when its
+  // request reaches the queue, so one slow language cannot cancel later ones.
+  for (const language of languages) {
+    if (stopRequested) break;
     const base = "https://" + language + ".wikipedia.org";
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -412,49 +501,42 @@ async function researchQuestion(query) {
       }).toString();
       const payload = await fetchPublicJson(searchUrl.href, controller.signal);
       const hits = Array.isArray(payload?.query?.search) ? payload.query.search.slice(0, 2) : [];
-      return (await Promise.all(hits.map(async hit => {
+      for (const hit of hits) {
+        if (stopRequested) break;
         const title = clean(hit.title, 180);
-        if (!title) return null;
+        if (!title) continue;
         const url = base + "/api/rest_v1/page/summary/" + encodeURIComponent(title.replace(/ /g, "_"));
         const pageKey = base + "/wiki/" + encodeURIComponent(title.replace(/ /g, "_"));
-        await loadVisitedPages();
-        if (visitedPages.has(pageKey)) return null;
+        if (visitedPages.has(pageKey)) continue;
         const item = await fetchPublicJson(url, controller.signal);
         const content = clean(item.extract, 4000);
         const source = item.content_urls?.desktop?.page;
-        if (!content || typeof source !== "string" || !source.startsWith(base + "/wiki/")) return null;
+        if (!content || typeof source !== "string" || !source.startsWith(base + "/wiki/") || known.has(source)) continue;
         await markPageVisited(pageKey);
-        return {
+        known.add(source);
+        collected.push({
           id: crypto.randomUUID(), title: clean(item.title || title, 180),
           content, source, language, agent: "OnDemandResearchAgent",
           status: "pending-review", quality: "live-public-summary-unverified",
           createdAt: new Date().toISOString()
-        };
-      }))).filter(Boolean);
+        });
+      }
     } catch (error) {
       state.lastError = clean(error.name === "AbortError" ? "Internet qidiruvi vaqti tugadi." : error.message, 240);
-      return [];
     } finally {
       clearTimeout(timeout);
     }
-  }));
-
-  const collected = batches.flat();
-  const additions = collected.filter(item => {
-    if (!item.source || known.has(item.source)) return false;
-    known.add(item.source);
-    current.push(item);
-    return true;
-  });
-  if (additions.length) {
-    await writeKnowledge(current);
-    state.saved += additions.length;
-    state.lastOnDemandSearchAt = new Date().toISOString();
-    state.lastOnDemandSearchLanguages = [...new Set(additions.map(item => item.language))];
   }
-  return additions;
+
+  if (collected.length) {
+    await writeKnowledge([...current, ...collected]);
+    state.saved += collected.length;
+    state.lastOnDemandSearchAt = new Date().toISOString();
+    state.lastOnDemandSearchLanguages = [...new Set(collected.map(item => item.language))];
+  }
+  return collected;
 }
 function buildLocalReply(query, hits, context) {
   return require("./native-cognition").respond(query, hits, context);
 }
-module.exports = { start, stop, status, cycle, learnTopic, searchKnowledge, researchQuestion, buildLocalReply, loadVisitedPages, robotsAllows };
+module.exports = { start, stop, status, cycle, learnTopic, searchKnowledge, researchQuestion, researchOpenWeb, parseOpenWebResults, buildLocalReply, loadVisitedPages, robotsAllows };
