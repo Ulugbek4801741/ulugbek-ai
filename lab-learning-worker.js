@@ -444,7 +444,11 @@ function status() {
       { language: "en", name: "Ingliz", sharePercent: 25 },
       { language: "ru", name: "Rus", sharePercent: 15 }
     ],
-    sourceAllowlist: [...ALLOWED_WIKIPEDIA_HOSTS],\n    genericPublicHttpsWeb: true,\n    openWebPagesSaved: state.openWebSaved,\n    lastOpenWebAt: state.lastOpenWebAt,\n    lastOpenWebError: state.lastOpenWebError,
+    sourceAllowlist: [...ALLOWED_WIKIPEDIA_HOSTS],
+    genericPublicHttpsWeb: true,
+    openWebPagesSaved: state.openWebSaved,
+    lastOpenWebAt: state.lastOpenWebAt,
+    lastOpenWebError: state.lastOpenWebError,
     minimumRequestGapSeconds: 1,
     requestConcurrency: 1,
     robotsTxtEnforced: true,
