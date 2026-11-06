@@ -6,6 +6,7 @@ const crypto = require("node:crypto");
 const agentRuntime = require("./agent-runtime");
 const singleAgent = require("./modules/single-agent").createSingleAgent();
 const languageModule = require("./modules/language-module");
+const translationService = require("./modules/translation-service").createTranslationService();
 const emotionalIntelligence = require("./modules/emotional-intelligence");
 const ethicalReasoning = require("./modules/ethical-reasoning");
 const conversationOrchestrator = require("./modules/conversation-orchestrator");
@@ -362,6 +363,25 @@ app.post("/api/language/analyze", (req, res) => {
   return res.json({ ok: true, detected, linguistic: languageCognition.analyze(text), instruction: languageModule.buildLanguageInstruction(text) });
 });
 
+app.get("/api/translation/status", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, translation: translationService.status(), coreLanguage: "uz" });
+});
+app.post("/api/translation/translate", async (req, res) => {
+  const text = typeof req.body?.text === "string" ? req.body.text.trim() : "";
+  const targetLanguage = typeof req.body?.targetLanguage === "string" ? req.body.targetLanguage.trim().toLowerCase() : "uz";
+  const sourceLanguage = typeof req.body?.sourceLanguage === "string" ? req.body.sourceLanguage.trim().toLowerCase() : "auto";
+  if (!text) return res.status(400).json({ error: "Tarjima matni bo‘sh bo‘lmasligi kerak." });
+  if (text.length > 4000) return res.status(413).json({ error: "Tarjima matni 4000 belgidan oshmasligi kerak." });
+  try {
+    const result = await translationService.translate(text, { targetLanguage, sourceLanguage });
+    res.set("Cache-Control", "no-store");
+    return res.json({ ok: true, ...result });
+  } catch (error) {
+    return res.status(error.statusCode || 503).json({ error: error.message || "Tarjima bajarilmadi." });
+  }
+});
+
 app.get("/api/language/status", (_req, res) => {
   res.set("Cache-Control", "no-store");
   res.json({ ok: true, language: languageModule.status(), languageLearning: languageLearningWorker.status() });
@@ -637,7 +657,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   res.set("Cache-Control", "no-store");
   if (!message) return res.status(400).json({ error: "Xabar bo‘sh bo‘lmasligi kerak." });
   if (message.length > MAX_TASK_LENGTH) return res.status(413).json({ error: "Xabar 4000 belgidan oshmasligi kerak." });
-  const conversationMessage = conversationMemory.expand(sessionId, message);
+  let conversationMessage = conversationMemory.expand(sessionId, message);
   req.chatContextMessage = conversationMessage;
   const inputSafety = require("./modules/input-safety").inspectUserMessage(message);
   const shieldDecision = globalSafetyShield.inspectChat({ message, sessionId, ip: req.ip, inputSafety });
@@ -646,6 +666,43 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       error: shieldDecision.message || inputSafety.message,
       safety: { blocked: true, category: shieldDecision.reason, quarantined: shieldDecision.quarantined === true }
     });
+  }
+  const detectedForTranslation = languageModule.detectLanguage(message);
+  let chatReplyLanguage = detectedForTranslation.code;
+  const sourceLanguageForTranslation = detectedForTranslation.code === "unknown"
+    ? "auto" : detectedForTranslation.code;
+  const shouldTranslateChat = detectedForTranslation.code !== "uz";
+  if (shouldTranslateChat) {
+    try {
+      const translatedInput = await translationService.translate(conversationMessage, {
+        targetLanguage: "uz",
+        sourceLanguage: sourceLanguageForTranslation
+      });
+      conversationMessage = translatedInput.text;
+      chatReplyLanguage = translatedInput.sourceLanguage;
+    } catch (error) {
+      return res.status(503).json({
+        error: "Boshqa tildagi xabarni o‘zbekchaga tarjima qilib bo‘lmadi. Tarjima uchun ULUGBEK AI model provayderini sozlang va qayta urinib ko‘ring.",
+        translation: { required: true, available: false, reason: error.code || "translation-unavailable" }
+      });
+    }
+  }
+  if (chatReplyLanguage && chatReplyLanguage !== "uz") {
+    const sendJson = res.json.bind(res);
+    res.json = payload => {
+      if (!payload || typeof payload.reply !== "string") return sendJson(payload);
+      translationService.translate(payload.reply, { targetLanguage: chatReplyLanguage, sourceLanguage: "uz" })
+        .then(translatedOutput => sendJson({
+          ...payload,
+          reply: translatedOutput.text,
+          translation: { used: true, sourceLanguage: "uz", targetLanguage: chatReplyLanguage }
+        }))
+        .catch(() => {
+          res.status(502);
+          sendJson({ error: "Javob tayyorlandi, lekin foydalanuvchi tiliga tarjima qilish amalga oshmadi. Qayta urinib ko‘ring.", translation: { used: true, failed: true } });
+        });
+      return res;
+    };
   }
   const conversationContext = conversationOrchestrator.analyze(conversationMessage);
   const cognition = conversationContext.cognition;
@@ -823,7 +880,7 @@ app.use((err, _req, res, _next) => {
   return res.status(500).json({ error: "Ichki server xatosi." });
 });
 learningWorker.start();
-languageLearningWorker.start();
+languageLearningWorker.stop();
 agentRuntime.startWorker().then(() => {
   const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`ULUGBEK AI serveri ${PORT}-portda ishga tushdi.`);

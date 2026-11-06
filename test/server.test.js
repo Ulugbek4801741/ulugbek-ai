@@ -357,6 +357,37 @@ test("API smoke tests", async (t) => {
       assert.equal(response.status, 400);
     });
 
+    await t.test("translation status reports Uzbek as the core language", async () => {
+      const response = await fetch(`${baseUrl}/api/translation/status`);
+      const body = await response.json();
+      assert.equal(response.status, 200);
+      assert.equal(body.coreLanguage, "uz");
+      assert.equal(body.translation.requiresConfiguredModel, true);
+      assert.equal(body.translation.available, false);
+    });
+
+    await t.test("translation API fails clearly when no model provider is configured", async () => {
+      const response = await fetch(`${baseUrl}/api/translation/translate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: "Hello", sourceLanguage: "en", targetLanguage: "uz" })
+      });
+      const body = await response.json();
+      assert.equal(response.status, 503);
+      assert.match(body.error, /provayderi sozlanmagan/i);
+    });
+
+    await t.test("non-Uzbek chat does not pretend to translate without a provider", async () => {
+      const response = await fetch(`${baseUrl}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: "Hello, please help me." })
+      });
+      const body = await response.json();
+      assert.equal(response.status, 503);
+      assert.equal(body.translation.required, true);
+    });
+
     await t.test("chat accepts a message using native-only reasoning", async () => {
       const response = await fetch(`${baseUrl}/api/chat`, {
         method: "POST",
