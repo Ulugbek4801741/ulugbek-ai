@@ -26,7 +26,7 @@ test("tokenizer preserves Uzbek letters and apostrophe words",()=>{
  assert.ok(tokens.includes("tafakkur"));
  assert.ok(tokens.includes("o'rganish"));
 });
-test("only allowlisted public encyclopedia sources enter the language corpus",async t=>{
+test("public HTTPS sources are accepted and local sources are rejected",async t=>{
  const engine=await temporaryEngine(t);
  assert.equal(trustedSource("https://uz.wikipedia.org/wiki/O%27zbek_tili"),true);
  assert.equal(trustedSource("https://example.org/docs/uzbek-language"),true);
@@ -35,7 +35,7 @@ test("only allowlisted public encyclopedia sources enter the language corpus",as
  assert.equal(trustedSource("https://localhost/wiki/Ozbek_tili"),false);
  const result=await engine.trainFromEntries([
   {title:"Til",content:sampleText(),source:"https://uz.wikipedia.org/wiki/Til",language:"uz",status:"pending-review"},
-  {title:"Injected",content:sampleText(),source:"https://evil.example/wiki/Til",language:"uz",status:"approved"}
+  {title:"Private",content:sampleText(),source:"https://127.0.0.1/wiki/Til",language:"uz",status:"approved"}
  ]);
  assert.equal(result.addedSources,1);
  assert.equal(result.corpusSources,1);
@@ -76,4 +76,14 @@ test("learned language scoring ranks relevant evidence and survives restart",asy
  await second.initialize();
  assert.equal(second.status().corpusSources,1);
  assert.equal(second.status().languages.uz.predictionReady,true);
+});
+
+test("language module can train from a general public HTTPS website", async t => {
+ const engine=await temporaryEngine(t);
+ const result=await engine.trainFromEntries([
+  {title:"Ochiq til manbasi",content:sampleText(),source:"https://example.org/open-language-page",language:"uz",status:"pending-review"}
+ ]);
+ assert.equal(result.addedSources,1);
+ assert.equal(engine.status().corpusSources,1);
+ assert.ok(engine.status().languages.uz.predictionReady);
 });
