@@ -102,7 +102,8 @@ function createLanguageCognition(options={}){
  async function trainFromEntries(entries){
   const existing=await readJson(corpusFile,[]),corpus=Array.isArray(existing)?existing:[],known=new Set(corpus.map(x=>x.source)),additions=[];
   for(const entry of Array.isArray(entries)?entries:[]){
-   if(!entry||!["pending-review","approved"].includes(entry.status)||!trustedSource(entry.source)||known.has(entry.source))continue;
+   // Train only on administrator-approved material. Pending review is never a training source.
+   if(!entry||entry.status!=="approved"||!trustedSource(entry.source)||known.has(entry.source))continue;
    const text=String(entry.content||"").replace(/\s+/g," ").trim().slice(0,4000);if(text.length<80)continue;
    const detected=detectLanguage(text,entry.language),language=LANGUAGES.has(detected.code)?detected.code:"unknown";if(language==="unknown")continue;
    additions.push({id:crypto.randomUUID(),source:entry.source,title:String(entry.title||"Nomsiz manba").slice(0,180),language,text,sourceReviewStatus:entry.status,collectedAt:entry.createdAt||new Date().toISOString()});
