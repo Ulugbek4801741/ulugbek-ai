@@ -213,6 +213,9 @@ app.get("/api/admin/overview", requireAdmin, (_req, res) => {
     aiConfigured: singleAgent.status().configured,
     nativeReasoningReady: true,
     trainedLanguageModelReady: false,
+    independentLanguageModelTrained: languageCognition.status().modelTrained,
+    independentLanguageModelType: languageCognition.status().modelType,
+    languageTraining: languageLearningWorker.status(),
     languageModuleReady: languageModule.status().ready,
     emotionalIntelligenceReady: emotionalIntelligence.status().ready,
     ethicalReasoningReady: ethicalReasoning.status().ready,
@@ -220,7 +223,9 @@ app.get("/api/admin/overview", requireAdmin, (_req, res) => {
     independentLanguageReady: languageCognition.status().ready,
     independentLanguageModelTrained: languageCognition.status().modelTrained,
     localModelConfigured: singleAgent.status().configured && singleAgent.status().provider === "openai-compatible",
-    externalAiApiEnabled: singleAgent.status().configured && singleAgent.status().provider !== "openai-compatible",
+    externalAiApiEnabled: singleAgent.status().configured && ["gemini", "anthropic"].includes(singleAgent.status().provider),
+    modelProvider: singleAgent.status().provider,
+    modelName: singleAgent.status().model || null,
     model: singleAgent.status(),
     cognition: "one-universal-agent-with-native-fallback",
     agentWorker: "single-process-queue",
@@ -414,14 +419,23 @@ app.get("/api/health", (_req, res) => {
     aiConfigured: singleAgent.status().configured,
     nativeReasoningReady: true,
     trainedLanguageModelReady: false,
+    independentLanguageModelTrained: languageCognition.status().modelTrained,
+    independentLanguageModelType: languageCognition.status().modelType,
+    languageTraining: languageLearningWorker.status(),
     languageModuleReady: languageModule.status().ready,
     emotionalIntelligenceReady: emotionalIntelligence.status().ready,
     ethicalReasoningReady: ethicalReasoning.status().ready,
     conversationPipelineReady: conversationOrchestrator.status().ready,
-    localModelConfigured: singleAgent.status().configured,
-    externalAiApiEnabled: false,
+    localModelConfigured: singleAgent.status().configured && singleAgent.status().provider === "openai-compatible",
+    externalAiApiEnabled: singleAgent.status().configured && ["gemini", "anthropic"].includes(singleAgent.status().provider),
+    modelProvider: singleAgent.status().provider,
+    modelName: singleAgent.status().model || null,
+    independentLanguageModelTrained: languageCognition.status().modelTrained,
+    independentLanguageModelType: languageCognition.status().modelType,
+    languageTraining: languageLearningWorker.status(),
     agentCount: 1,
-    mode: singleAgent.status().configured ? "self-hosted-single-agent" : "native-single-agent-fallback-no-external-ai",
+    mode: !singleAgent.status().configured ? "native-single-agent-fallback-no-model" :
+      singleAgent.status().provider === "openai-compatible" ? "openai-compatible-model" : "external-ai-provider",
     storageMode: "local-json",
     workerConcurrency: 1,
     multiInstanceSafe: false,
@@ -825,7 +839,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       cognition
     });
   }
-  // One-agent chat mode: optional self-hosted model only; never call a hosted AI provider.
+  // One-agent chat mode: use the configured model provider when available, otherwise native fallback.
   try {
     const nativeBrain = require("./lab-learning-worker");
     const answerWithOneAgent = async entries => {
@@ -837,7 +851,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     const webResearchUsed = false;
     return res.json({
       reply: result.reply,
-      mode: result.modelUsed ? "self-hosted-single-agent-no-external-ai" : webResearchUsed ? "native-public-research-single-agent-fallback-no-external-ai" : "native-single-agent-fallback-no-external-ai",
+      mode: result.modelUsed ? (result.provider === "openai-compatible" ? "openai-compatible-single-agent" : "external-ai-single-agent") : webResearchUsed ? "native-public-research-single-agent-fallback-no-model" : "native-single-agent-fallback-no-model",
       agents: ["ULUGBEK Universal Agent"],
       reasoning: result.reasoning,
       knowledgeUsed: learned.length,
