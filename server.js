@@ -669,9 +669,9 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   }
   const detectedForTranslation = languageModule.detectLanguage(message);
   let chatReplyLanguage = detectedForTranslation.code;
-  const sourceLanguageForTranslation = detectedForTranslation.code === "unknown" || (detectedForTranslation.code === "uz" && detectedForTranslation.confidence < 0.7)
+  const sourceLanguageForTranslation = detectedForTranslation.code === "unknown"
     ? "auto" : detectedForTranslation.code;
-  const shouldTranslateChat = sourceLanguageForTranslation !== "uz";
+  const shouldTranslateChat = detectedForTranslation.code !== "uz";
   if (shouldTranslateChat) {
     try {
       const translatedInput = await translationService.translate(conversationMessage, {
