@@ -757,7 +757,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   const hasLocalAnswer = localCandidate?.reasoning?.answerable === true;
   // Preserve quick, built-in answers (greetings, arithmetic, starter lessons).
   // Research every other knowledge gap; explicit/current research always refreshes sources.
-  if (searchIntent.shouldSearch || !hasLocalAnswer) {
+  if (searchIntent.shouldSearch || (!hasLocalAnswer && searchIntent.reason !== "local-dialogue-or-arithmetic")) {
     if (searchIntent.isJobSearch) {
       const jobSearch = require("./modules/job-search");
       if (!jobSearch.hasLocationHint(conversationMessage)) {
