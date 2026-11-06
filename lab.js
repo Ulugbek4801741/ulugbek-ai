@@ -6,6 +6,7 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 
 const router = express.Router();
+const { readPublicPage, normalizePublicUrl } = require("./modules/public-web-reader");
 const DATA_DIR = path.resolve(process.env.ULUGBEK_DATA_DIR || path.join(__dirname, "data"));
 const KNOWLEDGE_FILE = path.join(DATA_DIR, "knowledge.json");
 const MEMORY_FILE = path.join(DATA_DIR, "agent-memory.json");
@@ -212,6 +213,43 @@ router.post("/learn", async (req, res) => {
     return res.status(502).json({ error: "Ochiq manbadan o‘rganish amalga oshmadi. Server interneti yoki manba xizmatini tekshiring." });
   } finally {
     clearTimeout(timeout);
+  }
+});
+
+// Read one arbitrary publicly accessible HTTPS page after checking DNS, robots.txt,
+// redirect targets, response type and size. This route is admin-only and read-only.
+router.post("/learn-url", searchRateLimit, async (req, res) => {
+  if (!requireLabAdmin(req, res)) return;
+  const rawUrl = typeof req.body?.url === "string" ? req.body.url.trim() : "";
+  const safeUrl = normalizePublicUrl(rawUrl);
+  if (!safeUrl) return res.status(400).json({ error: "Faqat HTTPS manzilli, ochiq domen sahifasi qabul qilinadi." });
+  try {
+    const page = await readPublicPage(safeUrl.href);
+    const entries = await readJson(KNOWLEDGE_FILE, []);
+    const current = Array.isArray(entries) ? entries : [];
+    if (current.some(item => item.source === page.source)) {
+      return res.json({ ok: true, saved: false, duplicate: true, source: page.source,
+        note: "Bu manba avval bilimlar bazasiga kiritilgan." });
+    }
+    const entry = {
+      id: require("node:crypto").randomUUID(),
+      title: page.title,
+      content: page.content,
+      source: page.source,
+      contentType: page.contentType,
+      agent: "OpenWebResearch",
+      status: "pending-review",
+      quality: "public-web-page-unverified",
+      fetchedAt: page.fetchedAt,
+      createdAt: new Date().toISOString(),
+      reviewNote: "Faktlar tekshirilmaguncha chat javoblarida ishlatilmaydi."
+    };
+    await writeJson(KNOWLEDGE_FILE, [...current, entry].slice(-MAX_ITEMS));
+    return res.json({ ok: true, saved: true, entry,
+      note: "Ochiq sahifa olindi. U tekshiruvdan o‘tmaguncha tasdiqlangan bilim sifatida ishlatilmaydi." });
+  } catch (error) {
+    const message = String(error?.message || "Ochiq sahifani o‘qib bo‘lmadi.").slice(0, 240);
+    return res.status(422).json({ ok: false, error: message });
   }
 });
 
