@@ -44,7 +44,7 @@ function hashIndex(value){return crypto.createHash("sha1").update(value).digest(
 function trustedSource(value){
  try{
   const u=new URL(String(value||"")),host=u.hostname.toLowerCase();
-  const ipv4=/^(?:\\d{1,3}\\.){3}\\d{1,3}$/.test(host);
+  const ipv4=/^(?:\d{1,3}\.){3}\d{1,3}$/.test(host);
   return u.protocol==="https:"&&!u.username&&!u.password&&!ipv4&&!host.includes(":")&&
    host.includes(".")&&host!=="localhost"&&!host.endsWith(".localhost")&&
    !host.endsWith(".local")&&!host.endsWith(".internal");
