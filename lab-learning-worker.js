@@ -398,8 +398,9 @@ async function cycle() {
   const language = LANGUAGE_PLAN[cursor++ % LANGUAGE_PLAN.length];
   const topics = TOPICS[language];
   const topic = topics[topicCursors[language]++ % topics.length];
-  let findings = 0;
-  let openWebFindings = 0;
+  try {
+    let findings = 0;
+    let openWebFindings = 0;
   let wikipediaError = null;
   state.lastOpenWebError = null;
 
@@ -429,11 +430,7 @@ async function cycle() {
     // Search completed but no new readable pages were found; this is not a crash.
     state.lastError = null;
   }
-  try {
-    // Persist operational diagnostics without storing user chat messages.
-    await fs.mkdir(DATA_DIR, { recursive: true });
-  } catch (_) {}
-  finally {
+  } finally {
     inFlight = false;
     if (state.enabled && !stopRequested) {
       timer = setTimeout(cycle, INTERVAL_MS);
