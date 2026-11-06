@@ -10,7 +10,7 @@ test("research worker prioritizes Uzbek, then English, then Russian", () => {
   assert.deepEqual(status.languagePriority.map(item => item.sharePercent), [60, 25, 15]);
   assert.deepEqual(status.sourceAllowlist, ["uz.wikipedia.org", "en.wikipedia.org", "ru.wikipedia.org"]);
   assert.equal(status.intervalMinutes, 1);
-  assert.equal(status.parallelLanguages, 3);
+  assert.equal(status.parallelLanguages, 1);
   assert.equal(status.maxCandidatesPerCycle, 6);
   assert.equal(status.writesToExternalSites, false);
   assert.equal(status.executesDownloadedCode, false);

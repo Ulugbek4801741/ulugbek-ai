@@ -268,12 +268,12 @@ async function learnTopic(topic, language = "uz") {
       const pageKey = base + "/wiki/" + encodeURIComponent(title.replace(/ /g, "_"));
       await loadVisitedPages();
       if (visitedPages.has(pageKey)) continue;
-      await markPageVisited(pageKey);
       const item = await fetchPublicJson(summaryUrl, controller.signal);
       const content = clean(item.extract, 4000);
       const source = item.content_urls?.desktop?.page;
       if (!content || typeof source !== "string" ||
           !source.startsWith(base + "/wiki/") || known.has(source)) continue;
+      await markPageVisited(pageKey);
 
       known.add(source);
       additions.push({
@@ -355,7 +355,7 @@ function status() {
   return {
     ...state,
     intervalMinutes: Math.round(INTERVAL_MS / 60_000),
-    parallelLanguages: 3,
+    parallelLanguages: 1,
     maxCandidatesPerCycle: 6,
     languagePriority: [
       { language: "uz", name: "O‘zbek", sharePercent: 60 },
@@ -375,7 +375,7 @@ function status() {
     chatUsesOnlyApprovedKnowledge: true,
     modelWeightsRetrained: false,
     uptimeGuarantee: "host-process-and-persistent-storage-dependent",
-    note: "Oldin ko‘rilgan sahifalar doimiy ro‘yxatda saqlanadi va qayta yuklanmaydi. Har daqiqada o‘zbek, ingliz va rus Wikipedia manbalarida parallel qidiruv; har tildan 2 tagacha nomzod (jami ko‘pi bilan 6). O‘zbek mavzulari 60%, ingliz 25%, rus 15% navbatda. Manbalar pending-review holatida saqlanadi; chat faqat tasdiqlangan yozuvlardan foydalanadi. Bu model vaznlarini o‘qitmaydi."
+    note: "Oldin ko‘rilgan sahifalar doimiy ro‘yxatda saqlanadi va qayta yuklanmaydi. Har daqiqada o‘zbek, ingliz va rus Wikipedia manbalarida qidiruv; HTTP so‘rovlari bitta navbatda ketma-ket yuboriladi; har tildan 2 tagacha nomzod (jami ko‘pi bilan 6). O‘zbek mavzulari 60%, ingliz 25%, rus 15% navbatda. Manbalar pending-review holatida saqlanadi; chat faqat tasdiqlangan yozuvlardan foydalanadi. Bu model vaznlarini o‘qitmaydi."
   };
 }
 async function searchKnowledge(query, limit = 5) {
@@ -419,11 +419,11 @@ async function researchQuestion(query) {
         const pageKey = base + "/wiki/" + encodeURIComponent(title.replace(/ /g, "_"));
         await loadVisitedPages();
         if (visitedPages.has(pageKey)) return null;
-        await markPageVisited(pageKey);
         const item = await fetchPublicJson(url, controller.signal);
         const content = clean(item.extract, 4000);
         const source = item.content_urls?.desktop?.page;
         if (!content || typeof source !== "string" || !source.startsWith(base + "/wiki/")) return null;
+        await markPageVisited(pageKey);
         return {
           id: crypto.randomUUID(), title: clean(item.title || title, 180),
           content, source, language, agent: "OnDemandResearchAgent",
