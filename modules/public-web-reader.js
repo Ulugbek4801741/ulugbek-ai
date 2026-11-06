@@ -124,11 +124,15 @@ function robotsAllows(text, pathname) {
   const selected = specific.length ? specific : groups.filter(g => g.agents.includes("*"));
   if (!selected.length) return { allowed: true, delayMs: 0 };
   const rules = selected.flatMap(g => g.rules).filter(rule => {
-    const escaped = rule.path.replace(/[.+?^{}()|[\\]\\\\]/g, "\\\\$&")
+    const endAnchored = rule.path.endsWith("$");
+    const pattern = rule.path.replace(/\\$/, "").split("*")
+      .map(part => part.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\    const escaped = rule.path.replace(/[.+?^{}()|[\\]\\\\]/g, "\\\\$&")
       .replace(/\\*/g, ".*");
     const anchored = escaped.endsWith("$") ? "^" + escaped.slice(0, -1) + "$" : "^" + escaped;
     return new RegExp(anchored).test(pathname);
-  }).sort((a,b) => b.path.replace(/[\\*$]/g, "").length - a.path.replace(/[\\*$]/g, "").length);
+  }).sort((a,b) => b.path.replace(/[\\*$]/g, "").length - a.path.replace(/[\\*$]/g, "").length);")).join(".*");
+    return new RegExp("^" + pattern + (endAnchored ? "$" : "")).test(pathname);
+  }).sort((a,b) => b.path.replace(/[*$]/g, "").length - a.path.replace(/[*$]/g, "").length);
   const best = rules[0];
   return { allowed: !best || best.allow, delayMs: Math.max(0, ...selected.map(g => g.delayMs)) };
 }
