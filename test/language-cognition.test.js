@@ -29,7 +29,10 @@ test("tokenizer preserves Uzbek letters and apostrophe words",()=>{
 test("only allowlisted public encyclopedia sources enter the language corpus",async t=>{
  const engine=await temporaryEngine(t);
  assert.equal(trustedSource("https://uz.wikipedia.org/wiki/O%27zbek_tili"),true);
- assert.equal(trustedSource("https://example.org/wiki/Ozbek_tili"),false);
+ assert.equal(trustedSource("https://example.org/docs/uzbek-language"),true);
+ assert.equal(trustedSource("http://example.org/wiki/Ozbek_tili"),false);
+ assert.equal(trustedSource("https://127.0.0.1/wiki/Ozbek_tili"),false);
+ assert.equal(trustedSource("https://localhost/wiki/Ozbek_tili"),false);
  const result=await engine.trainFromEntries([
   {title:"Til",content:sampleText(),source:"https://uz.wikipedia.org/wiki/Til",language:"uz",status:"pending-review"},
   {title:"Injected",content:sampleText(),source:"https://evil.example/wiki/Til",language:"uz",status:"approved"}
