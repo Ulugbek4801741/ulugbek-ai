@@ -399,15 +399,37 @@ async function cycle() {
   const topics = TOPICS[language];
   const topic = topics[topicCursors[language]++ % topics.length];
   try {
-    const findings = await researchQuestion(topic);
-    const openWebFindings = await researchOpenWeb(topic, language);
-    state.cycles += 1;
-    state.lastTopic = topic;
-    state.lastLanguage = language;
-    state.lastSuccessAt = new Date().toISOString();
-    if (findings.length || openWebFindings) state.lastError = null;
+    let findings = 0;
+    let openWebFindings = 0;
+  let wikipediaError = null;
+  state.lastOpenWebError = null;
+
+  // Wikipedia and general public-web research are independent fallbacks.
+  // A robots.txt denial on one site must never prevent trying other public sources.
+  try {
+    findings = await researchQuestion(topic);
   } catch (error) {
-    state.lastError = clean(error.name === "AbortError" ? "Ochiq manba so‘rovi vaqti tugadi." : error.message, 240);
+    wikipediaError = clean(error.name === "AbortError" ? "Wikipedia so‘rovi vaqti tugadi." : error.message, 180);
+  }
+  try {
+    openWebFindings = await researchOpenWeb(topic, language);
+  } catch (error) {
+    state.lastOpenWebError = clean(error.name === "AbortError" ? "Ochiq internet qidiruvi vaqti tugadi." : error.message, 180);
+  }
+
+  state.cycles += 1;
+  state.lastTopic = topic;
+  state.lastLanguage = language;
+  if ((Array.isArray(findings) ? findings.length : findings) || openWebFindings) {
+    state.lastSuccessAt = new Date().toISOString();
+    state.lastError = null;
+  } else if (wikipediaError || state.lastOpenWebError) {
+    state.lastError = [wikipediaError && "Wikipedia: " + wikipediaError, state.lastOpenWebError && "Ochiq internet: " + state.lastOpenWebError]
+      .filter(Boolean).join(" | ").slice(0, 240);
+  } else {
+    // Search completed but no new readable pages were found; this is not a crash.
+    state.lastError = null;
+  }
   } finally {
     inFlight = false;
     if (state.enabled && !stopRequested) {

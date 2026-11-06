@@ -30,6 +30,24 @@ test("API smoke tests", async (t) => {
   try {
     await waitForServer();
 
+    await t.test("research cache status endpoint is available and returns JSON", async () => {
+      const response = await fetch(`${baseUrl}/api/research/status`);
+      const body = await response.json();
+      assert.equal(response.status, 200);
+      assert.equal(body.ok, true);
+      assert.equal(typeof body.researchCache.count, "number");
+      assert.equal(body.researchCache.modelTraining, false);
+    });
+
+    await t.test("runtime version exposes the deployed commit fingerprint", async () => {
+      const response = await fetch(`${baseUrl}/api/version`);
+      const body = await response.json();
+      assert.equal(response.status, 200);
+      assert.equal(body.app, "ULUGBEK AI");
+      assert.equal(body.version, "0.3.2");
+      assert.ok(body.endpoints.research);
+    });
+
     await t.test("independent language learner status endpoint is available", async () => {
       const response = await fetch(`${baseUrl}/api/language/status`);
       const body = await response.json();

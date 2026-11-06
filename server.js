@@ -24,6 +24,9 @@ const adminAutopilot = createAdminAutopilot({ developerAgent, learningWorker: le
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 const MAX_TASK_LENGTH = 4000;
+const BUILD_COMMIT = process.env.RENDER_GIT_COMMIT || process.env.SOURCE_VERSION || process.env.GITHUB_SHA || "unknown";
+const BUILD_BRANCH = process.env.RENDER_GIT_BRANCH || process.env.GITHUB_REF_NAME || "unknown";
+const SERVER_STARTED_AT = new Date().toISOString();
 
 app.disable("x-powered-by");
 // Always allow the official GitHub Pages origin. Hosting variables are additional allowed origins,
@@ -404,6 +407,11 @@ app.post("/api/cognition/analyze", (req, res) => {
   return res.json({ ok: true, language: languageModule.detectLanguage(text), linguistic: languageCognition.analyze(text), emotion: emotionalIntelligence.responseGuidance(text), ethics: ethicalReasoning.evaluate(text) });
 });
 
+app.get("/api/version", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, app: "ULUGBEK AI", version: "0.3.2", commit: BUILD_COMMIT, branch: BUILD_BRANCH, startedAt: SERVER_STARTED_AT, node: process.version, endpoints: { health: "/api/health", research: "/api/research/status", learning: "/api/lab/learning/status", ai: "/api/ai/status" } });
+});
+
 app.get("/api/ai/status", (_req, res) => {
   res.set("Cache-Control", "no-store");
   res.json({ ok: true, agentCount: 1, agentName: "ULUGBEK Universal Agent", model: singleAgent.status(), language: languageModule.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status(), conversationPipeline: conversationOrchestrator.status(), independentLanguage: languageLearningWorker.status(), mathEngine: "native-safe-arithmetic", research: "public-read-only-with-source-checks" });
@@ -414,7 +422,10 @@ app.get("/api/health", (_req, res) => {
   res.json({
     ok: true,
     app: "ULUGBEK AI",
-    version: "0.3.1",
+    version: "0.3.2",
+    buildCommit: BUILD_COMMIT,
+    buildBranch: BUILD_BRANCH,
+    startedAt: SERVER_STARTED_AT,
     processUptimeSeconds: Math.floor(process.uptime()),
     aiConfigured: singleAgent.status().configured,
     nativeReasoningReady: true,
