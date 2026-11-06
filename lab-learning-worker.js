@@ -5,6 +5,7 @@
 const fs = require("node:fs/promises");
 const path = require("node:path");
 const crypto = require("node:crypto");
+const { readPublicPage, normalizePublicUrl } = require("./modules/public-web-reader");
 
 const DATA_DIR = path.resolve(process.env.ULUGBEK_DATA_DIR || path.join(__dirname, "data"));
 const FILE = path.join(DATA_DIR, "knowledge.json");
@@ -304,6 +305,87 @@ async function learnTopic(topic, language = "uz") {
     clearTimeout(timeout);
   }
 }
+function parseOpenWebResults(html) {
+  const results = [];
+  const pattern = /<a[^>]*class=["'][^"']*result__a[^"']*["'][^>]*href=["']([^"']+)["'][^>]*>([\\s\\S]*?)<\\/a>/gi;
+  let match;
+  while ((match = pattern.exec(String(html || ""))) && results.length < 5) {
+    try {
+      let href = match[1].replace(/&amp;/g, "&").replace(/&quot;/g, '"');
+      const candidate = new URL(href, "https://html.duckduckgo.com");
+      if (candidate.hostname.endsWith("duckduckgo.com")) {
+        const target = candidate.searchParams.get("uddg");
+        if (target) href = target;
+      }
+      const safe = normalizePublicUrl(href);
+      const title = clean(match[2].replace(/<[^>]*>/g, " "), 180);
+      if (safe && title && !results.some(item => item.url === safe.href)) {
+        results.push({ title, url: safe.href });
+      }
+    } catch (_) {}
+  }
+  return results;
+}
+
+async function researchOpenWeb(topic, language) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12000);
+  try {
+    const endpoint = "https://html.duckduckgo.com/html/?q=" + encodeURIComponent(topic);
+    const response = await fetch(endpoint, {
+      headers: {
+        "User-Agent": "ULUGBEK-AI-OpenKnowledge/2.0 (public read-only research)",
+        "Accept": "text/html"
+      },
+      signal: controller.signal,
+      redirect: "error"
+    });
+    if (!response.ok) throw new Error("Ochiq qidiruv HTTP " + response.status);
+    const html = await response.text();
+    if (Buffer.byteLength(html, "utf8") > 1_000_000) throw new Error("Qidiruv javobi hajmi limitdan oshdi.");
+    const results = parseOpenWebResults(html);
+    const current = await readKnowledge();
+    const known = new Set(current.map(item => item.source).filter(Boolean));
+    const additions = [];
+    for (const result of results.slice(0, 2)) {
+      if (stopRequested) break;
+      try {
+        const page = await readPublicPage(result.url);
+        if (known.has(page.source)) continue;
+        const entry = {
+          id: crypto.randomUUID(),
+          title: clean(page.title || result.title, 180),
+          content: clean(page.content, 8000),
+          source: page.source,
+          language,
+          agent: "AutonomousOpenWebResearchAgent",
+          status: "pending-review",
+          quality: "public-web-page-unverified",
+          fetchedAt: page.fetchedAt,
+          contentType: page.contentType,
+          createdAt: new Date().toISOString()
+        };
+        known.add(page.source);
+        additions.push(entry);
+      } catch (error) {
+        state.lastOpenWebError = clean(error.message, 200);
+      }
+    }
+    if (additions.length) {
+      await writeKnowledge([...current, ...additions]);
+      state.saved += additions.length;
+      state.openWebSaved += additions.length;
+    }
+    state.lastOpenWebAt = new Date().toISOString();
+    return additions.length;
+  } catch (error) {
+    state.lastOpenWebError = clean(error.name === "AbortError" ? "Ochiq internet qidiruvi vaqti tugadi." : error.message, 200);
+    return 0;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function cycle() {
   if (!state.enabled || stopRequested || inFlight) return;
   inFlight = true;
@@ -322,7 +404,7 @@ async function cycle() {
     state.lastTopic = topic;
     state.lastLanguage = language;
     state.lastSuccessAt = new Date().toISOString();
-    if (findings.length) state.lastError = null;
+    if (findings.length || openWebFindings) state.lastError = null;
   } catch (error) {
     state.lastError = clean(error.name === "AbortError" ? "Ochiq manba so‘rovi vaqti tugadi." : error.message, 240);
   } finally {
@@ -362,7 +444,7 @@ function status() {
       { language: "en", name: "Ingliz", sharePercent: 25 },
       { language: "ru", name: "Rus", sharePercent: 15 }
     ],
-    sourceAllowlist: [...ALLOWED_WIKIPEDIA_HOSTS],
+    sourceAllowlist: [...ALLOWED_WIKIPEDIA_HOSTS],\n    genericPublicHttpsWeb: true,\n    openWebPagesSaved: state.openWebSaved,\n    lastOpenWebAt: state.lastOpenWebAt,\n    lastOpenWebError: state.lastOpenWebError,
     minimumRequestGapSeconds: 1,
     requestConcurrency: 1,
     robotsTxtEnforced: true,
@@ -375,7 +457,7 @@ function status() {
     chatUsesOnlyApprovedKnowledge: true,
     modelWeightsRetrained: false,
     uptimeGuarantee: "host-process-and-persistent-storage-dependent",
-    note: "Oldin ko‘rilgan sahifalar doimiy ro‘yxatda saqlanadi va qayta yuklanmaydi. Har daqiqada o‘zbek, ingliz va rus Wikipedia manbalarida qidiruv; HTTP so‘rovlari bitta navbatda ketma-ket yuboriladi; har tildan 2 tagacha nomzod (jami ko‘pi bilan 6). O‘zbek mavzulari 60%, ingliz 25%, rus 15% navbatda. Manbalar pending-review holatida saqlanadi; chat faqat tasdiqlangan yozuvlardan foydalanadi. Bu model vaznlarini o‘qitmaydi."
+    note: "Har siklda o‘zbek, ingliz yoki rus mavzusi bo‘yicha Wikipedia va umumiy ochiq HTTPS internet qidiriladi. Umumiy internetdan ko‘pi bilan 2 sahifa olinadi; robots.txt, DNS va HTTP cheklovlari tekshiriladi. Olingan yozuvlar pending-review holatida saqlanadi; chat faqat tasdiqlangan bilimlardan foydalanadi. Bu model vaznlarini o‘qitmaydi."
   };
 }
 async function searchKnowledge(query, limit = 5) {
