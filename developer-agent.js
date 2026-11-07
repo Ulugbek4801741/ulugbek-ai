@@ -17,7 +17,7 @@ const STORE = path.resolve(process.env.DEVELOPER_AGENT_STORE || path.join(DATA_D
 const MAX_PROPOSALS = 300;
 const MAX_FILES = 8;
 const MAX_FILE_BYTES = 160_000;
-const ALLOWED_EXT = /\.(?:js|cjs|mjs|json|yml|yaml|md)$/i;
+const ALLOWED_EXT = /\\.(?:py|js|cjs|mjs|ts|tsx|kt|kts|html|htm|css|c|h|cc|cpp|cxx|hpp|hh|hxx|go|php|java|dart|rs|swift|json|yml|yaml|md|toml|txt)$/i;
 let timer = null;
 let running = false;
 let started = false;
@@ -91,7 +91,16 @@ function addProposal(kind, severity, title, detail, file) {
   state.proposalsCreated++;
   return true;
 }
-function isEligibleFile(filePath, size) {\n  return typeof filePath === "string" && ALLOWED_EXT.test(filePath) && Number.isFinite(size) && size >= 0 && size <= MAX_FILE_BYTES;\n}\nfunction inspectFile(file, text) {
+function isEligibleFile(filePath, size) {
+  if (typeof filePath !== "string" || !filePath || filePath.length > 300 ||
+      filePath.startsWith("/") || filePath.includes("\\") || filePath.includes("\0")) return false;
+  const blocked = new Set([".git", "secrets", "credentials", "node_modules", ".venv", "venv", "__pycache__"]);
+  const parts = filePath.split("/");
+  if (parts.some(part => !part || part === "." || part === ".." ||
+      blocked.has(part.toLowerCase()) || part.toLowerCase().startsWith(".env"))) return false;
+  return ALLOWED_EXT.test(filePath) && Number.isFinite(size) && size >= 0 && size <= MAX_FILE_BYTES;
+}
+function inspectFile(file, text) {
   const findings = [];
   if (/\beval\s*\(|new Function\s*\(/.test(text)) {
     findings.push(["security", "high", "Dinamik kod bajarish konstruktsiyasi topildi", "eval yoki Function konstruktsiyasi xavfli bo‘lishi mumkin; foydalanish joyi va ishonch chegarasini tekshirish kerak.", file]);
