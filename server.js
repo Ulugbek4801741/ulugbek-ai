@@ -89,6 +89,26 @@ const selfRecovery = createSelfRecoveryEngine({
 const { createFunctionGuardian } = require("./modules/function-guardian");
 const functionGuardian = createFunctionGuardian();
 
+// Instrument exported functions in every server-loaded first-party module.
+[
+  ["agent-runtime", agentRuntime],
+  ["single-agent", singleAgent],
+  ["language-module", languageModule],
+  ["coding-language-engine", codingLanguageEngine],
+  ["translation-service", translationService],
+  ["emotional-intelligence", emotionalIntelligence],
+  ["ethical-reasoning", ethicalReasoning],
+  ["conversation-orchestrator", conversationOrchestrator],
+  ["language-cognition", languageCognition],
+  ["language-learning-worker", languageLearningWorker],
+  ["error-learning", errorLearning],
+  ["conversation-memory", conversationMemory],
+  ["research-cache", researchCache],
+  ["developer-agent", developerAgent],
+  ["agent-permissions", agentPermissions],
+  ["learning-worker", learningWorkerForAdmin]
+].forEach(([name, moduleExports]) => functionGuardian.instrumentModule(name, moduleExports));
+
 const app = express();
 app.use((req, res, next) => {
   const started = Date.now();
