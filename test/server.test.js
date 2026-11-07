@@ -284,6 +284,7 @@ test("API smoke tests", async (t) => {
       const fs = require("node:fs");
       const config = fs.readFileSync(require("node:path").join(__dirname, "..", "public", "config.js"), "utf8");
       assert.match(config, /host\.endsWith\("\.github\.io"\)/);
+      assert.match(config, /isNativeLocalhost/);
       assert.match(config, /https:\/\/ulugbek-ai-1\.onrender\.com/);
     });
 
