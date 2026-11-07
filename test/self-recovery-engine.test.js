@@ -29,6 +29,7 @@ test("diagnostics reports healthy and failed probes without executing repairs", 
     const saved = JSON.parse(await fs.readFile(path.join(dir, "state.json"), "utf8"));
     assert.equal(saved.cycles, 1);
   } finally {
+    engine.stop();
     await fs.rm(dir, { recursive: true, force: true });
   }
 });
