@@ -206,7 +206,7 @@ async function readPublicPage(inputUrl) {
     }
     const page = extractReadablePage(response.body);
     if (page.content.length < 120) throw new Error("Sahifada o‘rganish uchun yetarli ochiq matn topilmadi.");
-    return { ...page, source: url.href, fetchedAt: new Date().toISOString(), contentType: type };
+    return { ...page, source: url.href, fetchedAt: new Date().toISOString(), contentType: type, html: response.body };
   }
   throw new Error("Sahifani ochib bo‘lmadi.");
 }
