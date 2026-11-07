@@ -55,6 +55,12 @@ test("HTTP health and diagnostics endpoints report real single-instance limits",
     assert.equal(health.workerConcurrency, 1);
     assert.equal(health.multiInstanceSafe, false);
     assert.equal(health.automaticFailoverReady, false);
+
+    const reportResponse = await fetch(`${base}/api/reports/status`, { signal: AbortSignal.timeout(2000) });
+    assert.equal(reportResponse.status, 200);
+    const reportStatus = await reportResponse.json();
+    assert.equal(reportStatus.ok, true);
+    assert.equal(reportStatus.reports.intervalMinutes, 5);
     assert.ok(Number.isFinite(health.processUptimeSeconds));
 
     const diagnosticsResponse = await fetch(`${base}/api/diagnostics`, { signal: AbortSignal.timeout(2000) });

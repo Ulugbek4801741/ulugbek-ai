@@ -3,6 +3,7 @@ const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const path = require("node:path");
 const crypto = require("node:crypto");
+const { createVoiceReportService } = require("./modules/voice-report");
 const agentRuntime = require("./agent-runtime");
 const singleAgent = require("./modules/single-agent").createSingleAgent();
 const languageModule = require("./modules/language-module");
@@ -112,6 +113,37 @@ const adminAuth = require("./modules/admin-auth").createAdminAuth({
   accessCode: process.env.ADMIN_ACCESS_CODE,
   sessionSecret: ADMIN_SESSION_SECRET,
   storePath: path.join(ADMIN_DATA_DIR, "admin-auth-lockouts.json")
+});
+const improvementPlanner = require("./modules/autonomous-improvement").createAutonomousImprovementPlanner({
+  dataDir: ADMIN_DATA_DIR,
+  readSnapshot: () => ({
+    health: {
+      multiInstanceSafe: false,
+      automaticFailoverReady: false,
+      trainedLanguageModelReady: false,
+      localModelConfigured: singleAgent.status().configured,
+      agentCount: 1
+    },
+    diagnostics: {
+      productionDatabase: "not-configured-task-store-uses-local-json-file",
+      automaticFailover: "not-configured-requires-authorized-backup-host",
+      securityEnforcement: "disclosure-only"
+    },
+    modules: require("./modules/catalog").listModules(),
+    agents: require("./agents/registry").listAgents()
+  })
+});
+const voiceReports = createVoiceReportService({
+  readSnapshot: () => ({
+    uptimeSeconds: process.uptime(),
+    model: singleAgent.status(),
+    learning: learningWorkerForAdmin.status(),
+    images: imageGenerator.status(),
+    videos: videoGenerator.status(),
+    developer: developerAgent.status(),
+    tasks: agentRuntime.listTasks(),
+    improvements: improvementPlanner.status()
+  })
 });
 function readCookie(req, name) {
   const item = (req.headers.cookie || "").split(";").map(x => x.trim()).find(x => x.startsWith(name + "="));
@@ -238,6 +270,26 @@ app.get("/api/admin/overview", requireAdmin, (_req, res) => {
     adminEmail: "local-admin",
     deployment: "manual-host-configuration-required"
   });
+});
+
+app.get("/api/admin/improvements", requireAdmin, (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, planner: improvementPlanner.status(), proposals: improvementPlanner.list({ limit: 100 }) });
+});
+app.post("/api/admin/improvements/scan", requireAdmin, async (_req, res) => {
+  const planner = await improvementPlanner.scan();
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, planner, proposals: improvementPlanner.list({ limit: 100 }) });
+});
+app.post("/api/admin/improvements/:id/decision", requireAdmin, async (req, res) => {
+  try {
+    const result = await improvementPlanner.decide(req.params.id, String(req.body?.decision || ""), "administrator");
+    if (!result) return res.status(404).json({ error: "Taklif topilmadi." });
+    res.set("Cache-Control", "no-store");
+    res.json({ ok: true, proposal: result, execution: "disabled", note: "Tasdiq faqat ishni rejalashtirishga ruxsat beradi. Kod o‘zgartirish, buyruq bajarish va deploy avtomatik bajarilmaydi." });
+  } catch (error) {
+    res.status(400).json({ error: error.message || "Qaror saqlanmadi." });
+  }
 });
 
 app.get("/api/admin/autopilot/status", requireAdmin, (_req, res) => {
@@ -415,6 +467,15 @@ app.get("/api/version", (_req, res) => {
 app.get("/api/ai/status", (_req, res) => {
   res.set("Cache-Control", "no-store");
   res.json({ ok: true, agentCount: 1, agentName: "ULUGBEK Universal Agent", model: singleAgent.status(), language: languageModule.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status(), conversationPipeline: conversationOrchestrator.status(), independentLanguage: languageLearningWorker.status(), mathEngine: "native-safe-arithmetic", research: "public-read-only-with-source-checks" });
+});
+
+app.get("/api/reports/latest", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  return res.json({ ok: true, report: voiceReports.latest() });
+});
+app.get("/api/reports/status", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  return res.json({ ok: true, reports: voiceReports.status() });
 });
 
 app.get("/api/health", (_req, res) => {
@@ -935,6 +996,8 @@ app.use((err, _req, res, _next) => {
 });
 learningWorker.start();
 languageLearningWorker.start();
+if (process.env.NODE_ENV !== "test") improvementPlanner.start();
+if (process.env.NODE_ENV !== "test") voiceReports.start().catch(error => console.error("Ovozli hisobot xizmati ishga tushmadi:", error.message));
 agentRuntime.startWorker().then(() => {
   const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`ULUGBEK AI serveri ${PORT}-portda ishga tushdi.`);
