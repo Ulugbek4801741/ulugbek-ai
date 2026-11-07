@@ -7,15 +7,23 @@ function createFunctionGuardian(options = {}) {
     path.join(process.env.ULUGBEK_DATA_DIR || path.join(__dirname, "..", "data"), "function-guardian.json"));
   const max = 500;
   let events = [];
-  let loaded = false;
+  let loadPromise = null;
+  let writeQueue = Promise.resolve();
+
   async function load() {
-    if (loaded) return;
-    loaded = true;
-    try {
-      const data = JSON.parse(await fs.readFile(file, "utf8"));
-      if (Array.isArray(data.events)) events = data.events.slice(-max);
-    } catch (error) { if (error.code !== "ENOENT") throw error; }
+    if (!loadPromise) {
+      loadPromise = (async () => {
+        try {
+          const data = JSON.parse(await fs.readFile(file, "utf8"));
+          if (Array.isArray(data.events)) events = data.events.slice(-max);
+        } catch (error) {
+          if (error.code !== "ENOENT") throw error;
+        }
+      })();
+    }
+    return loadPromise;
   }
+
   async function record(event) {
     await load();
     const safe = {
@@ -30,17 +38,25 @@ function createFunctionGuardian(options = {}) {
     };
     events.push(safe);
     events = events.slice(-max);
-    await fs.mkdir(path.dirname(file), { recursive: true });
-    const temp = file + ".tmp";
-    await fs.writeFile(temp, JSON.stringify({ version: 1, events }, null, 2), { mode: 0o600 });
-    await fs.rename(temp, file);
+    // Serialize atomic writes: concurrent requests must never race on the same temp file.
+    const snapshot = JSON.stringify({ version: 1, events }, null, 2);
+    writeQueue = writeQueue.then(async () => {
+      await fs.mkdir(path.dirname(file), { recursive: true });
+      const temp = file + "." + process.pid + ".tmp";
+      await fs.writeFile(temp, snapshot, { mode: 0o600 });
+      await fs.rename(temp, file);
+    });
+    await writeQueue;
     return safe;
   }
+
   function instrumentModule(moduleName, target) {
     if (!target || (typeof target !== "object" && typeof target !== "function")) return target;
     for (const key of Object.keys(target)) {
       const original = target[key];
       if (typeof original !== "function" || original.__guardianWrapped) continue;
+      // Do not wrap ES classes as ordinary functions: class constructors require 'new'.
+      if (/^class\\s/.test(Function.prototype.toString.call(original))) continue;
       const wrapped = function (...args) {
         const started = Date.now();
         const finish = outcome => record({
@@ -64,6 +80,7 @@ function createFunctionGuardian(options = {}) {
     }
     return target;
   }
+
   function status() {
     const errors = events.filter(x => x.outcome === "error");
     return { service: "ULUGBEK AI", mode: "per-function-observation", trackedEvents: events.length,
