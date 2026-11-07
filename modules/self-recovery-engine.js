@@ -34,7 +34,10 @@ function createSelfRecoveryEngine(options = {}) {
     path.join(process.env.ULUGBEK_DATA_DIR || path.join(__dirname, "..", "data"), "self-recovery.json"));
   const now = typeof options.now === "function" ? options.now : () => Date.now();
   const timeoutMs = Math.max(100, Math.min(30_000, Number(options.timeoutMs) || 5_000));
+  const intervalMs = Math.max(60_000, Number(options.intervalMs) || 5 * 60_000);
   let busy = false;
+  let started = false;
+  let timer = null;
   let state = {
     version: 1,
     startedAt: null,
@@ -198,13 +201,34 @@ function createSelfRecoveryEngine(options = {}) {
     return { ...finding };
   }
 
-  async function start() {
-    if (!state.startedAt) state.startedAt = new Date(now()).toISOString();
-    await load();
-    return run();
+  function schedule() {
+    if (!started) return;
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(async () => {
+      await run();
+      schedule();
+    }, intervalMs);
+    if (typeof timer.unref === "function") timer.unref();
   }
 
-  return { start, run, status, report, listFindings, resolveFinding, load };
+  async function start() {
+    if (started) return status();
+    await load();
+    if (!state.startedAt) state.startedAt = new Date(now()).toISOString();
+    started = true;
+    const result = await run();
+    schedule();
+    return result;
+  }
+
+  function stop() {
+    started = false;
+    if (timer) clearTimeout(timer);
+    timer = null;
+    return status();
+  }
+
+  return { start, stop, run, status, report, listFindings, resolveFinding, load };
 }
 
 module.exports = { createSelfRecoveryEngine, safeDetails };
