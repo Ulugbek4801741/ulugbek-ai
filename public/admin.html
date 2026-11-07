@@ -92,5 +92,13 @@
 <div class="notice"><b>Xavfsizlik eslatmasi</b><p>AI kaliti hech qachon bu sahifada ko‘rsatilmaydi. Hosting, to‘lovlar, foydalanuvchi ma’lumotlari va deploy amallari alohida ruxsat hamda sinovlarni talab qiladi.</p></div>
 </section>
 <footer>ULUGBEK AI · Admin panel MVP · HTTPS talab qilinadi</footer>
-</main><script src="admin.js" defer></script><script src="media-library-admin.js" defer></script>
+</main><script src="config.js"></script><script>
+(function(){
+  var api=typeof window.ULUGBEK_API_BASE_URL==="string"?window.ULUGBEK_API_BASE_URL.trim().replace(/\\/$/,""):"";
+  if(location.hostname.endsWith("github.io")){
+    if(api){location.replace(api+"/admin.html");}
+    else{var s=document.getElementById("status");if(s)s.textContent="Admin panel server manzili sozlanmagan."}
+  }
+})();
+</script><script src="admin.js" defer></script><script src="media-library-admin.js" defer></script>
 </body></html>
