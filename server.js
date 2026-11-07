@@ -21,6 +21,70 @@ const agentPermissions = require("./agent-permissions");
 const learningWorkerForAdmin = require("./lab-learning-worker");
 const { createAdminAutopilot } = require("./admin-autopilot");
 const adminAutopilot = createAdminAutopilot({ developerAgent, learningWorker: learningWorkerForAdmin, agentRuntime });
+const { createSelfRecoveryEngine } = require("./modules/self-recovery-engine");
+const selfRecovery = createSelfRecoveryEngine({
+  probes: [
+    {
+      name: "node-runtime",
+      critical: true,
+      run: async () => {
+        const major = Number(process.versions.node.split(".")[0]);
+        return { ok: Number.isFinite(major) && major >= 20, details: { nodeVersion: process.versions.node } };
+      }
+    },
+    {
+      name: "language-module",
+      critical: true,
+      run: async () => {
+        const value = languageModule.status();
+        return { ok: value.ready === true, details: { ready: value.ready } };
+      }
+    },
+    {
+      name: "conversation-pipeline",
+      critical: true,
+      run: async () => {
+        const value = conversationOrchestrator.status();
+        return { ok: value.ready === true, details: { ready: value.ready } };
+      }
+    },
+    {
+      name: "single-agent",
+      run: async () => {
+        const value = singleAgent.status();
+        return { ok: true, details: { configured: value.configured === true, provider: value.provider || "not-configured" } };
+      }
+    },
+    {
+      name: "developer-agent",
+      run: async () => {
+        const value = developerAgent.status();
+        return { ok: value.enabled === true && !value.lastError, message: value.lastError || "Developer Agent o‘chiq.", details: { enabled: value.enabled, cycles: value.cycles } };
+      }
+    },
+    {
+      name: "learning-worker",
+      run: async () => {
+        const value = learningWorkerForAdmin.status();
+        return { ok: value.enabled === true && !value.lastError, message: value.lastError || "Learning worker o‘chiq.", details: { enabled: value.enabled, running: value.running, cycles: value.cycles } };
+      }
+    },
+    {
+      name: "admin-watchdog",
+      run: async () => {
+        const value = adminAutopilot.status();
+        return { ok: value.enabled === true && value.quarantined !== true, message: value.quarantineReason || "Admin watchdog o‘chiq.", details: { enabled: value.enabled, quarantined: value.quarantined } };
+      }
+    },
+    {
+      name: "agent-runtime",
+      run: async () => {
+        const tasks = agentRuntime.listTasks();
+        return { ok: Array.isArray(tasks), details: { queued: tasks.filter(item => item.status === "queued").length, running: tasks.filter(item => item.status === "running").length, failed: tasks.filter(item => item.status === "failed").length } };
+      }
+    }
+  ]
+});
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -272,6 +336,30 @@ app.get("/api/admin/overview", requireAdmin, (_req, res) => {
     adminEmail: "local-admin",
     deployment: "manual-host-configuration-required"
   });
+});
+
+app.get("/api/admin/recovery/status", requireAdmin, (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, recovery: selfRecovery.status() });
+});
+app.get("/api/admin/recovery/report", requireAdmin, (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, recovery: selfRecovery.report() });
+});
+app.post("/api/admin/recovery/diagnose", requireAdmin, async (_req, res) => {
+  const recovery = await selfRecovery.run();
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, recovery, note: "Faqat diagnostika bajarildi; kod, GitHub branchlari va production o‘zgartirilmadi." });
+});
+app.post("/api/admin/recovery/findings/:id/review", requireAdmin, (req, res) => {
+  try {
+    const finding = selfRecovery.resolveFinding(req.params.id, req.body?.note || "");
+    if (!finding) return res.status(404).json({ error: "Diagnostika topilmasi topilmadi." });
+    res.set("Cache-Control", "no-store");
+    return res.json({ ok: true, finding });
+  } catch (error) {
+    return res.status(error.status || 500).json({ error: error.message || "Topilmani yangilab bo‘lmadi." });
+  }
 });
 
 app.get("/api/admin/autopilot/status", requireAdmin, (_req, res) => {
@@ -995,9 +1083,11 @@ agentRuntime.startWorker().then(() => {
       })
       .finally(() => {
         // The watchdog supervises only the existing bounded background workers.
-        adminAutopilot.start().catch(error => {
-          console.error("Admin watchdog ishga tushmadi:", error.message);
-        });
+        adminAutopilot.start()
+          .then(() => selfRecovery.start())
+          .catch(error => {
+            console.error("Self-Recovery diagnostikasi ishga tushmadi:", error.message);
+          });
       });
   });
   server.on("error", error => console.error("HTTP server xatosi:", error.message));
