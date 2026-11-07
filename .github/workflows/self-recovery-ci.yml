@@ -1,0 +1,44 @@
+name: Self-Recovery Engine CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "modules/self-recovery-engine.js"
+      - "test/self-recovery-engine.test.js"
+      - "server.js"
+      - "package.json"
+      - ".github/workflows/self-recovery-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: self-recovery-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Node.js ${{ matrix.node }} tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Install dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Syntax check
+        run: |
+          node --check server.js
+          node --check modules/self-recovery-engine.js
+          node --check test/self-recovery-engine.test.js
+      - name: Run complete test suite
+        run: npm test
