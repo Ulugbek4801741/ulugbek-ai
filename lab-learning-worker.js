@@ -6,6 +6,7 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const { readPublicPage, normalizePublicUrl } = require("./modules/public-web-reader");
+const { buildProvenance } = require("./modules/knowledge-provenance");
 
 const DATA_DIR = path.resolve(process.env.ULUGBEK_DATA_DIR || path.join(__dirname, "data"));
 const FILE = path.join(DATA_DIR, "knowledge.json");
@@ -288,6 +289,7 @@ async function learnTopic(topic, language = "uz") {
         status: "pending-review",
         quality: "public-encyclopedia-summary-unverified",
         licenseNote: "Manba litsenziyasi va attribution talablari tekshirilishi kerak.",
+        ...buildProvenance({ url: source, content, sourceType: "wikipedia-summary" }),
         createdAt: new Date().toISOString()
       });
     }
@@ -356,6 +358,7 @@ async function researchOpenWeb(topic, language) {
           quality: "public-web-page-unverified",
           fetchedAt: page.fetchedAt,
           contentType: page.contentType,
+          ...buildProvenance({ url: page.source, content: page.content, fetchedAt: page.fetchedAt, sourceType: "public-web-page" }),
           createdAt: new Date().toISOString()
         };
         known.add(page.source);
@@ -474,6 +477,9 @@ function status() {
     writesToExternalSites: false,
     executesDownloadedCode: false,
     chatUsesOnlyApprovedKnowledge: true,
+    knowledgeProvenanceTracking: true,
+    knowledgeContentHash: "sha256",
+    unverifiedCandidatesRequireReview: true,
     modelWeightsRetrained: false,
     uptimeGuarantee: "host-process-and-persistent-storage-dependent",
     note: "Har siklda o‘zbek, ingliz yoki rus mavzusi bo‘yicha Wikipedia va umumiy ochiq HTTPS internet qidiriladi. Umumiy internetdan ko‘pi bilan 2 sahifa olinadi; robots.txt, DNS va HTTP cheklovlari tekshiriladi. Olingan yozuvlar pending-review holatida saqlanadi; chat faqat tasdiqlangan bilimlardan foydalanadi. Bu model vaznlarini o‘qitmaydi."
