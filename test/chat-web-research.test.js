@@ -61,3 +61,10 @@ test("public page fetch never follows non-HTTP protocols or private hosts", asyn
   assert.equal(await research.fetchPage("http://[::1]/"), null);
   assert.equal(await research.fetchPage("http://127.0.0.1/"), null);
 });
+
+test("decodes decimal and hexadecimal HTML apostrophes in search snippets", () => {
+  const html = '<a class="result__a" href="https://example.org/article">O&#x27;lmasbek</a><a class="result__snippet">Bu bo&#x27;lgan va O&#39;lmasbek haqida &amp; boshqa ma&#x27;lumot.</a>';
+  const [item] = research.parseResults(html);
+  assert.equal(item.title, "O'lmasbek");
+  assert.equal(item.snippet, "Bu bo'lgan va O'lmasbek haqida & boshqa ma'lumot.");
+});
