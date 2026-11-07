@@ -17,7 +17,7 @@ const STORE = path.resolve(process.env.DEVELOPER_AGENT_STORE || path.join(DATA_D
 const MAX_PROPOSALS = 300;
 const MAX_FILES = 8;
 const MAX_FILE_BYTES = 160_000;
-const ALLOWED_EXT = /\.(?:js|cjs|mjs|json|yml|yaml|md)$/i;
+const ALLOWED_EXT = /\.(?:py|js|cjs|mjs|ts|tsx|kt|kts|html|htm|css|c|h|cc|cpp|cxx|hpp|hh|hxx|go|php|java|dart|rs|swift|json|yml|yaml|md|toml|txt)$/i;
 let timer = null;
 let running = false;
 let started = false;
@@ -91,6 +91,15 @@ function addProposal(kind, severity, title, detail, file) {
   state.proposalsCreated++;
   return true;
 }
+function isEligibleFile(filePath, size) {
+  if (typeof filePath !== "string" || !filePath || filePath.length > 300 ||
+      filePath.startsWith("/") || filePath.includes("\\") || filePath.includes("\0")) return false;
+  const blocked = new Set([".git", "secrets", "credentials", "node_modules", ".venv", "venv", "__pycache__"]);
+  const parts = filePath.split("/");
+  if (parts.some(part => !part || part === "." || part === ".." ||
+      blocked.has(part.toLowerCase()) || part.toLowerCase().startsWith(".env"))) return false;
+  return ALLOWED_EXT.test(filePath) && Number.isFinite(size) && size >= 0 && size <= MAX_FILE_BYTES;
+}
 function inspectFile(file, text) {
   const findings = [];
   if (/\beval\s*\(|new Function\s*\(/.test(text)) {
@@ -125,7 +134,7 @@ async function auditOnce() {
     const tree = await githubJson(base + "/git/trees/" + encodeURIComponent(branch.commit.sha) + "?recursive=1", controller.signal);
     if (!Array.isArray(tree.tree)) throw new Error("GitHub fayllar ro‘yxati noto‘g‘ri.");
     const eligible = tree.tree
-      .filter(item => item.type === "blob" && ALLOWED_EXT.test(item.path) && item.size <= MAX_FILE_BYTES)
+      .filter(item => item.type === "blob" && isEligibleFile(item.path, item.size))
       .sort((a, b) => {
         const rank = item => /\\.(?:js|cjs|mjs)$/i.test(item.path) ? 0 : /\\.json$/i.test(item.path) ? 1 : /\\.(?:yml|yaml)$/i.test(item.path) ? 2 : 3;
         return rank(a) - rank(b) || a.path.localeCompare(b.path);
@@ -230,4 +239,4 @@ function status() {
   };
 }
 function listProposals() { return state.proposals.map(item => ({ ...item })); }
-module.exports = { start, stop, auditOnce, status, listProposals, reviewProposal, inspectFile, githubHeaders };
+module.exports = { start, stop, auditOnce, status, listProposals, reviewProposal, inspectFile, isEligibleFile, githubHeaders };
