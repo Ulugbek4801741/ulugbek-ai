@@ -266,6 +266,27 @@ test("API smoke tests", async (t) => {
       assert.equal((await status.json()).authenticated, false);
     });
 
+    await t.test("GitHub Pages chat preflight permits JSON POST to backend", async () => {
+      const response = await fetch(`${baseUrl}/api/chat`, {
+        method: "OPTIONS",
+        headers: {
+          Origin: "https://ulugbek4801741.github.io",
+          "Access-Control-Request-Method": "POST",
+          "Access-Control-Request-Headers": "content-type"
+        }
+      });
+      assert.equal(response.status, 204);
+      assert.equal(response.headers.get("access-control-allow-origin"), "https://ulugbek4801741.github.io");
+      assert.match(response.headers.get("access-control-allow-methods") || "", /POST/);
+    });
+
+    await t.test("GitHub Pages config selects the Render backend, not its static origin", async () => {
+      const fs = require("node:fs");
+      const config = fs.readFileSync(require("node:path").join(__dirname, "..", "public", "config.js"), "utf8");
+      assert.match(config, /endsWith\("\\.github\\.io"\)/);
+      assert.match(config, /https:\/\/ulugbek-ai2\.onrender\.com/);
+    });
+
     await t.test("configured GitHub Pages origin can call backend and CSP permits it", async () => {
       const response = await fetch(`${baseUrl}/api/health`, { headers: { Origin: "https://ulugbek4801741.github.io" } });
       assert.equal(response.status, 200);
