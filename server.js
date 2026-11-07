@@ -938,6 +938,20 @@ languageLearningWorker.start();
 agentRuntime.startWorker().then(() => {
   const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`ULUGBEK AI serveri ${PORT}-portda ishga tushdi.`);
+
+    // Start the repository auditor only after HTTP is accepting requests.
+    // It is read-only: it may create local review proposals, but never edits,
+    // merges, executes, or deploys source code.
+    developerAgent.start()
+      .catch(error => {
+        console.error("Developer Agent ishga tushmadi:", error.message);
+      })
+      .finally(() => {
+        // The watchdog supervises only the existing bounded background workers.
+        adminAutopilot.start().catch(error => {
+          console.error("Admin watchdog ishga tushmadi:", error.message);
+        });
+      });
   });
   server.on("error", error => console.error("HTTP server xatosi:", error.message));
 }).catch(error => {
