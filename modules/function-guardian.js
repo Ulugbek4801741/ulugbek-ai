@@ -36,6 +36,34 @@ function createFunctionGuardian(options = {}) {
     await fs.rename(temp, file);
     return safe;
   }
+  function instrumentModule(moduleName, target) {
+    if (!target || (typeof target !== "object" && typeof target !== "function")) return target;
+    for (const key of Object.keys(target)) {
+      const original = target[key];
+      if (typeof original !== "function" || original.__guardianWrapped) continue;
+      const wrapped = function (...args) {
+        const started = Date.now();
+        const finish = outcome => record({
+          function: moduleName + "." + key, method: "INTERNAL", path: moduleName,
+          outcome, durationMs: Date.now() - started, statusCode: outcome === "error" ? 500 : 200
+        }).catch(() => {});
+        try {
+          const result = original.apply(this, args);
+          if (result && typeof result.then === "function") {
+            return result.then(value => { finish("ok"); return value; }, error => { finish("error"); throw error; });
+          }
+          finish("ok");
+          return result;
+        } catch (error) {
+          finish("error");
+          throw error;
+        }
+      };
+      Object.defineProperty(wrapped, "__guardianWrapped", { value: true });
+      try { target[key] = wrapped; } catch (_) {}
+    }
+    return target;
+  }
   function status() {
     const errors = events.filter(x => x.outcome === "error");
     return { service: "ULUGBEK AI", mode: "per-function-observation", trackedEvents: events.length,
@@ -43,6 +71,6 @@ function createFunctionGuardian(options = {}) {
       repair: "proposal-and-test-required", crossCheck: "peer-endpoint-configuration-required" };
   }
   function report() { return { ...status(), events: events.slice(-100) }; }
-  return { record, status, report, load };
+  return { record, status, report, load, instrumentModule };
 }
 module.exports = { createFunctionGuardian };
