@@ -14,3 +14,9 @@ Yadro xatoni aniqlaydi, tarixni saqlaydi va tuzatish taklifini tayyorlash/test q
 
 ## Cheklov
 Kuzatilgan HTTP xatolari barcha ichki funksiyalar to‘liq sog‘lomligini isbotlamaydi. Har bir modul uchun keyinchalik unit/integration test va domain-specific health probe qo‘shilishi shart. 99% tiklash maqsad, kafolat emas; tashqi API, disk, DB, hosting yoki model resursi yo‘q bo‘lsa, yadro ularni o‘zi yaratolmaydi.
+
+## Modul va funksiya darajasidagi qamrov
+
+Server ishga tushganda birinchi tomon modullarining eksport qilingan funksiyalari kuzatuv wrapper'i bilan o‘raladi; Python backendda modulga tegishli public funksiyalar va class metodlari ham o‘raladi. HTTP middleware esa endpoint darajasidagi kuzatuvni qo‘shadi. Har bir hodisa nom, natija va davomiylikni saqlaydi; maxfiy argumentlar, request body va tokenlar yozilmaydi.
+
+Bu qamrov har bir kod satri yoki barcha lokal/private yordamchi funksiyalarni avtomatik kuzatadi degani emas. Har bir modulning ichki tarmoqlari uchun alohida unit/integration testlar va health probe'lar bosqichma-bosqich qo‘shilishi kerak. Wrapper kuzatuv beradi, xatoni avtomatik tuzatmaydi.
