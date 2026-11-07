@@ -58,6 +58,25 @@ test("API smoke tests", async (t) => {
       assert.equal(body.languageLearning.neuralWeightsTrained, false);
     });
 
+    await t.test("coding language API exposes twelve languages and safe validation", async () => {
+      const catalogResponse = await fetch(`${baseUrl}/api/coding/languages`);
+      const catalog = await catalogResponse.json();
+      assert.equal(catalogResponse.status, 200);
+      assert.equal(catalog.languageCount, 12);
+      assert.equal(catalog.sandboxExecutionEnabled, false);
+      const valid = await fetch(`${baseUrl}/api/coding/validate`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ files: [{ path: "src/main.py", content: "print('hello')" }] })
+      });
+      assert.equal(valid.status, 200);
+      assert.equal((await valid.json()).files[0].language, "Python");
+      const unsafe = await fetch(`${baseUrl}/api/coding/validate`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ files: [{ path: "../secret.py", content: "print('x')" }] })
+      });
+      assert.equal(unsafe.status, 400);
+    });
+
     await t.test("language analysis exposes intent and a reasoning plan", async () => {
       const response = await fetch(`${baseUrl}/api/language/analyze`, {
         method: "POST", headers: { "Content-Type": "application/json" },
