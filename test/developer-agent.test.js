@@ -45,3 +45,15 @@ test("flags TODO markers without changing source code", () => {
 test("does not flag clean source files", () => {
   assert.deepEqual(agent.inspectFile("clean.js", "function sum(a, b) { return a + b; }"), []);
 });
+
+test("repository audit recognizes all twelve coding-engine languages", () => {
+  const files = [
+    "src/main.py", "src/main.js", "src/main.ts", "android/MainActivity.kt",
+    "web/index.html", "native/main.cpp", "server/main.go", "server/index.php",
+    "android/Main.java", "mobile/main.dart", "native/lib.rs", "ios/App.swift"
+  ];
+  for (const file of files) assert.equal(agent.isEligibleFile(file, 1024), true, file);
+  assert.equal(agent.isEligibleFile("secrets/key.py", 1024), true);
+  assert.equal(agent.isEligibleFile("binary.exe", 1024), false);
+  assert.equal(agent.isEligibleFile("huge.py", 200001), false);
+});
