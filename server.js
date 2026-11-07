@@ -6,6 +6,7 @@ const crypto = require("node:crypto");
 const agentRuntime = require("./agent-runtime");
 const singleAgent = require("./modules/single-agent").createSingleAgent();
 const languageModule = require("./modules/language-module");
+const codingLanguageEngine = require("./modules/coding-language-engine");
 const translationService = require("./modules/translation-service").createTranslationService();
 const emotionalIntelligence = require("./modules/emotional-intelligence");
 const ethicalReasoning = require("./modules/ethical-reasoning");
@@ -360,6 +361,19 @@ app.post("/api/admin/tasks/:id/review", requireAdmin, (req, res) => {
     res.json({ ok: true, task });
   } catch (error) {
     res.status(error.status || 500).json({ error: error.message || "Qaror saqlanmadi." });
+  }
+});
+
+app.get("/api/coding/languages", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  return res.json({ ok: true, ...codingLanguageEngine.status() });
+});
+app.post("/api/coding/validate", (req, res) => {
+  try {
+    const files = codingLanguageEngine.normalizeGeneratedFiles(req.body?.files);
+    return res.json({ ok: true, valid: true, files: files.map(({ path, language, reason }) => ({ path, language, reason })) });
+  } catch (error) {
+    return res.status(400).json({ ok: false, valid: false, error: error.message || "Kod taklifi tekshirilmadi." });
   }
 });
 
