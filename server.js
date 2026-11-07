@@ -126,6 +126,18 @@ function requireAdmin(req, res, next) {
   next();
 }
 
+function requireAsilbekIntegration(req, res, next) {
+  const expected = process.env.ASILBEK_INTEGRATION_TOKEN || "";
+  const supplied = req.get("X-Asilbek-Token") || "";
+  const expectedBuffer = Buffer.from(expected);
+  const suppliedBuffer = Buffer.from(supplied);
+  if (!expected || expectedBuffer.length !== suppliedBuffer.length ||
+      !crypto.timingSafeEqual(expectedBuffer, suppliedBuffer)) {
+    return res.status(401).json({ error: "ASILBEK AI integratsiyasi uchun ruxsat yo‘q." });
+  }
+  next();
+}
+
 app.get("/api/learning/status", async (_req, res) => {
   res.set("Cache-Control", "no-store");
   try { return res.json({ ok: true, learning: await errorLearning.status() }); }
@@ -204,6 +216,27 @@ app.post("/api/admin/logout", (req, res) => {
   res.setHeader("Set-Cookie", "ulugbek_admin=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0");
   res.set("Cache-Control", "no-store");
   res.json({ ok: true });
+});
+
+app.get("/api/integrations/asilbek/status", requireAsilbekIntegration, (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({
+    service: "ULUGBEK AI",
+    integration: "ASILBEK AI",
+    mode: "read-only",
+    serverTime: new Date().toISOString(),
+    uptimeSeconds: Math.floor(process.uptime()),
+    version: process.env.APP_VERSION || "unknown",
+    buildCommit: BUILD_COMMIT,
+    buildBranch: BUILD_BRANCH,
+    ai: singleAgent.status(),
+    tasks: {
+      queued: agentRuntime.listTasks().filter(task => task.status === "queued").length,
+      running: agentRuntime.listTasks().filter(task => task.status === "running").length
+    },
+    learning: languageLearningWorker.status(),
+    deployment: "status-only; no remote actions enabled"
+  });
 });
 
 app.get("/api/admin/overview", requireAdmin, (_req, res) => {
