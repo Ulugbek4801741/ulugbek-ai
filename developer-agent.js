@@ -91,7 +91,7 @@ function addProposal(kind, severity, title, detail, file) {
   state.proposalsCreated++;
   return true;
 }
-function inspectFile(file, text) {
+function isEligibleFile(filePath, size) {\n  return typeof filePath === "string" && ALLOWED_EXT.test(filePath) && Number.isFinite(size) && size >= 0 && size <= MAX_FILE_BYTES;\n}\nfunction inspectFile(file, text) {
   const findings = [];
   if (/\beval\s*\(|new Function\s*\(/.test(text)) {
     findings.push(["security", "high", "Dinamik kod bajarish konstruktsiyasi topildi", "eval yoki Function konstruktsiyasi xavfli bo‘lishi mumkin; foydalanish joyi va ishonch chegarasini tekshirish kerak.", file]);
@@ -125,7 +125,7 @@ async function auditOnce() {
     const tree = await githubJson(base + "/git/trees/" + encodeURIComponent(branch.commit.sha) + "?recursive=1", controller.signal);
     if (!Array.isArray(tree.tree)) throw new Error("GitHub fayllar ro‘yxati noto‘g‘ri.");
     const eligible = tree.tree
-      .filter(item => item.type === "blob" && ALLOWED_EXT.test(item.path) && item.size <= MAX_FILE_BYTES)
+      .filter(item => item.type === "blob" && isEligibleFile(item.path, item.size))
       .sort((a, b) => {
         const rank = item => /\\.(?:js|cjs|mjs)$/i.test(item.path) ? 0 : /\\.json$/i.test(item.path) ? 1 : /\\.(?:yml|yaml)$/i.test(item.path) ? 2 : 3;
         return rank(a) - rank(b) || a.path.localeCompare(b.path);
@@ -230,4 +230,4 @@ function status() {
   };
 }
 function listProposals() { return state.proposals.map(item => ({ ...item })); }
-module.exports = { start, stop, auditOnce, status, listProposals, reviewProposal, inspectFile, githubHeaders };
+module.exports = { start, stop, auditOnce, status, listProposals, reviewProposal, inspectFile, isEligibleFile, githubHeaders };
