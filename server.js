@@ -86,7 +86,34 @@ const selfRecovery = createSelfRecoveryEngine({
   ]
 });
 
+const { createFunctionGuardian } = require("./modules/function-guardian");
+const functionGuardian = createFunctionGuardian();
+
 const app = express();
+app.use((req, res, next) => {
+  const started = Date.now();
+  res.on("finish", () => {
+    const route = req.route && req.route.path ? String(req.route.path) : req.path;
+    functionGuardian.record({
+      function: req.method + " " + route,
+      method: req.method,
+      path: route,
+      outcome: res.statusCode >= 500 ? "error" : "ok",
+      durationMs: Date.now() - started,
+      statusCode: res.statusCode
+    }).catch(error => console.error("Function guardian yozuvi saqlanmadi:", error.message));
+  });
+  next();
+});
+app.get("/api/admin/function-guardian/status", requireAdmin, async (_req, res) => {
+  await functionGuardian.load();
+  res.set("Cache-Control", "no-store").json({ ok: true, guardian: functionGuardian.status() });
+});
+app.get("/api/admin/function-guardian/report", requireAdmin, async (_req, res) => {
+  await functionGuardian.load();
+  res.set("Cache-Control", "no-store").json({ ok: true, report: functionGuardian.report() });
+});
+
 const PORT = Number(process.env.PORT) || 3000;
 const MAX_TASK_LENGTH = 4000;
 const BUILD_COMMIT = process.env.RENDER_GIT_COMMIT || process.env.SOURCE_VERSION || process.env.GITHUB_SHA || "unknown";
