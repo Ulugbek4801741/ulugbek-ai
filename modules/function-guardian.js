@@ -56,7 +56,7 @@ function createFunctionGuardian(options = {}) {
       const original = target[key];
       if (typeof original !== "function" || original.__guardianWrapped) continue;
       // Do not wrap ES classes as ordinary functions: class constructors require 'new'.
-      if (/^class\\s/.test(Function.prototype.toString.call(original))) continue;
+      if (/^class\s/.test(Function.prototype.toString.call(original))) continue;
       const wrapped = function (...args) {
         const started = Date.now();
         const finish = outcome => record({
