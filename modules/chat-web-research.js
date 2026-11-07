@@ -12,11 +12,23 @@ const MAX_PAGE_BYTES = 900000;
 const MAX_PAGE_CHARS = 12000;
 const MAX_REDIRECTS = 3;
 
+function decodeEntities(value) {
+  return String(value || "")
+    .replace(/&amp;/gi, "&").replace(/&quot;/gi, '"')
+    .replace(/&apos;|&#39;|&#x27;/gi, "'")
+    .replace(/&lt;/gi, "<").replace(/&gt;/gi, ">")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&#(\d+);/g, (_match, digits) => {
+      const code = Number(digits);
+      return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : " ";
+    })
+    .replace(/&#x([0-9a-f]+);/gi, (_match, digits) => {
+      const code = Number.parseInt(digits, 16);
+      return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : " ";
+    });
+}
 function clean(value, max = 800) {
-  return String(value || "").replace(/<[^>]*>/g, " ")
-    .replace(/&amp;/g, "&").replace(/&quot;/g, '"')
-    .replace(/&#39;|&apos;/g, "'").replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">").replace(/&nbsp;/g, " ")
+  return decodeEntities(String(value || "").replace(/<[^>]*>/g, " "))
     .replace(/\s+/g, " ").trim().slice(0, max);
 }
 function isPrivateAddress(address) {
