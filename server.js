@@ -99,10 +99,6 @@ const imageRateLimit = rateLimit({
 });
 const imageGenerator = require("./modules/image-generation").createImageGenerator();
 const videoGenerator = require("./modules/video-generation").createVideoGenerator();
-const videoRateLimit = rateLimit({
-  windowMs: 60 * 1000, limit: 1, standardHeaders: "draft-8", legacyHeaders: false,
-  message: { error: "Video yaratish limiti tugadi. Bir daqiqadan keyin qayta urinib ko‘ring." }
-});
 const mediaLibraryRoot = path.join(process.env.ULUGBEK_DATA_DIR || path.join(__dirname, "data"), "media-library");
 const mediaLibrary = require("./modules/media-library").createMediaLibrary({ dataDir: mediaLibraryRoot });
 
@@ -601,23 +597,16 @@ app.get("/api/videos/status", (_req, res) => {
   res.json({ ok: true, videoGeneration: videoGenerator.status() });
 });
 
-app.post("/api/videos/generate", (req, res, next) => {
-  // Do not consume the one-per-minute generation quota when no model/workflow is configured.
-  if (!videoGenerator.status().enabled) {
-    res.set("Cache-Control", "no-store");
-    return res.status(503).json({
-      error: "Video modeli ulanmagan. Serverda VIDEO_COMFYUI_URL va VIDEO_COMFYUI_WORKFLOW sozlang.",
-      videoGeneration: videoGenerator.status()
-    });
-  }
-  next();
-}, videoRateLimit, async (req, res) => {
+app.post("/api/videos/generate", async (req, res) => {
   res.set("Cache-Control", "no-store");
   try {
     const result = await videoGenerator.generate(req.body?.prompt);
-    return res.json({ ok: true, ...result, provider: "self-hosted-comfyui" });
+    return res.json({ ok: true, ...result, provider: "ulugbek-native-video-model" });
   } catch (error) {
-    return res.status(error.status || 502).json({ error: error.message || "Video yaratib bo‘lmadi." });
+    return res.status(error.status || 502).json({
+      error: error.message || "Video yaratib bo‘lmadi.",
+      videoGeneration: videoGenerator.status()
+    });
   }
 });
 

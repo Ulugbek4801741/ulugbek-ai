@@ -185,7 +185,7 @@ test("API smoke tests", async (t) => {
       assert.match(preflight.headers.get("access-control-allow-headers") || "", /authorization/i);
     });
 
-    await t.test("unconfigured video service returns 503 without consuming rate limit", async () => {
+    await t.test("untrained native video model returns 503", async () => {
       for (let attempt = 0; attempt < 2; attempt += 1) {
         const response = await fetch(`${baseUrl}/api/videos/generate`, {
           method: "POST",
@@ -194,7 +194,7 @@ test("API smoke tests", async (t) => {
         });
         assert.equal(response.status, 503);
         const body = await response.json();
-        assert.match(body.error, /VIDEO_COMFYUI_URL/);
+        assert.match(body.error, /video modeli hali o‘qitilmagan/i);
       }
     });
 
