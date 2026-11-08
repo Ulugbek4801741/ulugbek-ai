@@ -48,3 +48,5 @@ These are learning materials, not proof that a compiler, language runtime, code 
 - `docs/ai-memory/24-autonomy-policy-and-workflows.md`: routine automatic actions, approval gates and project separation.
 
 These are architecture/policy specifications, not proof that runtime features are active. Runtime adapters, storage, rendering workers, tests and deployment must be implemented and verified separately.
+
+- `docs/ai-memory/25-public-web-allowlist-and-private-access.md`: public web source categories, automatic lawful access, and explicit scoped authorization for closed/private sites.
