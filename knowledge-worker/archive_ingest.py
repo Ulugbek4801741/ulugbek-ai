@@ -81,7 +81,7 @@ def main():
     results = []
     with manifest.open(encoding="utf-8") as stream:
         for line in stream:
-            if not line.strip():
+            if not line.strip() or line.lstrip().startswith("#"):
                 continue
             if len(results) >= args.max_items:
                 break
