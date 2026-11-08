@@ -25,3 +25,16 @@ Collect → validate source → extract → deduplicate → classify → store w
 
 ## Status
 These documents are policy and architecture knowledge. Runtime web browsing, memory retrieval, persistent storage and policy enforcement are not proven active by documentation alone. Inspect implementation and tests before enabling in production.
+
+## Programming languages knowledge library
+
+A separate curriculum is stored in `docs/ai-memory/programming-languages/`.
+
+- `00-README.md`: learning sequence, mastery levels and truthful memory rules.
+- `01-python.md` through `12-swift.md`: one separate guide for each selected language/group.
+- `13-universal-programming-foundations.md`: shared concepts and algorithms.
+- `14-functions-and-code-patterns.md`: functions, reusable patterns and adaptation.
+- `15-testing-debugging-and-review.md`: test strategy, debugging and review.
+- `16-learning-memory-and-recall.md`: explain, reproduce, adapt, test and spaced recall.
+
+These are learning materials, not proof that a compiler, language runtime, code execution sandbox, or automatic memory retrieval is already connected to the live application.
