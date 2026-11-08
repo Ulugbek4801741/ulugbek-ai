@@ -920,6 +920,43 @@ app.post("/api/admin/knowledge/upload", requireAdmin,
     }
   });
 
+function requireKnowledgeWorker(req, res, next) {
+  const expected = process.env.KNOWLEDGE_API_TOKEN || "";
+  const supplied = req.get("X-Knowledge-Worker-Token") || "";
+  const a = Buffer.from(expected);
+  const b = Buffer.from(supplied);
+  if (!expected || a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+    return res.status(401).json({ error: "Internal knowledge token required." });
+  }
+  return next();
+}
+
+app.post("/api/internal/knowledge/upload", requireKnowledgeWorker,
+  express.raw({ type: ["application/pdf", "application/epub+zip", "application/octet-stream"], limit: "50mb" }),
+  async (req, res) => {
+    const worker = String(process.env.KNOWLEDGE_WORKER_URL || "").replace(/\/$/, "");
+    const token = process.env.KNOWLEDGE_WORKER_TOKEN || "";
+    const filename = String(req.headers["x-filename"] || "document.pdf").slice(0, 240);
+    if (!worker || !token) return res.status(503).json({ error: "PDF/EPUB worker server sozlanmagan." });
+    if (!Buffer.isBuffer(req.body) || !req.body.length) return res.status(400).json({ error: "PDF yoki EPUB fayl yuboring." });
+    try {
+      const extracted = await fetch(worker + "/extract", {
+        method: "POST", headers: { authorization: "Bearer " + token,
+          "content-type": req.headers["content-type"] || "application/octet-stream", "x-filename": filename },
+        body: req.body, signal: AbortSignal.timeout(90000)
+      });
+      const data = await extracted.json();
+      if (!extracted.ok) return res.status(extracted.status).json({ error: data.detail || "Hujjat o‘qilmadi." });
+      const saved = await knowledgeStore.ingest({
+        title: filename, author: "", source: "user://archive/" + crypto.createHash("sha256").update(req.body).digest("hex"),
+        language: "auto", content: data.text
+      });
+      return res.status(201).json({ ...saved, filename, format: data.format, sections: data.sections });
+    } catch (error) {
+      return res.status(503).json({ error: error.message || "Arxiv hujjatini import qilish xatosi." });
+    }
+  });
+
 app.post("/api/admin/knowledge/read-url", requireAdmin, async (req, res) => {
   const url = typeof req.body?.url === "string" ? req.body.url.trim() : "";
   if (!url || url.length > 2000) return res.status(400).json({ error: "Ochiq HTTPS manzil kerak." });
