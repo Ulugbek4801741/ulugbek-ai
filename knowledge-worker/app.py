@@ -88,7 +88,7 @@ async def extract(request: Request, authorization: str | None = Header(default=N
                 soup = BeautifulSoup(item.get_content(), "html.parser")
                 for node in soup(["script", "style", "nav"]):
                     node.decompose()
-                chapter = re.sub(r"\\s+", " ", soup.get_text(" ", strip=True)).strip()
+                chapter = re.sub(r"\s+", " ", soup.get_text(" ", strip=True)).strip()
                 if chapter:
                     sections.append(chapter)
                 if sum(map(len, sections)) > MAX_TEXT_CHARS:
