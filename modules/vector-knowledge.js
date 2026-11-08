@@ -28,16 +28,21 @@ function configured() { return Boolean(embeddingUrl() && qdrantUrl()); }
 
 async function embed(texts) {
   if (!embeddingUrl()) throw new Error("EMBEDDING_API_URL is not configured");
-  const result = await request(embeddingUrl() + "/embed", {
-    method: "POST",
-    headers: { "content-type": "application/json", ...(process.env.EMBEDDING_API_TOKEN ? { authorization: "Bearer " + process.env.EMBEDDING_API_TOKEN } : {}) },
-    body: JSON.stringify({ texts })
-  });
-  if (!Array.isArray(result.vectors) || result.vectors.length !== texts.length ||
-      result.vectors.some(v => !Array.isArray(v) || v.length !== dimension)) {
-    throw new Error("Embedding model returned an unexpected vector shape");
+  const output = [];
+  for (let offset = 0; offset < texts.length; offset += 32) {
+    const batch = texts.slice(offset, offset + 32);
+    const result = await request(embeddingUrl() + "/embed", {
+      method: "POST",
+      headers: { "content-type": "application/json", ...(process.env.EMBEDDING_API_TOKEN ? { authorization: "Bearer " + process.env.EMBEDDING_API_TOKEN } : {}) },
+      body: JSON.stringify({ texts: batch })
+    });
+    if (!Array.isArray(result.vectors) || result.vectors.length !== batch.length ||
+        result.vectors.some(v => !Array.isArray(v) || v.length !== dimension)) {
+      throw new Error("Embedding model returned an unexpected vector shape");
+    }
+    output.push(...result.vectors);
   }
-  return result.vectors;
+  return output;
 }
 async function ensureCollection() {
   const base = qdrantUrl() + "/collections/" + encodeURIComponent(collection);
