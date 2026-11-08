@@ -16,6 +16,8 @@ const languageLearningWorker = require("./modules/language-learning-worker");
 const errorLearning = require("./modules/error-learning");
 const conversationMemory = require("./modules/conversation-memory");
 const researchCache = require("./modules/research-cache");
+const knowledgeStore = require("./modules/knowledge-store");
+const publicWebReader = require("./modules/public-web-reader");
 const developerAgent = require("./developer-agent");
 const agentPermissions = require("./agent-permissions");
 const learningWorkerForAdmin = require("./lab-learning-worker");
@@ -862,6 +864,43 @@ app.get("/api/research/status", async (_req, res) => {
   }
 });
 
+app.get("/api/admin/knowledge/status", requireAdmin, async (_req, res) => {
+  try { res.set("Cache-Control", "no-store"); return res.json({ ok: true, knowledge: await knowledgeStore.status() }); }
+  catch (_) { return res.status(503).json({ error: "Bilim ombori holatini o‘qib bo‘lmadi." }); }
+});
+app.post("/api/admin/knowledge/ingest", requireAdmin, async (req, res) => {
+  try {
+    const result = await knowledgeStore.ingest({
+      title: req.body?.title, author: req.body?.author, source: req.body?.source,
+      language: req.body?.language, content: req.body?.content
+    });
+    res.set("Cache-Control", "no-store");
+    return res.status(201).json(result);
+  } catch (error) {
+    return res.status(error.statusCode || 500).json({ error: error.message || "Bilim hujjati saqlanmadi." });
+  }
+});
+app.post("/api/admin/knowledge/read-url", requireAdmin, async (req, res) => {
+  const url = typeof req.body?.url === "string" ? req.body.url.trim() : "";
+  if (!url || url.length > 2000) return res.status(400).json({ error: "Ochiq HTTPS manzil kerak." });
+  try {
+    const page = await publicWebReader.readPublicPage(url);
+    const saved = await knowledgeStore.ingest({
+      title: req.body?.title || page.title, author: req.body?.author || "",
+      source: page.source, language: req.body?.language || "auto", content: page.content
+    });
+    return res.status(201).json({ ...saved, fetchedAt: page.fetchedAt, contentType: page.contentType });
+  } catch (error) {
+    return res.status(error.statusCode || 422).json({ error: error.message || "Ochiq sahifa bilim omboriga qo‘shilmadi." });
+  }
+});
+app.post("/api/admin/knowledge/search", requireAdmin, async (req, res) => {
+  const query = typeof req.body?.query === "string" ? req.body.query.trim() : "";
+  if (query.length < 2 || query.length > 1000) return res.status(400).json({ error: "Qidiruv 2–1000 belgi bo‘lishi kerak." });
+  try { return res.json({ ok: true, results: await knowledgeStore.search(query, req.body?.limit || 6) }); }
+  catch (_) { return res.status(503).json({ error: "Bilim qidiruvi bajarilmadi." }); }
+});
+
 app.post("/api/chat", chatRateLimit, async (req, res) => {
   const message = typeof req.body?.message === "string" ? req.body.message.trim() : "";
   const suppliedSessionId = typeof req.body?.sessionId === "string" ? req.body.sessionId : "";
@@ -936,16 +975,18 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   const nativeBrain = require("./lab-learning-worker");
   let localKnowledge = [];
   let cachedKnowledge = [];
+  let storedKnowledge = [];
   try {
-    [localKnowledge, cachedKnowledge] = await Promise.all([
+    [localKnowledge, cachedKnowledge, storedKnowledge] = await Promise.all([
       nativeBrain.searchKnowledge(conversationMessage, 5),
-      researchCache.search(conversationMessage, 5)
+      researchCache.search(conversationMessage, 5),
+      knowledgeStore.search(conversationMessage, 6)
     ]);
   } catch (_) {}
   // Search the public web when the local approved knowledge and persistent research cache
   // cannot answer the user's question. Explicit/current searches always refresh evidence.
   const localCandidate = nativeBrain.buildLocalReply(
-    conversationMessage, [...localKnowledge, ...cachedKnowledge], conversationContext
+    conversationMessage, [...localKnowledge, ...cachedKnowledge, ...storedKnowledge.map(item => ({ title: item.title, content: item.content, source: item.source, status: "approved-local-knowledge", sourceQuality: 4 }))], conversationContext
   );
   const hasLocalAnswer = localCandidate?.reasoning?.answerable === true;
   // Preserve quick, built-in answers (greetings, arithmetic, starter lessons).
@@ -1006,6 +1047,10 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     const evidence = [
       ...universalSearch.evidenceEntries(found.results),
       ...cachedKnowledge,
+      ...storedKnowledge.map(item => ({
+        title: item.title, content: item.content, source: item.source,
+        status: "approved-local-knowledge", sourceQuality: 4
+      })),
       ...localKnowledge.map(item => ({
         title: item.title, content: item.content, source: item.source,
         status: "approved-local-knowledge", sourceQuality: 3
