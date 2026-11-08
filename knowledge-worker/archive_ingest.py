@@ -6,6 +6,8 @@ import json
 import os
 import re
 import time
+import socket
+import ipaddress
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -27,6 +29,14 @@ def download(item: dict, root: Path, max_bytes: int):
     parsed = urllib.parse.urlparse(url)
     if parsed.scheme != "https" or not parsed.hostname:
         return {"status": "skipped-invalid-url", "title": item.get("title", "")}
+    if parsed.username is not None or parsed.password is not None:
+        return {"status": "skipped-invalid-url", "title": item.get("title", "")}
+    try:
+        addresses = {entry[4][0] for entry in socket.getaddrinfo(parsed.hostname, 443, type=socket.SOCK_STREAM)}
+        if not addresses or any(not ipaddress.ip_address(address).is_global for address in addresses):
+            return {"status": "skipped-nonpublic-host", "title": item.get("title", "")}
+    except Exception:
+        return {"status": "skipped-unresolvable-host", "title": item.get("title", "")}
     ext = Path(parsed.path).suffix.lower()
     if ext not in {".pdf", ".epub"}:
         return {"status": "skipped-unsupported-format", "title": item.get("title", "")}
