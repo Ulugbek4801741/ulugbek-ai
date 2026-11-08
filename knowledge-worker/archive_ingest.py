@@ -13,7 +13,7 @@ import urllib.request
 from pathlib import Path
 
 ALLOWED_RIGHTS = {"open-license", "public-domain-global", "permission-granted"}
-MAX_DEFAULT = 100 * 1024 * 1024
+MAX_DEFAULT = 50 * 1024 * 1024
 
 
 def safe_name(value: str) -> str:
@@ -61,18 +61,24 @@ def download(item: dict, root: Path, max_bytes: int):
         raise ValueError("Downloaded file is not a ZIP/EPUB")
     source_id = hashlib.sha256((url + license_name).encode()).hexdigest()[:16]
     folder = root / safe_name(str(item.get("collection", "open-library"))) / source_id
-    folder.mkdir(parents=True, exist_ok=True)
+    folder.mkdir(parents=True, exist_ok=True, mode=0o700)
+    try: os.chmod(folder, 0o700)
+    except OSError: pass
     target = folder / (digest.hexdigest() + ext)
     if not target.exists():
         target.write_bytes(data)
+        try: os.chmod(target, 0o600)
+        except OSError: pass
     metadata = {
         "title": str(item.get("title", ""))[:500], "author": str(item.get("author", ""))[:300],
         "download_url": url, "license": license_name, "rights_status": rights,
         "source": str(item.get("source", ""))[:500], "sha256": digest.hexdigest(),
         "bytes": len(data), "stored_file": str(target), "downloaded_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     }
-    (folder / (digest.hexdigest() + ".metadata.json")).write_text(
-        json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
+    metadata_path = folder / (digest.hexdigest() + ".metadata.json")
+    metadata_path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
+    try: os.chmod(metadata_path, 0o600)
+    except OSError: pass
     api_url = os.getenv("KNOWLEDGE_API_URL", "").rstrip("/")
     api_token = os.getenv("KNOWLEDGE_API_TOKEN", "")
     ingested = False
@@ -93,10 +99,12 @@ def main():
     parser.add_argument("--manifest", default="knowledge-worker/archive-queue.jsonl")
     parser.add_argument("--storage", default=os.getenv("KNOWLEDGE_ARCHIVE_DIR", "/var/data/books"))
     parser.add_argument("--max-items", type=int, default=100)
-    parser.add_argument("--max-mb", type=int, default=100)
+    parser.add_argument("--max-mb", type=int, default=50)
     args = parser.parse_args()
     root = Path(args.storage)
-    root.mkdir(parents=True, exist_ok=True)
+    root.mkdir(parents=True, exist_ok=True, mode=0o700)
+    try: os.chmod(root, 0o700)
+    except OSError: pass
     manifest = Path(args.manifest)
     if not manifest.exists():
         raise SystemExit(f"Manifest not found: {manifest}")
