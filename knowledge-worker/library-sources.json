@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "description": "Federated discovery seed list; catalogue access is not equivalent to full-text download permission.",
+  "sources": [
+    {"id":"open-textbook-library","name":"Open Textbook Library","kind":"open-textbook-catalog","mode":"discover-and-check-item-license","url":"https://open.umn.edu/opentextbooks"},
+    {"id":"doab","name":"Directory of Open Access Books","kind":"open-access-book-catalog","mode":"discover-and-check-item-license","url":"https://www.doabooks.org/"},
+    {"id":"oapen","name":"OAPEN Library","kind":"open-access-book-platform","mode":"discover-and-check-item-license","url":"https://library.oapen.org/"},
+    {"id":"gutenberg","name":"Project Gutenberg","kind":"public-domain-ebook-catalog","mode":"catalogue-and-country-rights-check","url":"https://www.gutenberg.org/ebooks/offline_catalogs.html"},
+    {"id":"openlibrary","name":"Open Library","kind":"bibliographic-metadata","mode":"metadata-only-use-monthly-dumps-for-bulk","url":"https://openlibrary.org/developers"},
+    {"id":"libretexts","name":"LibreTexts","kind":"open-education-resources","mode":"discover-and-check-item-license","url":"https://libretexts.org/"},
+    {"id":"pressbooks","name":"Pressbooks Directory","kind":"open-textbook-catalog","mode":"discover-and-check-item-license","url":"https://pressbooks.directory/"},
+    {"id":"wikibooks","name":"Wikibooks","kind":"open-content-books","mode":"use-source-license-and-attribution","url":"https://www.wikibooks.org/"},
+    {"id":"wikiversity","name":"Wikiversity","kind":"open-learning-resources","mode":"use-source-license-and-attribution","url":"https://www.wikiversity.org/"},
+    {"id":"ncbi-bookshelf","name":"NCBI Bookshelf","kind":"biomedical-books","mode":"check-item-terms-and-reuse","url":"https://www.ncbi.nlm.nih.gov/books/"}
+  ]
+}
