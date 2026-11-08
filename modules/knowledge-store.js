@@ -163,7 +163,7 @@ async function search(query, limit = 6) {
       chunkIndex: record.chunkIndex, documentId: record.documentId, updatedAt: record.updatedAt
     }));
 }
-async function reindexVectors(limit = 500) {
+async function reindexVectors(limit = 500, offset = 0) {
   if (!vectorIndex.configured()) throw new Error("EMBEDDING_API_URL va QDRANT_URL sozlanmagan");
   const all = await load();
   const groups = new Map();
@@ -171,7 +171,8 @@ async function reindexVectors(limit = 500) {
     if (!groups.has(item.documentId)) groups.set(item.documentId, []);
     groups.get(item.documentId).push(item);
   }
-  const selected = [...groups.values()].slice(0, Math.max(1, Math.min(Number(limit) || 500, 2000)));
+  const safeOffset = Math.max(0, Number(offset) || 0);
+  const selected = [...groups.values()].slice(safeOffset, safeOffset + Math.max(1, Math.min(Number(limit) || 500, 2000)));
   let indexedDocuments = 0, indexedChunks = 0, errors = 0;
   for (const chunks of selected) {
     try {
@@ -181,7 +182,9 @@ async function reindexVectors(limit = 500) {
     } catch (_) { errors += 1; }
   }
   return { processedDocuments: selected.length, totalDocuments: groups.size,
-    indexedDocuments, indexedChunks, errors, remaining: Math.max(0, groups.size - selected.length) };
+    indexedDocuments, indexedChunks, errors, offset: safeOffset,
+    nextOffset: safeOffset + selected.length < groups.size ? safeOffset + selected.length : null,
+    remaining: Math.max(0, groups.size - safeOffset - selected.length) };
 }
 
 async function status() {
