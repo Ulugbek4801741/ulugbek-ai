@@ -41,10 +41,10 @@ Use distinct tokens, Qdrant collections, databases and disks for the two AI proj
 Discover Gutenberg catalogue candidates with `python knowledge-worker/catalog_discovery.py --query biology --limit 50`. The output is metadata-only and marks every candidate `rights-review-required`. Add one JSON record per cleared file to `knowledge-worker/archive-queue.jsonl` (use `archive-queue.example.jsonl` as the schema). The downloader only accepts HTTPS PDF/EPUB URLs and records with a non-empty license plus `rights_status` set to `open-license`, `public-domain-global`, or `permission-granted`. It writes files and SHA-256 manifests to a private persistent volume:
 
 ```bash
-python knowledge-worker/archive_ingest.py --manifest knowledge-worker/archive-queue.jsonl --storage /var/data/books --max-items 100
+docker compose -f docker-compose.knowledge.yml exec knowledge-worker python archive_ingest.py --manifest archive-queue.jsonl --storage /var/data/books --max-items 100
 ```
 
-Set `KNOWLEDGE_API_URL`, `KNOWLEDGE_API_TOKEN` and `KNOWLEDGE_API_AUTH_HEADER` in the private worker environment to have successfully downloaded books automatically posted to that project's protected ingestion API. ULUGBEK uses `/api/internal/knowledge/upload` with `X-Knowledge-Worker-Token`; ASILBEK uses `/knowledge/upload` with `X-Owner-Token`. The script does not scrape every catalogue or assume that every catalogue record has a reusable full text. Open Library offers monthly metadata dumps and explicitly says its API is not intended as a bulk data backend. Project Gutenberg recommends its offline catalogues and mirrors for bulk access. Non-US users must check local rights status. Restricted titles stay as metadata and official links.
+Set `KNOWLEDGE_API_URL`, `KNOWLEDGE_API_TOKEN` and `KNOWLEDGE_API_AUTH_HEADER` in the private worker `.env` before starting Compose to have successfully downloaded books automatically posted to that project's protected ingestion API. ULUGBEK uses `/api/internal/knowledge/upload` with `X-Knowledge-Worker-Token`; ASILBEK uses `/knowledge/upload` with `X-Owner-Token`. The script does not scrape every catalogue or assume that every catalogue record has a reusable full text. Open Library offers monthly metadata dumps and explicitly says its API is not intended as a bulk data backend. Project Gutenberg recommends its offline catalogues and mirrors for bulk access. Non-US users must check local rights status. Restricted titles stay as metadata and official links.
 
 ## Model adaptation
 
