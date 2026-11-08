@@ -5,6 +5,7 @@
 const fs = require("node:fs/promises");
 const path = require("node:path");
 const crypto = require("node:crypto");
+const vectorIndex = require("./vector-knowledge");
 
 const ROOT = path.resolve(process.env.ULUGBEK_KNOWLEDGE_DIR ||
   path.join(process.env.ULUGBEK_DATA_DIR || path.join(__dirname, "..", "data"), "knowledge-base"));
@@ -108,13 +109,26 @@ async function ingest(input = {}) {
     await fs.appendFile(FILE, added.map(item => JSON.stringify(item)).join("\n") + "\n", { encoding: "utf8", mode: 0o600 });
     records = remaining.concat(added);
     buildIndex();
-    return { ok: true, documentId: id, chunks: pieces.length, characters: text.length, source, contentHash: digest };
+    let vector = { enabled: false, indexed: 0 };
+    try { vector = await vectorIndex.upsertDocument(added); }
+    catch (error) { vector = { enabled: true, indexed: 0, error: error.message.slice(0, 180) }; }
+    return { ok: true, documentId: id, chunks: pieces.length, characters: text.length,
+      source, contentHash: digest, vector };
   });
   writeQueue = next.catch(() => {});
   return next;
 }
 async function search(query, limit = 6) {
   const text = String(query || "").trim().slice(0, 1000);
+  if (vectorIndex.configured()) {
+    try {
+      const semantic = await vectorIndex.search(text, limit);
+      if (semantic.length) return semantic;
+    } catch (error) {
+      // Keep the service available with local BM25 if the optional vector stack is down.
+      console.warn("Multilingual vector search fallback:", error.message);
+    }
+  }
   const queryTerms = [...new Set(terms(text))].slice(0, 18);
   if (!queryTerms.length) return [];
   const all = await load();
@@ -154,9 +168,10 @@ async function status() {
   const docs = new Set(all.map(item => item.documentId));
   let bytes = 0;
   try { bytes = (await fs.stat(FILE)).size; } catch (_) {}
-  return { ready: true, engine: "ulugbek-inverted-index-bm25-v1", documents: docs.size,
-    chunks: all.length, vocabulary: postings.size, bytes, storage: ROOT,
-    persistentVolumeRequired: true, vectorEmbeddings: false,
-    note: "Indexed lexical retrieval is active. Semantic embeddings are not enabled in this build." };
+  const vector = await vectorIndex.status();
+  return { ready: true, engine: vector.enabled && vector.ready !== false
+      ? "multilingual-vector-with-bm25-fallback" : "ulugbek-inverted-index-bm25-v1",
+    documents: docs.size, chunks: all.length, vocabulary: postings.size, bytes,
+    storage: ROOT, persistentVolumeRequired: true, vector };
 }
 module.exports = { ingest, search, status, splitText, terms };
