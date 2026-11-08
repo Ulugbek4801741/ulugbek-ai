@@ -17,5 +17,11 @@ Use these documents as the project's intended policy and retrieval knowledge. Th
 ## Memory lifecycle
 Collect → validate source → extract → deduplicate → classify → store with provenance → retrieve → answer/act → evaluate → revise with version history.
 
+## Extended knowledge areas
+
+- Foundational constitution, mission, autonomy and memory principles.
+- Lawful public-web access, fetcher architecture, SSRF/network protections, copyright/licensing, source verification, multilingual extraction, open-data catalog, web threat model, knowledge-record schema and test plan.
+- Product research workflows, customer delivery, business privacy and cost/resource governance.
+
 ## Status
-These are foundational knowledge documents. Runtime retrieval, policy enforcement and persistent database integration must be implemented and tested separately.
+These documents are policy and architecture knowledge. Runtime web browsing, memory retrieval, persistent storage and policy enforcement are not proven active by documentation alone. Inspect implementation and tests before enabling in production.
