@@ -1,0 +1,4 @@
+# One JSON object per line. Add exact PDF/EPUB download URLs from trusted catalogues.
+# Download is blocked unless rights_status is open-license, public-domain-global, or permission-granted,
+# and a non-empty license field is supplied. Example only:
+# {"collection":"open-textbooks","title":"Example textbook","author":"Example Author","download_url":"https://example.org/book.pdf","license":"CC-BY-4.0","rights_status":"open-license","source":"https://example.org/catalog/item"}
