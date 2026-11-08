@@ -864,6 +864,15 @@ app.get("/api/research/status", async (_req, res) => {
   }
 });
 
+app.post("/api/admin/knowledge/reindex-vector", requireAdmin, async (_req, res) => {
+  try {
+    const result = await knowledgeStore.reindexVectors();
+    return res.json({ ok: true, ...result });
+  } catch (error) {
+    return res.status(503).json({ error: error.message || "Vektor indeksni qayta qurib bo‘lmadi." });
+  }
+});
+
 app.get("/api/admin/knowledge/status", requireAdmin, async (_req, res) => {
   try { res.set("Cache-Control", "no-store"); return res.json({ ok: true, knowledge: await knowledgeStore.status() }); }
   catch (_) { return res.status(503).json({ error: "Bilim ombori holatini o‘qib bo‘lmadi." }); }
