@@ -63,7 +63,19 @@ def download(item: dict, root: Path, max_bytes: int):
     }
     (folder / (digest.hexdigest() + ".metadata.json")).write_text(
         json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
-    return {"status": "downloaded", "title": metadata["title"], "bytes": len(data), "sha256": digest.hexdigest()}
+    api_url = os.getenv("KNOWLEDGE_API_URL", "").rstrip("/")
+    api_token = os.getenv("KNOWLEDGE_API_TOKEN", "")
+    ingested = False
+    if api_url and api_token:
+        api_path = os.getenv("KNOWLEDGE_API_PATH", "/knowledge/upload")
+        auth_header = os.getenv("KNOWLEDGE_API_AUTH_HEADER", "X-Owner-Token")
+        upload = urllib.request.Request(api_url + api_path, data=bytes(data), method="POST",
+            headers={auth_header: api_token, "X-Filename": safe_name(str(item.get("title", "book")) + ext),
+                     "Content-Type": "application/pdf" if ext == ".pdf" else "application/epub+zip"})
+        with urllib.request.urlopen(upload, timeout=180) as response:
+            ingested = 200 <= response.status < 300
+    return {"status": "downloaded", "ingested": ingested, "title": metadata["title"],
+            "bytes": len(data), "sha256": digest.hexdigest()}
 
 
 def main():
