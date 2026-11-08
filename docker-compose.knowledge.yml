@@ -1,0 +1,28 @@
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.13.6
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+  knowledge-worker:
+    build:
+      context: ./knowledge-worker
+    restart: unless-stopped
+    environment:
+      KNOWLEDGE_WORKER_TOKEN: ${KNOWLEDGE_WORKER_TOKEN:?set a long random token}
+      EMBEDDING_MODEL: BAAI/bge-m3
+      EMBEDDING_DEVICE: cpu
+      HF_HOME: /models
+      MAX_FILE_BYTES: "52428800"
+      MAX_TEXT_CHARS: "2000000"
+    ports:
+      - "8080:8080"
+    volumes:
+      - model_cache:/models
+    depends_on:
+      - qdrant
+volumes:
+  qdrant_data:
+  model_cache:
