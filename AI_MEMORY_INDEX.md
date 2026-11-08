@@ -76,3 +76,16 @@ The independent film studio knowledge library is stored in `docs/ai-memory/film-
 - `38-film-quality-evaluation-and-acceptance-tests.md`: shot/film QC, acceptance tests and release gates.
 
 These are implementation-ready knowledge and architecture specifications. They do not prove that a video model, GPU worker, media storage, queue or render service is connected. Runtime implementation and a verified sample export are separate release requirements. This library is duplicated independently in each repository; it does not authorize cross-project data or credential sharing.
+
+
+## Universal question research, book reading and original authoring
+
+Stored in `docs/ai-memory/universal-knowledge/`:
+- `39-universal-question-understanding-and-routing.md`: multilingual question interpretation, intent, domain routing and ambiguity handling.
+- `40-source-discovery-and-research-policy.md`: source hierarchy, research discovery, provenance and prompt-injection defense.
+- `41-book-discovery-reading-and-comprehension.md`: lawful book discovery, full-text reading, chapter comprehension and reading records.
+- `42-knowledge-synthesis-and-concise-answering.md`: evidence synthesis, contradiction handling and short grounded answers.
+- `43-original-book-authoring-and-100-page-projects.md`: research-led original book planning, writing, citation, layout and page-count verification.
+- `44-subject-taxonomy-learning-memory-and-evaluation.md`: broad subject map, knowledge coverage, retrieval, learning memory and acceptance tests.
+
+These documents specify knowledge and operating behavior. They do not prove that live web search, book ingestion, semantic indexing, model training or DOCX/PDF authoring is implemented. A book catalogue entry is not full-text access; free-to-read is not automatically free-to-reuse. Verify each source's license and terms.
