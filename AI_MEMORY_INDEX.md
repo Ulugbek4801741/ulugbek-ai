@@ -50,3 +50,14 @@ These are learning materials, not proof that a compiler, language runtime, code 
 These are architecture/policy specifications, not proof that runtime features are active. Runtime adapters, storage, rendering workers, tests and deployment must be implemented and verified separately.
 
 - `docs/ai-memory/25-public-web-allowlist-and-private-access.md`: public web source categories, automatic lawful access, and explicit scoped authorization for closed/private sites.
+
+## Universal question answering, books and world geography
+
+- `docs/ai-memory/26-universal-question-answering-and-fact-checking.md`: answer arbitrary questions, detect false premises, verify evidence and state uncertainty.
+- `docs/ai-memory/27-world-geography-and-open-map-knowledge.md`: global geography, administrative areas, public streets and licensed map data with privacy limits.
+- `docs/ai-memory/28-books-libraries-and-literary-knowledge.md`: book catalogue, editions, open/public-domain texts and copyright-aware reading.
+- `docs/ai-memory/29-universal-knowledge-record-and-index.md`: common provenance-aware knowledge record, indexing, retrieval and security.
+- `docs/ai-memory/30-question-catalog-and-answer-playbooks.md`: reusable question families and answer procedures, including fabricated and ambiguous questions.
+- `docs/ai-memory/31-knowledge-coverage-roadmap-and-acceptance-tests.md`: implementation phases, measurable coverage and acceptance tests.
+
+These documents specify intended knowledge architecture. They do not mean all books, addresses, map features or runtime retrieval have already been ingested or implemented. Public map coverage is not resident identity data. Rights, attribution, access rules and privacy must be checked per source.
