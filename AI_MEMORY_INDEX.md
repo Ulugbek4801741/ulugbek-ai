@@ -61,3 +61,18 @@ These are architecture/policy specifications, not proof that runtime features ar
 - `docs/ai-memory/31-knowledge-coverage-roadmap-and-acceptance-tests.md`: implementation phases, measurable coverage and acceptance tests.
 
 These documents specify intended knowledge architecture. They do not mean all books, addresses, map features or runtime retrieval have already been ingested or implemented. Public map coverage is not resident identity data. Rights, attribution, access rules and privacy must be checked per source.
+
+
+## Autonomous film and video production
+
+The independent film studio knowledge library is stored in `docs/ai-memory/film-studio/`:
+
+- `32-film-language-and-story-development.md`: story development, screenplay, shot breakdown and long-form runtime planning.
+- `33-performer-identity-consent-and-character-continuity.md`: consent, likeness rights, character reference continuity, privacy and synthetic-media disclosure.
+- `34-video-generation-models-and-adapter-contracts.md`: provider-neutral video model capabilities, adapter interface, job lifecycle and evaluation.
+- `35-film-job-orchestration-and-project-manifest.md`: durable task graph, checkpoints, edit timeline, manifest and approvals.
+- `36-audio-dialogue-music-and-localization.md`: dialogue, voice, sound, music licensing, Uzbek localization and accessibility.
+- `37-render-infrastructure-cost-and-delivery.md`: control/data plane, storage, FFmpeg rendering, GPU capacity, budgets and delivery.
+- `38-film-quality-evaluation-and-acceptance-tests.md`: shot/film QC, acceptance tests and release gates.
+
+These are implementation-ready knowledge and architecture specifications. They do not prove that a video model, GPU worker, media storage, queue or render service is connected. Runtime implementation and a verified sample export are separate release requirements. This library is duplicated independently in each repository; it does not authorize cross-project data or credential sharing.
