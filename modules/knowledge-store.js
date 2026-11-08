@@ -163,6 +163,27 @@ async function search(query, limit = 6) {
       chunkIndex: record.chunkIndex, documentId: record.documentId, updatedAt: record.updatedAt
     }));
 }
+async function reindexVectors(limit = 500) {
+  if (!vectorIndex.configured()) throw new Error("EMBEDDING_API_URL va QDRANT_URL sozlanmagan");
+  const all = await load();
+  const groups = new Map();
+  for (const item of all) {
+    if (!groups.has(item.documentId)) groups.set(item.documentId, []);
+    groups.get(item.documentId).push(item);
+  }
+  const selected = [...groups.values()].slice(0, Math.max(1, Math.min(Number(limit) || 500, 2000)));
+  let indexedDocuments = 0, indexedChunks = 0, errors = 0;
+  for (const chunks of selected) {
+    try {
+      const result = await vectorIndex.upsertDocument(chunks);
+      indexedDocuments += 1;
+      indexedChunks += result.indexed || 0;
+    } catch (_) { errors += 1; }
+  }
+  return { processedDocuments: selected.length, totalDocuments: groups.size,
+    indexedDocuments, indexedChunks, errors, remaining: Math.max(0, groups.size - selected.length) };
+}
+
 async function status() {
   const all = await load();
   const docs = new Set(all.map(item => item.documentId));
@@ -174,4 +195,4 @@ async function status() {
     documents: docs.size, chunks: all.length, vocabulary: postings.size, bytes,
     storage: ROOT, persistentVolumeRequired: true, vector };
 }
-module.exports = { ingest, search, status, splitText, terms };
+module.exports = { ingest, search, status, splitText, terms, reindexVectors };
