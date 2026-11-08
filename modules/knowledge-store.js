@@ -1,7 +1,7 @@
 "use strict";
 
-// Persistent, dependency-free knowledge store for ULUGBEK AI.
-// Store text chunks and metadata on the server's persistent data volume.
+// Persistent, dependency-free hybrid lexical retrieval for ULUGBEK AI.
+// Append-only JSONL storage avoids rewriting a growing corpus on every ingestion.
 const fs = require("node:fs/promises");
 const path = require("node:path");
 const crypto = require("node:crypto");
@@ -12,6 +12,9 @@ const FILE = path.join(ROOT, "chunks.jsonl");
 const CHUNK_CHARS = 1800;
 const OVERLAP_CHARS = 240;
 let records = null;
+let postings = null;
+let lengths = [];
+let averageLength = 1;
 let writeQueue = Promise.resolve();
 
 function hash(value) {
@@ -38,6 +41,23 @@ function splitText(value) {
   }
   return chunks;
 }
+function buildIndex() {
+  postings = new Map();
+  lengths = new Array(records.length);
+  let totalLength = 0;
+  records.forEach((record, index) => {
+    const bodyTerms = terms(record.text);
+    lengths[index] = bodyTerms.length;
+    totalLength += bodyTerms.length;
+    const frequencies = new Map();
+    for (const token of bodyTerms) frequencies.set(token, (frequencies.get(token) || 0) + 1);
+    for (const [token, frequency] of frequencies) {
+      if (!postings.has(token)) postings.set(token, new Map());
+      postings.get(token).set(index, frequency);
+    }
+  });
+  averageLength = records.length ? Math.max(1, totalLength / records.length) : 1;
+}
 async function load() {
   if (records) return records;
   await fs.mkdir(ROOT, { recursive: true });
@@ -45,20 +65,20 @@ async function load() {
   try { raw = await fs.readFile(FILE, "utf8"); } catch (error) {
     if (error.code !== "ENOENT") throw error;
   }
-  records = raw.split("\n").filter(Boolean).flatMap(line => {
+  const parsed = raw.split("\n").filter(Boolean).flatMap(line => {
     try {
       const item = JSON.parse(line);
       return item && item.id && item.text ? [item] : [];
     } catch (_) { return []; }
   });
+  const latest = new Map();
+  for (const item of parsed) {
+    const previous = latest.get(item.documentId);
+    if (!previous || String(item.updatedAt) > String(previous.updatedAt)) latest.set(item.documentId, item);
+  }
+  records = parsed.filter(item => latest.get(item.documentId)?.contentHash === item.contentHash);
+  buildIndex();
   return records;
-}
-async function persist(next) {
-  await fs.mkdir(ROOT, { recursive: true });
-  const temp = FILE + ".tmp";
-  await fs.writeFile(temp, next.map(item => JSON.stringify(item)).join("\n") + (next.length ? "\n" : ""), { mode: 0o600 });
-  await fs.rename(temp, FILE);
-  records = next;
 }
 async function ingest(input = {}) {
   const title = String(input.title || "").trim().slice(0, 300);
@@ -74,50 +94,59 @@ async function ingest(input = {}) {
   const id = hash(source).slice(0, 24);
   const now = new Date().toISOString();
   const pieces = splitText(text);
-  const next = (await load()).filter(item => item.documentId !== id);
-  pieces.forEach((part, index) => next.push({
-    id: hash(id + ":" + index + ":" + part).slice(0, 32),
-    documentId: id, title, author: String(input.author || "").slice(0, 200),
-    source, language: String(input.language || "auto").slice(0, 24),
-    contentHash: digest, chunkIndex: index, chunkCount: pieces.length,
-    text: part, createdAt: now, updatedAt: now,
-    usage: "retrieval-only"
-  }));
-  writeQueue = writeQueue.then(() => persist(next));
-  await writeQueue;
-  return { ok: true, documentId: id, chunks: pieces.length, characters: text.length, source, contentHash: digest };
-}
-function scoreRecord(record, queryTerms, queryPhrase) {
-  const body = terms(record.text);
-  const title = terms(record.title);
-  const counts = new Map();
-  for (const token of body) counts.set(token, (counts.get(token) || 0) + 1);
-  let score = 0;
-  for (const token of queryTerms) {
-    const tf = counts.get(token) || 0;
-    if (tf) score += (1 + Math.log(tf)) * (title.includes(token) ? 3.5 : 1);
-  }
-  const titleText = record.title.toLocaleLowerCase("und");
-  const bodyText = record.text.toLocaleLowerCase("und");
-  if (queryPhrase && titleText.includes(queryPhrase)) score += 7;
-  if (queryPhrase && bodyText.includes(queryPhrase)) score += 2;
-  return score / Math.sqrt(Math.max(1, body.length));
+  const next = writeQueue.then(async () => {
+    const current = await load();
+    const remaining = current.filter(item => item.documentId !== id);
+    const added = pieces.map((part, index) => ({
+      id: hash(id + ":" + digest + ":" + index + ":" + part).slice(0, 32),
+      documentId: id, title, author: String(input.author || "").slice(0, 200),
+      source, language: String(input.language || "auto").slice(0, 24),
+      contentHash: digest, chunkIndex: index, chunkCount: pieces.length,
+      text: part, createdAt: now, updatedAt: now, usage: "retrieval-only"
+    }));
+    await fs.mkdir(ROOT, { recursive: true });
+    await fs.appendFile(FILE, added.map(item => JSON.stringify(item)).join("\n") + "\n", { encoding: "utf8", mode: 0o600 });
+    records = remaining.concat(added);
+    buildIndex();
+    return { ok: true, documentId: id, chunks: pieces.length, characters: text.length, source, contentHash: digest };
+  });
+  writeQueue = next.catch(() => {});
+  return next;
 }
 async function search(query, limit = 6) {
   const text = String(query || "").trim().slice(0, 1000);
   const queryTerms = [...new Set(terms(text))].slice(0, 18);
   if (!queryTerms.length) return [];
-  const queryPhrase = text.toLocaleLowerCase("und").replace(/\s+/g, " ");
   const all = await load();
-  return all.map(record => ({ record, score: scoreRecord(record, queryTerms, queryPhrase) }))
-    .filter(item => item.score > 0)
-    .sort((a, b) => b.score - a.score || b.record.updatedAt.localeCompare(a.record.updatedAt))
+  const phrase = text.toLocaleLowerCase("und").replace(/\s+/g, " ");
+  const scores = new Map();
+  for (const token of queryTerms) {
+    const found = postings.get(token);
+    if (!found) continue;
+    const df = found.size;
+    const idf = Math.log(1 + (all.length - df + 0.5) / (df + 0.5));
+    for (const [index, tf] of found) {
+      const length = lengths[index] || 1;
+      const denominator = tf + 1.2 * (0.25 + 0.75 * length / averageLength);
+      const bm25 = idf * (tf * 2.2) / denominator;
+      scores.set(index, (scores.get(index) || 0) + bm25);
+    }
+  }
+  const ranked = [];
+  for (const [index, baseScore] of scores) {
+    const record = all[index];
+    const titleTerms = terms(record.title);
+    let score = baseScore + queryTerms.reduce((sum, token) => sum + (titleTerms.includes(token) ? 1.5 : 0), 0);
+    if (phrase && record.title.toLocaleLowerCase("und").includes(phrase)) score += 5;
+    if (phrase && record.text.toLocaleLowerCase("und").includes(phrase)) score += 1.5;
+    ranked.push({ record, score });
+  }
+  return ranked.sort((a, b) => b.score - a.score || b.record.updatedAt.localeCompare(a.record.updatedAt))
     .slice(0, Math.max(1, Math.min(Number(limit) || 6, 12)))
     .map(({ record, score }) => ({
       title: record.title, author: record.author, source: record.source,
       language: record.language, content: record.text, score: Number(score.toFixed(4)),
-      chunkIndex: record.chunkIndex, documentId: record.documentId,
-      updatedAt: record.updatedAt
+      chunkIndex: record.chunkIndex, documentId: record.documentId, updatedAt: record.updatedAt
     }));
 }
 async function status() {
@@ -125,8 +154,9 @@ async function status() {
   const docs = new Set(all.map(item => item.documentId));
   let bytes = 0;
   try { bytes = (await fs.stat(FILE)).size; } catch (_) {}
-  return { ready: true, engine: "ulugbek-local-lexical-rag-v1", documents: docs.size,
-    chunks: all.length, bytes, storage: ROOT, persistentVolumeRequired: true,
-    vectorEmbeddings: false, note: "Local lexical retrieval is active; semantic embeddings can be added as a separate optional index." };
+  return { ready: true, engine: "ulugbek-inverted-index-bm25-v1", documents: docs.size,
+    chunks: all.length, vocabulary: postings.size, bytes, storage: ROOT,
+    persistentVolumeRequired: true, vectorEmbeddings: false,
+    note: "Indexed lexical retrieval is active. Semantic embeddings are not enabled in this build." };
 }
 module.exports = { ingest, search, status, splitText, terms };
