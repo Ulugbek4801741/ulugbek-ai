@@ -17,6 +17,11 @@ services:
       HF_HOME: /models
       MAX_FILE_BYTES: "52428800"
       MAX_TEXT_CHARS: "2000000"
+      KNOWLEDGE_API_URL: ${KNOWLEDGE_API_URL:-}
+      KNOWLEDGE_API_TOKEN: ${KNOWLEDGE_API_TOKEN:-}
+      KNOWLEDGE_API_PATH: ${KNOWLEDGE_API_PATH:-/knowledge/upload}
+      KNOWLEDGE_API_AUTH_HEADER: ${KNOWLEDGE_API_AUTH_HEADER:-X-Owner-Token}
+      KNOWLEDGE_ARCHIVE_DIR: /var/data/books
     ports:
       - "127.0.0.1:8080:8080"
     volumes:
