@@ -1,0 +1,47 @@
+name: ULUGBEK quality gate
+
+on:
+  push:
+    branches: [main, "foundation/**"]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  node-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Run Node test suite
+        run: npm test
+      - name: Syntax-check server
+        run: node --check server.js
+
+  knowledge-worker-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: knowledge-worker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: knowledge-worker/test-requirements.txt
+      - name: Install worker test dependencies
+        run: python -m pip install --upgrade pip && pip install -r test-requirements.txt
+      - name: Compile worker
+        run: python -m py_compile app.py archive_ingest.py catalog_discovery.py test_worker.py
+      - name: Run worker tests
+        run: pytest -q
