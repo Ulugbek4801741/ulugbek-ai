@@ -27,3 +27,7 @@ Store URL, publisher, title, retrieval timestamp, publication/update date if ava
 ---
 
 Status: policy/architecture guidance. This document does not prove runtime capability is implemented. Validate against source code and tests before enabling in production.
+
+
+## Public web allowlist and private-site authorization
+See `25-public-web-allowlist-and-private-access.md` for the public-source categories, per-domain access classification, automatic public research rules, and explicit scoped authorization requirements for closed/private sites. Public availability is not blanket permission to crawl, copy, train on, redistribute or monetize content.
