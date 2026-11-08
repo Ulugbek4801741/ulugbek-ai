@@ -866,7 +866,7 @@ app.get("/api/research/status", async (_req, res) => {
 
 app.post("/api/admin/knowledge/reindex-vector", requireAdmin, async (_req, res) => {
   try {
-    const result = await knowledgeStore.reindexVectors();
+    const result = await knowledgeStore.reindexVectors(Number(_req.query.limit) || 500, Number(_req.query.offset) || 0);
     return res.json({ ok: true, ...result });
   } catch (error) {
     return res.status(503).json({ error: error.message || "Vektor indeksni qayta qurib bo‘lmadi." });
