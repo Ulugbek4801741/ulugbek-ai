@@ -21,7 +21,7 @@ jobs:
       - name: Install lightweight worker test dependencies
         run: pip install -r knowledge-worker/test-requirements.txt
       - name: Compile worker
-        run: python -m py_compile app.py archive_ingest.py test_worker.py
+        run: python -m py_compile app.py archive_ingest.py catalog_discovery.py test_worker.py
         working-directory: knowledge-worker
       - name: Run worker tests
         run: pytest -q
