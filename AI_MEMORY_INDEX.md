@@ -38,3 +38,13 @@ A separate curriculum is stored in `docs/ai-memory/programming-languages/`.
 - `16-learning-memory-and-recall.md`: explain, reproduce, adapt, test and spaced recall.
 
 These are learning materials, not proof that a compiler, language runtime, code execution sandbox, or automatic memory retrieval is already connected to the live application.
+
+
+## Autonomous research and universal media studio
+
+- `docs/ai-memory/21-autonomous-research-and-evidence.md`: automatic web research, source confidence, persistent provenance-aware memory and retrieval.
+- `docs/ai-memory/22-universal-media-studio.md`: image, video, audio and document creation/editing pipeline.
+- `docs/ai-memory/23-platform-ingestion-and-rights.md`: lawful YouTube/Instagram/Facebook and other platform ingestion.
+- `docs/ai-memory/24-autonomy-policy-and-workflows.md`: routine automatic actions, approval gates and project separation.
+
+These are architecture/policy specifications, not proof that runtime features are active. Runtime adapters, storage, rendering workers, tests and deployment must be implemented and verified separately.
