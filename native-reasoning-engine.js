@@ -1,5 +1,6 @@
 "use strict";
 const cognition = require("./native-cognition");
+const offlineDiscovery = require("./offline-discovery-engine");
 
 // One integrated agent: research, education, mathematics, coding and verification
 // are capabilities of the same agent, not separate autonomous agent processes.
@@ -42,7 +43,8 @@ function analyze(prompt) {
     steps,
     acceptanceCriteria,
     risks: codeTask ? ["Kod sinov muhitida tekshirilmaguncha ishlab chiqarishga kiritilmaydi."] : [],
-    limitations: "Mahalliy model sozlanmagan bo‘lsa, javoblar qoidalar va mavjud bilimlar bazasi bilan cheklanadi."
+    limitations: "Mahalliy model sozlanmagan bo‘lsa, javoblar qoidalar va mavjud bilimlar bazasi bilan cheklanadi.",
+    offlineDiscovery: offlineDiscovery.planOfflineDiscovery({ problem: text })
   };
 }
 
@@ -53,6 +55,10 @@ function runTask(prompt, _role = "ulugbek-agent", knowledgeEntries = []) {
     : [];
   result.sharedKnowledgeCount = sharedKnowledge.length;
   result.sharedKnowledgeSources = sharedKnowledge.map(item => item.source).filter(Boolean);
+  result.offlineDiscovery = offlineDiscovery.planOfflineDiscovery({
+    problem: prompt,
+    knownFacts: sharedKnowledge.map(item => item.content)
+  });
   const lines = [
     "# ULUGBEK AI — yagona universal agent hisoboti",
     "",
@@ -77,6 +83,8 @@ function runTask(prompt, _role = "ulugbek-agent", knowledgeEntries = []) {
   result.steps.forEach((step, index) => lines.push((index + 1) + ". " + step.title + ": " + step.action));
   lines.push("", "## Tekshiruv mezonlari");
   result.acceptanceCriteria.forEach(item => lines.push("- " + item));
+  lines.push("", "## Offline mustaqil kashfiyot rejasi", result.offlineDiscovery.conclusion);
+  result.offlineDiscovery.steps.forEach((step, index) => lines.push((index + 1) + ". " + step.action));
   lines.push("", "## Cheklovlar", result.limitations);
   return { analysis: result, output: lines.join("\n") };
 }
