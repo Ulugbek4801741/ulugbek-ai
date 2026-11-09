@@ -8,12 +8,30 @@ import re
 import time
 import socket
 import ipaddress
+import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
 
 ALLOWED_RIGHTS = {"open-license", "public-domain-global", "permission-granted"}
 MAX_DEFAULT = 50 * 1024 * 1024
+
+
+class _RejectRedirects(urllib.request.HTTPRedirectHandler):
+    """Reject redirects before urllib can contact a second host."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise urllib.error.HTTPError(
+            req.full_url,
+            code,
+            "Redirects are disabled for archive transfers",
+            headers,
+            fp,
+        )
+
+
+def _open_without_redirects(request, timeout):
+    return urllib.request.build_opener(_RejectRedirects()).open(request, timeout=timeout)
 
 
 def safe_name(value: str) -> str:
@@ -43,7 +61,7 @@ def download(item: dict, root: Path, max_bytes: int):
     request = urllib.request.Request(url, headers={"User-Agent": "PrivateKnowledgeArchive/1.0"})
     digest = hashlib.sha256()
     data = bytearray()
-    with urllib.request.urlopen(request, timeout=60) as response:
+    with _open_without_redirects(request, timeout=60) as response:
         final = urllib.parse.urlparse(response.geturl())
         if final.scheme != "https" or final.hostname != parsed.hostname:
             raise ValueError("Cross-host or non-HTTPS redirect rejected")
@@ -88,7 +106,7 @@ def download(item: dict, root: Path, max_bytes: int):
         upload = urllib.request.Request(api_url + api_path, data=bytes(data), method="POST",
             headers={auth_header: api_token, "X-Filename": safe_name(str(item.get("title", "book")) + ext),
                      "Content-Type": "application/pdf" if ext == ".pdf" else "application/epub+zip"})
-        with urllib.request.urlopen(upload, timeout=180) as response:
+        with _open_without_redirects(upload, timeout=180) as response:
             ingested = 200 <= response.status < 300
     return {"status": "downloaded", "ingested": ingested, "title": metadata["title"],
             "bytes": len(data), "sha256": digest.hexdigest()}
