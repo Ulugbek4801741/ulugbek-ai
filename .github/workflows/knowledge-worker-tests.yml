@@ -1,0 +1,28 @@
+name: Knowledge worker tests
+
+on:
+  push:
+    branches: [main, "foundation/**"]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  worker-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install lightweight worker test dependencies
+        run: pip install -r knowledge-worker/test-requirements.txt
+      - name: Compile worker
+        run: python -m py_compile app.py archive_ingest.py catalog_discovery.py test_worker.py
+        working-directory: knowledge-worker
+      - name: Run worker tests
+        run: pytest -q
+        working-directory: knowledge-worker

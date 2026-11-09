@@ -8,8 +8,20 @@ on:
       - fix/android-cors-video-gate-2026-11
       - mvp/initial-scaffold
       - security/chat-agent-isolation
+      - "foundation/**"
     paths:
       - "public/**"
+      - "modules/**"
+      - "package.json"
+      - "server.js"
+      - "test/**"
+      - "capacitor.config.json"
+      - ".github/workflows/build-android.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "public/**"
+      - "modules/**"
       - "package.json"
       - "server.js"
       - "test/**"
@@ -20,7 +32,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: android-apk-${{ github.ref }}
+  group: android-apk-\${{ github.ref }}
   cancel-in-progress: true
 
 jobs:

@@ -16,6 +16,8 @@ const languageLearningWorker = require("./modules/language-learning-worker");
 const errorLearning = require("./modules/error-learning");
 const conversationMemory = require("./modules/conversation-memory");
 const researchCache = require("./modules/research-cache");
+const knowledgeStore = require("./modules/knowledge-store");
+const publicWebReader = require("./modules/public-web-reader");
 const developerAgent = require("./developer-agent");
 const agentPermissions = require("./agent-permissions");
 const learningWorkerForAdmin = require("./lab-learning-worker");
@@ -186,7 +188,7 @@ app.use(helmet({
     directives: { microphone: ["self"], camera: [], geolocation: [] }
   }
 }));
-app.use(express.json({ limit: "20kb", strict: true, type: "application/json" }));
+app.use(express.json({ limit: "1.2mb", strict: true, type: "application/json" }));
 // Capture only failure metadata automatically; raw chat text is not stored without explicit feedback.
 app.use("/api/chat", errorLearning.middleware(), conversationMemory.middleware());
 app.use("/api/", rateLimit({
@@ -862,6 +864,120 @@ app.get("/api/research/status", async (_req, res) => {
   }
 });
 
+app.post("/api/admin/knowledge/reindex-vector", requireAdmin, async (_req, res) => {
+  try {
+    const result = await knowledgeStore.reindexVectors(Number(_req.query.limit) || 500, Number(_req.query.offset) || 0);
+    return res.json({ ok: true, ...result });
+  } catch (error) {
+    return res.status(503).json({ error: error.message || "Vektor indeksni qayta qurib bo‘lmadi." });
+  }
+});
+
+app.get("/api/admin/knowledge/status", requireAdmin, async (_req, res) => {
+  try { res.set("Cache-Control", "no-store"); return res.json({ ok: true, knowledge: await knowledgeStore.status() }); }
+  catch (_) { return res.status(503).json({ error: "Bilim ombori holatini o‘qib bo‘lmadi." }); }
+});
+app.post("/api/admin/knowledge/ingest", requireAdmin, async (req, res) => {
+  try {
+    const result = await knowledgeStore.ingest({
+      title: req.body?.title, author: req.body?.author, source: req.body?.source,
+      language: req.body?.language, content: req.body?.content
+    });
+    res.set("Cache-Control", "no-store");
+    return res.status(201).json(result);
+  } catch (error) {
+    return res.status(error.statusCode || 500).json({ error: error.message || "Bilim hujjati saqlanmadi." });
+  }
+});
+app.post("/api/admin/knowledge/upload", requireAdmin,
+  express.raw({ type: ["application/pdf", "application/epub+zip", "application/octet-stream"], limit: "50mb" }),
+  async (req, res) => {
+    const worker = String(process.env.KNOWLEDGE_WORKER_URL || "").replace(/\/$/, "");
+    const token = process.env.KNOWLEDGE_WORKER_TOKEN || "";
+    const filename = String(req.query.filename || req.headers["x-filename"] || "document.pdf").slice(0, 240);
+    if (!worker || !token) return res.status(503).json({ error: "PDF/EPUB worker server sozlanmagan." });
+    if (!Buffer.isBuffer(req.body) || !req.body.length) return res.status(400).json({ error: "PDF yoki EPUB fayl yuboring." });
+    try {
+      const extracted = await fetch(worker + "/extract", {
+        method: "POST", headers: {
+          authorization: "Bearer " + token,
+          "content-type": req.headers["content-type"] || "application/octet-stream",
+          "x-filename": filename
+        }, body: req.body, signal: AbortSignal.timeout(90000)
+      });
+      const data = await extracted.json();
+      if (!extracted.ok) return res.status(extracted.status).json({ error: data.detail || "Hujjat o‘qilmadi." });
+      const saved = await knowledgeStore.ingest({
+        title: String(req.query.title || filename).slice(0, 300),
+        author: String(req.query.author || "").slice(0, 200),
+        source: "user://upload/" + crypto.createHash("sha256").update(req.body).digest("hex"),
+        language: String(req.query.language || "auto").slice(0, 24),
+        content: data.text
+      });
+      return res.status(201).json({ ...saved, filename, format: data.format, sections: data.sections });
+    } catch (error) {
+      return res.status(503).json({ error: error.message || "Hujjatni import qilish xatosi." });
+    }
+  });
+
+function requireKnowledgeWorker(req, res, next) {
+  const expected = process.env.KNOWLEDGE_API_TOKEN || "";
+  const supplied = req.get("X-Knowledge-Worker-Token") || "";
+  const a = Buffer.from(expected);
+  const b = Buffer.from(supplied);
+  if (!expected || a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+    return res.status(401).json({ error: "Internal knowledge token required." });
+  }
+  return next();
+}
+
+app.post("/api/internal/knowledge/upload", requireKnowledgeWorker,
+  express.raw({ type: ["application/pdf", "application/epub+zip", "application/octet-stream"], limit: "50mb" }),
+  async (req, res) => {
+    const worker = String(process.env.KNOWLEDGE_WORKER_URL || "").replace(/\/$/, "");
+    const token = process.env.KNOWLEDGE_WORKER_TOKEN || "";
+    const filename = String(req.headers["x-filename"] || "document.pdf").slice(0, 240);
+    if (!worker || !token) return res.status(503).json({ error: "PDF/EPUB worker server sozlanmagan." });
+    if (!Buffer.isBuffer(req.body) || !req.body.length) return res.status(400).json({ error: "PDF yoki EPUB fayl yuboring." });
+    try {
+      const extracted = await fetch(worker + "/extract", {
+        method: "POST", headers: { authorization: "Bearer " + token,
+          "content-type": req.headers["content-type"] || "application/octet-stream", "x-filename": filename },
+        body: req.body, signal: AbortSignal.timeout(90000)
+      });
+      const data = await extracted.json();
+      if (!extracted.ok) return res.status(extracted.status).json({ error: data.detail || "Hujjat o‘qilmadi." });
+      const saved = await knowledgeStore.ingest({
+        title: filename, author: "", source: "user://archive/" + crypto.createHash("sha256").update(req.body).digest("hex"),
+        language: "auto", content: data.text
+      });
+      return res.status(201).json({ ...saved, filename, format: data.format, sections: data.sections });
+    } catch (error) {
+      return res.status(503).json({ error: error.message || "Arxiv hujjatini import qilish xatosi." });
+    }
+  });
+
+app.post("/api/admin/knowledge/read-url", requireAdmin, async (req, res) => {
+  const url = typeof req.body?.url === "string" ? req.body.url.trim() : "";
+  if (!url || url.length > 2000) return res.status(400).json({ error: "Ochiq HTTPS manzil kerak." });
+  try {
+    const page = await publicWebReader.readPublicPage(url);
+    const saved = await knowledgeStore.ingest({
+      title: req.body?.title || page.title, author: req.body?.author || "",
+      source: page.source, language: req.body?.language || "auto", content: page.content
+    });
+    return res.status(201).json({ ...saved, fetchedAt: page.fetchedAt, contentType: page.contentType });
+  } catch (error) {
+    return res.status(error.statusCode || 422).json({ error: error.message || "Ochiq sahifa bilim omboriga qo‘shilmadi." });
+  }
+});
+app.post("/api/admin/knowledge/search", requireAdmin, async (req, res) => {
+  const query = typeof req.body?.query === "string" ? req.body.query.trim() : "";
+  if (query.length < 2 || query.length > 1000) return res.status(400).json({ error: "Qidiruv 2–1000 belgi bo‘lishi kerak." });
+  try { return res.json({ ok: true, results: await knowledgeStore.search(query, req.body?.limit || 6) }); }
+  catch (_) { return res.status(503).json({ error: "Bilim qidiruvi bajarilmadi." }); }
+});
+
 app.post("/api/chat", chatRateLimit, async (req, res) => {
   const message = typeof req.body?.message === "string" ? req.body.message.trim() : "";
   const suppliedSessionId = typeof req.body?.sessionId === "string" ? req.body.sessionId : "";
@@ -936,16 +1052,18 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   const nativeBrain = require("./lab-learning-worker");
   let localKnowledge = [];
   let cachedKnowledge = [];
+  let storedKnowledge = [];
   try {
-    [localKnowledge, cachedKnowledge] = await Promise.all([
+    [localKnowledge, cachedKnowledge, storedKnowledge] = await Promise.all([
       nativeBrain.searchKnowledge(conversationMessage, 5),
-      researchCache.search(conversationMessage, 5)
+      researchCache.search(conversationMessage, 5),
+      knowledgeStore.search(conversationMessage, 6)
     ]);
   } catch (_) {}
   // Search the public web when the local approved knowledge and persistent research cache
   // cannot answer the user's question. Explicit/current searches always refresh evidence.
   const localCandidate = nativeBrain.buildLocalReply(
-    conversationMessage, [...localKnowledge, ...cachedKnowledge], conversationContext
+    conversationMessage, [...localKnowledge, ...cachedKnowledge, ...storedKnowledge.map(item => ({ title: item.title, content: item.content, source: item.source, status: "approved-local-knowledge", sourceQuality: 4 }))], conversationContext
   );
   const hasLocalAnswer = localCandidate?.reasoning?.answerable === true;
   // Preserve quick, built-in answers (greetings, arithmetic, starter lessons).
@@ -1006,6 +1124,10 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     const evidence = [
       ...universalSearch.evidenceEntries(found.results),
       ...cachedKnowledge,
+      ...storedKnowledge.map(item => ({
+        title: item.title, content: item.content, source: item.source,
+        status: "approved-local-knowledge", sourceQuality: 4
+      })),
       ...localKnowledge.map(item => ({
         title: item.title, content: item.content, source: item.source,
         status: "approved-local-knowledge", sourceQuality: 3

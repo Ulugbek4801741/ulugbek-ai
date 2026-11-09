@@ -1,0 +1,3 @@
+{"instruction":"O‘zbek tilida qisqa va aniq tushuntir: RAG nima?","input":"","output":"RAG — sun’iy intellekt savolga javob berishdan oldin ishonchli bilim omboridan tegishli ma’lumotlarni qidirib topishi va javobda ulardan foydalanish usuli."}
+{"instruction":"Manba yetarli bo‘lmasa nima qilish kerak?","input":"","output":"Dalil yetarli emasligini ochiq aytish, taxminni fakt sifatida ko‘rsatmaslik va tekshirish uchun kerakli manbani so‘rash kerak."}
+{"instruction":"Quyidagi atamani sodda o‘zbekchaga tarjima qil.","input":"persistent storage","output":"Doimiy ma’lumotlar xotirasi — server qayta ishga tushganda ham saqlanib qoladigan joy."}

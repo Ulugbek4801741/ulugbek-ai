@@ -1,0 +1,35 @@
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.13.6
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+  knowledge-worker:
+    build:
+      context: ./knowledge-worker
+    restart: unless-stopped
+    environment:
+      KNOWLEDGE_WORKER_TOKEN: ${KNOWLEDGE_WORKER_TOKEN:?set a long random token}
+      EMBEDDING_MODEL: BAAI/bge-m3
+      EMBEDDING_DEVICE: cpu
+      HF_HOME: /models
+      MAX_FILE_BYTES: "52428800"
+      MAX_TEXT_CHARS: "2000000"
+      KNOWLEDGE_API_URL: ${KNOWLEDGE_API_URL:-}
+      KNOWLEDGE_API_TOKEN: ${KNOWLEDGE_API_TOKEN:-}
+      KNOWLEDGE_API_PATH: ${KNOWLEDGE_API_PATH:-/knowledge/upload}
+      KNOWLEDGE_API_AUTH_HEADER: ${KNOWLEDGE_API_AUTH_HEADER:-X-Knowledge-Worker-Token}
+      KNOWLEDGE_ARCHIVE_DIR: /var/data/books
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - model_cache:/models
+      - archive_data:/var/data/books
+    depends_on:
+      - qdrant
+volumes:
+  qdrant_data:
+  model_cache:
+  archive_data:
