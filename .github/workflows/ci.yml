@@ -42,7 +42,7 @@ jobs:
         with:
           python-version: "3.11"
       - name: Check Python model trainer syntax
-        run: python -m py_compile training/train_tiny_gpt.py
+        run: python -m py_compile training/train_tiny_gpt.py video-ai/model.py video-ai/train.py video-ai/generate.py
       - name: Check critical JavaScript syntax
         run: |
           node --check server.js
