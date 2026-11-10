@@ -239,6 +239,50 @@ function requireAdmin(req, res, next) {
   next();
 }
 
+const businessEngine = require("./modules/business-engine").createBusinessEngine({
+  storePath: path.join(ADMIN_DATA_DIR, "business-ledger.json")
+});
+app.get("/api/business/services", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, services: businessEngine.catalog() });
+});
+app.post("/api/business/quote", (req, res) => {
+  try { return res.json({ ok: true, ...businessEngine.quote(req.body?.serviceId, req.body?.complexity || 1) }); }
+  catch (error) { return res.status(error.status || 400).json({ ok: false, error: error.message }); }
+});
+app.post("/api/business/orders", async (req, res) => {
+  try {
+    const order = await businessEngine.createOrder(req.body || {});
+    return res.status(201).json({ ok: true, order });
+  } catch (error) {
+    return res.status(error.status || 400).json({ ok: false, error: error.message });
+  }
+});
+app.get("/api/admin/business/orders", requireAdmin, (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, orders: businessEngine.listOrders() });
+});
+app.get("/api/admin/business/finance", requireAdmin, (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, finance: businessEngine.finance() });
+});
+app.post("/api/admin/business/orders/:id/review", requireAdmin, async (req, res) => {
+  try {
+    const order = await businessEngine.reviewOrder(req.params.id, req.body || {});
+    return res.json({ ok: true, order, finance: businessEngine.finance() });
+  } catch (error) {
+    return res.status(error.status || 400).json({ ok: false, error: error.message });
+  }
+});
+app.post("/api/admin/business/expenses", requireAdmin, async (req, res) => {
+  try {
+    const entry = await businessEngine.recordExpense(req.body || {});
+    return res.status(201).json({ ok: true, entry, finance: businessEngine.finance() });
+  } catch (error) {
+    return res.status(error.status || 400).json({ ok: false, error: error.message });
+  }
+});
+
 function requireAsilbekIntegration(req, res, next) {
   const expected = process.env.ASILBEK_INTEGRATION_TOKEN || "";
   const supplied = req.get("X-Asilbek-Token") || "";
