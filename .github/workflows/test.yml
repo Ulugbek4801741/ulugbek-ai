@@ -5,6 +5,10 @@ on:
     branches:
       - main
       - "feature/**"
+      - "foundation/**"
+      - "fix/**"
+      - "quality-fix/**"
+      - "integration/**"
   pull_request:
     branches:
       - main
