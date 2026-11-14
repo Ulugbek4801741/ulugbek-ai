@@ -83,3 +83,55 @@ This document describes the intended architecture; it does not claim that peer n
 ## Release gates
 
 Do not merge or publish a production APK until CI passes, Android device tests pass, privacy tests pass, signing/release process is defined, and the privacy policy accurately describes every network transfer. Draft PRs only until the owner explicitly approves merge and release.
+
+
+## Storage Marketplace — peer-provided rented storage
+
+### Product behavior
+
+A device owner may explicitly list a chosen amount of free disk space as a storage offer. Another user may purchase/rent a quota and use it as a private remote drive through the ULUGBEK AI app. Supported providers may include Android phones and desktop computers, but each platform must run its own signed provider application/service; installing the Android APK on a computer is not assumed.
+
+### Roles and consent
+
+- **Provider (seller):** selects a dedicated app-managed storage folder, quota, price, availability schedule, bandwidth cap, and whether the node may sleep or disconnect. The app must never share the whole disk or arbitrary folders.
+- **Customer (buyer):** chooses a provider/plan, reviews uptime, location/region if disclosed, price, retention and redundancy terms, then explicitly purchases and receives a private virtual volume.
+- Either party can pause or terminate future service. Existing customer data must have a clear export/migration and deletion window; do not silently delete data when a provider goes offline.
+- A provider must be able to see only operational metadata required to manage the offer (used capacity, transfer volume, node status, payout); not filenames, file contents, customer keys, or plaintext previews.
+
+### Confidentiality and isolation
+
+- Encrypt files on the customer device before upload. Use authenticated encryption, per-customer/per-object data keys, and envelope/key wrapping so the provider stores ciphertext only.
+- Customer keys stay under the customer's control (Android Keystore/desktop OS secure key store where available); never transmit plaintext keys to the provider, marketplace, relay, or another customer.
+- Split data into bounded chunks with authenticated integrity hashes. The provider API exposes only an opaque customer-scoped object namespace and quota operations; it must not expose filesystem paths or shell access.
+- Separate tenants with cryptographically random IDs, authorization checks, quotas, and storage namespaces. Test cross-tenant access denial for every read, write, list, delete, and metadata endpoint.
+- Encrypt metadata that could reveal sensitive filenames or folder structure. Provider dashboards should show opaque object IDs and aggregate usage only.
+- Do not promise absolute privacy against a compromised provider device, operating system, app, or customer endpoint. Explain the threat model and keep the customer-side encryption keys off provider devices.
+
+### Availability, durability, and network limits
+
+- A phone being online does not guarantee public reachability: NAT, carrier firewalls, Wi-Fi changes, Android Doze, battery saver, app termination, and owner pause can interrupt service.
+- Show provider availability history and a clear service-level description; do not sell guaranteed 24/7 availability from an ordinary phone.
+- For important files, offer optional encrypted replication across multiple independent providers or a customer-controlled backup. Replication copies ciphertext only and requires explicit customer consent because it consumes extra storage/bandwidth.
+- Define behavior for provider disconnection, missed heartbeats, insufficient capacity, corrupted chunks, customer cancellation, provider withdrawal, and recovery/migration.
+- A signaling/relay service may coordinate sessions; any relay sees encrypted payloads only. Relay bandwidth and costs must be disclosed.
+- Use resumable uploads/downloads, integrity verification, rate limits, bandwidth schedules, and per-plan transfer quotas.
+
+### Marketplace, billing, and abuse controls
+
+- Marketplace listings must disclose capacity, price, currency, region if relevant, bandwidth limits, uptime history, retention, redundancy, and cancellation terms.
+- Use a trusted payment provider for real payments; never store card details. Show fees, refunds, payout timing, and disputes clearly.
+- Apply identity/risk controls appropriate to the jurisdiction and transaction value. Add reporting, abuse response, provider/customer suspension, and an auditable dispute process.
+- Do not allow rented storage to be marketed for illegal content, malware hosting, command-and-control, or evading lawful access controls. Publish acceptable-use and takedown procedures.
+- Obtain explicit consent before using device storage, battery, CPU, or mobile data. Default mobile-data upload limits should be conservative and configurable.
+
+### Storage Marketplace acceptance tests
+
+1. Provider can list only a dedicated app-managed folder and a bounded quota.
+2. Customer can upload/download files while the provider is online; transfers resume after a network interruption.
+3. Provider cannot decrypt customer file contents or enumerate plaintext filenames.
+4. Customer A cannot list, read, overwrite, or delete Customer B's objects, even by guessing IDs.
+5. Provider cannot access its own personal files through the customer volume API, and customer cannot access provider files.
+6. Provider going offline produces a clear unavailable state; no false claim of continuous availability.
+7. Replication, migration, deletion, and billing events are consented, logged, and tested.
+8. The app shows exactly what capacity, bandwidth, and background activity the provider is contributing.
+
