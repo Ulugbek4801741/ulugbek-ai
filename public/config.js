@@ -13,6 +13,8 @@ function resolveRemoteApi() {
   return (isGitHubPages || isNativeLocalhost) ? DEFAULT_REMOTE_API : window.location.origin;
 }
 window.ULUGBEK_REMOTE_DATA_CONSENT = hasRemoteConsent();
+try { window.ULUGBEK_CLOUD_SPEECH_CONSENT = localStorage.getItem("ulugbek-voice-cloud-consent-v1") === "granted"; }
+catch (_) { window.ULUGBEK_CLOUD_SPEECH_CONSENT = false; }
 window.ULUGBEK_API_BASE_URL = window.ULUGBEK_REMOTE_DATA_CONSENT ? resolveRemoteApi() : "";
 window.ULUGBEK_SET_REMOTE_DATA_CONSENT = function (enabled) {
   try {
