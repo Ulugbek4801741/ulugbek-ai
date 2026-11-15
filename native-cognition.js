@@ -130,10 +130,9 @@ function respond(query, entries, suppliedContext = null) {
     if (fact.length > 420) fact = fact.slice(0, 417).replace(/\s+\S*$/, "") + "...";
     return fact;
   }).filter(Boolean);
-  const sources = [...new Set(selected.map(item => item.source).filter(Boolean))].slice(0, 2);
-  const reply = (sentences.length ? "Mavjud dalillarga ko‘ra, " + sentences.join(" ") :
-    "Bu savol bo‘yicha yetarli ishonchli dalil topilmadi.") +
-    (sources.length ? "\n\nManba: " + sources.join(" | ") : "");
+  // Source metadata remains internal for evidence ranking; never expose it in the user-facing answer.
+  const reply = sentences.length ? sentences.join(" ") :
+    "Bu savol bo‘yicha hozircha yetarli ishonchli ma’lumot topilmadi.";
   const conciseReasoning = { ...result, facts: selected, outputPolicy: "single-concise-synthesized-answer" };
   return { reply: (opening ? opening + "\n\n" : "") + reply, cognition: context.cognition, reasoning: conciseReasoning };
 }
