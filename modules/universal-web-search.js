@@ -131,7 +131,7 @@ function formatEvidenceReply(results, reason = "") {
     ? "Hozircha savolga ishonchli yakuniy javob tuzish uchun yetarli tasdiqlangan dalil topilmadi. " + cleanText(reason, 220)
     : "Hozircha savolga ishonchli yakuniy javob tuzish uchun yetarli tasdiqlangan dalil topilmadi. Qidiruv parchalari fakt sifatida qabul qilinmadi.";
   if (!items.length) return message + " Bilmagan ma’lumotimni taxmin qilib aytmayman.";
-  return message + "\\n\\nTekshirish uchun o‘qilgan manbalar: " +
+  return message + "\n\nTekshirish uchun o‘qilgan manbalar: " +
     items.map(item => item.url).join(" | ");
 }
 module.exports = { detectSearchIntent, buildUniversalSearchQuery, buildUniversalSearchQueries, searchWeb, cleanText, evidenceEntries, formatEvidenceReply };
