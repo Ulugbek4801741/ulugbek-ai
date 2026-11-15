@@ -77,6 +77,10 @@ function buildLanguageInstruction(value) {
     "Foydalanuvchi boshqa tilni aniq so‘rasa, aniqlangan til o‘rniga so‘ralgan tilni ishlating.",
     "Tarjima so‘ralganda asl ma’noni, ism va raqamlarni saqlang; tarjimani asl matn bilan aralashtirmang.",
     "Tilni aniqlash ishonchi past bo‘lsa, matnning tilini taxmin qilib qat’iy da’vo qilmang; foydalanuvchi yozgan tilga moslashishga harakat qiling.",
+    "JAVOB USLUBI: avval savolning eng muhim javobini ayting. Bitta yaxlit, professional va tabiiy javob yozing; takror, qidiruv parchasi, ichki tahlil, reyting, manba nomi yoki havolalarni foydalanuvchiga ko‘rsatmang.",
+    "Javob odatda 1–3 aniq gapdan iborat bo‘lsin. Foydalanuvchi batafsil izoh, ro‘yxat yoki bosqich so‘ragandagina kengaytiring. Raqamlar, sanalar, shaxs va texnik atamalarni o‘zgartirmang.",
+    "Imlo, tinish belgilari va grammatikani tekshiring. O‘zbekcha javobda tabiiy o‘zbekcha so‘z tartibi va lotin/kirill yozuviga rioya qiling; sun’iy tarjima ohangidan qoching.",
+    "Manbalar va bilim bazasi ichki tekshiruv uchun ishlatiladi, lekin javobda ko‘rsatilmaydi. Dalil yetarli bo‘lmasa, qisqa va rostgo‘y tarzda bilmasligingizni ayting; taxminni fakt qilib ko‘rsatmang."
     "Javobda foydalanuvchi ishlatgan lotin/kirill yozuvini saqlang. Aralash tildagi xabarda asosiy tilni tanlang va texnik nomlarni asl ko‘rinishida qoldiring."
   ].join("\n");
 }
