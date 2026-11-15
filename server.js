@@ -1087,9 +1087,8 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     conversationMessage, [...localKnowledge, ...cachedKnowledge, ...storedKnowledge.map(item => ({ title: item.title, content: item.content, source: item.source, status: "approved-local-knowledge", sourceQuality: 4 }))], conversationContext
   );
   const hasLocalAnswer = localCandidate?.reasoning?.answerable === true;
-  // Preserve quick, built-in answers (greetings, arithmetic, starter lessons).
-  // Research every other knowledge gap; explicit/current research always refreshes sources.
-  const shouldResearch = searchIntent.reason !== "local-dialogue-or-arithmetic" && localCandidate?.reasoning?.method !== "built-in-dialogue";
+  // Only greetings, thanks and plain arithmetic stay local. Every other question or task triggers fresh public research.
+  const shouldResearch = searchIntent.shouldSearch;
   if (shouldResearch) {
     if (legalAssessment.isLegalQuestion) {
       const webSearch = require("./modules/chat-web-research");
@@ -1133,33 +1132,16 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
         });
       }
       const jobWebSearch = require("./modules/chat-web-research");
-      const jobs = await jobSearch.searchJobs(conversationMessage, jobWebSearch, { limit: 5 });
-      let jobReply = jobs.reply;
-      let jobModelUsed = false;
-      if (jobs.results.length && singleAgent.status().configured) {
-        try {
-          const evidence = jobs.results.map(item => ({
-            title: item.title,
-            content: item.snippet,
-            source: item.url,
-            status: item.pageRead ? "unverified-public-job-page" : "unverified-job-search-snippet"
-          }));
-          const synthesized = await singleAgent.answer(conversationMessage, evidence, conversationContext);
-          if (synthesized?.reply) {
-            jobReply = synthesized.reply + "\n\nVakansiyalar manbalari:\n" +
-              jobs.results.map((item, index) => (index + 1) + ". " + item.title + "\n" + item.url).join("\n");
-            jobModelUsed = true;
-          }
-        } catch (_) {}
-      }
+      const jobs = await jobSearch.searchJobs(conversationMessage, jobWebSearch, { limit: 10 });
       return res.json({
-        reply: jobReply,
-        mode: jobModelUsed ? "self-hosted-job-search-agent" : "native-job-search-results",
+        reply: jobs.reply,
+        mode: "verified-individual-vacancy-search",
         agents: ["ULUGBEK Universal Agent"],
         jobSearchUsed: true,
         webSearchUsed: jobs.ok,
-        webResults: jobs.results,
-        synthesisModelConfigured: singleAgent.status().configured,
+        jobResultsCount: jobs.results.length,
+        searchedPages: jobs.searchedPages || 0,
+        openedVacancyPages: jobs.results.length,
         cognition
       });
     }
