@@ -304,7 +304,7 @@ test("API smoke tests", async (t) => {
       const config = fs.readFileSync(require("node:path").join(__dirname, "..", "public", "config.js"), "utf8");
       assert.match(config, /host\.endsWith\("\.github\.io"\)/);
       assert.match(config, /isNativeLocalhost/);
-      assert.match(config, /https:\/\/ulugbek-ai-1\.onrender\.com/);
+      assert.match(config, /https:\/\/ulugbek-ai2\.onrender\.com/);
     });
 
     await t.test("configured GitHub Pages origin can call backend and CSP permits it", async () => {
@@ -314,6 +314,17 @@ test("API smoke tests", async (t) => {
       assert.match(response.headers.get("content-security-policy") || "", /connect-src[^;]*https:\/\/ulugbek4801741\.github\.io/);
       const denied = await fetch(`${baseUrl}/api/health`, { headers: { Origin: "https://untrusted.example" } });
       assert.equal(denied.headers.get("access-control-allow-origin"), null);
+    });
+
+    await t.test("AI status exposes one universal agent and model readiness without duplicate route shadowing", async () => {
+      const response = await fetch(`${baseUrl}/api/ai/status`);
+      const body = await response.json();
+      assert.equal(response.status, 200);
+      assert.equal(body.agentCount, 1);
+      assert.equal(body.agentName, "ULUGBEK Universal Agent");
+      assert.equal(typeof body.configured, "boolean");
+      assert.equal(typeof body.provider, "string");
+      assert.equal(typeof body.model, "object");
     });
 
     await t.test("health endpoint reports the app", async () => {

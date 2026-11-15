@@ -96,6 +96,11 @@ const functionGuardian = createFunctionGuardian();
 [
   ["agent-runtime", agentRuntime],
   ["single-agent", singleAgent],
+  ["independent-model", independentModel],
+  ["knowledge-store", knowledgeStore],
+  ["public-web-reader", publicWebReader],
+  ["admin-autopilot", adminAutopilot],
+  ["self-recovery", selfRecovery],
   ["language-module", languageModule],
   ["coding-language-engine", codingLanguageEngine],
   ["translation-service", translationService],
@@ -144,6 +149,8 @@ const BUILD_BRANCH = process.env.RENDER_GIT_BRANCH || process.env.GITHUB_REF_NAM
 const SERVER_STARTED_AT = new Date().toISOString();
 
 app.disable("x-powered-by");
+// Render terminates TLS and forwards client IPs through one trusted proxy hop.
+app.set("trust proxy", 1);
 // Always allow the official GitHub Pages origin. Hosting variables are additional allowed origins,
 // not overrides, so an outdated FRONTEND_ORIGIN value cannot silently break the public website.
 const FRONTEND_ORIGINS = new Set([
@@ -620,7 +627,8 @@ app.post("/api/independent/answer", independentAnswerRateLimit, async (req, res)
 
 app.get("/api/ai/status", (_req, res) => {
   res.set("Cache-Control", "no-store");
-  res.json({ ok: true, agentCount: 1, agentName: "ULUGBEK Universal Agent", model: singleAgent.status(), language: languageModule.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status(), conversationPipeline: conversationOrchestrator.status(), independentLanguage: languageLearningWorker.status(), mathEngine: "native-safe-arithmetic", research: "public-read-only-with-source-checks" });
+  const modelStatus = singleAgent.status();
+  res.json({ ok: true, agentCount: 1, agentName: "ULUGBEK Universal Agent", model: modelStatus, configured: modelStatus.configured, provider: modelStatus.provider, modelName: modelStatus.model || null, apiKeyRequired: modelStatus.apiKeyRequired, tokenConfigured: modelStatus.tokenConfigured || false, language: languageModule.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status(), conversationPipeline: conversationOrchestrator.status(), independentLanguage: languageLearningWorker.status(), mathEngine: "native-safe-arithmetic", research: "public-read-only-with-source-checks" });
 });
 
 app.get("/api/health", (_req, res) => {
@@ -794,12 +802,6 @@ app.post("/api/images/generate", (req, res, next) => {
   } catch (error) {
     return res.status(error.status || 502).json({ error: error.message || "Rasm yaratib bo‘lmadi." });
   }
-});
-
-app.get("/api/ai/status", (_req, res) => {
-  res.set("Cache-Control", "no-store");
-  const model = singleAgent.status();
-  return res.json({ ok: true, configured: model.configured, provider: model.provider, model: model.model || null, apiKeyRequired: model.apiKeyRequired, tokenConfigured: model.tokenConfigured || false });
 });
 
 app.get("/api/videos/status", (_req, res) => {
