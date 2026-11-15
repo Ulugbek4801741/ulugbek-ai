@@ -91,6 +91,28 @@ function quickReply(query) {
   if (/^(?:menga\s+)?yordam\s+ber(?:\s+(?:olasanmi|olasizmi)|a\s+(?:olasanmi|olasizmi)|ing)?[!? .]*$/iu.test(q) || /^(?:menga\s+)?yordam\s+kerak[!? .]*$/iu.test(q)) {
     return "Albatta, yordam beraman. Qaysi ishda yordam kerak? Masala yechish, darsni tushuntirish, tarjima, matn yozish yoki dastur kodi — topshirig‘ingizni yuboring.";
   }
+  if ((/termux/iu.test(q) && /(?:agent|yordamchi|sun'iy endilik)/iu.test(q) && /(?:kod|cod|code|yoz|yarat)/iu.test(q)) ||
+      (/(?:nusxa|copy)/iu.test(q) && /(?:kod|cod|code)/iu.test(q))) {
+    return [
+      "Termux uchun xavfsiz boshlang‘ich agent tayyor. U internetdan ochiq Wikipedia sahifalarini izlaydi, topilgan matnlarni telefoningizdagi mahalliy xotiraga saqlaydi va keyingi savollarda qayta ishlatadi. Bu modelni qayta o‘qitish emas; hozircha internetdan ma’lumot yig‘ish va xotirada saqlash.",
+      "",
+      "Termuxga quyidagi buyruqlarni bir marta nusxalab kiriting:",
+      "",
+      "\`\`\`bash",
+      "pkg update -y && pkg install python curl -y",
+      "mkdir -p ~/ulugbek-agent && cd ~/ulugbek-agent",
+      "curl -L https://raw.githubusercontent.com/Ulugbek4801741/ulugbek-ai/main/termux-agent/ulugbek_termux_agent.py -o ulugbek_termux_agent.py",
+      "python ulugbek_termux_agent.py --self-test",
+      "python ulugbek_termux_agent.py",
+      "\`\`\`",
+      "",
+      "Ishga tushgach, masalan: \`Amir Temur haqida ma’lumot\` deb yozing. \`/memory\` saqlangan bilimlar sonini, \`/exit\` agentni to‘xtatishni ko‘rsatadi.",
+      "",
+      "Xavfsizlik: agent o‘zboshimchalik bilan telefon buyruqlarini bajarmaydi, fayllarni o‘chirmaydi va o‘z kodini yashirincha o‘zgartirmaydi. Bunday amallar uchun alohida ruxsat kerak.",
+      "",
+      "Manba kodi: https://github.com/Ulugbek4801741/ulugbek-ai/blob/main/termux-agent/ulugbek_termux_agent.py"
+    ].join(String.fromCharCode(10));
+  }
   if (/(?:agent|yordamchi).{0,120}(?:kod|cod|code|dastur).{0,45}(?:yoz|yarat)|(?:agent|yordamchi).{0,100}(?:yoz|yarat).{0,60}(?:kod|cod|code|dastur)/iu.test(q)) {
     return [
       "Python tilida AI-agent uchun boshlang‘ich karkas. U vazifani qabul qiladi, mavjud vositani tanlaydi va ishga tushirishdan oldin ruxsat so‘raydi. Bu hali mustaqil til modeli emas — unga keyin model ulash kerak.",
