@@ -596,10 +596,7 @@ app.get("/api/version", (_req, res) => {
   res.json({ ok: true, app: "ULUGBEK AI", version: "0.3.2", commit: BUILD_COMMIT, branch: BUILD_BRANCH, startedAt: SERVER_STARTED_AT, node: process.version, endpoints: { health: "/api/health", research: "/api/research/status", learning: "/api/lab/learning/status", ai: "/api/ai/status" } });
 });
 
-app.get("/api/ai/status", (_req, res) => {
-  res.set("Cache-Control", "no-store");
-  res.json({ ok: true, agentCount: 1, agentName: "ULUGBEK Universal Agent", model: singleAgent.status(), language: languageModule.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status(), conversationPipeline: conversationOrchestrator.status(), independentLanguage: languageLearningWorker.status(), mathEngine: "native-safe-arithmetic", research: "public-read-only-with-source-checks" });
-});
+
 
 app.get("/api/health", (_req, res) => {
   res.set("Cache-Control", "no-store");
@@ -776,8 +773,25 @@ app.post("/api/images/generate", (req, res, next) => {
 
 app.get("/api/ai/status", (_req, res) => {
   res.set("Cache-Control", "no-store");
-  const model = singleAgent.status();
-  return res.json({ ok: true, configured: model.configured, provider: model.provider, model: model.model || null, apiKeyRequired: model.apiKeyRequired, tokenConfigured: model.tokenConfigured || false });
+  const modelStatus = singleAgent.status();
+  res.json({
+    ok: true,
+    configured: modelStatus.configured,
+    provider: modelStatus.provider,
+    model: modelStatus,
+    modelName: modelStatus.model || null,
+    apiKeyRequired: modelStatus.apiKeyRequired,
+    tokenConfigured: modelStatus.tokenConfigured || false,
+    agentCount: 1,
+    agentName: "ULUGBEK Universal Agent",
+    language: languageModule.status(),
+    emotion: emotionalIntelligence.status(),
+    ethics: ethicalReasoning.status(),
+    conversationPipeline: conversationOrchestrator.status(),
+    independentLanguage: languageLearningWorker.status(),
+    mathEngine: "native-safe-arithmetic",
+    research: "public-read-only-with-source-checks"
+  });
 });
 
 app.get("/api/videos/status", (_req, res) => {

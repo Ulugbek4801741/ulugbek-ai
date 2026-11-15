@@ -62,6 +62,19 @@ test("HTTP health and diagnostics endpoints report real single-instance limits",
     const diagnostics = await diagnosticsResponse.json();
     assert.match(diagnostics.productionDatabase, /not-configured/i);
     assert.match(diagnostics.automaticFailover, /not-configured/i);
+    
+    const aiStatusResponse = await fetch(`${base}/api/ai/status`, { signal: AbortSignal.timeout(2000) });
+    assert.equal(aiStatusResponse.status, 200);
+    const aiStatus = await aiStatusResponse.json();
+    assert.equal(typeof aiStatus.configured, "boolean");
+    assert.equal(aiStatus.configured, aiStatus.model.configured);
+    assert.equal(aiStatus.provider, aiStatus.model.provider);
+    assert.equal(aiStatus.modelName, aiStatus.model.model || null);
+    assert.equal(aiStatus.apiKeyRequired, aiStatus.model.apiKeyRequired);
+    assert.equal(aiStatus.tokenConfigured, aiStatus.model.tokenConfigured || false);
+    assert.equal(aiStatus.agentCount, 1);
+    assert.ok(aiStatus.language && aiStatus.emotion && aiStatus.ethics && aiStatus.conversationPipeline);
+
   } finally {
     child.kill("SIGTERM");
     await Promise.race([
