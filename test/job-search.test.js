@@ -4,11 +4,12 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { detectSearchIntent, buildUniversalSearchQuery, buildUniversalSearchQueries, searchWeb, evidenceEntries, formatEvidenceReply } = require("../modules/universal-web-search");
 const { knowledgeContext, SYSTEM_PROMPT } = require("../modules/single-agent");
-const { isJobSearchRequest, hasLocationHint, locationClarification, searchJobs, cleanText, decodeHtmlEntities } = require("../modules/job-search");
+const { isJobSearchRequest, hasLocationHint, locationClarification, searchJobs, cleanText, decodeHtmlEntities, buildJobSearchQueries, extractPhones, extractSalary } = require("../modules/job-search");
 
-test("searches only explicit discovery, job, and current-information requests", () => {
-  for (const q of ["Bugun ob-havo qanday?", "Bugungi eng so'nggi yangiliklarni top", "Shveysariyada traktorchi ish topish", "Menga vakansiya qidirib ber", "YouTube kanalining linkini topib ber"]) assert.equal(detectSearchIntent(q).shouldSearch, true, q);
-  for (const q of ["JavaScriptda API server qanday yoziladi?", "O'zbekistonda kichik biznesni qanday boshlash mumkin?", "Fotosintez nima?", "Qonuniy shartnoma qanday tuziladi?", "Menga ingliz tilidan yordam ber", "Menga dasturlashda yordam ber"]) assert.equal(detectSearchIntent(q).shouldSearch, false, q);
+test("researches every substantive question and task, not only explicit search commands", () => {
+  for (const q of ["Bugun ob-havo qanday?", "Bugungi eng so'nggi yangiliklarni top", "Shveysariyada traktorchi ish topish", "Menga vakansiya qidirib ber", "YouTube kanalining linkini topib ber", "JavaScriptda API server qanday yoziladi?", "O'zbekistonda kichik biznesni qanday boshlash mumkin?", "Fotosintez nima?", "Qonuniy shartnoma qanday tuziladi?", "Menga ingliz tilidan yordam ber", "Menga dasturlashda yordam ber"]) assert.equal(detectSearchIntent(q).shouldSearch, true, q);
+  assert.equal(detectSearchIntent("Assalomu alaykum").shouldSearch, false);
+  assert.equal(detectSearchIntent("25 * 4").shouldSearch, false);
 });
 test("keeps greetings, thanks and arithmetic local", () => {
   assert.equal(detectSearchIntent("Assalomu alaykum").shouldSearch, false);
@@ -81,19 +82,55 @@ test("job search detects job intent and returns read public listing details", as
   const result = await searchJobs("Shveysariyada traktorchi ish topish", {
     async search(query) {
       assert.match(query, /Shveysariyada/);
-      return [{ title: "Tractor operator vacancy", url: "https://jobs.example.org/tractor", snippet: "Tractor operator role, full time." }];
+      return [{ title: "Tractor operator vacancy", url: "https://jobs.example.org/tractor/123", snippet: "Tractor operator vacancy." }];
     },
     async fetchPage(url) {
-      return { title: "Tractor operator vacancy", url, content: "Employer listing with role, location and application details.".repeat(3) };
+      return { title: "Tractor operator vacancy", url, content: "Vakansiya: Traktor operatori\nIsh beruvchi: Example Farm AG\nManzil: Zurich, Switzerland\nMaosh: 5 000 CHF per month\nTalablar: 2 years experience, tractor licence required\nTelefon: +41 44 123 45 67\nAriza topshirish uchun ish beruvchiga murojaat qiling. ".repeat(4) };
     }
   });
   assert.equal(result.results.length, 1);
   assert.match(result.reply, /Tractor operator vacancy/);
-  assert.match(result.reply, /https:\/\/jobs\.example\.org\/tractor/);
+  assert.match(result.reply, /Example Farm AG/);
+  assert.match(result.reply, /\+41441234567/);
+  assert.match(result.reply, /5 000 CHF/);
+  assert.doesNotMatch(result.reply, /jobs\.example\.org/);
+  assert.equal(result.results[0].pageRead, true);
 });
 
 test("job search output decodes nested HTML entities from search snippets", () => {
   assert.equal(decodeHtmlEntities("bo&amp;#x27;sh ish o&amp;#x27;rni"), "bo'sh ish o'rni");
   assert.equal(cleanText("Buxoroda bo&amp;#x27;sh ish o&amp;#x27;rinlari"), "Buxoroda bo'sh ish o'rinlari");
   assert.equal(cleanText("A &amp;amp; B"), "A & B");
+});
+
+
+test("builds several location-preserving job searches and extracts contact and pay", () => {
+  const queries = buildJobSearchQueries("Kogondan traktorchi ish topib ber");
+  assert.ok(queries.length >= 4);
+  assert.ok(queries.every(query => query.includes("Kogondan")));
+  assert.deepEqual(extractPhones("Telefon: +998 90 123 45 67"), ["+998901234567"]);
+  assert.match(extractSalary("Maosh: 5 000 000 so'm"), /5 000 000 so'm/);
+});
+
+test("returns at most ten unique individual vacancy pages and never treats category pages as vacancies", async () => {
+  const result = await searchJobs("Kogondan ish topib ber", {
+    async search() {
+      return Array.from({ length: 10 }, (_, index) => ({
+        title: "Kogon vacancy " + index,
+        url: "https://jobs.example.org/vacancy/" + index,
+        snippet: "Vakansiya va talablar"
+      }));
+    },
+    async fetchPage(url) {
+      const id = url.split("/").pop();
+      return {
+        title: "Kogon vacancy " + id,
+        url,
+        content: ("Vakansiya: Ishchi " + id + "\nIsh beruvchi: Kogon korxonasi\nMaosh: 4 000 000 so'm\nTalablar: tajriba kerak\nTelefon: +998 90 123 45 67\nAriza topshirish uchun bog'laning. ").repeat(3)
+      };
+    }
+  });
+  assert.equal(result.results.length, 10);
+  assert.match(result.reply, /10 ta alohida vakansiya/);
+  assert.doesNotMatch(result.reply, /jobs\.example\.org/);
 });

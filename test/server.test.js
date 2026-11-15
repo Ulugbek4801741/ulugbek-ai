@@ -466,7 +466,7 @@ test("API smoke tests", async (t) => {
       assert.equal(body.receivedCharacters, 5);
     });
 
-    await t.test("English-learning request gets a direct lesson instead of unrelated web snippets", async () => {
+    await t.test("English-learning request researches online and still returns a direct lesson", async () => {
       const response = await fetch(`${baseUrl}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -475,7 +475,7 @@ test("API smoke tests", async (t) => {
       const body = await response.json();
       assert.equal(response.status, 200);
       assert.match(body.reply, /Hello — Salom/);
-      assert.equal(body.webResearchUsed, false);
+      assert.equal(body.webSearchUsed, true);
       assert.doesNotMatch(body.reply, /Grokipedia|StudyX|Instagram/);
     });
 

@@ -23,9 +23,9 @@ function detectSearchIntent(value) {
   const localOnly = !text || LOCAL_ONLY.test(text) || MATH_ONLY.test(text);
   const currentInfo = CURRENT_INFO_INTENT.test(text);
   const explicitResearch = EXPLICIT_RESEARCH_INTENT.test(text);
-  const shouldSearch = !localOnly && (isJobSearch || isLinkSearch || currentInfo || explicitResearch);
+  const shouldSearch = !localOnly;
   return { shouldSearch, isJobSearch, isLinkSearch, platforms, currentInfo,
-    reason: localOnly ? "local-dialogue-or-arithmetic" : isJobSearch ? "job-search" : isLinkSearch ? "link-discovery" : currentInfo ? "current-information" : explicitResearch ? "explicit-research-request" : "direct-assistant-response" };
+    reason: localOnly ? "local-dialogue-or-arithmetic" : isJobSearch ? "job-search" : isLinkSearch ? "link-discovery" : currentInfo ? "current-information" : explicitResearch ? "explicit-research-request" : "general-research" };
 }
 function cleanText(value, max = 1200) {
   return String(value || "").replace(/\s+/g, " ").trim().slice(0, max);
