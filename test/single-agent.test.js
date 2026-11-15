@@ -37,6 +37,9 @@ test("single agent sends one unified prompt and returns local model answer", asy
   assert.match(request.body.messages[0].content, /yagona universal yordamchi agent/);
   assert.equal(request.body.model, "qwen2.5:7b");
   assert.equal(request.options.redirect, "error");
+  assert.equal(agent.status().configured, true);
+  assert.ok(agent.status().lastSuccessAt);
+  assert.equal(agent.status().lastFailure, null);
 });
 
 test("single agent supplies bounded knowledge as evidence, not instructions", async () => {
@@ -53,11 +56,11 @@ test("single agent supplies bounded knowledge as evidence, not instructions", as
   assert.match(knowledgeContext([{ title: "A", content: "B" }]), /A/);
 });
 
-test("single agent can use Gemini through the provider adapter", async () => {
+test("single agent can use Gemini through the provider adapter after explicit consent", async () => {
   let sentUrl = "";
   let sentBody;
   const agent = createSingleAgent({
-    env: { ULUGBEK_AI_PROVIDER: "gemini", ULUGBEK_AI_MODEL: "gemini-test", ULUGBEK_AI_TOKEN: "test-key" },
+    env: { ULUGBEK_AI_PROVIDER: "gemini", ULUGBEK_AI_MODEL: "gemini-test", ULUGBEK_AI_TOKEN: "test-key", GEMINI_ALLOW_CHAT_CONTENT: "true" },
     fetchImpl: async (url, options) => {
       sentUrl = String(url);
       sentBody = JSON.parse(options.body);
@@ -71,6 +74,7 @@ test("single agent can use Gemini through the provider adapter", async () => {
   assert.ok(sentUrl.includes("generativelanguage.googleapis.com"));
   assert.equal(sentBody.contents[0].parts[0].text.includes("Kotlin nima?"), true);
 });
+
 test("single agent can use Claude through the provider adapter", async () => {
   let sentBody;
   const agent = createSingleAgent({
@@ -85,4 +89,42 @@ test("single agent can use Claude through the provider adapter", async () => {
   assert.equal(result.provider, "anthropic");
   assert.equal(result.externalProviderUsed, true);
   assert.equal(sentBody.model, "claude-test");
+});
+
+test("Gemini chat is not called without explicit consent and status explains why", async () => {
+  let called = false;
+  const agent = createSingleAgent({
+    env: { GEMINI_API_KEY: "private-test-secret", GEMINI_MODEL: "gemini-flash-latest" },
+    fetchImpl: async () => { called = true; throw new Error("should not be called"); }
+  });
+  assert.equal(await agent.answer("Oddiy savol"), null);
+  assert.equal(called, false);
+  const status = agent.status();
+  assert.equal(status.configured, false);
+  assert.equal(status.reason, "chat-content-consent-required");
+  assert.equal(status.tokenConfigured, true);
+  assert.doesNotMatch(JSON.stringify(status), /private-test-secret/);
+});
+
+test("single agent exposes sanitized HTTP failure diagnostics without response body or secrets", async () => {
+  const agent = createSingleAgent({
+    env: { ULUGBEK_LOCAL_MODEL_URL: "https://model.example/v1/chat/completions", ULUGBEK_LOCAL_MODEL_NAME: "private-model", ULUGBEK_LOCAL_MODEL_TOKEN: "private-test-secret" },
+    fetchImpl: async () => ({ ok: false, status: 503, json: async () => ({ error: "secret-bearing response" }) })
+  });
+  assert.equal(await agent.answer("Modelni sinab ko‘r"), null);
+  const status = agent.status();
+  assert.equal(status.lastFailure.code, "provider-http-error");
+  assert.equal(status.lastFailure.httpStatus, 503);
+  assert.equal(status.lastFailure.provider, "openai-compatible");
+  assert.doesNotMatch(JSON.stringify(status), /private-test-secret|secret-bearing|model\.example/);
+});
+
+test("single agent reports network failures without exposing exception text", async () => {
+  const agent = createSingleAgent({
+    env: { ULUGBEK_LOCAL_MODEL_URL: "https://model.example/v1/chat/completions", ULUGBEK_LOCAL_MODEL_NAME: "model" },
+    fetchImpl: async () => { throw new Error("https://model.example?token=do-not-leak"); }
+  });
+  assert.equal(await agent.answer("Modelni sinab ko‘r"), null);
+  assert.equal(agent.status().lastFailure.code, "provider-network-or-request-error");
+  assert.doesNotMatch(JSON.stringify(agent.status()), /do-not-leak|model\.example/);
 });
