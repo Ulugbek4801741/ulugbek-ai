@@ -316,6 +316,17 @@ test("API smoke tests", async (t) => {
       assert.equal(denied.headers.get("access-control-allow-origin"), null);
     });
 
+    await t.test("AI status exposes one universal agent and model readiness without duplicate route shadowing", async () => {
+      const response = await fetch(`${baseUrl}/api/ai/status`);
+      const body = await response.json();
+      assert.equal(response.status, 200);
+      assert.equal(body.agentCount, 1);
+      assert.equal(body.agentName, "ULUGBEK Universal Agent");
+      assert.equal(typeof body.configured, "boolean");
+      assert.equal(typeof body.provider, "string");
+      assert.equal(typeof body.model, "object");
+    });
+
     await t.test("health endpoint reports the app", async () => {
       const response = await fetch(`${baseUrl}/api/health`);
       const body = await response.json();
