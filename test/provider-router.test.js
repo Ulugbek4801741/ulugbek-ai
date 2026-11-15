@@ -14,8 +14,8 @@ test("supports local and OpenAI-compatible model endpoints without requiring a k
   assert.equal(request.options.method, "POST");
   assert.equal(JSON.parse(request.options.body).model, "qwen-local");
 });
-test("builds Gemini and Anthropic requests only when credentials exist", () => {
-  const gemini = { ULUGBEK_AI_PROVIDER: "gemini", ULUGBEK_AI_MODEL: "gemini-2.5-flash", ULUGBEK_AI_TOKEN: "test-secret" };
+test("builds Gemini and Anthropic requests only when credentials exist and Gemini consent is explicit", () => {
+  const gemini = { ULUGBEK_AI_PROVIDER: "gemini", ULUGBEK_AI_MODEL: "gemini-2.5-flash", ULUGBEK_AI_TOKEN: "test-secret", GEMINI_ALLOW_CHAT_CONTENT: "true" };
   const request = provider.request("Salom", "System", gemini);
   assert.match(request.url, /generativelanguage\.googleapis\.com/);
   assert.equal(JSON.parse(request.options.body).contents[0].parts[0].text, "Salom");
@@ -36,14 +36,22 @@ test("does not allow custom untrusted Anthropic API hosts", () => {
   }));
 });
 
-test("uses existing Render Gemini variables without requiring renamed secrets", () => {
+test("uses existing Render Gemini variables only after explicit chat-content consent", () => {
   const env = { GEMINI_API_KEY: "render-gemini-secret", GEMINI_MODEL: "gemini-flash-latest" };
-  const config = provider.configuration(env);
+  const blocked = provider.configuration(env);
+  assert.equal(blocked.configured, false);
+  assert.equal(blocked.reason, "chat-content-consent-required");
+  assert.equal(blocked.tokenConfigured, true);
+  assert.throws(() => provider.request("Salom", "System", env));
+
+  const consented = { ...env, GEMINI_ALLOW_CHAT_CONTENT: "true" };
+  const config = provider.configuration(consented);
   assert.equal(config.configured, true);
   assert.equal(config.provider, "gemini");
   assert.equal(config.model, "gemini-flash-latest");
-  const request = provider.request("Salom", "System", env);
-  assert.match(request.url, /key=render-gemini-secret/);
+  const request = provider.request("Salom", "System", consented);
+  assert.match(request.url, /generativelanguage\.googleapis\.com/);
+  assert.equal(JSON.parse(request.options.body).generationConfig.maxOutputTokens, 2400);
 });
 
 test("uses existing Render OpenAI variables as an OpenAI-compatible endpoint", () => {

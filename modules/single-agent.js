@@ -37,10 +37,40 @@ function knowledgeContext(entries) {
     String(entry.content || "").slice(0, 2600)
   ].join("\n")).join("\n\n");
 }
+
 function createSingleAgent(options = {}) {
   const env = options.env || process.env;
   const fetchImpl = options.fetchImpl || globalThis.fetch;
   const timeoutMs = Math.max(1000, Math.min(60000, Number(options.timeoutMs) || 30000));
+  let lastAttemptAt = null;
+  let lastSuccessAt = null;
+  let lastFailure = null;
+
+  function status() {
+    const config = configuration(env);
+    return {
+      configured: config.configured === true,
+      provider: config.provider || "not-configured",
+      model: config.model || null,
+      apiKeyRequired: config.apiKeyRequired === true,
+      tokenConfigured: config.tokenConfigured === true,
+      reason: config.reason || null,
+      consentRequired: config.consentRequired === true,
+      lastAttemptAt,
+      lastSuccessAt,
+      lastFailure: lastFailure ? { ...lastFailure } : null
+    };
+  }
+
+  function recordFailure(code, provider, httpStatus) {
+    lastFailure = {
+      code,
+      provider: provider || "unknown",
+      ...(Number.isInteger(httpStatus) ? { httpStatus } : {}),
+      at: new Date().toISOString()
+    };
+  }
+
   async function answer(prompt, entries = [], suppliedContext = null) {
     const question = String(prompt || "").trim();
     if (!question || question.length > 4000) return null;
@@ -56,6 +86,7 @@ function createSingleAgent(options = {}) {
     }
     const config = configuration(env);
     if (!config.configured || typeof fetchImpl !== "function") return null;
+    lastAttemptAt = new Date().toISOString();
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
@@ -69,14 +100,35 @@ function createSingleAgent(options = {}) {
       const response = await fetchImpl(providerRequest.url, {
         ...providerRequest.options, signal: controller.signal, redirect: "error"
       });
-      if (!response.ok) return null;
-      const payload = await response.json();
+      if (!response.ok) {
+        recordFailure("provider-http-error", config.provider, response.status);
+        return null;
+      }
+      let payload;
+      try {
+        payload = await response.json();
+      } catch (_) {
+        recordFailure("invalid-provider-json", config.provider);
+        return null;
+      }
       const content = providerRouter.extract(payload, config.provider);
-      if (typeof content !== "string" || !content.trim()) return null;
+      if (typeof content !== "string" || !content.trim()) {
+        recordFailure("empty-model-response", config.provider);
+        return null;
+      }
       const hosted = config.provider !== "openai-compatible" || (() => { try { return !["127.0.0.1", "localhost", "::1"].includes(new URL(config.endpoint).hostname); } catch (_) { return true; } })();
+      lastSuccessAt = new Date().toISOString();
+      lastFailure = null;
       return { reply: content.trim().slice(0, 16000), emotion: emotional.emotion, ethicalAssessment: ethics, cognition: contextState.cognition, reasoning: { method: "provider-adapter-evidence-grounded-universal-agent", answerable: true, facts: [] }, modelUsed: config.model, provider: config.provider, externalProviderUsed: hosted };
-    } catch (_) { return null; } finally { clearTimeout(timer); }
+    } catch (error) {
+      recordFailure(controller.signal.aborted || error?.name === "AbortError" ? "provider-timeout" : "provider-network-or-request-error", config.provider);
+      return null;
+    } finally {
+      clearTimeout(timer);
+    }
   }
-  return { answer, status: () => configuration(env) };
+
+  return { answer, status };
 }
+
 module.exports = { createSingleAgent, configuration, knowledgeContext, SYSTEM_PROMPT };

@@ -57,7 +57,13 @@ function configuration(env = process.env) {
     if (!url) return { configured: false, provider, reason: "endpoint-invalid", apiKeyRequired: false };
     return { configured: true, provider, model, endpoint: url.toString(), apiKeyRequired: false, tokenConfigured: Boolean(token) };
   }
-  if (provider === "gemini") return { configured: Boolean(token), provider, model, apiKeyRequired: true, tokenConfigured: Boolean(token) };
+  if (provider === "gemini") {
+    if (!token) return { configured: false, provider, model, reason: "credentials-missing", apiKeyRequired: true, tokenConfigured: false, consentRequired: true };
+    if (String(env.GEMINI_ALLOW_CHAT_CONTENT || "").trim().toLowerCase() !== "true") {
+      return { configured: false, provider, model, reason: "chat-content-consent-required", apiKeyRequired: true, tokenConfigured: true, consentRequired: true };
+    }
+    return { configured: true, provider, model, apiKeyRequired: true, tokenConfigured: true, consentRequired: true };
+  }
   if (provider === "anthropic") return { configured: Boolean(token), provider, model, apiKeyRequired: true, tokenConfigured: Boolean(token) };
   return { configured: false, provider, reason: "provider-unsupported", apiKeyRequired: true };
 }
