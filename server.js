@@ -1103,7 +1103,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   const hasLocalAnswer = localCandidate?.reasoning?.answerable === true;
   // Keep known native answers local, but do not bypass configured models for unrelated dialogue.
   const simpleDefinitionRequest = /(?:sun['’‘ʻʼ]?iy intellekt|artificial intelligence|\bai\b).{0,45}(?:nima|degani|tushuntir)|(?:nima|degani).{0,45}(?:sun['’‘ʻ]?iy intellekt|artificial intelligence)/iu.test(conversationMessage);
-  const deterministicNativeRequest = /(?:temur\s*(?:lang|lank|lenk)|tamerlan|amir\s*temur)|^(?:menga\s+)?yordam\s+ber(?:\s+(?:olasanmi|olasizmi)|a\s+(?:olasanmi|olasizmi)|ing)?[!? .]*$|(?:agent|yordamchi).{0,120}(?:kod|cod|code|dastur).{0,45}(?:yoz|yarat)|(?:agent|yordamchi).{0,100}(?:yoz|yarat).{0,60}(?:kod|cod|code|dastur)/iu.test(conversationMessage);
+  const deterministicNativeRequest = /termux.{0,180}(?:agent|yordamchi|sun'iy endilik).{0,180}(?:kod|cod|code|yoz|yarat)|(?:nusxa|copy).{0,80}(?:kod|cod|code)|(?:temur\s*(?:lang|lank|lenk)|tamerlan|amir\s*temur)|^(?:menga\s+)?yordam\s+ber(?:\s+(?:olasanmi|olasizmi)|a\s+(?:olasanmi|olasizmi)|ing)?[!? .]*$|(?:agent|yordamchi).{0,120}(?:kod|cod|code|dastur).{0,45}(?:yoz|yarat)|(?:agent|yordamchi).{0,100}(?:yoz|yarat).{0,60}(?:kod|cod|code|dastur)/iu.test(conversationMessage);
   if ((simpleDefinitionRequest || deterministicNativeRequest) && localCandidate?.reasoning?.method === "built-in-dialogue" && localCandidate.reply) {
     return res.json({
       reply: localCandidate.reply,

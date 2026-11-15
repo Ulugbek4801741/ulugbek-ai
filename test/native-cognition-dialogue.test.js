@@ -69,3 +69,16 @@ test("Temur Lang haqidagi tarixiy savolga javob beradi", () => {
   assert.match(reply, /1336–1405/);
   assert.match(reply, /Samarqand/);
 });
+
+test("Termux agent so‘roviga nusxa olinadigan o‘rnatish buyrug‘ini beradi", () => {
+  const reply = cognition.respond("Termux ishlaydigan sunʼiy endilik agent yaratish boʻyicha cod yozib ber", []).reply;
+  assert.match(reply, /pkg update -y/);
+  assert.match(reply, /ulugbek_termux_agent.py/);
+  assert.match(reply, /--self-test/);
+  assert.match(reply, /modelni qayta o‘qitish emas/);
+});
+test("kodni nusxa olish so‘rovi o‘rnatish yo‘riqnomasini beradi", () => {
+  const reply = cognition.respond("Menga yordam ber nusxa olish joyi bilan yozib ber codni", []).reply;
+  assert.match(reply, /curl -L/);
+  assert.match(reply, /ulugbek_termux_agent.py/);
+});
