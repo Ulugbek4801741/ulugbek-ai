@@ -151,8 +151,14 @@ function extractJobDetails(item, message) {
     activeStatus: /(?:vakansiya yopildi|e'lon yopildi|qabul tugadi|позиция закрыта|vacancy closed|no longer accepting)/iu.test(text) ? "closed-or-expired-indicator-found" : "not-independently-confirmed"
   };
 }
-function formatJobResults(results) {
-  if (!results.length) return "Qidiruv sahifalari ochildi, ammo alohida vakansiya sifatida tekshirish mumkin bo‘lgan e’lonlar topilmadi. Saytlarning umumiy sahifalarini ish o‘rni deb ko‘rsatmayman. Boshqa kasb yoki yaqin hududni ham qo‘shib qidirish mumkin.";
+function formatJobResults(results, message = "") {
+  if (!results.length) {
+    const role = extractJobRole(message);
+    const place = /kogon/iu.test(message) ? "Kogon" : /buxoro/iu.test(message) ? "Buxoro" : "";
+    if (role && place) return place + " hududida " + role.label.toLowerCase() +
+      " bo‘yicha alohida vakansiya sahifasini ochib, tekshirish mumkin bo‘lgan e’lon topilmadi. Umumiy ish saytlari yoki aloqasiz vakansiyalarni ish o‘rni deb ko‘rsatmayman. Qidiruvni Buxoro shahri, masofaviy ish yoki boshqa dasturlash yo‘nalishlariga kengaytirish mumkin.";
+    return "Qidiruv sahifalari ochildi, ammo alohida vakansiya sifatida tekshirish mumkin bo‘lgan e’lonlar topilmadi. Saytlarning umumiy sahifalarini ish o‘rni deb ko‘rsatmayman. Boshqa kasb yoki yaqin hududni ham qo‘shib qidirish mumkin.";
+  }
   const lines = results.map((item, index) => {
     const details = [
       (index + 1) + ". " + item.title,
@@ -233,7 +239,7 @@ async function searchJobs(message, webSearch, options = {}) {
     results: usable,
     searchedPages: candidates.length,
     openedPages: pages.filter(Boolean).length,
-    reply: formatJobResults(usable)
+    reply: formatJobResults(usable, message)
   };
 }
 
