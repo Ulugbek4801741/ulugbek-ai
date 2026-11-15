@@ -596,8 +596,9 @@ app.get("/api/cognition/status", (_req, res) => {
     independentLanguage: training,
     storage: {
       dataDirectoryConfigured: Boolean(process.env.ULUGBEK_DATA_DIR),
-      durableStorageConfigured: Boolean(process.env.ULUGBEK_DATA_DIR),
-      warning: process.env.ULUGBEK_DATA_DIR ? null : "Render ephemeral filesystem: learned data may be lost after restart or redeploy."
+      durableStorageConfirmed: false,
+      persistentStoragePathConfigured: Boolean(process.env.ULUGBEK_DATA_DIR),
+      warning: "A data path alone does not prove durable storage. Confirm that a persistent disk is mounted before relying on learned data after redeploy."
     }
   });
 });
