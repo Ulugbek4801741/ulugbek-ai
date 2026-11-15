@@ -40,13 +40,9 @@ function buildJobSearchQueries(value) {
   ];
   const queries = [original, ...suffixes.map(suffix => original + " " + suffix)];
   if (role) {
-    queries.push(original + " " + role.terms + " Kogon Buxoro vakansiya ish o‘rni");
-    queries.push(original + " " + role.terms + " site:hh.uz OR site:ishkop.uz OR site:olx.uz");
-    queries.push("Kogon Buxoro " + role.terms + " vakansiya ish beruvchi");
-  }
-  if (role) {
-    queries.push(original + " " + role.terms + " vacancy jobs hiring Tashkent Uzbekistan");
-    queries.push(original + " " + role.terms + " site:hh.uz OR site:linkedin.com/jobs OR site:ishkop.uz");
+    if (/kogon/iu.test(original)) queries.push("Kogon " + role.terms + " Buxoro viloyati vakansiya ish beruvchi");
+    queries.push(original + " " + role.terms + " vacancy jobs hiring Uzbekistan");
+    queries.push(original + " " + role.terms + " site:hh.uz OR site:linkedin.com/jobs OR site:ishkop.uz OR site:olx.uz");
   }
   return [...new Set(queries)].filter(Boolean).slice(0, 8);
 }
