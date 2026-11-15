@@ -28,7 +28,7 @@ test("tasdiqlangan bilimdan manbali dalil qaytaradi", () => {
   const entries = [{title:"Yer",content:"Yer Quyosh atrofida aylanadigan sayyoradir. U Quyosh tizimining uchinchi sayyorasi hisoblanadi.",source:"https://uz.wikipedia.org/wiki/Yer"}];
   const result = cognition.respond("Yer qaysi sayyora?", entries);
   assert.equal(result.reasoning.answerable, true);
-  assert.match(result.reply, /Manbalar:/);
+  assert.match(result.reply, /Manba:/);
 });
 
 test("ingliz tilini o‘rganish so‘roviga amaliy birinchi dars beradi", () => {
