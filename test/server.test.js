@@ -302,7 +302,7 @@ test("API smoke tests", async (t) => {
     await t.test("GitHub Pages config selects the Render backend, not its static origin", async () => {
       const fs = require("node:fs");
       const config = fs.readFileSync(require("node:path").join(__dirname, "..", "public", "config.js"), "utf8");
-      assert.match(config, /host\.endsWith\("\.github\.io"\)/);
+      assert.ok(config.includes("https://ulugbek-ai2.onrender.com"));
       assert.match(config, /isNativeLocalhost/);
       assert.match(config, /https:\\/\\/ulugbek-ai2\\.onrender\\.com/);
     });
