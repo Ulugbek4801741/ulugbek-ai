@@ -6,7 +6,7 @@ const TTL_MS = 30 * 60 * 1000;
 const JOB_INTENT = /(?:\bish\s*(?:top(?:ib)?\s*ber|qidir(?:ib)?\s*ber|kerak|o\s*rin|vakans)|\bjob\s*(?:search|opening)|\bваканси|\bработ)/iu;
 const LOCATION_ONLY = /^(?:kogon|buxoro|buxoro shahri|buxoroda|kogonda|toshkent|toshkentda|samarqand|samarqandda|navoiy|navoiyda|qarshi|qarshida|andijon|andijonda|farg'ona|farg'onada|namangan|namanganda|nukus|nukusda|urganch|urganchda|jizzax|jizzaxda|termiz|termizda|olot|g'ijduvon)(?:\s+(?:shahri|tumani))?$/iu;
 const KNOWN_LOCATIONS = /\b(kogon|buxoro|toshkent|samarqand|navoiy|qarshi|andijon|farg'ona|namangan|nukus|urganch|jizzax|termiz|guliston|denov|olot|g'ijduvon)(?:da|ga|dan|ning|ni)?\b/iu;
-const FOLLOW_UP_JOB = /^(?:ish(?:\s+(?:topib\s+ber|qidirib\s+ber|kerak))?|\bish\s+top|vakansiya(?:\s+topib\s+ber)?|job(?:\s+search)?|yana\s+qidir|davom\s+et)[!.?\s]*$/iu;
+const FOLLOW_UP_JOB = /(?:^(?:ish(?:\s+(?:topib\s+ber|qidirib\s+ber|kerak))?|\bish\s+top|vakansiya(?:\s+topib\s+ber)?|job(?:\s+search)?|yana\s+qidir|davom\s+et)[!.?\s]*$|\bshu\s+(?:yo['’]?nalish(?:da|ga)?|soha|kasb)\b|\bmen\s+.{0,45}\b(?:dasturchi|dasturlovchi|programmist|programmer|developer|frontend|backend|android\s+dasturchi)\w*|\b(?:dasturchiman|dasturlovchiman)\b)/iu;
 
 function prune(now = Date.now()) {
   for (const [key, value] of sessions) {
@@ -21,10 +21,15 @@ function expand(sessionId, message) {
   prune();
   const previous = sessions.get(key);
   if (!previous) return text;
-  if (LOCATION_ONLY.test(text) && JOB_INTENT.test(previous.lastPrompt)) {
+  const previousWasJobSearch = JOB_INTENT.test(previous.lastPrompt);
+  if (LOCATION_ONLY.test(text) && previousWasJobSearch) {
     return (previous.lastPrompt + " " + text).slice(0, 4000);
   }
-  if ((JOB_INTENT.test(text) || FOLLOW_UP_JOB.test(text)) && !KNOWN_LOCATIONS.test(text) && JOB_INTENT.test(previous.lastPrompt)) {
+  // Preserve the earlier city when a user clarifies their profession naturally.
+  if (previousWasJobSearch && FOLLOW_UP_JOB.test(text) && !KNOWN_LOCATIONS.test(text)) {
+    return (previous.lastPrompt + " " + text).slice(0, 4000);
+  }
+  if (previousWasJobSearch && JOB_INTENT.test(text) && !KNOWN_LOCATIONS.test(text)) {
     const location = previous.lastPrompt.match(KNOWN_LOCATIONS);
     if (location) return (previous.lastPrompt + " " + text).slice(0, 4000);
   }
