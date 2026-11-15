@@ -82,9 +82,12 @@ function extractSalary(value) {
 }
 function extractLabeledValue(text, labels) {
   const source = cleanText(text, 12000);
-  const labelPattern = labels.source.replace(/\\\\s\\*:\\s*$/, "");
-  const match = source.match(new RegExp("(?:^|\\\\s)(" + labelPattern + ")\\\\s*[:：-]\\\\s*([^.!?]{2,150}?)(?=\\\\s+(?:ish beruvchi|kompaniya|tashkilot|company|employer|manzil|joylashuv|location|address|maosh|ish haqi|salary|talablar|vazifalar|telefon|tel|aloqa|email|e-mail|contact|apply)\\\\s*[:：-]|[.!?]|$)", "iu"));
-  return match ? cleanText(match[2], 160) : "";
+  const escape = value => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const labelPattern = (Array.isArray(labels) ? labels : []).map(escape).join("|");
+  if (!labelPattern) return "";
+  const nextLabels = "ish beruvchi|kompaniya|tashkilot|company|employer|manzil|joylashuv|location|address|maosh|ish haqi|salary|talablar|malaka talablari|requirements|qualifications|vazifalar|telefon|tel|aloqa|email|e-mail|contact|apply|ish grafigi|ish vaqti|jadval|schedule|working hours|tajriba|ish tajribasi|experience";
+  const match = source.match(new RegExp("(?:^|\\s)(?:" + labelPattern + ")\\s*[:：-]\\s*([^.!?]{2,150}?)(?=\\s+(?:" + nextLabels + ")\\s*[:：-]|[.!?]|$)", "iu"));
+  return match ? cleanText(match[1], 160) : "";
 }
 function isCategoryPage(url) {
   try {
