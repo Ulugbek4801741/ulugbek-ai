@@ -48,7 +48,7 @@ function buildJobSearchQueries(value) {
     queries.push(original + " " + role.terms + " vacancy jobs hiring Tashkent Uzbekistan");
     queries.push(original + " " + role.terms + " site:hh.uz OR site:linkedin.com/jobs OR site:ishkop.uz");
   }
-  return [...new Set(queries)].filter(Boolean).slice(0, 6);
+  return [...new Set(queries)].filter(Boolean).slice(0, 8);
 }
 function buildJobSearchQuery(value) {
   return buildJobSearchQueries(value).slice(0, 2).join(" ");
