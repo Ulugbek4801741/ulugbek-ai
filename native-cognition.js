@@ -81,14 +81,14 @@ function quickReply(query) {
     return "Hisoblash: " + math.expression + " = " + answer + "\\nJavob: " + answer + ".";
   }
   const q = normalizeInput(query);
-  if (/(?:temur\\s*(?:lang|lank|lenk)|tamerlan|amir\\s*temur)/iu.test(q) &&
-      /(?:tarix|podshoh|podshox|hukmdor|shoh|sulton|kim|haqida|ma'lumot|malumot)/iu.test(q)) {
+  if (/(?:temur\s*(?:lang|lank|lenk)|tamerlan|amir\s*temur)/iu.test(q) &&
+      /(?:tarix|podshoh|podshox|potshox|hukmdor|shoh|sulton|kim|haqida|ma'lumot|malumot)/iu.test(q)) {
     return "Temur Lang nomi bilan tanilgan hukmdor — Amir Temur (1336–1405). U XIV asrda Movarounnahrda kuchli davlat barpo etgan sarkarda va davlat arbobi edi. Poytaxti Samarqand bo‘lgan. Amir Temur Samarqandni yirik siyosiy, savdo va me’morchilik markaziga aylantirishga katta e’tibor bergan. “Temur Lang” yoki “Tamerlan” laqabi uning yoshligidagi jarohat sabab oqsoqlanib yurishi bilan bog‘lanadi.";
   }
-  if (/(?:menga\\s+)?yordam\\s+ber(?:a\\s+olasanmi|a\\s+olasizmi|ing)?[!? .]*$/iu.test(q) || /^(?:menga\\s+)?yordam\\s+kerak[!? .]*$/iu.test(q)) {
+  if (/^(?:menga\s+)?yordam\s+ber(?:\s+(?:olasanmi|olasizmi)|a\s+(?:olasanmi|olasizmi)|ing)?[!? .]*$/iu.test(q) || /^(?:menga\s+)?yordam\s+kerak[!? .]*$/iu.test(q)) {
     return "Albatta, yordam beraman. Qaysi ishda yordam kerak? Masala yechish, darsni tushuntirish, tarjima, matn yozish yoki dastur kodi — topshirig‘ingizni yuboring.";
   }
-  if (/(?:sun'iy intellekt|sun’iy intellekt|suniy intellekt|\\bai\\b).{0,70}(?:agent|yordamchi).{0,45}(?:kod|dastur|yoz)|(?:kod|dastur).{0,60}(?:ai|sun'iy intellekt|sun’iy intellekt).{0,45}(?:agent|yoz)/iu.test(q)) {
+  if (/(?:ai\s*)?(?:agent|yordamchi).{0,100}(?:kod|cod|code|dastur).{0,35}(?:yoz|yarat)|(?:kod|cod|code|dastur).{0,60}(?:ai\s*)?(?:agent|yordamchi).{0,40}(?:yoz|yarat)/iu.test(q)) {
     return [
       "Python tilida AI-agent uchun boshlang‘ich karkas. U vazifani qabul qiladi, mavjud vositani tanlaydi va ishga tushirishdan oldin ruxsat so‘raydi. Bu hali mustaqil til modeli emas — unga keyin model ulash kerak.",
       "",
@@ -110,10 +110,7 @@ function quickReply(query) {
       "```",
       "",
       "Saqlash: `agent.py`. Ishga tushirish: `python agent.py`."
-    ].join("\\n");
-  }
-  if (/(?:sun'iy intellekt|sun’iy intellekt|suniy intellekt|artificial intelligence|\bai\b).{0,35}(?:nima|degani|tushuntir)|(?:nima|degani).{0,35}(?:sun'iy intellekt|sun’iy intellekt|suniy intellekt|artificial intelligence)/iu.test(q)) {
-    return "Sun’iy intellekt — kompyuterga odam bajaradigan ayrim aqliy ishlarni bajarishni o‘rgatadigan texnologiya. Masalan, u savollarga javob beradi, matnni tarjima qiladi yoki rasmdagi narsalarni taniydi. Lekin u odam kabi ongli emas: o‘rgatilgan ma’lumotlar va dasturlar asosida javob yaratadi.";
+    ].join(\"\\n\");
   }
   if (/^(o'zbekiston|uzbekiston|uzbekistan)$/.test(q)) {
     return "O‘zbekiston — Markaziy Osiyoda joylashgan mustaqil davlat. Poytaxti — Toshkent. Davlatning rasmiy nomi — O‘zbekiston Respublikasi. Qaysi yo‘nalish haqida batafsil ma’lumot kerak: tarixi, geografiyasi, aholisi, iqtisodiyoti yoki viloyatlari?";
