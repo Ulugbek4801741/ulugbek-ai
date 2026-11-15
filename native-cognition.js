@@ -112,11 +112,29 @@ function respond(query, entries, suppliedContext = null) {
     const fallback = "Bu savolga hozircha tasdiqlangan bilimlar bazamdan ishonchli javob topa olmadim. Savolni boshqacha yoki aniqroq yozib ko‘ring. Bilmagan narsamni to‘qib aytmayman.";
     return { reply: (opening ? opening + "\n\n" : "") + fallback, cognition: context.cognition, reasoning: result };
   }
-  const lines = result.facts.map((x, i) => (i + 1) + ". " + x.fact + "\n   Mavzu: " + x.title);
-  const sources = [...new Set(result.facts.map(x => x.source).filter(Boolean))];
-  const reply = "ULUGBEK AI mustaqil mantiqiy mexanizmi topgan dalillar:\n\n" + lines.join("\n\n") +
-    (sources.length ? "\n\nManbalar:\n" + sources.join("\n") : "") +
-    "\n\nXulosa faqat topilgan dalillarga asoslandi; dalil yetishmasa taxmin qilinmadi.";
-  return { reply: (opening ? opening + "\n\n" : "") + reply, cognition: context.cognition, reasoning: result };
+  // Synthesize retrieved evidence into one concise answer instead of dumping snippets.
+  const selected = [];
+  for (const candidate of result.facts) {
+    const candidateTerms = new Set(words(candidate.fact));
+    const duplicate = selected.some(existing => {
+      const existingTerms = new Set(words(existing.fact));
+      const overlap = [...candidateTerms].filter(term => existingTerms.has(term)).length;
+      const union = new Set([...candidateTerms, ...existingTerms]).size || 1;
+      return overlap / union >= 0.68;
+    });
+    if (!duplicate) selected.push(candidate);
+    if (selected.length === 2) break;
+  }
+  const sentences = selected.map(item => {
+    let fact = String(item.fact || "").replace(/^\s*\d+[.)]\s*/, "").trim();
+    if (fact.length > 420) fact = fact.slice(0, 417).replace(/\s+\S*$/, "") + "...";
+    return fact;
+  }).filter(Boolean);
+  const sources = [...new Set(selected.map(item => item.source).filter(Boolean))].slice(0, 2);
+  const reply = (sentences.length ? "Mavjud dalillarga ko‘ra, " + sentences.join(" ") :
+    "Bu savol bo‘yicha yetarli ishonchli dalil topilmadi.") +
+    (sources.length ? "\n\nManba: " + sources.join(" | ") : "");
+  const conciseReasoning = { ...result, facts: selected, outputPolicy: "single-concise-synthesized-answer" };
+  return { reply: (opening ? opening + "\n\n" : "") + reply, cognition: context.cognition, reasoning: conciseReasoning };
 }
 module.exports = { concepts, splitFacts, reason, respond, quickReply, normalizeInput };
