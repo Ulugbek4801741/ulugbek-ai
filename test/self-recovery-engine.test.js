@@ -76,9 +76,9 @@ test("finding can be marked reviewed but cannot be reviewed twice", async () => 
   try {
     await engine.run();
     const finding = engine.listFindings()[0];
-    const updated = engine.resolveFinding(finding.id, "Tekshirildi");
+    const updated = await engine.resolveFinding(finding.id, "Tekshirildi");
     assert.equal(updated.status, "reviewed");
-    assert.throws(() => engine.resolveFinding(finding.id), /Faqat ochiq/);
+    await assert.rejects(engine.resolveFinding(finding.id), /Faqat ochiq/);
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }

@@ -52,7 +52,7 @@ function createSelfRecoveryEngine(options = {}) {
 
   async function persist() {
     await fs.mkdir(path.dirname(storePath), { recursive: true });
-    const temp = storePath + ".tmp";
+    const temp = storePath + "." + crypto.randomUUID() + ".tmp";
     await fs.writeFile(temp, JSON.stringify(state, null, 2), { mode: 0o600 });
     await fs.rename(temp, storePath);
   }
@@ -186,7 +186,7 @@ function createSelfRecoveryEngine(options = {}) {
     return state.findings.map(item => ({ ...item }));
   }
 
-  function resolveFinding(id, note = "") {
+  async function resolveFinding(id, note = "") {
     const finding = state.findings.find(item => item.id === id);
     if (!finding) return null;
     if (finding.status !== "open") {
@@ -197,7 +197,7 @@ function createSelfRecoveryEngine(options = {}) {
     finding.status = "reviewed";
     finding.reviewNote = clean(note, 300);
     finding.reviewedAt = new Date(now()).toISOString();
-    persist().catch(error => { state.lastError = clean(error.message, 200); });
+    await persist();
     return { ...finding };
   }
 

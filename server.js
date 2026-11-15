@@ -405,9 +405,9 @@ app.post("/api/admin/recovery/diagnose", requireAdmin, async (_req, res) => {
   res.set("Cache-Control", "no-store");
   res.json({ ok: true, recovery, note: "Faqat diagnostika bajarildi; kod, GitHub branchlari va production o‘zgartirilmadi." });
 });
-app.post("/api/admin/recovery/findings/:id/review", requireAdmin, (req, res) => {
+app.post("/api/admin/recovery/findings/:id/review", requireAdmin, async (req, res) => {
   try {
-    const finding = selfRecovery.resolveFinding(req.params.id, req.body?.note || "");
+    const finding = await selfRecovery.resolveFinding(req.params.id, req.body?.note || "");
     if (!finding) return res.status(404).json({ error: "Diagnostika topilmasi topilmadi." });
     res.set("Cache-Control", "no-store");
     return res.json({ ok: true, finding });
