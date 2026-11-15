@@ -4,7 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { detectSearchIntent, buildUniversalSearchQuery, buildUniversalSearchQueries, searchWeb, evidenceEntries, formatEvidenceReply } = require("../modules/universal-web-search");
 const { knowledgeContext, SYSTEM_PROMPT } = require("../modules/single-agent");
-const { isJobSearchRequest, hasLocationHint, locationClarification, searchJobs, cleanText, decodeHtmlEntities, buildJobSearchQueries, extractPhones, extractSalary } = require("../modules/job-search");
+const { isJobSearchRequest, hasLocationHint, locationClarification, searchJobs, cleanText, decodeHtmlEntities, buildJobSearchQueries, extractPhones, extractSalary, extractJobRole } = require("../modules/job-search");
 
 test("researches every substantive question and task, not only explicit search commands", () => {
   for (const q of ["Bugun ob-havo qanday?", "Bugungi eng so'nggi yangiliklarni top", "Shveysariyada traktorchi ish topish", "Menga vakansiya qidirib ber", "YouTube kanalining linkini topib ber", "JavaScriptda API server qanday yoziladi?", "O'zbekistonda kichik biznesni qanday boshlash mumkin?", "Fotosintez nima?", "Qonuniy shartnoma qanday tuziladi?", "Menga ingliz tilidan yordam ber", "Menga dasturlashda yordam ber"]) assert.equal(detectSearchIntent(q).shouldSearch, true, q);
@@ -133,4 +133,31 @@ test("returns at most ten unique individual vacancy pages and never treats categ
   assert.equal(result.results.length, 10);
   assert.match(result.reply, /10 ta alohida vakansiya/);
   assert.doesNotMatch(result.reply, /jobs\.example\.org/);
+});
+
+test("recognizes a programmer profession and adds role-specific job searches", () => {
+  const request = "Ish topib ber Toshkent shahridan. Men dasturchiman, shu yo'nalishda izlab topib ber.";
+  const role = extractJobRole(request);
+  assert.equal(role.label, "Dasturchi");
+  const queries = buildJobSearchQueries(request);
+  assert.ok(queries.some(query => /developer software engineer programmer/i.test(query)));
+  assert.ok(queries.every(query => query.includes("Toshkent")));
+});
+
+test("job search sends profession-specific queries and returns a direct listing link", async () => {
+  const calls = [];
+  const result = await searchJobs("Ish topib ber Toshkent shahridan. Men dasturchiman shu yo'nalishda", {
+    async search(query) {
+      calls.push(query);
+      return [{ title: "Junior Node.js Developer", url: "https://jobs.example.org/vacancy/node-42", snippet: "Developer vacancy" }];
+    },
+    async fetchPage(url) {
+      return { title: "Junior Node.js Developer", url, content: ("Vakansiya: Junior Node.js Developer\\nIsh beruvchi: Example Tech\\nManzil: Toshkent\\nMaosh: 8 000 000 so'm\\nTalablar: JavaScript Node.js REST API tajriba\\nTelefon: +998 90 123 45 67\\nAriza topshirish uchun murojaat qiling. ").repeat(3) };
+    }
+  });
+  assert.ok(calls.some(query => /developer software engineer programmer/i.test(query)));
+  assert.equal(result.requestedRole, "Dasturchi");
+  assert.equal(result.results.length, 1);
+  assert.match(result.reply, /Junior Node.js Developer/);
+  assert.match(result.reply, /https:\\/\\/jobs\\.example\\.org\\/vacancy\\/node-42/);
 });
