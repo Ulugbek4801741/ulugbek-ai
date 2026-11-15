@@ -1020,43 +1020,8 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       safety: { blocked: true, category: shieldDecision.reason, quarantined: shieldDecision.quarantined === true }
     });
   }
-  const detectedForTranslation = languageModule.detectLanguage(message);
-  let chatReplyLanguage = detectedForTranslation.code;
-  const sourceLanguageForTranslation = detectedForTranslation.code === "unknown"
-    ? "auto" : detectedForTranslation.code;
-  const shouldTranslateChat = detectedForTranslation.code !== "uz";
-  if (shouldTranslateChat) {
-    try {
-      const translatedInput = await translationService.translate(conversationMessage, {
-        targetLanguage: "uz",
-        sourceLanguage: sourceLanguageForTranslation
-      });
-      conversationMessage = translatedInput.text;
-      chatReplyLanguage = translatedInput.sourceLanguage;
-    } catch (error) {
-      return res.status(503).json({
-        error: "Boshqa tildagi xabarni o‘zbekchaga tarjima qilib bo‘lmadi. Tarjima uchun ULUGBEK AI model provayderini sozlang va qayta urinib ko‘ring.",
-        translation: { required: true, available: false, reason: error.code || "translation-unavailable" }
-      });
-    }
-  }
-  if (chatReplyLanguage && chatReplyLanguage !== "uz") {
-    const sendJson = res.json.bind(res);
-    res.json = payload => {
-      if (!payload || typeof payload.reply !== "string") return sendJson(payload);
-      translationService.translate(payload.reply, { targetLanguage: chatReplyLanguage, sourceLanguage: "uz" })
-        .then(translatedOutput => sendJson({
-          ...payload,
-          reply: translatedOutput.text,
-          translation: { used: true, sourceLanguage: "uz", targetLanguage: chatReplyLanguage }
-        }))
-        .catch(() => {
-          res.status(502);
-          sendJson({ error: "Javob tayyorlandi, lekin foydalanuvchi tiliga tarjima qilish amalga oshmadi. Qayta urinib ko‘ring.", translation: { used: true, failed: true } });
-        });
-      return res;
-    };
-  }
+  // Keep the original message in its detected language. The native language module
+  // handles Uzbek, English, Russian, Turkish, and Kazakh without requiring a translation API.
   const conversationContext = conversationOrchestrator.analyze(conversationMessage);
   const cognition = conversationContext.cognition;
   const safetyReply = conversationOrchestrator.safetyReply(conversationContext);
