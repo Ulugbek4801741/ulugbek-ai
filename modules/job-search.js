@@ -100,11 +100,11 @@ function extractJobDetails(item, message) {
   const phones = extractPhones(text);
   const emails = extractEmails(text);
   const salary = extractSalary(text);
-  const employer = extractLabeledValue(text, /(?:ish beruvchi|kompaniya|tashkilot|company|employer|работодатель)\s*:/iu);
-  const location = extractLabeledValue(text, /(?:manzil|joylashuv|location|address|город|адрес)\s*:/iu);
-  const requirements = extractLabeledValue(text, /(?:talablar|malaka talablari|requirements|qualifications|требования)\s*:/iu);
-  const schedule = extractLabeledValue(text, /(?:ish grafigi|ish vaqti|jadval|schedule|working hours|график работы)\s*:/iu);
-  const experience = extractLabeledValue(text, /(?:tajriba|ish tajribasi|experience|стаж)\s*:/iu);
+  const employer = extractLabeledValue(text, ["ish beruvchi", "kompaniya", "tashkilot", "company", "employer", "работодатель"]);
+  const location = extractLabeledValue(text, ["manzil", "joylashuv", "location", "address", "город", "адрес"]);
+  const requirements = extractLabeledValue(text, ["talablar", "malaka talablari", "requirements", "qualifications", "требования"]);
+  const schedule = extractLabeledValue(text, ["ish grafigi", "ish vaqti", "jadval", "schedule", "working hours", "график работы"]);
+  const experience = extractLabeledValue(text, ["tajriba", "ish tajribasi", "experience", "стаж"]);
   const apply = /(?:ariza|murojaat|bog'lan|aloqa|telefon|apply|contact|отклик|связаться)/iu.test(text);
   const jobSignals = (/(?:vakans|bo'sh ish|ish o'rni|lavozim|talablar|vazifalar|tajriba|ish grafigi|ishga qabul|jobs?|position|requirements|responsibilit|employment|зарплат|ваканси|должност|обязанност)/iu.test(text) ? 1 : 0) +
     (salary ? 1 : 0) + (phones.length || emails.length || apply ? 1 : 0) +
