@@ -742,6 +742,7 @@ app.get("/api/integrations/app-stores", (_req, res) => {
 });
 
 const capabilityCatalog = require("./modules/catalog");
+const socialNetworkPolicy = require("./modules/social-network-policy");
 const workflowGate = require("./modules/workflow-gate");
 const securityPolicy = require("./modules/security-policy");
 const globalSafetyShield = require("./modules/global-safety-shield");
@@ -777,7 +778,7 @@ app.post("/api/workflows", (req, res) => {
   }
 });
 
-app.get("/api/modules", (_req, res) => {
+app.get("/api/social/status", (_req, res) => {\n  res.set("Cache-Control", "no-store");\n  return res.json({ ok: true, socialNetwork: socialNetworkPolicy.getStatus() });\n});\n\napp.get("/api/modules", (_req, res) => {
   res.set("Cache-Control", "no-store");
   res.json({ ok: true, product: "ULUGBEK AI", note: "planned modullar hali ishlaydigan integratsiya emas.", modules: capabilityCatalog.listModules() });
 });
