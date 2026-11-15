@@ -56,7 +56,7 @@ async function searchJobs(message, webSearch, options = {}) {
   const baseQuery = buildJobSearchQuery(message);
   const queryVariants = [
     baseQuery,
-    String(message || "").trim() + " vakansiya ish o'rinlari Kogon Buxoro ish beruvchi",
+    String(message || "").trim() + " vakansiya ish o'rinlari ish beruvchi maosh ishga qabul",
     String(message || "").trim() + " site:hh.uz OR site:ishkop.uz OR site:olx.uz OR site:ish.uz"
   ];
   const batches = await Promise.all(queryVariants.map(async query => {
