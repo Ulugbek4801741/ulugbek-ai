@@ -42,6 +42,19 @@ test("API smoke tests", async (t) => {
       assert.match(body.reply, /o‘zbek tilida/);
     });
 
+    await t.test("simple AI definition returns a short native Uzbek answer without web search", async () => {
+      const response = await fetch(`${baseUrl}/api/chat`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: "language-pref-test-123456", message: "Sun’iy intellekt nima? Oddiy o‘zbek tilida tushuntir." })
+      });
+      const body = await response.json();
+      assert.equal(response.status, 200);
+      assert.equal(body.mode, "native-simple-explanation");
+      assert.equal(body.webSearchUsed, false);
+      assert.match(body.reply, /kompyuterga odam bajaradigan/);
+      assert.doesNotMatch(body.reply, /\\[\\d+\\]|transformer arxitekturasi/i);
+    });
+
     await t.test("research cache status endpoint is available and returns JSON", async () => {
       const response = await fetch(`${baseUrl}/api/research/status`);
       const body = await response.json();
