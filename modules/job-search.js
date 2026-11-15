@@ -81,14 +81,9 @@ function extractSalary(value) {
   return "";
 }
 function extractLabeledValue(text, labels) {
-  const lines = String(text || "").split(/\n+/).map(line => cleanText(line, 220)).filter(Boolean);
-  for (const line of lines) {
-    if (labels.test(line)) {
-      const value = line.replace(/^[^:]{0,45}:\s*/, "").trim();
-      if (value.length > 2 && value.length < 180) return value;
-    }
-  }
-  return "";
+  const source = cleanText(text, 12000);
+  const match = source.match(new RegExp("(?:^|\\\\s)(" + labels.source.replace(/^\\^|\\$/g, "") + ")\\\\s*[:：-]\\\\s*([^.!?]{2,150}?)(?=\\\\s+(?:ish beruvchi|kompaniya|tashkilot|company|employer|manzil|joylashuv|location|address|maosh|ish haqi|salary|talablar|vazifalar|telefon|tel|aloqa|email|e-mail|contact|apply)\\\\s*[:：-]|[.!?]|$)", "iu"));
+  return match ? cleanText(match[2], 160) : "";
 }
 function isCategoryPage(url) {
   try {
