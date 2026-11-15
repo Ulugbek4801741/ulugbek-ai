@@ -304,7 +304,7 @@ test("API smoke tests", async (t) => {
       const config = fs.readFileSync(require("node:path").join(__dirname, "..", "public", "config.js"), "utf8");
       assert.match(config, /host\.endsWith\("\.github\.io"\)/);
       assert.match(config, /isNativeLocalhost/);
-      assert.match(config, /https:\/\/ulugbek-ai-1\.onrender\.com/);
+      assert.match(config, /https:\/\/ulugbek-ai1\.onrender\.com/);
     });
 
     await t.test("configured GitHub Pages origin can call backend and CSP permits it", async () => {
@@ -314,6 +314,12 @@ test("API smoke tests", async (t) => {
       assert.match(response.headers.get("content-security-policy") || "", /connect-src[^;]*https:\/\/ulugbek4801741\.github\.io/);
       const denied = await fetch(`${baseUrl}/api/health`, { headers: { Origin: "https://untrusted.example" } });
       assert.equal(denied.headers.get("access-control-allow-origin"), null);
+    });
+
+    await t.test("Express trusts the single Render proxy hop for client IP validation", async () => {
+      const fs = require("node:fs");
+      const serverSource = fs.readFileSync(require("node:path").join(__dirname, "..", "server.js"), "utf8");
+      assert.match(serverSource, /app\.set\("trust proxy", 1\)/);
     });
 
     await t.test("health endpoint reports the app", async () => {
