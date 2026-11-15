@@ -16,15 +16,34 @@ function locationClarification() {
   return "Ish qidirishni boshlashim uchun qaysi davlat yoki shaharda ish kerakligini yozing. Masalan: O‘zbekistonda, Buxoroda yoki Shveysariyada. Shundan keyin alohida vakansiyalarni tekshiraman.";
 }
 
+function extractJobRole(value) {
+  const text = String(value || "").toLowerCase();
+  const roles = [
+    { pattern: /(?:dasturchi|dasturlovchi|programmist|programmer|developer|software\\s+engineer|software\\s+developer)/iu, label: "Dasturchi", terms: "dasturchi programmer developer software engineer software developer" },
+    { pattern: /(?:frontend|front-end|front\\s+end)/iu, label: "Frontend dasturchi", terms: "frontend developer front-end engineer JavaScript React" },
+    { pattern: /(?:backend|back-end|back\\s+end)/iu, label: "Backend dasturchi", terms: "backend developer back-end engineer Node.js Python Java" },
+    { pattern: /(?:full[ -]?stack)/iu, label: "Full-stack dasturchi", terms: "full stack developer frontend backend" },
+    { pattern: /(?:android\\s+(?:dasturchi|developer)|kotlin\\s+developer)/iu, label: "Android dasturchi", terms: "Android developer Kotlin Java mobile developer" },
+    { pattern: /(?:qa\\s+engineer|test(?:chi|er)|software\\s+tester)/iu, label: "Dasturiy ta'minot testlovchisi", terms: "QA engineer software tester test automation" }
+  ];
+  return roles.find(role => role.pattern.test(text)) || null;
+}
+
 function buildJobSearchQueries(value) {
-  const original = String(value || "").replace(/\s+/g, " ").trim().slice(0, 180);
+  const original = String(value || "").replace(/\\s+/g, " ").trim().slice(0, 180);
+  const role = extractJobRole(original);
   const suffixes = [
     "vakansiya ish o'rni ish beruvchi lavozim telefon maosh talablar",
     "bo'sh ish o'rinlari ishga qabul qilinadi aloqa raqami",
     "jobs vacancies hiring employer contact phone salary",
     "site:hh.uz OR site:ishkop.uz OR site:olx.uz OR site:ish.uz"
   ];
-  return [...new Set([original, ...suffixes.map(suffix => original + " " + suffix)])].filter(Boolean);
+  const queries = [original, ...suffixes.map(suffix => original + " " + suffix)];
+  if (role) {
+    queries.push(original + " " + role.terms + " vacancy jobs hiring Tashkent Uzbekistan");
+    queries.push(original + " " + role.terms + " site:hh.uz OR site:linkedin.com/jobs OR site:ishkop.uz");
+  }
+  return [...new Set(queries)].filter(Boolean).slice(0, 6);
 }
 function buildJobSearchQuery(value) {
   return buildJobSearchQueries(value).slice(0, 2).join(" ");
@@ -144,6 +163,7 @@ function formatJobResults(results) {
       "Tajriba: " + (item.experience || "Sahifada ko‘rsatilmagan"),
       "Telefon: " + (item.phones.length ? item.phones.join(", ") : "Sahifada topilmadi"),
       "Email: " + (item.emails.length ? item.emails.join(", ") : "Sahifada topilmadi"),
+      "Vakansiya sahifasi: " + item.url,
       "E’lon holati: " + (item.activeStatus === "closed-or-expired-indicator-found" ? "Yopilgan yoki muddati o‘tgan bo‘lishi mumkin" : "Sahifa o‘qildi, lekin ish beruvchi hali ham qabul qilayotganini tasdiqlash kerak"),
       "Tekshiruv: " + (item.contactAvailable ? "Aloqa usuli sahifada topildi" : "Aloqa ma’lumoti ochiq sahifada topilmadi")
     ];
@@ -158,6 +178,7 @@ async function searchJobs(message, webSearch, options = {}) {
   }
   const limit = Math.max(1, Math.min(10, Number(options.limit) || 10));
   const queries = buildJobSearchQueries(message);
+  const requestedRole = extractJobRole(message);
   const batches = await Promise.all(queries.map(async query => {
     try { const value = await webSearch.search(query); return Array.isArray(value) ? value : []; }
     catch (_) { return null; }
@@ -201,6 +222,7 @@ async function searchJobs(message, webSearch, options = {}) {
   return {
     ok: true,
     queries,
+    requestedRole: requestedRole?.label || null,
     results: usable,
     searchedPages: candidates.length,
     openedPages: pages.filter(Boolean).length,
@@ -212,5 +234,5 @@ module.exports = {
   isJobSearchRequest, hasLocationHint, locationClarification,
   buildJobSearchQuery, buildJobSearchQueries, searchJobs,
   cleanText, decodeHtmlEntities, extractPhones, extractEmails,
-  extractSalary, extractJobDetails, formatJobResults
+  extractSalary, extractJobDetails, formatJobResults, extractJobRole
 };
