@@ -7,14 +7,16 @@ const languageCognition = require("./language-cognition");
 
 function analyze(message) {
   const text = String(message || "").trim();
-  const language = languageModule.detectLanguage(text);
+  const nativeLanguage = languageModule.analyze(text);
+  const language = nativeLanguage.language;
   const emotion = emotionalIntelligence.responseGuidance(text);
   const ethics = ethicalReasoning.evaluate(text);
   const linguistic = languageCognition.analyze(text);
   return {
-    language, emotion, ethics, linguistic,
+    language, nativeLanguage, emotion, ethics, linguistic,
     cognition: {
       language,
+      nativeLanguage: { intent: nativeLanguage.intent, tokenCount: nativeLanguage.tokenCount, script: nativeLanguage.script },
       linguistic: { intent: linguistic.intent, concepts: linguistic.concepts, learnedLanguage: linguistic.learnedLanguage },
       emotion: emotion.emotion,
       ethics: { risk: ethics.risk, category: ethics.category }
