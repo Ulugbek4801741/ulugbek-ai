@@ -82,7 +82,8 @@ function extractSalary(value) {
 }
 function extractLabeledValue(text, labels) {
   const source = cleanText(text, 12000);
-  const match = source.match(new RegExp("(?:^|\\\\s)(" + labels.source.replace(/^\\^|\\$/g, "") + ")\\\\s*[:：-]\\\\s*([^.!?]{2,150}?)(?=\\\\s+(?:ish beruvchi|kompaniya|tashkilot|company|employer|manzil|joylashuv|location|address|maosh|ish haqi|salary|talablar|vazifalar|telefon|tel|aloqa|email|e-mail|contact|apply)\\\\s*[:：-]|[.!?]|$)", "iu"));
+  const labelPattern = labels.source.replace(/\\\\s\\*:\\s*$/, "");
+  const match = source.match(new RegExp("(?:^|\\\\s)(" + labelPattern + ")\\\\s*[:：-]\\\\s*([^.!?]{2,150}?)(?=\\\\s+(?:ish beruvchi|kompaniya|tashkilot|company|employer|manzil|joylashuv|location|address|maosh|ish haqi|salary|talablar|vazifalar|telefon|tel|aloqa|email|e-mail|contact|apply)\\\\s*[:：-]|[.!?]|$)", "iu"));
   return match ? cleanText(match[2], 160) : "";
 }
 function isCategoryPage(url) {
