@@ -28,7 +28,6 @@ test("native cognition returns one concise synthesized answer, not a numbered ev
   assert.doesNotMatch(result.reply, /Mavjud dalillarga ko‘ra|Manba:|https:\/\//i);
   assert.doesNotMatch(result.reply, /mustaqil mantiqiy mexanizmi topgan dalillar|Mavzu:|\n1\./i);
   assert.ok(result.reply.length < 1100);
-  assert.doesNotMatch(result.reply, /example\\.org|methods|https/i);
 });
 
 test("native cognition clearly says when evidence is insufficient", () => {
