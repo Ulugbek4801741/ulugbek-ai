@@ -58,11 +58,17 @@ function cleanText(value, max = 650) {
 }
 function extractPhones(value) {
   const text = String(value || "");
-  const matches = text.match(/(?:\+?\s*998[\s().-]?(?:\d[\s().-]?){9}|(?:\+?\s*\d{1,3}[\s().-]?)?(?:\(?\d{2,4}\)?[\s().-]?){2,4}\d{2,4})/g) || [];
-  return [...new Set(matches.map(item => item.replace(/[().\s-]+/g, "").replace(/^00/, "+")).filter(item => {
-    const digits = item.replace(/\D/g, "");
-    return digits.length >= 9 && digits.length <= 15;
-  }))].slice(0, 4);
+  const pattern = /(?:\\+?\\s*998[\\s().-]?(?:\\d[\\s().-]?){9}|(?:\\+?\\s*\\d{1,3}[\\s().-]?)?(?:\\(?\\d{2,4}\\)?[\\s().-]?){2,4}\\d{2,4})/g;
+  const matches = [...text.matchAll(pattern)];
+  return [...new Set(matches.map(match => {
+    const raw = match[0];
+    const digits = raw.replace(/\\D/g, "");
+    const before = text.slice(Math.max(0, match.index - 35), match.index + 8);
+    const hasContactContext = /(?:telefon|tel\\.?|phone|call|aloqa|contact|whatsapp|viber)/iu.test(before);
+    const hasCountryPrefix = /^\\s*\\+/.test(raw) || /^00/.test(digits) || digits.startsWith("998");
+    if (digits.length < 9 || digits.length > 15 || (!hasContactContext && !hasCountryPrefix)) return "";
+    return raw.replace(/[().\\s-]+/g, "").replace(/^00/, "+");
+  }).filter(Boolean))].slice(0, 4);
 }
 function extractEmails(value) {
   return [...new Set((String(value || "").match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi) || []).map(x => x.toLowerCase()))].slice(0, 3);
