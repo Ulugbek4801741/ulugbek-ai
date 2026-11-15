@@ -161,3 +161,29 @@ test("job search sends profession-specific queries and returns a direct listing 
   assert.match(result.reply, /Junior Node.js Developer/);
   assert.ok(result.reply.includes("https://jobs.example.org/vacancy/node-42"));
 });
+
+test("recognizes colloquial Uzbek programming request and adds Kogon-specific searches", () => {
+  const request = "Kogondan ish topib ber Dasturlash bo‘yicha";
+  assert.equal(isJobSearchRequest(request), true);
+  assert.equal(hasLocationHint(request), true);
+  assert.equal(extractJobRole(request).label, "Dasturchi");
+  const queries = buildJobSearchQueries(request);
+  assert.ok(queries.some(query => /Kogon/.test(query)));
+  assert.ok(queries.some(query => /junior frontend backend Python JavaScript/i.test(query)));
+});
+test("does not present unrelated vacancies as programming jobs in Kogon", async () => {
+  const result = await searchJobs("Kogondan ish topib ber Dasturlash bo‘yicha", {
+    async search() {
+      return [
+        { title: "Ombor ishchisi", url: "https://jobs.example.org/kogon/warehouse", snippet: "Kogon vakansiya omborchi" },
+        { title: "Junior Python Developer", url: "https://jobs.example.org/kogon/python", snippet: "Kogon dasturchi vakansiya" }
+      ];
+    },
+    async fetchPage(url) {
+      if (url.endsWith("warehouse")) return { title: "Ombor ishchisi", url, content: ("Kogon ombor ishchisi. Ish beruvchi: Kogon. Maosh: 4 000 000 so'm. Talablar: tajriba. Telefon: +998 90 123 45 67. ").repeat(3) };
+      return { title: "Junior Python Developer", url, content: ("Kogon shahrida Junior Python Developer vakansiyasi. Ish beruvchi: Tech Kogon. Maosh: 5 000 000 so'm. Talablar: Python dasturlash tajribasi. Telefon: +998 90 123 45 67. ").repeat(3) };
+    }
+  });
+  assert.equal(result.results.length, 1);
+  assert.match(result.results[0].title, /Python Developer/);
+});
