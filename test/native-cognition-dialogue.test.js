@@ -40,3 +40,10 @@ test("dasturlash yordam so‘roviga aniq keyingi qadamni so‘raydi", () => {
   const reply = cognition.respond("Menga dasturlashda yordam ber", []).reply;
   assert.match(reply, /Python, JavaScript yoki Kotlin/);
 });
+
+test("sun’iy intellektni sodda o‘zbek tilida tushuntiradi", () => {
+  const reply = cognition.respond("Sun’iy intellekt nima? Oddiy o‘zbek tilida tushuntir.", []).reply;
+  assert.match(reply, /kompyuterga odam bajaradigan/);
+  assert.match(reply, /savollarga javob beradi/);
+  assert.doesNotMatch(reply, /\\[\\d+\\]|XX asr|transformer arxitekturasi/i);
+});

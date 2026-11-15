@@ -68,6 +68,9 @@ function quickReply(query) {
     return "Hisoblash: " + math.expression + " = " + answer + "\\nJavob: " + answer + ".";
   }
   const q = normalizeInput(query);
+  if (/(?:sun'iy intellekt|sun’iy intellekt|suniy intellekt|artificial intelligence|\bai\b).{0,35}(?:nima|degani|tushuntir)|(?:nima|degani).{0,35}(?:sun'iy intellekt|sun’iy intellekt|suniy intellekt|artificial intelligence)/iu.test(q)) {
+    return "Sun’iy intellekt — kompyuterga odam bajaradigan ayrim aqliy ishlarni bajarishni o‘rgatadigan texnologiya. Masalan, u savollarga javob beradi, matnni tarjima qiladi yoki rasmdagi narsalarni taniydi. Lekin u odam kabi ongli emas: o‘rgatilgan ma’lumotlar va dasturlar asosida javob yaratadi.";
+  }
   if (/^(o'zbekiston|uzbekiston|uzbekistan)$/.test(q)) {
     return "O‘zbekiston — Markaziy Osiyoda joylashgan mustaqil davlat. Poytaxti — Toshkent. Davlatning rasmiy nomi — O‘zbekiston Respublikasi. Qaysi yo‘nalish haqida batafsil ma’lumot kerak: tarixi, geografiyasi, aholisi, iqtisodiyoti yoki viloyatlari?";
   }

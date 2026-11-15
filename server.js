@@ -1101,6 +1101,20 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     conversationMessage, [...localKnowledge, ...cachedKnowledge, ...storedKnowledge.map(item => ({ title: item.title, content: item.content, source: item.source, status: "approved-local-knowledge", sourceQuality: 4 }))], conversationContext
   );
   const hasLocalAnswer = localCandidate?.reasoning?.answerable === true;
+  // Deterministic native dialogue (greetings, basic definitions and simple explanations)
+  // must not be overwritten by broad web-search snippets.
+  const simpleDefinitionRequest = /(?:sun['’‘ʻ]?iy intellekt|artificial intelligence|\\bai\\b).{0,45}(?:nima|degani|tushuntir)|(?:nima|degani).{0,45}(?:sun['’‘ʻ]?iy intellekt|artificial intelligence)/iu.test(conversationMessage);
+  if (simpleDefinitionRequest && localCandidate?.reasoning?.method === "built-in-dialogue" && localCandidate.reply) {
+    return res.json({
+      reply: localCandidate.reply,
+      mode: "native-simple-explanation",
+      agents: ["ULUGBEK Universal Agent"],
+      webSearchUsed: false,
+      synthesisModelConfigured: singleAgent.status().configured,
+      detectedLanguage: languageModule.detectLanguage(message),
+      cognition
+    });
+  }
   // Only greetings, thanks and plain arithmetic stay local. Every other question or task triggers fresh public research.
   const shouldResearch = searchIntent.shouldSearch;
   if (shouldResearch) {
