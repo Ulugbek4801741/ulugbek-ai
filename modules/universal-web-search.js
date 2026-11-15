@@ -124,14 +124,14 @@ function evidenceEntries(results) {
   }));
 }
 function formatEvidenceReply(results, reason = "") {
-  const items = Array.isArray(results) ? results : [];
-  if (!items.length) return "Savol bo'yicha bir nechta ochiq manbada izlandim, ammo hozircha ishonchli dalil topilmadi. Savolni aniqlashtirish yoki boshqa manba turini tekshirish kerak. Men javobni to'qib aytmayman.";
-  const lines = items.map((item, index) =>
-    (index + 1) + ". " + item.title + "\n" + (item.snippet || "Sahifa matni olinmadi.") +
-    "\nManba: " + item.url + "\nHolati: " + (item.pageRead ? "sahifa matni o'qildi, faktlar mustaqil tekshirilishi kerak" : "faqat qidiruv parchasi")
-  );
-  return "Savolga javobni ishonchli shakllantirish uchun quyidagi dalillar topildi:\n\n" + lines.join("\n\n") +
-    (reason ? "\n\nIzoh: " + reason : "") +
-    "\n\nBu avtomatik xulosa emas: til modeli ulanmagan yoki dalillar yetarli bo'lmagan holatda manbalarni ko'rsataman, tasdiqlanmagan fikrni aniq javob deb bermayman.";
+  const items = (Array.isArray(results) ? results : [])
+    .filter(item => item && item.pageRead === true && typeof item.url === "string")
+    .slice(0, 2);
+  const message = reason
+    ? "Hozircha savolga ishonchli yakuniy javob tuzish uchun yetarli tasdiqlangan dalil topilmadi. " + cleanText(reason, 220)
+    : "Hozircha savolga ishonchli yakuniy javob tuzish uchun yetarli tasdiqlangan dalil topilmadi. Qidiruv parchalari fakt sifatida qabul qilinmadi.";
+  if (!items.length) return message + " Bilmagan ma’lumotimni taxmin qilib aytmayman.";
+  return message + "\n\nTekshirish uchun o‘qilgan manbalar: " +
+    items.map(item => item.url).join(" | ");
 }
 module.exports = { detectSearchIntent, buildUniversalSearchQuery, buildUniversalSearchQueries, searchWeb, cleanText, evidenceEntries, formatEvidenceReply };

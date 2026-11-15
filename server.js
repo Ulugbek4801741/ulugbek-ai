@@ -1170,17 +1170,23 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       } catch (_) {}
     }
 
-    const sourceLines = found.results.map((item, index) =>
-      (index + 1) + ". " + item.title + "\n" + item.url +
-      (item.pageRead ? "\nOchiq sahifa matni olindi; faktlar mustaqil tasdiqlanmagan." : "\nFaqat qidiruv parchasi olindi; sahifa to‘liq o‘qilmadi.")
-    ).join("\n\n");
+    const usedSources = Array.isArray(result?.reasoning?.facts)
+      ? result.reasoning.facts.map(item => item.source).filter(Boolean)
+      : [];
+    const sourcePool = usedSources.length
+      ? found.results.filter(item => usedSources.includes(item.url))
+      : found.results.filter(item => item.pageRead === true);
+    const sourceLines = [...new Map(sourcePool.map(item => [item.url, item])).values()]
+      .slice(0, 2)
+      .map(item => item.url)
+      .join("\n");
 
     let reply;
     let reasoning;
     if (result?.reasoning?.answerable && result.reply) {
       reply = result.reply;
       reasoning = result.reasoning;
-      if (sourceLines) reply += "\n\nInternet manbalari:\n" + sourceLines;
+      if (sourceLines && !reply.includes("https://")) reply += "\n\nManba: " + sourceLines;
     } else {
       reply = universalSearch.formatEvidenceReply(found.results,
         found.ok ? "" : "Internet qidiruvi vaqtincha ishlamadi; mahalliy bilimlardan ham ishonchli javob topilmadi.");

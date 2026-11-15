@@ -46,11 +46,12 @@ test("keeps source metadata in evidence entries", () => {
   assert.equal(entries[0].status, "unverified-public-page-content");
   assert.equal(entries[0].sourceQuality, 2);
 });
-test("fallback distinguishes page reads from search snippets and never claims verification", () => {
+test("fallback does not present an unread search snippet as verified evidence", () => {
   const reply = formatEvidenceReply([{ title: "Public source", snippet: "Useful evidence", url: "https://example.org", pageRead: false }]);
-  assert.match(reply, /Useful evidence/);
-  assert.match(reply, /faqat qidiruv parchasi/);
-  assert.match(reply, /avtomatik xulosa emas/);
+  assert.match(reply, /yetarli tasdiqlangan dalil topilmadi/);
+  assert.match(reply, /Qidiruv parchalari fakt sifatida qabul qilinmadi/);
+  assert.equal(reply.includes("Useful evidence"), false);
+  assert.equal(reply.includes("https://example.org"), false);
 });
 test("no-result and search errors are explicit", async () => {
   const empty = await searchWeb("Ish topib ber", { search: async () => [] });
