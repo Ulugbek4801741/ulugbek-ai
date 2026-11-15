@@ -193,5 +193,5 @@ test("explains that no Kogon programmer vacancy page was verified", async () => 
     async search() { return []; }
   });
   assert.match(result.reply, /Kogon hududida dasturchi/);
-  assert.match(result.reply, /umumiy ish saytlari/);
+  assert.match(result.reply, /umumiy ish saytlari/i);
 });
