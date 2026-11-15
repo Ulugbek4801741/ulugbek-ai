@@ -93,7 +93,7 @@ test("job search detects job intent and returns read public listing details", as
   assert.match(result.reply, /Example Farm AG/);
   assert.match(result.reply, /\+41441234567/);
   assert.match(result.reply, /5 000 CHF/);
-  assert.doesNotMatch(result.reply, /jobs\.example\.org/);
+  assert.match(result.reply, /https:\/\/jobs\.example\.org\/tractor\/123/);
   assert.equal(result.results[0].pageRead, true);
 });
 
@@ -132,7 +132,7 @@ test("returns at most ten unique individual vacancy pages and never treats categ
   });
   assert.equal(result.results.length, 10);
   assert.match(result.reply, /10 ta alohida vakansiya/);
-  assert.doesNotMatch(result.reply, /jobs\.example\.org/);
+  assert.match(result.reply, /https:\/\/jobs\.example\.org\/vacancy\/0/);
 });
 
 test("recognizes a programmer profession and adds role-specific job searches", () => {
