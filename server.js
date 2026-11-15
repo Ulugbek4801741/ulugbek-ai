@@ -1081,7 +1081,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       const legalEvidence = await legalResearch.research(conversationMessage, countryCode, webSearch, { limit: 6 });
       if (!legalEvidence.results.length || !legalEvidence.results.some(item => item.pageRead)) {
         return res.json({
-          reply: legalResearch.noEvidenceReply(legalEvidence.jurisdiction) + (legalEvidence.results.length ? "\\n\\nTopilgan rasmiy sahifalar hali to‘liq o‘qilmadi; ularni tasdiqlangan qonuniy dalil sifatida ishlatmadim." : ""),
+          reply: legalResearch.noEvidenceReply(legalEvidence.jurisdiction) + (legalEvidence.results.length ? "\n\nTopilgan rasmiy sahifalar hali to‘liq o‘qilmadi; ularni tasdiqlangan qonuniy dalil sifatida ishlatmadim." : ""),
           mode: "legal-official-source-not-confirmed",
           webSearchUsed: true,
           legal: { checked: false, jurisdiction: legalEvidence.jurisdiction, officialSourcesFound: legalEvidence.results.length, officialPagesRead: 0 }
@@ -1092,7 +1092,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       try { legalAnswer = await singleAgent.answer(conversationMessage, legalEvidence.results, legalContext); } catch (_) {}
       const reply = legalAnswer?.reply || legalResearch.noEvidenceReply(legalEvidence.jurisdiction);
       return res.json({
-        reply: reply + "\\n\\nTekshirilgan rasmiy manbalar:\\n" + legalResearch.sourceSummary(legalEvidence.results),
+        reply: reply + "\n\nTekshirilgan rasmiy manbalar:\n" + legalResearch.sourceSummary(legalEvidence.results),
         mode: "official-jurisdiction-legal-research",
         agents: ["ULUGBEK Universal Agent"],
         webSearchUsed: true,
