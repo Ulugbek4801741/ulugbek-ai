@@ -69,7 +69,7 @@ function quickReply(query) {
       const expression = arithmeticInput.replace(/[=?]+$/g, "").trim();
       const value = mathEngine.calculateExpression(expression);
       const answer = mathEngine.formatNumber(value);
-      return "Hisoblash: " + expression + " = " + answer + "\\nJavob: " + answer + ".";
+      return "Hisoblash: " + expression + " = " + answer + String.fromCharCode(10) + "Javob: " + answer + ".";
     } catch (error) {
       if (/Nolga bo‘lish mumkin emas/.test(error.message)) return "Bu ifodada nolga bo‘lish bor. Matematikada sonni 0 ga bo‘lish mumkin emas, shuning uchun natija aniqlanmaydi.";
       return "Matematik ifodada xato bor: " + error.message;
@@ -81,6 +81,9 @@ function quickReply(query) {
     return "Hisoblash: " + math.expression + " = " + answer + "\\nJavob: " + answer + ".";
   }
   const q = normalizeInput(query);
+  if (/(?:sun'iy intellekt|sun’iy intellekt|suniy intellekt|artificial intelligence|\bai\b).{0,35}(?:nima|degani|tushuntir)|(?:nima|degani).{0,35}(?:sun'iy intellekt|sun’iy intellekt|suniy intellekt|artificial intelligence)/iu.test(q)) {
+    return "Sun’iy intellekt — kompyuterga odam bajaradigan ayrim aqliy ishlarni bajarishni o‘rgatadigan texnologiya. Masalan, u savollarga javob beradi, matnni tarjima qiladi yoki rasmdagi narsalarni taniydi. Lekin u odam kabi ongli emas: o‘rgatilgan ma’lumotlar va dasturlar asosida javob yaratadi.";
+  }
   if (/(?:temur\s*(?:lang|lank|lenk)|tamerlan|amir\s*temur)/iu.test(q) &&
       /(?:tarix|podshoh|podshox|potshox|hukmdor|shoh|sulton|kim|haqida|ma'lumot|malumot)/iu.test(q)) {
     return "Temur Lang nomi bilan tanilgan hukmdor — Amir Temur (1336–1405). U XIV asrda Movarounnahrda kuchli davlat barpo etgan sarkarda va davlat arbobi edi. Poytaxti Samarqand bo‘lgan. Amir Temur Samarqandni yirik siyosiy, savdo va me’morchilik markaziga aylantirishga katta e’tibor bergan. “Temur Lang” yoki “Tamerlan” laqabi uning yoshligidagi jarohat sabab oqsoqlanib yurishi bilan bog‘lanadi.";
