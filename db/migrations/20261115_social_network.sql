@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS social_posts (
   author_id UUID NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
   body TEXT NOT NULL DEFAULT '' CHECK (length(body) <= 5000),
   media_object_key TEXT,
-  visibility TEXT NOT NULL DEFAULT 'public' CHECK (visibility IN ('public', 'followers', 'private')),
+  visibility TEXT NOT NULL DEFAULT 'private' CHECK (visibility IN ('public', 'followers', 'private')),
   status TEXT NOT NULL DEFAULT 'published' CHECK (status IN ('published', 'hidden', 'removed')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -99,6 +99,12 @@ CREATE TABLE IF NOT EXISTS social_messages (
 );
 CREATE INDEX IF NOT EXISTS social_messages_inbox_idx ON social_messages(recipient_id, created_at DESC);
 
--- RLS policies are intentionally deferred until the authenticated API role and
--- transaction-scoped app.user_id identity are configured and integration-tested.
--- Never connect the public web process with a database owner/superuser role.
+-- SECURITY GATE: RLS policies are not yet installed. Do not apply this migration
+-- to production or expose these tables until the authenticated API role,
+-- transaction-scoped app.user_id identity, and per-table policies are implemented
+-- and integration-tested. Never connect the public web process as a table owner
+-- or superuser. Keep social read/write endpoints disabled until that gate passes.
+
+-- Direct-message bodies are currently stored as text in this foundation schema.
+-- Do not enable direct messages until encryption-at-rest, access controls,
+-- retention/deletion, and a documented key-management design are implemented.
