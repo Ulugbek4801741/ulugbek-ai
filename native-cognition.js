@@ -88,7 +88,7 @@ function quickReply(query) {
   if (/^(?:menga\s+)?yordam\s+ber(?:\s+(?:olasanmi|olasizmi)|a\s+(?:olasanmi|olasizmi)|ing)?[!? .]*$/iu.test(q) || /^(?:menga\s+)?yordam\s+kerak[!? .]*$/iu.test(q)) {
     return "Albatta, yordam beraman. Qaysi ishda yordam kerak? Masala yechish, darsni tushuntirish, tarjima, matn yozish yoki dastur kodi — topshirig‘ingizni yuboring.";
   }
-  if (/(?:ai\s*)?(?:agent|yordamchi).{0,100}(?:kod|cod|code|dastur).{0,35}(?:yoz|yarat)|(?:kod|cod|code|dastur).{0,60}(?:ai\s*)?(?:agent|yordamchi).{0,40}(?:yoz|yarat)/iu.test(q)) {
+  if (/(?:agent|yordamchi).{0,120}(?:kod|cod|code|dastur).{0,45}(?:yoz|yarat)|(?:agent|yordamchi).{0,100}(?:yoz|yarat).{0,60}(?:kod|cod|code|dastur)/iu.test(q)) {
     return [
       "Python tilida AI-agent uchun boshlang‘ich karkas. U vazifani qabul qiladi, mavjud vositani tanlaydi va ishga tushirishdan oldin ruxsat so‘raydi. Bu hali mustaqil til modeli emas — unga keyin model ulash kerak.",
       "",
@@ -110,7 +110,7 @@ function quickReply(query) {
       "```",
       "",
       "Saqlash: `agent.py`. Ishga tushirish: `python agent.py`."
-    ].join(\"\\n\");
+    ].join(String.fromCharCode(10));
   }
   if (/^(o'zbekiston|uzbekiston|uzbekistan)$/.test(q)) {
     return "O‘zbekiston — Markaziy Osiyoda joylashgan mustaqil davlat. Poytaxti — Toshkent. Davlatning rasmiy nomi — O‘zbekiston Respublikasi. Qaysi yo‘nalish haqida batafsil ma’lumot kerak: tarixi, geografiyasi, aholisi, iqtisodiyoti yoki viloyatlari?";
