@@ -27,3 +27,13 @@ test("keeps the original city when the user repeats a short job request", () => 
   assert.match(expanded, /Kogon/i);
   assert.match(expanded, /Ish topib ber/i);
 });
+
+test("retains city and job intent when the user clarifies a profession in natural language", () => {
+  memory.clear();
+  const session = "session-programmer-123";
+  memory.remember(session, "Ish topib ber Toshkent shahridan");
+  const expanded = memory.expand(session, "Men dasturchiman shu yo'nalishda izlab topib ber");
+  assert.match(expanded, /Toshkent/i);
+  assert.match(expanded, /dasturchiman/i);
+  assert.match(expanded, /Ish topib ber/i);
+});
