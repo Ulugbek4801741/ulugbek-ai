@@ -1108,9 +1108,6 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     return res.json({
       reply: localCandidate.reply,
       mode: "native-dialogue",
-    return res.json({
-      reply: localCandidate.reply,
-      mode: "native-dialogue",
       agents: ["ULUGBEK Universal Agent"],
       webSearchUsed: false,
       synthesisModelConfigured: singleAgent.status().configured,
