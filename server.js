@@ -742,6 +742,7 @@ app.get("/api/integrations/app-stores", (_req, res) => {
 });
 
 const capabilityCatalog = require("./modules/catalog");
+const socialNetworkPolicy = require("./modules/social-network-policy");
 const workflowGate = require("./modules/workflow-gate");
 const securityPolicy = require("./modules/security-policy");
 const globalSafetyShield = require("./modules/global-safety-shield");
@@ -775,6 +776,11 @@ app.post("/api/workflows", (req, res) => {
   } catch (error) {
     res.status(400).json({ error: "Workflow yaratilmadi: " + (error.message || "noto‘g‘ri so‘rov.") });
   }
+});
+
+app.get("/api/social/status", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  return res.json({ ok: true, socialNetwork: socialNetworkPolicy.getStatus() });
 });
 
 app.get("/api/modules", (_req, res) => {
