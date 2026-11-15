@@ -25,7 +25,7 @@ test("native cognition returns one concise synthesized answer, not a numbered ev
   const result = cognition.respond("Matn tahlilining zamonaviy metodlari", entries, context);
   assert.equal(result.reasoning.answerable, true);
   assert.ok(result.reasoning.facts.length <= 2);
-  assert.match(result.reply, /^Mavjud dalillarga ko‘ra,/);
+  assert.doesNotMatch(result.reply, /Mavjud dalillarga ko‘ra|Manba:|https:\/\//i);
   assert.doesNotMatch(result.reply, /mustaqil mantiqiy mexanizmi topgan dalillar|Mavzu:|\n1\./i);
   assert.ok(result.reply.length < 1100);
 });

@@ -442,15 +442,16 @@ test("API smoke tests", async (t) => {
       assert.match(body.error, /provayderi sozlanmagan/i);
     });
 
-    await t.test("non-Uzbek chat does not pretend to translate without a provider", async () => {
+    await t.test("non-Uzbek chat is handled by the native language module without a translation provider", async () => {
       const response = await fetch(`${baseUrl}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: "Hello, please help me." })
       });
       const body = await response.json();
-      assert.equal(response.status, 503);
-      assert.equal(body.translation.required, true);
+      assert.equal(response.status, 200);
+      assert.equal(typeof body.reply, "string");
+      assert.equal(body.translation, undefined);
     });
 
     await t.test("chat accepts a message using native-only reasoning", async () => {

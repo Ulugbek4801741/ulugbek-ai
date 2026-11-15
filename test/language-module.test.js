@@ -26,6 +26,8 @@ test("language instruction gives the shared agent response policy", () => {
   const prompt = language.buildLanguageInstruction("Salom, menga yordam bering");
   assert.match(prompt, /O‘zbek tilida/);
   assert.match(prompt, /lotin\/kirill/);
+  assert.match(prompt, /bitta yaxlit, professional va tabiiy javob/i);
+  assert.match(prompt, /manba nomi yoki havolalarni foydalanuvchiga ko‘rsatmang/);
 });
 test("status does not falsely claim neural model training", () => {
   assert.equal(language.status().ready, true);

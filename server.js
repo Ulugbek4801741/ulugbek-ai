@@ -1020,43 +1020,8 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       safety: { blocked: true, category: shieldDecision.reason, quarantined: shieldDecision.quarantined === true }
     });
   }
-  const detectedForTranslation = languageModule.detectLanguage(message);
-  let chatReplyLanguage = detectedForTranslation.code;
-  const sourceLanguageForTranslation = detectedForTranslation.code === "unknown"
-    ? "auto" : detectedForTranslation.code;
-  const shouldTranslateChat = detectedForTranslation.code !== "uz";
-  if (shouldTranslateChat) {
-    try {
-      const translatedInput = await translationService.translate(conversationMessage, {
-        targetLanguage: "uz",
-        sourceLanguage: sourceLanguageForTranslation
-      });
-      conversationMessage = translatedInput.text;
-      chatReplyLanguage = translatedInput.sourceLanguage;
-    } catch (error) {
-      return res.status(503).json({
-        error: "Boshqa tildagi xabarni o‘zbekchaga tarjima qilib bo‘lmadi. Tarjima uchun ULUGBEK AI model provayderini sozlang va qayta urinib ko‘ring.",
-        translation: { required: true, available: false, reason: error.code || "translation-unavailable" }
-      });
-    }
-  }
-  if (chatReplyLanguage && chatReplyLanguage !== "uz") {
-    const sendJson = res.json.bind(res);
-    res.json = payload => {
-      if (!payload || typeof payload.reply !== "string") return sendJson(payload);
-      translationService.translate(payload.reply, { targetLanguage: chatReplyLanguage, sourceLanguage: "uz" })
-        .then(translatedOutput => sendJson({
-          ...payload,
-          reply: translatedOutput.text,
-          translation: { used: true, sourceLanguage: "uz", targetLanguage: chatReplyLanguage }
-        }))
-        .catch(() => {
-          res.status(502);
-          sendJson({ error: "Javob tayyorlandi, lekin foydalanuvchi tiliga tarjima qilish amalga oshmadi. Qayta urinib ko‘ring.", translation: { used: true, failed: true } });
-        });
-      return res;
-    };
-  }
+  // Keep the original message in its detected language. The native language module
+  // handles Uzbek, English, Russian, Turkish, and Kazakh without requiring a translation API.
   const conversationContext = conversationOrchestrator.analyze(conversationMessage);
   const cognition = conversationContext.cognition;
   const safetyReply = conversationOrchestrator.safetyReply(conversationContext);
@@ -1170,23 +1135,13 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       } catch (_) {}
     }
 
-    const usedSources = Array.isArray(result?.reasoning?.facts)
-      ? result.reasoning.facts.map(item => item.source).filter(Boolean)
-      : [];
-    const sourcePool = usedSources.length
-      ? found.results.filter(item => usedSources.includes(item.url))
-      : found.results.filter(item => item.pageRead === true);
-    const sourceLines = [...new Map(sourcePool.map(item => [item.url, item])).values()]
-      .slice(0, 2)
-      .map(item => item.url)
-      .join("\n");
+    // Evidence source URLs stay server-side; only the synthesized answer is returned.
 
     let reply;
     let reasoning;
     if (result?.reasoning?.answerable && result.reply) {
       reply = result.reply;
       reasoning = result.reasoning;
-      if (sourceLines && !reply.includes("https://")) reply += "\n\nManba: " + sourceLines;
     } else {
       reply = universalSearch.formatEvidenceReply(found.results,
         found.ok ? "" : "Internet qidiruvi vaqtincha ishlamadi; mahalliy bilimlardan ham ishonchli javob topilmadi.");
@@ -1201,12 +1156,11 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       reply,
       mode: result?.modelUsed ? "self-hosted-universal-research-agent" : "native-universal-research-single-agent-no-external-ai",
       agents: ["ULUGBEK Universal Agent"],
-      reasoning,
+      reasoning: reasoning ? { method: reasoning.method, answerable: reasoning.answerable, inference: reasoning.inference, outputPolicy: "single-professional-answer" } : null,
       webSearchUsed: found.ok,
       webSearchSucceeded: found.ok,
       jobSearchUsed: searchIntent.isJobSearch,
       platformSearch: searchIntent.platforms,
-      webResults: found.results,
       synthesisModelConfigured: singleAgent.status().configured,
       detectedLanguage: languageModule.detectLanguage(message),
       researchIntent: searchIntent.reason,
