@@ -17,6 +17,7 @@ const languageLearningWorker = require("./modules/language-learning-worker");
 const legalResearch = require("./modules/legal-research");
 const errorLearning = require("./modules/error-learning");
 const conversationMemory = require("./modules/conversation-memory");
+const userPreferences = require("./modules/user-preferences").createUserPreferences();
 const researchCache = require("./modules/research-cache");
 const knowledgeStore = require("./modules/knowledge-store");
 const publicWebReader = require("./modules/public-web-reader");
@@ -1028,6 +1029,11 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   res.set("Cache-Control", "no-store");
   if (!message) return res.status(400).json({ error: "Xabar bo‘sh bo‘lmasligi kerak." });
   if (message.length > MAX_TASK_LENGTH) return res.status(413).json({ error: "Xabar 4000 belgidan oshmasligi kerak." });
+  const preferenceUpdate = userPreferences.apply(sessionId, message);
+  if (preferenceUpdate.changed) {
+    const languageName = preferenceUpdate.preference?.name || "tanlangan";
+    return res.json({ reply: "Tushundim. Endi sizga " + languageName + " tilida javob beraman. Bu sozlama ushbu brauzer suhbat identifikatoriga saqlanadi.", mode: "language-preference-saved", languagePreference: preferenceUpdate.preference?.code || null });
+  }
   let conversationMessage = conversationMemory.expand(sessionId, message);
   req.chatContextMessage = conversationMessage;
   const inputSafety = require("./modules/input-safety").inspectUserMessage(message);
@@ -1041,6 +1047,13 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   // Keep the original message in its detected language. The native language module
   // handles Uzbek, English, Russian, Turkish, and Kazakh without requiring a translation API.
   const conversationContext = conversationOrchestrator.analyze(conversationMessage);
+  const savedLanguagePreference = userPreferences.get(sessionId);
+  if (savedLanguagePreference) {
+    conversationContext.language = { ...conversationContext.language, code: savedLanguagePreference.code, confidence: 1, explicit: true };
+    conversationContext.responseLanguageInstruction = savedLanguagePreference.instruction;
+    conversationContext.cognition.language = conversationContext.language;
+    conversationContext.cognition.nativeLanguage = { ...conversationContext.cognition.nativeLanguage, language: conversationContext.language };
+  }
   const cognition = conversationContext.cognition;
   const legalAssessment = legalResearch.classifyRequest(conversationMessage, countryCode);
   if (legalAssessment.potentiallyIllegal) {
