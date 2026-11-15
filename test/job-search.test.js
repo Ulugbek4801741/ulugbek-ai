@@ -50,7 +50,8 @@ test("fallback does not present an unread search snippet as verified evidence", 
   const reply = formatEvidenceReply([{ title: "Public source", snippet: "Useful evidence", url: "https://example.org", pageRead: false }]);
   assert.match(reply, /yetarli tasdiqlangan dalil topilmadi/);
   assert.match(reply, /Qidiruv parchalari fakt sifatida qabul qilinmadi/);
-  assert.doesNotMatch(reply, /Useful evidence|https:\\/\\/example\\.org/);
+  assert.equal(reply.includes("Useful evidence"), false);
+  assert.equal(reply.includes("https://example.org"), false);
 });
 test("no-result and search errors are explicit", async () => {
   const empty = await searchWeb("Ish topib ber", { search: async () => [] });
