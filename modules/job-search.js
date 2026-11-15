@@ -99,6 +99,9 @@ function extractJobDetails(item, message) {
   const salary = extractSalary(text);
   const employer = extractLabeledValue(text, /(?:ish beruvchi|kompaniya|tashkilot|company|employer|работодатель)\s*:/iu);
   const location = extractLabeledValue(text, /(?:manzil|joylashuv|location|address|город|адрес)\s*:/iu);
+  const requirements = extractLabeledValue(text, /(?:talablar|malaka talablari|requirements|qualifications|требования)\s*:/iu);
+  const schedule = extractLabeledValue(text, /(?:ish grafigi|ish vaqti|jadval|schedule|working hours|график работы)\s*:/iu);
+  const experience = extractLabeledValue(text, /(?:tajriba|ish tajribasi|experience|стаж)\s*:/iu);
   const apply = /(?:ariza|murojaat|bog'lan|aloqa|telefon|apply|contact|отклик|связаться)/iu.test(text);
   const jobSignals = (/(?:vakans|bo'sh ish|ish o'rni|lavozim|talablar|vazifalar|tajriba|ish grafigi|ishga qabul|jobs?|position|requirements|responsibilit|employment|зарплат|ваканси|должност|обязанност)/iu.test(text) ? 1 : 0) +
     (salary ? 1 : 0) + (phones.length || emails.length || apply ? 1 : 0) +
@@ -108,6 +111,9 @@ function extractJobDetails(item, message) {
     employer,
     location: location || "",
     salary,
+    requirements,
+    schedule,
+    experience,
     phones,
     emails,
     contactAvailable: phones.length > 0 || emails.length > 0 || apply,
@@ -124,6 +130,9 @@ function formatJobResults(results) {
       "Ish beruvchi: " + (item.employer || "Sahifada aniq ko‘rsatilmagan"),
       "Hudud: " + (item.location || "Sahifada aniq ko‘rsatilmagan"),
       "Maosh: " + (item.salary || "Sahifada ko‘rsatilmagan"),
+      "Talablar: " + (item.requirements || "Sahifada batafsil ko‘rsatilmagan"),
+      "Ish vaqti: " + (item.schedule || "Sahifada ko‘rsatilmagan"),
+      "Tajriba: " + (item.experience || "Sahifada ko‘rsatilmagan"),
       "Telefon: " + (item.phones.length ? item.phones.join(", ") : "Sahifada topilmadi"),
       "Email: " + (item.emails.length ? item.emails.join(", ") : "Sahifada topilmadi"),
       "E’lon holati: " + (item.activeStatus === "closed-or-expired-indicator-found" ? "Yopilgan yoki muddati o‘tgan bo‘lishi mumkin" : "Sahifa o‘qildi, lekin ish beruvchi hali ham qabul qilayotganini tasdiqlash kerak"),
