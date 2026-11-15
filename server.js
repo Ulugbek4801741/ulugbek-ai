@@ -144,6 +144,8 @@ const BUILD_BRANCH = process.env.RENDER_GIT_BRANCH || process.env.GITHUB_REF_NAM
 const SERVER_STARTED_AT = new Date().toISOString();
 
 app.disable("x-powered-by");
+// Render terminates TLS and forwards client IPs through one trusted proxy hop.
+app.set("trust proxy", 1);
 // Always allow the official GitHub Pages origin. Hosting variables are additional allowed origins,
 // not overrides, so an outdated FRONTEND_ORIGIN value cannot silently break the public website.
 const FRONTEND_ORIGINS = new Set([
