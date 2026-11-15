@@ -24,11 +24,11 @@ test("dalilsiz savolga uydirma javob bermaydi", () => {
   const reply = cognition.respond("Kvazarlar qanday hosil bo‘ladi?", []).reply;
   assert.match(reply, /ishonchli javob topa olmadim/);
 });
-test("tasdiqlangan bilimdan manbali dalil qaytaradi", () => {
+test("tasdiqlangan bilimdan javob qaytaradi, manbani foydalanuvchiga ko‘rsatmaydi", () => {
   const entries = [{title:"Yer",content:"Yer Quyosh atrofida aylanadigan sayyoradir. U Quyosh tizimining uchinchi sayyorasi hisoblanadi.",source:"https://uz.wikipedia.org/wiki/Yer"}];
   const result = cognition.respond("Yer qaysi sayyora?", entries);
   assert.equal(result.reasoning.answerable, true);
-  assert.match(result.reply, /Manba:/);
+  assert.doesNotMatch(result.reply, /Manba:|https:\/\//i);
 });
 
 test("ingliz tilini o‘rganish so‘roviga amaliy birinchi dars beradi", () => {
