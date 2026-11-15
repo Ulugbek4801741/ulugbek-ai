@@ -138,7 +138,7 @@ function formatJobResults(results) {
       "E’lon holati: " + (item.activeStatus === "closed-or-expired-indicator-found" ? "Yopilgan yoki muddati o‘tgan bo‘lishi mumkin" : "Sahifa o‘qildi, lekin ish beruvchi hali ham qabul qilayotganini tasdiqlash kerak"),
       "Tekshiruv: " + (item.contactAvailable ? "Aloqa usuli sahifada topildi" : "Aloqa ma’lumoti ochiq sahifada topilmadi")
     ];
-    return lines.join("\n");
+    return details.join("\n");
   }).join("\n\n");
   return "ULUGBEK AI " + results.length + " ta alohida vakansiya sahifasini ochib tekshirdi. Quyida faqat sahifasi o‘qilgan e’lonlar berilgan. Topilmagan telefon, maosh yoki ish beruvchi ma’lumoti taxmin qilinmadi.\n\n" + lines;
 }
