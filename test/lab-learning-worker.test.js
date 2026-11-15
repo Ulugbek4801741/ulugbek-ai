@@ -15,6 +15,9 @@ test("research worker prioritizes Uzbek, then English, then Russian", () => {
   assert.equal(status.writesToExternalSites, false);
   assert.equal(status.executesDownloadedCode, false);
   assert.equal(status.chatUsesOnlyApprovedKnowledge, true);
+  assert.equal(status.knowledgeProvenanceTracking, true);
+  assert.equal(status.knowledgeContentHash, "sha256");
+  assert.equal(status.unverifiedCandidatesRequireReview, true);
   assert.equal(status.modelWeightsRetrained, false);
   assert.equal(status.genericPublicHttpsWeb, true);
   assert.equal(status.requestConcurrency, 1);
