@@ -102,18 +102,26 @@ function createLanguageCognition(options={}){
  async function trainFromEntries(entries){
   const existing=await readJson(corpusFile,[]),corpus=Array.isArray(existing)?existing:[],known=new Set(corpus.map(x=>x.source)),additions=[];
   for(const entry of Array.isArray(entries)?entries:[]){
-   // Pending-review pages are evidence candidates only; never train the model before approval.
-   if(!entry||entry.status!=="approved"||!trustedSource(entry.source)||known.has(entry.source))continue;
-   const text=String(entry.content||"").replace(/\s+/g," ").trim().slice(0,4000);if(text.length<80)continue;
+   // Reviewed pages can contribute language patterns. Autonomous crawler candidates
+   // may also contribute statistical language patterns, but never factual retrieval.
+   const reviewed=entry?.status==="approved";
+   const crawlerCandidate=entry?.status==="pending-review"&&
+    ["AutonomousResearchAgent","AutonomousOpenWebResearchAgent"].includes(entry.agent)&&
+    ["public-encyclopedia-summary-unverified","public-web-page-unverified"].includes(entry.quality);
+   if(!entry||(!reviewed&&!crawlerCandidate)||!trustedSource(entry.source)||known.has(entry.source))continue;
+   const text=String(entry.content||"").replace(/\s+/g," ").trim().slice(0,4000);
+   if(text.length<160||/(?:<script|javascript:|\b(?:api[_ -]?key|password|secret token)\b)/iu.test(text))continue;
    const detected=detectLanguage(text,entry.language),language=LANGUAGES.has(detected.code)?detected.code:"unknown";if(language==="unknown")continue;
-   additions.push({id:crypto.randomUUID(),source:entry.source,title:String(entry.title||"Nomsiz manba").slice(0,180),language,text,sourceReviewStatus:entry.status,collectedAt:entry.createdAt||new Date().toISOString()});
+   additions.push({id:crypto.randomUUID(),source:entry.source,title:String(entry.title||"Nomsiz manba").slice(0,180),language,text,
+    sourceReviewStatus:entry.status,trainingScope:reviewed?"reviewed-language-patterns-only":"unverified-language-patterns-only",
+    factualUseAllowed:false,collectedAt:entry.createdAt||new Date().toISOString()});
    known.add(entry.source);if(corpus.length+additions.length>=MAX_CORPUS_SOURCES)break;
   }
   const next=[...corpus,...additions].slice(-MAX_CORPUS_SOURCES);if(additions.length)await atomicWrite(corpusFile,next);
   const all=[];for(const item of next){for(const sentence of splitSentences(item.text)){all.push({language:item.language,text:sentence});if(all.length>=MAX_SENTENCES)break;}if(all.length>=MAX_SENTENCES)break;}
   const languages={};for(const code of LANGUAGES){const rows=all.filter(x=>x.language===code);if(rows.length)languages[code]=languageStats(rows);}
   model={schemaVersion:1,modelType:"local-word-ngram-language-model",trainedAt:new Date().toISOString(),sourceCount:next.length,sentenceCount:all.length,languages,
-   safety:"Public text is used only for statistical language patterns; pending facts are never auto-approved for factual chat answers.",neuralWeightsTrained:false};
+   safety:"Approved and crawler-candidate public text is used only for statistical language patterns; unreviewed facts are never auto-approved for factual chat answers.",neuralWeightsTrained:false};
   await atomicWrite(modelFile,model);
   return{addedSources:additions.length,corpusSources:next.length,sentences:all.length,languages:Object.keys(languages),modelType:model.modelType,neuralWeightsTrained:false,
    validation:Object.fromEntries(Object.entries(languages).map(([code,data])=>[code,data.validation]))};
@@ -151,7 +159,7 @@ function createLanguageCognition(options={}){
   const languages=model?.languages||{},trained=Boolean(model?.sourceCount>0&&model?.sentenceCount>0);return{ready:true,module:"ulugbek-independent-language-cognition",modelType:trained?model.modelType:"not-trained-yet",modelTrained:trained,trainingMode:"incremental-local-word-ngram-from-allowlisted-public-corpus",
    selfTrainingEnabled:true,internetSourceWorker:"lab-learning-worker",corpusSources:model?.sourceCount||0,sentenceCount:model?.sentenceCount||0,
    languages:Object.fromEntries(Object.entries(languages).map(([code,d])=>[code,{vocabularySize:d.vocabularySize,tokenCount:d.tokenCount,sentenceCount:d.sentenceCount,predictionReady:d.suggestionsReady,validation:d.validation}])),
-   neuralWeightsTrained:false,factualAutoApproval:false,persistence:"server-side-json-atomic-write",dataDirectory:path.basename(dataDir)};
+   neuralWeightsTrained:false,factualAutoApproval:false,unreviewedTextUsedOnlyForLanguagePatterns:true,persistence:"server-side-json-atomic-write",dataDirectory:path.basename(dataDir)};
  }
  return{initialize,trainFromEntries,analyze,concepts,scoreText,rankEvidence,suggestNextWords,status};
 }
