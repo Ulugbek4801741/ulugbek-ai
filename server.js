@@ -13,6 +13,7 @@ const ethicalReasoning = require("./modules/ethical-reasoning");
 const conversationOrchestrator = require("./modules/conversation-orchestrator");
 const languageCognition = require("./modules/language-cognition");
 const languageLearningWorker = require("./modules/language-learning-worker");
+const legalResearch = require("./modules/legal-research");
 const errorLearning = require("./modules/error-learning");
 const conversationMemory = require("./modules/conversation-memory");
 const researchCache = require("./modules/research-cache");
@@ -584,7 +585,22 @@ app.get("/api/language/status", (_req, res) => {
 
 app.get("/api/cognition/status", (_req, res) => {
   res.set("Cache-Control", "no-store");
-  res.json({ ok: true, language: languageModule.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status(), voice: { input: "browser-speech-recognition", output: "browser-speech-synthesis", requiresMicrophonePermission: true }, conversationPipeline: conversationOrchestrator.status(), independentLanguage: languageLearningWorker.status() });
+  const training = languageLearningWorker.status();
+  res.json({
+    ok: true,
+    language: languageModule.status(),
+    emotion: emotionalIntelligence.status(),
+    ethics: ethicalReasoning.status(),
+    voice: { input: "browser-speech-recognition", output: "browser-speech-synthesis", requiresMicrophonePermission: true },
+    conversationPipeline: conversationOrchestrator.status(),
+    independentLanguage: training,
+    storage: {
+      dataDirectoryConfigured: Boolean(process.env.ULUGBEK_DATA_DIR),
+      durableStorageConfirmed: false,
+      persistentStoragePathConfigured: Boolean(process.env.ULUGBEK_DATA_DIR),
+      warning: "A data path alone does not prove durable storage. Confirm that a persistent disk is mounted before relying on learned data after redeploy."
+    }
+  });
 });
 
 app.post("/api/cognition/analyze", (req, res) => {
@@ -1004,6 +1020,7 @@ app.post("/api/admin/knowledge/search", requireAdmin, async (req, res) => {
 
 app.post("/api/chat", chatRateLimit, async (req, res) => {
   const message = typeof req.body?.message === "string" ? req.body.message.trim() : "";
+  const countryCode = legalResearch.normalizeCountryCode(req.body?.countryCode);
   const suppliedSessionId = typeof req.body?.sessionId === "string" ? req.body.sessionId : "";
   const sessionId = /^[a-zA-Z0-9_-]{8,80}$/.test(suppliedSessionId) ? suppliedSessionId : crypto.randomUUID().replace(/-/g, "");
   req.chatSessionId = sessionId;
@@ -1024,6 +1041,21 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   // handles Uzbek, English, Russian, Turkish, and Kazakh without requiring a translation API.
   const conversationContext = conversationOrchestrator.analyze(conversationMessage);
   const cognition = conversationContext.cognition;
+  const legalAssessment = legalResearch.classifyRequest(conversationMessage, countryCode);
+  if (legalAssessment.potentiallyIllegal) {
+    return res.json({
+      reply: "Bu ish qonunni buzish, firibgarlik yoki hujjatni soxtalashtirishga olib kelishi mumkin. Bunday amaliy ko‘rsatma bera olmayman. Qonuniy yo‘lini topish, talablarni tekshirish yoki xatoni to‘g‘rilashga yordam beraman.",
+      mode: "legal-safety-intervention",
+      legal: { checked: false, risk: "potentially-unlawful", jurisdiction: legalAssessment.jurisdiction }
+    });
+  }
+  if (legalAssessment.needsJurisdiction) {
+    return res.json({
+      reply: "Huquqiy javobni to‘g‘ri tekshirishim uchun qaysi davlat qonunlari bo‘yicha javob kerak? Sozlamalardan davlatni tanlang yoki davlat nomini yozing.",
+      mode: "legal-needs-jurisdiction",
+      legal: { checked: false, needsJurisdiction: true }
+    });
+  }
   const safetyReply = conversationOrchestrator.safetyReply(conversationContext);
   if (safetyReply) {
     return res.json({
@@ -1057,7 +1089,38 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   const hasLocalAnswer = localCandidate?.reasoning?.answerable === true;
   // Preserve quick, built-in answers (greetings, arithmetic, starter lessons).
   // Research every other knowledge gap; explicit/current research always refreshes sources.
-  if (searchIntent.shouldSearch || (!hasLocalAnswer && searchIntent.reason !== "local-dialogue-or-arithmetic")) {
+  const shouldResearch = searchIntent.reason !== "local-dialogue-or-arithmetic" && localCandidate?.reasoning?.method !== "built-in-dialogue";
+  if (shouldResearch) {
+    if (legalAssessment.isLegalQuestion) {
+      const webSearch = require("./modules/chat-web-research");
+      const legalEvidence = await legalResearch.research(conversationMessage, countryCode, webSearch, { limit: 6 });
+      if (!legalEvidence.results.length || !legalEvidence.results.some(item => item.pageRead)) {
+        return res.json({
+          reply: legalResearch.noEvidenceReply(legalEvidence.jurisdiction) + (legalEvidence.results.length ? "\n\nTopilgan rasmiy sahifalar hali to‘liq o‘qilmadi; ularni tasdiqlangan qonuniy dalil sifatida ishlatmadim." : ""),
+          mode: "legal-official-source-not-confirmed",
+          webSearchUsed: true,
+          legal: { checked: false, jurisdiction: legalEvidence.jurisdiction, officialSourcesFound: legalEvidence.results.length, officialPagesRead: 0 }
+        });
+      }
+      const legalContext = { ...conversationContext, legal: legalResearch.legalInstruction(legalEvidence) };
+      let legalAnswer = null;
+      try { legalAnswer = await singleAgent.answer(conversationMessage, legalEvidence.results, legalContext); } catch (_) {}
+      if (!legalAnswer?.reply) {
+        try {
+          const nativeLegal = nativeBrain.buildLocalReply(conversationMessage, legalEvidence.results, legalContext);
+          if (nativeLegal?.reasoning?.answerable && nativeLegal.reply) legalAnswer = nativeLegal;
+        } catch (_) {}
+      }
+      const reply = legalAnswer?.reply || legalResearch.noEvidenceReply(legalEvidence.jurisdiction);
+      return res.json({
+        reply: reply + "\n\nTekshirilgan rasmiy manbalar:\n" + legalResearch.sourceSummary(legalEvidence.results),
+        mode: "official-jurisdiction-legal-research",
+        agents: ["ULUGBEK Universal Agent"],
+        webSearchUsed: true,
+        legal: { checked: Boolean(legalAnswer?.reply), jurisdiction: legalEvidence.jurisdiction, officialSourcesFound: legalEvidence.results.length, officialPagesRead: legalEvidence.results.filter(item => item.pageRead).length, humanConfirmationRequired: legalAssessment.requiresHumanConfirmation },
+        cognition
+      });
+    }
     if (searchIntent.isJobSearch) {
       const jobSearch = require("./modules/job-search");
       if (!jobSearch.hasLocationHint(conversationMessage)) {
