@@ -25,13 +25,14 @@ test("native cognition returns one concise synthesized answer, not a numbered ev
   const result = cognition.respond("Matn tahlilining zamonaviy metodlari", entries, context);
   assert.equal(result.reasoning.answerable, true);
   assert.ok(result.reasoning.facts.length <= 2);
-  assert.match(result.reply, /^Mavjud dalillarga ko‘ra,/);
+  assert.doesNotMatch(result.reply, /Mavjud dalillarga ko‘ra|Manba:|https:\/\//i);
   assert.doesNotMatch(result.reply, /mustaqil mantiqiy mexanizmi topgan dalillar|Mavzu:|\n1\./i);
   assert.ok(result.reply.length < 1100);
+  assert.doesNotMatch(result.reply, /example\\.org|methods|https/i);
 });
 
 test("native cognition clearly says when evidence is insufficient", () => {
   const result = cognition.respond("QWERTY noma'lum mavzu 92831", [], context);
   assert.equal(result.reasoning.answerable, false);
-  assert.match(result.reply, /ishonchli javob topa olmadim/i);
+  assert.match(result.reply, /ishonchli ma’lumot topa olmadim/i);
 });
