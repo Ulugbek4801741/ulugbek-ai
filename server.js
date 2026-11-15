@@ -585,7 +585,21 @@ app.get("/api/language/status", (_req, res) => {
 
 app.get("/api/cognition/status", (_req, res) => {
   res.set("Cache-Control", "no-store");
-  res.json({ ok: true, language: languageModule.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status(), voice: { input: "browser-speech-recognition", output: "browser-speech-synthesis", requiresMicrophonePermission: true }, conversationPipeline: conversationOrchestrator.status(), independentLanguage: languageLearningWorker.status() });
+  const training = languageLearningWorker.status();
+  res.json({
+    ok: true,
+    language: languageModule.status(),
+    emotion: emotionalIntelligence.status(),
+    ethics: ethicalReasoning.status(),
+    voice: { input: "browser-speech-recognition", output: "browser-speech-synthesis", requiresMicrophonePermission: true },
+    conversationPipeline: conversationOrchestrator.status(),
+    independentLanguage: training,
+    storage: {
+      dataDirectoryConfigured: Boolean(process.env.ULUGBEK_DATA_DIR),
+      durableStorageConfigured: Boolean(process.env.ULUGBEK_DATA_DIR),
+      warning: process.env.ULUGBEK_DATA_DIR ? null : "Render ephemeral filesystem: learned data may be lost after restart or redeploy."
+    }
+  });
 });
 
 app.post("/api/cognition/analyze", (req, res) => {
