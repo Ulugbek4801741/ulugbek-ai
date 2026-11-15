@@ -24,7 +24,7 @@ test("stores language preference per session and reloads it after module restart
 
   const second = createUserPreferences({ filePath });
   assert.equal(second.get("session-user-123456").code, "uz");
-  assert.equal(second.get("another-session-123").code, undefined);
+  assert.equal(second.get("another-session-123"), null);
   assert.equal(second.status().storesChatContent, false);
 });
 
