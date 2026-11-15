@@ -140,7 +140,7 @@ test("recognizes a programmer profession and adds role-specific job searches", (
   const role = extractJobRole(request);
   assert.equal(role.label, "Dasturchi");
   const queries = buildJobSearchQueries(request);
-  assert.ok(queries.some(query => /developer software engineer programmer/i.test(query)));
+  assert.ok(queries.some(query => /programmer developer software engineer/i.test(query)));
   assert.ok(queries.every(query => query.includes("Toshkent")));
 });
 
@@ -155,7 +155,7 @@ test("job search sends profession-specific queries and returns a direct listing 
       return { title: "Junior Node.js Developer", url, content: ("Vakansiya: Junior Node.js Developer\\nIsh beruvchi: Example Tech\\nManzil: Toshkent\\nMaosh: 8 000 000 so'm\\nTalablar: JavaScript Node.js REST API tajriba\\nTelefon: +998 90 123 45 67\\nAriza topshirish uchun murojaat qiling. ").repeat(3) };
     }
   });
-  assert.ok(calls.some(query => /developer software engineer programmer/i.test(query)));
+  assert.ok(calls.some(query => /programmer developer software engineer/i.test(query)));
   assert.equal(result.requestedRole, "Dasturchi");
   assert.equal(result.results.length, 1);
   assert.match(result.reply, /Junior Node.js Developer/);
