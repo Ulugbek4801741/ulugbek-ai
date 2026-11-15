@@ -1170,23 +1170,13 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       } catch (_) {}
     }
 
-    const usedSources = Array.isArray(result?.reasoning?.facts)
-      ? result.reasoning.facts.map(item => item.source).filter(Boolean)
-      : [];
-    const sourcePool = usedSources.length
-      ? found.results.filter(item => usedSources.includes(item.url))
-      : found.results.filter(item => item.pageRead === true);
-    const sourceLines = [...new Map(sourcePool.map(item => [item.url, item])).values()]
-      .slice(0, 2)
-      .map(item => item.url)
-      .join("\n");
+    // Evidence source URLs stay server-side; only the synthesized answer is returned.
 
     let reply;
     let reasoning;
     if (result?.reasoning?.answerable && result.reply) {
       reply = result.reply;
       reasoning = result.reasoning;
-      if (sourceLines && !reply.includes("https://")) reply += "\n\nManba: " + sourceLines;
     } else {
       reply = universalSearch.formatEvidenceReply(found.results,
         found.ok ? "" : "Internet qidiruvi vaqtincha ishlamadi; mahalliy bilimlardan ham ishonchli javob topilmadi.");
@@ -1201,12 +1191,11 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       reply,
       mode: result?.modelUsed ? "self-hosted-universal-research-agent" : "native-universal-research-single-agent-no-external-ai",
       agents: ["ULUGBEK Universal Agent"],
-      reasoning,
+      reasoning: reasoning ? { method: reasoning.method, answerable: reasoning.answerable, inference: reasoning.inference, outputPolicy: "single-professional-answer" } : null,
       webSearchUsed: found.ok,
       webSearchSucceeded: found.ok,
       jobSearchUsed: searchIntent.isJobSearch,
       platformSearch: searchIntent.platforms,
-      webResults: found.results,
       synthesisModelConfigured: singleAgent.status().configured,
       detectedLanguage: languageModule.detectLanguage(message),
       researchIntent: searchIntent.reason,
