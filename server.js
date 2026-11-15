@@ -5,6 +5,7 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 const agentRuntime = require("./agent-runtime");
 const singleAgent = require("./modules/single-agent").createSingleAgent();
+const answerSelection = require("./modules/answer-selection");
 const languageModule = require("./modules/language-module");
 const codingLanguageEngine = require("./modules/coding-language-engine");
 const translationService = require("./modules/translation-service").createTranslationService();
@@ -1179,6 +1180,10 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
         result = nativeBrain.buildLocalReply(conversationMessage, evidence.slice(0, 8), conversationContext);
       } catch (_) {}
     }
+
+    // If web evidence is weak or model synthesis fails, keep a valid local answer
+    // instead of discarding it and returning a generic "not enough evidence" reply.
+    result = answerSelection.selectAnswer(result, localCandidate);
 
     // Evidence source URLs stay server-side; only the synthesized answer is returned.
 
