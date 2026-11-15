@@ -1186,7 +1186,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     if (result?.reasoning?.answerable && result.reply) {
       reply = result.reply;
       reasoning = result.reasoning;
-      if (sourceLines && !/https?:\\/\\//i.test(reply)) reply += "\n\nManba: " + sourceLines;
+      if (sourceLines && !reply.includes("https://")) reply += "\n\nManba: " + sourceLines;
     } else {
       reply = universalSearch.formatEvidenceReply(found.results,
         found.ok ? "" : "Internet qidiruvi vaqtincha ishlamadi; mahalliy bilimlardan ham ishonchli javob topilmadi.");
