@@ -316,6 +316,12 @@ test("API smoke tests", async (t) => {
       assert.equal(denied.headers.get("access-control-allow-origin"), null);
     });
 
+    await t.test("Express trusts the single Render proxy hop for client IP validation", async () => {
+      const fs = require("node:fs");
+      const serverSource = fs.readFileSync(require("node:path").join(__dirname, "..", "server.js"), "utf8");
+      assert.match(serverSource, /app\.set\("trust proxy", 1\)/);
+    });
+
     await t.test("health endpoint reports the app", async () => {
       const response = await fetch(`${baseUrl}/api/health`);
       const body = await response.json();
