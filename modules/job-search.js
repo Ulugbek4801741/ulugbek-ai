@@ -184,7 +184,7 @@ async function searchJobs(message, webSearch, options = {}) {
     const key = item.title.toLowerCase().replace(/[^a-z0-9а-яё]+/giu, " ").trim();
     if (!key || seenTitles.has(key)) continue;
     const hostCount = hostCounts.get(item.host) || 0;
-    if (hostCount >= 4) continue;
+    if (hostCount >= limit) continue;
     seenTitles.add(key); hostCounts.set(item.host, hostCount + 1);
     usable.push(item);
     if (usable.length >= limit) break;
