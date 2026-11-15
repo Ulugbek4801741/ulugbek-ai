@@ -85,7 +85,7 @@ test("job search detects job intent and returns read public listing details", as
       return [{ title: "Tractor operator vacancy", url: "https://jobs.example.org/tractor/123", snippet: "Tractor operator vacancy." }];
     },
     async fetchPage(url) {
-      return { title: "Tractor operator vacancy", url, content: "Vakansiya: Traktor operatori\\nIsh beruvchi: Example Farm AG\\nManzil: Zurich, Switzerland\\nMaosh: 5 000 CHF per month\\nTalablar: 2 years experience, tractor licence required\\nTelefon: +41 44 123 45 67\\nAriza topshirish uchun ish beruvchiga murojaat qiling. ".repeat(4) };
+      return { title: "Tractor operator vacancy", url, content: "Vakansiya: Traktor operatori\nIsh beruvchi: Example Farm AG\nManzil: Zurich, Switzerland\nMaosh: 5 000 CHF per month\nTalablar: 2 years experience, tractor licence required\nTelefon: +41 44 123 45 67\nAriza topshirish uchun ish beruvchiga murojaat qiling. ".repeat(4) };
     }
   });
   assert.equal(result.results.length, 1);
@@ -126,7 +126,7 @@ test("returns at most ten unique individual vacancy pages and never treats categ
       return {
         title: "Kogon vacancy " + id,
         url,
-        content: ("Vakansiya: Ishchi " + id + "\\nIsh beruvchi: Kogon korxonasi\\nMaosh: 4 000 000 so'm\\nTalablar: tajriba kerak\\nTelefon: +998 90 123 45 67\\nAriza topshirish uchun bog'laning. ").repeat(3)
+        content: ("Vakansiya: Ishchi " + id + "\nIsh beruvchi: Kogon korxonasi\nMaosh: 4 000 000 so'm\nTalablar: tajriba kerak\nTelefon: +998 90 123 45 67\nAriza topshirish uchun bog'laning. ").repeat(3)
       };
     }
   });
