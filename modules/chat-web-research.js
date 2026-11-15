@@ -61,10 +61,13 @@ function safePublicUrl(value) {
   } catch (_) { return null; }
 }
 function parseResults(html) {
+  const source = String(html || "");
   const results = [];
-  const pattern = /<a[^>]*class="[^"]*result__a[^"]*"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>[\s\S]{0,1800}?<a[^>]*class="[^"]*result__snippet[^"]*"[^>]*>([\s\S]*?)<\/a>/gi;
+  // DuckDuckGo has served several HTML layouts. Match result links independently
+  // from their snippets so a markup change cannot silently turn every search empty.
+  const pattern = /<a\b(?=[^>]*class=["'][^"']*\bresult__a\b[^"']*["'])[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
   let match;
-  while ((match = pattern.exec(String(html || ""))) && results.length < MAX_RESULTS) {
+  while ((match = pattern.exec(source)) && results.length < MAX_RESULTS) {
     let href = clean(match[1], 2000);
     try {
       const candidate = new URL(href, "https://html.duckduckgo.com");
@@ -74,8 +77,11 @@ function parseResults(html) {
       }
     } catch (_) {}
     const url = safePublicUrl(href);
-    const title = clean(match[2], 220), snippet = clean(match[3], 650);
-    if (url && title && snippet && !results.some(item => item.url === url)) results.push({ title, url, snippet });
+    const title = clean(match[2], 220);
+    const next = source.slice(match.index + match[0].length, match.index + match[0].length + 3200);
+    const snippetMatch = next.match(/class=["'][^"']*\bresult__snippet\b[^"']*["'][^>]*>([\s\S]*?)<\/(?:a|div|span|td)>/i);
+    const snippet = clean(snippetMatch?.[1] || "", 900);
+    if (url && title && !results.some(item => item.url === url)) results.push({ title, url, snippet });
   }
   return results;
 }
