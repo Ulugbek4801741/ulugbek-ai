@@ -18,3 +18,12 @@ test("does not expand unrelated short messages or mix separate sessions", () => 
   assert.equal(memory.expand("session-12345678", "Kogon"), "Kogon");
   assert.equal(memory.expand("another-session-123", "Kogon"), "Kogon");
 });
+
+test("keeps the original city when the user repeats a short job request", () => {
+  memory.clear();
+  const first = "Menga ish topib ber Kogon shahridan";
+  memory.remember("session-12345678", first);
+  const expanded = memory.expand("session-12345678", "Ish topib ber");
+  assert.match(expanded, /Kogon/i);
+  assert.match(expanded, /Ish topib ber/i);
+});
