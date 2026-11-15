@@ -187,3 +187,11 @@ test("does not present unrelated vacancies as programming jobs in Kogon", async 
   assert.equal(result.results.length, 1);
   assert.match(result.results[0].title, /Python Developer/);
 });
+
+test("explains that no Kogon programmer vacancy page was verified", async () => {
+  const result = await searchJobs("Kogondan ish topib ber Dasturlash bo‘yicha", {
+    async search() { return []; }
+  });
+  assert.match(result.reply, /Kogon hududida dasturchi/);
+  assert.match(result.reply, /umumiy ish saytlari/);
+});
