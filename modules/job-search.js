@@ -19,18 +19,18 @@ function locationClarification() {
 function extractJobRole(value) {
   const text = String(value || "").toLowerCase();
   const roles = [
-    { pattern: /(?:dasturchi|dasturlovchi|programmist|programmer|developer|software\\s+engineer|software\\s+developer)/iu, label: "Dasturchi", terms: "dasturchi programmer developer software engineer software developer" },
-    { pattern: /(?:frontend|front-end|front\\s+end)/iu, label: "Frontend dasturchi", terms: "frontend developer front-end engineer JavaScript React" },
-    { pattern: /(?:backend|back-end|back\\s+end)/iu, label: "Backend dasturchi", terms: "backend developer back-end engineer Node.js Python Java" },
+    { pattern: /(?:dasturchi|dasturlovchi|programmist|programmer|developer|software\s+engineer|software\s+developer)/iu, label: "Dasturchi", terms: "dasturchi programmer developer software engineer software developer" },
+    { pattern: /(?:frontend|front-end|front\s+end)/iu, label: "Frontend dasturchi", terms: "frontend developer front-end engineer JavaScript React" },
+    { pattern: /(?:backend|back-end|back\s+end)/iu, label: "Backend dasturchi", terms: "backend developer back-end engineer Node.js Python Java" },
     { pattern: /(?:full[ -]?stack)/iu, label: "Full-stack dasturchi", terms: "full stack developer frontend backend" },
-    { pattern: /(?:android\\s+(?:dasturchi|developer)|kotlin\\s+developer)/iu, label: "Android dasturchi", terms: "Android developer Kotlin Java mobile developer" },
-    { pattern: /(?:qa\\s+engineer|test(?:chi|er)|software\\s+tester)/iu, label: "Dasturiy ta'minot testlovchisi", terms: "QA engineer software tester test automation" }
+    { pattern: /(?:android\s+(?:dasturchi|developer)|kotlin\s+developer)/iu, label: "Android dasturchi", terms: "Android developer Kotlin Java mobile developer" },
+    { pattern: /(?:qa\s+engineer|test(?:chi|er)|software\s+tester)/iu, label: "Dasturiy ta'minot testlovchisi", terms: "QA engineer software tester test automation" }
   ];
   return roles.find(role => role.pattern.test(text)) || null;
 }
 
 function buildJobSearchQueries(value) {
-  const original = String(value || "").replace(/\\s+/g, " ").trim().slice(0, 180);
+  const original = String(value || "").replace(/\s+/g, " ").trim().slice(0, 180);
   const role = extractJobRole(original);
   const suffixes = [
     "vakansiya ish o'rni ish beruvchi lavozim telefon maosh talablar",
