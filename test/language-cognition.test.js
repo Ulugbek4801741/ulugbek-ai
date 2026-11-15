@@ -97,3 +97,15 @@ test("language module can train from a general public HTTPS website", async t =>
  assert.equal(engine.status().corpusSources,1);
  assert.ok(engine.status().languages.uz.predictionReady);
 });
+
+test("autonomous crawler candidates train language patterns without factual approval",async t=>{
+ const engine=await temporaryEngine(t);
+ const result=await engine.trainFromEntries([
+  {title:"O‘zbek tilidagi ochiq matn",content:sampleText(),source:"https://uz.wikipedia.org/wiki/Ozbek_tili",
+   language:"uz",status:"pending-review",agent:"AutonomousOpenWebResearchAgent",quality:"public-web-page-unverified"}
+ ]);
+ assert.equal(result.addedSources,1);
+ assert.equal(engine.status().corpusSources,1);
+ assert.equal(engine.status().factualAutoApproval,false);
+ assert.equal(engine.status().unreviewedTextUsedOnlyForLanguagePatterns,true);
+});
