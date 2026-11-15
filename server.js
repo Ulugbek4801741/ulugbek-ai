@@ -1104,6 +1104,12 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       const legalContext = { ...conversationContext, legal: legalResearch.legalInstruction(legalEvidence) };
       let legalAnswer = null;
       try { legalAnswer = await singleAgent.answer(conversationMessage, legalEvidence.results, legalContext); } catch (_) {}
+      if (!legalAnswer?.reply) {
+        try {
+          const nativeLegal = nativeBrain.buildLocalReply(conversationMessage, legalEvidence.results, legalContext);
+          if (nativeLegal?.reasoning?.answerable && nativeLegal.reply) legalAnswer = nativeLegal;
+        } catch (_) {}
+      }
       const reply = legalAnswer?.reply || legalResearch.noEvidenceReply(legalEvidence.jurisdiction);
       return res.json({
         reply: reply + "\n\nTekshirilgan rasmiy manbalar:\n" + legalResearch.sourceSummary(legalEvidence.results),
