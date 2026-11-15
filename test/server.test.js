@@ -30,6 +30,17 @@ test("API smoke tests", async (t) => {
   try {
     await waitForServer();
 
+    await t.test("social network status is visible but stays disabled until auth and database are configured", async () => {
+      const response = await fetch(`${baseUrl}/api/social/status`);
+      const body = await response.json();
+      assert.equal(response.status, 200);
+      assert.equal(body.ok, true);
+      assert.deepEqual(body.socialNetwork.modes, ["private", "public"]);
+      assert.equal(body.socialNetwork.readEnabled, false);
+      assert.equal(body.socialNetwork.writeEnabled, false);
+      assert.equal(body.socialNetwork.safety.privateByDefaultForNewAccounts, true);
+    });
+
     await t.test("research cache status endpoint is available and returns JSON", async () => {
       const response = await fetch(`${baseUrl}/api/research/status`);
       const body = await response.json();
