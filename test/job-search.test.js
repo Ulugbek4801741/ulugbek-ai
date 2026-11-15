@@ -159,5 +159,5 @@ test("job search sends profession-specific queries and returns a direct listing 
   assert.equal(result.requestedRole, "Dasturchi");
   assert.equal(result.results.length, 1);
   assert.match(result.reply, /Junior Node.js Developer/);
-  assert.match(result.reply, /https:\\/\\/jobs\\.example\\.org\\/vacancy\\/node-42/);
+  assert.ok(result.reply.includes("https://jobs.example.org/vacancy/node-42"));
 });
