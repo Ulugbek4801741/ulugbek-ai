@@ -167,7 +167,7 @@ async function searchJobs(message, webSearch, options = {}) {
     try {
       const page = await webSearch.fetchPage(item.url);
       if (!page) return null;
-      const content = cleanText(page.content || "", 12000);
+      const content = decodeHtmlEntities(String(page.content || "").replace(/<[^>]*>/g, " ")).replace(/[ \t]+/g, " ").replace(/\n\s*/g, "\n").trim().slice(0, 12000);
       const combined = [content, item.snippet || ""].filter(Boolean).join("\n");
       const normalized = { title: cleanText(page.title || item.title, 220), snippet: combined, url: page.url || item.url, pageRead: true };
       const details = extractJobDetails(normalized, message);
