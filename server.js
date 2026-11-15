@@ -778,7 +778,12 @@ app.post("/api/workflows", (req, res) => {
   }
 });
 
-app.get("/api/social/status", (_req, res) => {\n  res.set("Cache-Control", "no-store");\n  return res.json({ ok: true, socialNetwork: socialNetworkPolicy.getStatus() });\n});\n\napp.get("/api/modules", (_req, res) => {
+app.get("/api/social/status", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  return res.json({ ok: true, socialNetwork: socialNetworkPolicy.getStatus() });
+});
+
+app.get("/api/modules", (_req, res) => {
   res.set("Cache-Control", "no-store");
   res.json({ ok: true, product: "ULUGBEK AI", note: "planned modullar hali ishlaydigan integratsiya emas.", modules: capabilityCatalog.listModules() });
 });
