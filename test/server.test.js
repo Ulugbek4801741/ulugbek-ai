@@ -304,7 +304,7 @@ test("API smoke tests", async (t) => {
       const config = fs.readFileSync(require("node:path").join(__dirname, "..", "public", "config.js"), "utf8");
       assert.ok(config.includes("https://ulugbek-ai2.onrender.com"));
       assert.match(config, /isNativeLocalhost/);
-      assert.match(config, /https:\\/\\/ulugbek-ai2\\.onrender\\.com/);
+      assert.doesNotMatch(config, /ulugbek-ai1\.onrender\.com/);
     });
 
     await t.test("configured GitHub Pages origin can call backend and CSP permits it", async () => {
