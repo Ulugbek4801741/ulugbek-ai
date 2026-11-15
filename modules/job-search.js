@@ -19,7 +19,7 @@ function locationClarification() {
 function extractJobRole(value) {
   const text = String(value || "").toLowerCase();
   const roles = [
-    { pattern: /(?:dasturchi|dasturlovchi|programmist|programmer|developer|software\s+engineer|software\s+developer)/iu, label: "Dasturchi", terms: "dasturchi programmer developer software engineer software developer" },
+    { pattern: /(?:dasturchi|dasturlovchi|dasturlash|dastur\s+yozish|programmist|programmer|developer|software\s+engineer|software\s+developer)/iu, label: "Dasturchi", terms: "dasturchi dasturlash programmer developer software engineer software developer junior frontend backend Python JavaScript" },
     { pattern: /(?:frontend|front-end|front\s+end)/iu, label: "Frontend dasturchi", terms: "frontend developer front-end engineer JavaScript React" },
     { pattern: /(?:backend|back-end|back\s+end)/iu, label: "Backend dasturchi", terms: "backend developer back-end engineer Node.js Python Java" },
     { pattern: /(?:full[ -]?stack)/iu, label: "Full-stack dasturchi", terms: "full stack developer frontend backend" },
@@ -39,6 +39,11 @@ function buildJobSearchQueries(value) {
     "site:hh.uz OR site:ishkop.uz OR site:olx.uz OR site:ish.uz"
   ];
   const queries = [original, ...suffixes.map(suffix => original + " " + suffix)];
+  if (role) {
+    queries.push(original + " " + role.terms + " Kogon Buxoro vakansiya ish o‘rni");
+    queries.push(original + " " + role.terms + " site:hh.uz OR site:ishkop.uz OR site:olx.uz");
+    queries.push("Kogon Buxoro " + role.terms + " vakansiya ish beruvchi");
+  }
   if (role) {
     queries.push(original + " " + role.terms + " vacancy jobs hiring Tashkent Uzbekistan");
     queries.push(original + " " + role.terms + " site:hh.uz OR site:linkedin.com/jobs OR site:ishkop.uz");
@@ -179,6 +184,9 @@ async function searchJobs(message, webSearch, options = {}) {
   const limit = Math.max(1, Math.min(10, Number(options.limit) || 10));
   const queries = buildJobSearchQueries(message);
   const requestedRole = extractJobRole(message);
+  const requestedKogon = /kogon/iu.test(message);
+  const roleEvidence = /(?:dasturchi|dasturlash|developer|programmer|software engineer|frontend|backend|javascript|python|kotlin|java|qa engineer|web developer)/iu;
+  const locationEvidence = requestedKogon ? /(?:kogon|kog‘on|kogon tumani|buxoro viloyati)/iu : null;
   const batches = await Promise.all(queries.map(async query => {
     try { const value = await webSearch.search(query); return Array.isArray(value) ? value : []; }
     catch (_) { return null; }
@@ -206,6 +214,9 @@ async function searchJobs(message, webSearch, options = {}) {
       const combined = [content, item.snippet || ""].filter(Boolean).join("\n");
       const normalized = { title: cleanText(page.title || item.title, 220), snippet: combined, url: page.url || item.url, pageRead: true };
       const details = extractJobDetails(normalized, message);
+      const relevanceText = normalized.title + " " + combined;
+      if (requestedRole && !roleEvidence.test(relevanceText)) return null;
+      if (locationEvidence && !locationEvidence.test(relevanceText)) return null;
       return details.listingSpecific ? { ...normalized, ...details, host: (() => { try { return new URL(normalized.url).hostname; } catch (_) { return ""; } })() } : null;
     } catch (_) { return null; }
   }));
