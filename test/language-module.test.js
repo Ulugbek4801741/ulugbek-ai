@@ -33,3 +33,12 @@ test("status does not falsely claim neural model training", () => {
   assert.equal(language.status().ready, true);
   assert.equal(language.status().neuralModelTraining, false);
 });
+
+test("native analyzer normalizes Uzbek text and detects job-search intent", () => {
+  const result = language.analyze("  Menga  ish topib ber Kogon shahridan! ");
+  assert.equal(result.language.code, "uz");
+  assert.equal(result.intent, "job-search");
+  assert.equal(result.normalizedText, "Menga ish topib ber Kogon shahridan!");
+  assert.ok(result.tokenCount >= 6);
+  assert.ok(result.stems.length === result.tokens.length);
+});

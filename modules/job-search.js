@@ -53,13 +53,32 @@ async function searchJobs(message, webSearch, options = {}) {
     return { ok: false, results: [], reply: "ULUGBEK AI internet qidiruv moduliga ulana olmadi." };
   }
   const limit = Math.max(1, Math.min(5, Number(options.limit) || 5));
-  let found;
-  try {
-    found = await webSearch.search(buildJobSearchQuery(message));
-  } catch (_) {
+  const baseQuery = buildJobSearchQuery(message);
+  const queryVariants = [
+    baseQuery,
+    String(message || "").trim() + " vakansiya ish o'rinlari ish beruvchi maosh ishga qabul",
+    String(message || "").trim() + " site:hh.uz OR site:ishkop.uz OR site:olx.uz OR site:ish.uz"
+  ];
+  const batches = await Promise.all(queryVariants.map(async query => {
+    try { const value = await webSearch.search(query); return Array.isArray(value) ? value : []; }
+    catch (_) { return null; }
+  }));
+  const candidates = [];
+  const seen = new Set();
+  for (const batch of batches) {
+    if (!batch) continue;
+    for (const item of batch) {
+      const key = String(item?.url || item?.title || "").toLowerCase();
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      candidates.push(item);
+      if (candidates.length >= limit) break;
+    }
+    if (candidates.length >= limit) break;
+  }
+  if (batches.every(batch => batch === null)) {
     return { ok: false, results: [], reply: "ULUGBEK AI ish vakansiyalarini qidirishda internet manbasiga ulana olmadi. Keyinroq qayta urinib ko'ring." };
   }
-  const candidates = Array.isArray(found) ? found.slice(0, limit) : [];
   const results = await Promise.all(candidates.map(async item => {
     let page = null;
     if (typeof webSearch.fetchPage === "function" && item.url) {
