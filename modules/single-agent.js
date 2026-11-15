@@ -62,6 +62,7 @@ function createSingleAgent(options = {}) {
     try {
       const context = knowledgeContext(entries);
       const ethicsInstruction = ethicalReasoning.buildEthicsInstruction(question);
+      const legalInstruction = contextState.legal ? String(contextState.legal) + "\\n" : "";
       const linguistic = contextState.linguistic || languageCognition.analyze(question);
       const thinkingInstruction = "TAFAKKUR TAHLILI (taxminiy til statistikasi): " + JSON.stringify(linguistic) + "\nUshbu tahlil yordamchi signal, xato bo‘lishi mumkin; foydalanuvchi ma’nosini matn va dalillar asosida qayta tekshiring.\n";
       const userContent = languageModule.buildLanguageInstruction(question) + "\n\n" + thinkingInstruction + "\nEMOTSIONAL KONTEKST: " + emotional.emotion.label + " (taxminiy ishonch: " + emotional.emotion.confidence + "). " + emotional.instruction + "\n\n" + ethicsInstruction + "\n\nFoydalanuvchining savoli va maqsadi:\n" + question +
