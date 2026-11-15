@@ -3,7 +3,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const search = require("../modules/universal-web-search");
 
-test("evidence fallback returns one concise answer and at most two read-page links", () => {
+test("evidence fallback returns one concise answer without exposing source links", () => {
   const reply = search.formatEvidenceReply([
     { title: "Search snippet only", url: "https://example.org/snippet", snippet: "Not a fully read page", pageRead: false },
     { title: "Read page one", url: "https://example.org/one", snippet: "Read content", pageRead: true },
@@ -12,9 +12,7 @@ test("evidence fallback returns one concise answer and at most two read-page lin
   ]);
   assert.match(reply, /yetarli tasdiqlangan dalil topilmadi/i);
   assert.doesNotMatch(reply, /Search snippet only|Read page one|\n1\./);
-  assert.match(reply, /https:\/\/example\.org\/one/);
-  assert.match(reply, /https:\/\/example\.org\/two/);
-  assert.doesNotMatch(reply, /example\.org\/three/);
+  assert.doesNotMatch(reply, /https:\/\/example\.org\//);
   assert.ok(reply.length < 500);
 });
 
