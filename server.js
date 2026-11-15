@@ -1088,7 +1088,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   const hasLocalAnswer = localCandidate?.reasoning?.answerable === true;
   // Preserve quick, built-in answers (greetings, arithmetic, starter lessons).
   // Research every other knowledge gap; explicit/current research always refreshes sources.
-  const shouldResearch = searchIntent.reason !== "local-dialogue-or-arithmetic";
+  const shouldResearch = searchIntent.reason !== "local-dialogue-or-arithmetic" && localCandidate?.reasoning?.method !== "built-in-dialogue";
   if (shouldResearch) {
     if (legalAssessment.isLegalQuestion) {
       const webSearch = require("./modules/chat-web-research");
