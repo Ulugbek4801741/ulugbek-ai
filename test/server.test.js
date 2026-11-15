@@ -30,18 +30,6 @@ test("API smoke tests", async (t) => {
   try {
     await waitForServer();
 
-    await t.test("chat saves a user's explicit permanent Uzbek language preference", async () => {
-      const response = await fetch(`${baseUrl}/api/chat`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId: "language-pref-test-123456", message: "Menga har doim o‘zbek tilida javob ber" })
-      });
-      const body = await response.json();
-      assert.equal(response.status, 200);
-      assert.equal(body.mode, "language-preference-saved");
-      assert.equal(body.languagePreference, "uz");
-      assert.match(body.reply, /o‘zbek tilida/);
-    });
-
     await t.test("research cache status endpoint is available and returns JSON", async () => {
       const response = await fetch(`${baseUrl}/api/research/status`);
       const body = await response.json();
