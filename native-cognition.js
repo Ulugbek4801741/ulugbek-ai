@@ -98,6 +98,16 @@ function quickReply(query) {
   if (/(api kalit|tashqi api|ma'lumotlarim|maxfiylik|suhbatlarim)/.test(q)) {
     return "Hozirgi chat rejimi tashqi AI API’ga ulanmaydi va javob yaratish uchun xabarni tashqi AI provayderiga yubormaydi. Serverning odatiy ishlashi va saqlash sozlamalari baribir hostingga bog‘liq.";
   }
+  if (/(?:bloop.*(?:el\s*(?:gran\s*)?maja|maja)|(?:el\s*(?:gran\s*)?maja|maja).*bloop)/iu.test(q) &&
+      /(og'ir|ogir|kilogram|kg|vazn|weight|heavy|qaysi biri|taqqos|solishtir)/iu.test(q)) {
+    return "Bloop va El Gran Maja uchun ishonchli, ilmiy tasdiqlangan kilogramm o‘lchovi yo‘q. Bloop — 1997-yilda okeanda qayd etilgan tovush; NOAA uni ehtimoliy muzlik yorilishi bilan izohlagan. El Gran Maja esa internetdagi fantastik/mem obraz sifatida uchraydi, haqiqiy hayvon sifatida tasdiqlanmagan. Shuning uchun qaysi biri og‘irligini kilogrammda solishtirib bo‘lmaydi.";
+  }
+  if (/\bbloop\b/iu.test(q) && /(necha|qancha).{0,18}(kilogram|kg|og'ir|vazn)|(?:kilogram|kg|og'irligi|vazni)/iu.test(q)) {
+    return "Bloopning kilogrammdagi vazni ma’lum emas. Chunki Bloop tasdiqlangan hayvon emas: bu 1997-yilda Tinch okeanida qayd etilgan kuchli tovush bo‘lib, NOAA uni ehtimoliy muzlik seysmik hodisasi bilan izohlagan. Uni ulkan dengiz jonzoti deb tasdiqlovchi ilmiy dalil yo‘q.";
+  }
+  if (/(biznes|tadbirkorlik|savdo).{0,45}(boshlamoqchi|qilmoqchi|boshlash|maslahat|g'oya)|(?:boshlamoqchi|qilmoqchi).{0,45}(biznes|tadbirkorlik|savdo)/iu.test(q)) {
+    return "Biznesni katta xarajat bilan emas, avval mijoz muammosini tekshirishdan boshlang. 1) Bitta aniq mahsulot yoki xizmat tanlang. 2) Kogon va Buxorodagi kamida 10 potensial mijoz bilan gaplashing. 3) Raqobatchilar narxi va taklifini solishtiring. 4) Oldindan buyurtma yoki kichik sinov savdosi orqali talabni tekshiring. 5) Xarajat, sotuv narxi va sof foydani yozib boring; talab isbotlanmaguncha qarz yoki katta ijara olmang. Sizga mos aniq reja tuzishim uchun boshlang‘ich budjetingiz qancha?";
+  }
   return null;
 }
 function respond(query, entries, suppliedContext = null) {
