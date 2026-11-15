@@ -21,6 +21,7 @@ const publicWebReader = require("./modules/public-web-reader");
 const developerAgent = require("./developer-agent");
 const agentPermissions = require("./agent-permissions");
 const learningWorkerForAdmin = require("./lab-learning-worker");
+const independentModel = require("./modules/independent-model").createIndependentModel({ knowledge: learningWorkerForAdmin });
 const { createAdminAutopilot } = require("./admin-autopilot");
 const adminAutopilot = createAdminAutopilot({ developerAgent, learningWorker: learningWorkerForAdmin, agentRuntime });
 const { createSelfRecoveryEngine } = require("./modules/self-recovery-engine");
@@ -594,6 +595,27 @@ app.post("/api/cognition/analyze", (req, res) => {
 app.get("/api/version", (_req, res) => {
   res.set("Cache-Control", "no-store");
   res.json({ ok: true, app: "ULUGBEK AI", version: "0.3.2", commit: BUILD_COMMIT, branch: BUILD_BRANCH, startedAt: SERVER_STARTED_AT, node: process.version, endpoints: { health: "/api/health", research: "/api/research/status", learning: "/api/lab/learning/status", ai: "/api/ai/status" } });
+});
+
+app.get("/api/independent/status", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, model: independentModel.status() });
+});
+const independentAnswerRateLimit = rateLimit({
+  windowMs: 60 * 1000, limit: 8, standardHeaders: "draft-8", legacyHeaders: false,
+  message: { error: "Mustaqil model so‘rovlari limiti tugadi. Bir daqiqadan keyin qayta urinib ko‘ring." }
+});
+app.post("/api/independent/answer", independentAnswerRateLimit, async (req, res) => {
+  try {
+    const result = await independentModel.answer(req.body?.message);
+    res.set("Cache-Control", "no-store");
+    return res.json(result);
+  } catch (error) {
+    return res.status(error.statusCode || 503).json({
+      ok: false,
+      error: error.statusCode ? error.message : "Mustaqil bilim mexanizmi hozir javob bera olmadi."
+    });
+  }
 });
 
 app.get("/api/ai/status", (_req, res) => {
