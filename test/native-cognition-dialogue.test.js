@@ -47,3 +47,25 @@ test("sun’iy intellektni sodda o‘zbek tilida tushuntiradi", () => {
   assert.match(reply, /savollarga javob beradi/);
   assert.doesNotMatch(reply, /\\[\\d+\\]|XX asr|transformer arxitekturasi/i);
 });
+
+test("nolga bo‘lishni xato sifatida tushuntiradi", () => {
+  const reply = cognition.respond("569-568÷(0)", []).reply;
+  assert.match(reply, /nolga bo‘lish/iu);
+  assert.match(reply, /natija aniqlanmaydi/iu);
+});
+test("umumiy yordam so‘roviga mavzuni aniqlashtiradi", () => {
+  const reply = cognition.respond("Menga yordam ber olasanmi", []).reply;
+  assert.match(reply, /Qaysi ishda yordam kerak/iu);
+  assert.doesNotMatch(reply, /Expert-verified|Question 2/iu);
+});
+test("AI agent kodi so‘roviga Python karkasini beradi", () => {
+  const reply = cognition.respond("Men sun’iy intellekt agent yaratish uchun AI kodini yozib ber", []).reply;
+  assert.match(reply, /class UniversalAgent/);
+  assert.match(reply, /mustaqil til modeli emas/);
+});
+test("Temur Lang haqidagi tarixiy savolga javob beradi", () => {
+  const reply = cognition.respond("Tarixdan Temur lang nomi bilan tanilgan podshoh haqida ma’lumot ber", []).reply;
+  assert.match(reply, /Amir Temur/);
+  assert.match(reply, /1336–1405/);
+  assert.match(reply, /Samarqand/);
+});

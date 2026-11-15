@@ -62,14 +62,58 @@ function normalizeInput(value) {
     .replace(/\s+/g, " ").trim();
 }
 function quickReply(query) {
-  const math = require("./modules/math-engine").findExpression(query);
+  const mathEngine = require("./modules/math-engine");
+  const arithmeticInput = String(query || "").trim();
+  if (/^[\d\s.,()+\-*/×÷%^=?]+$/.test(arithmeticInput) && /[+\-*/×÷%^]/.test(arithmeticInput) && /\d/.test(arithmeticInput)) {
+    try {
+      const expression = arithmeticInput.replace(/[=?]+$/g, "").trim();
+      const value = mathEngine.calculateExpression(expression);
+      const answer = mathEngine.formatNumber(value);
+      return "Hisoblash: " + expression + " = " + answer + String.fromCharCode(10) + "Javob: " + answer + ".";
+    } catch (error) {
+      if (/Nolga bo‘lish mumkin emas/.test(error.message)) return "Bu ifodada nolga bo‘lish bor. Matematikada sonni 0 ga bo‘lish mumkin emas, shuning uchun natija aniqlanmaydi.";
+      return "Matematik ifodada xato bor: " + error.message;
+    }
+  }
+  const math = mathEngine.findExpression(query);
   if (math) {
-    const answer = require("./modules/math-engine").formatNumber(math.result);
+    const answer = mathEngine.formatNumber(math.result);
     return "Hisoblash: " + math.expression + " = " + answer + "\\nJavob: " + answer + ".";
   }
   const q = normalizeInput(query);
   if (/(?:sun'iy intellekt|sun’iy intellekt|suniy intellekt|artificial intelligence|\bai\b).{0,35}(?:nima|degani|tushuntir)|(?:nima|degani).{0,35}(?:sun'iy intellekt|sun’iy intellekt|suniy intellekt|artificial intelligence)/iu.test(q)) {
     return "Sun’iy intellekt — kompyuterga odam bajaradigan ayrim aqliy ishlarni bajarishni o‘rgatadigan texnologiya. Masalan, u savollarga javob beradi, matnni tarjima qiladi yoki rasmdagi narsalarni taniydi. Lekin u odam kabi ongli emas: o‘rgatilgan ma’lumotlar va dasturlar asosida javob yaratadi.";
+  }
+  if (/(?:temur\s*(?:lang|lank|lenk)|tamerlan|amir\s*temur)/iu.test(q) &&
+      /(?:tarix|podshoh|podshox|potshox|hukmdor|shoh|sulton|kim|haqida|ma'lumot|malumot)/iu.test(q)) {
+    return "Temur Lang nomi bilan tanilgan hukmdor — Amir Temur (1336–1405). U XIV asrda Movarounnahrda kuchli davlat barpo etgan sarkarda va davlat arbobi edi. Poytaxti Samarqand bo‘lgan. Amir Temur Samarqandni yirik siyosiy, savdo va me’morchilik markaziga aylantirishga katta e’tibor bergan. “Temur Lang” yoki “Tamerlan” laqabi uning yoshligidagi jarohat sabab oqsoqlanib yurishi bilan bog‘lanadi.";
+  }
+  if (/^(?:menga\s+)?yordam\s+ber(?:\s+(?:olasanmi|olasizmi)|a\s+(?:olasanmi|olasizmi)|ing)?[!? .]*$/iu.test(q) || /^(?:menga\s+)?yordam\s+kerak[!? .]*$/iu.test(q)) {
+    return "Albatta, yordam beraman. Qaysi ishda yordam kerak? Masala yechish, darsni tushuntirish, tarjima, matn yozish yoki dastur kodi — topshirig‘ingizni yuboring.";
+  }
+  if (/(?:agent|yordamchi).{0,120}(?:kod|cod|code|dastur).{0,45}(?:yoz|yarat)|(?:agent|yordamchi).{0,100}(?:yoz|yarat).{0,60}(?:kod|cod|code|dastur)/iu.test(q)) {
+    return [
+      "Python tilida AI-agent uchun boshlang‘ich karkas. U vazifani qabul qiladi, mavjud vositani tanlaydi va ishga tushirishdan oldin ruxsat so‘raydi. Bu hali mustaqil til modeli emas — unga keyin model ulash kerak.",
+      "",
+      "```python",
+      "class UniversalAgent:",
+      "    def __init__(self): self.tools = {}",
+      "    def add_tool(self, name, function): self.tools[name] = function",
+      "    def run(self, task):",
+      "        print(\"Vazifa:\", task)",
+      "        print(\"Vositalar:\", list(self.tools))",
+      "        name = input(\"Vosita nomi: \").strip()",
+      "        if name not in self.tools: return \"Vosita topilmadi.\"",
+      "        if input(\"Ishga tushirishga ruxsat? (ha/yo‘q): \").lower() != \"ha\": return \"Bekor qilindi.\"",
+      "        return self.tools[name](task)",
+      "",
+      "agent = UniversalAgent()",
+      "agent.add_tool(\"echo\", lambda task: \"Qabul qilindi: \" + task)",
+      "print(agent.run(input(\"Topshiriq: \")))",
+      "```",
+      "",
+      "Saqlash: `agent.py`. Ishga tushirish: `python agent.py`."
+    ].join(String.fromCharCode(10));
   }
   if (/^(o'zbekiston|uzbekiston|uzbekistan)$/.test(q)) {
     return "O‘zbekiston — Markaziy Osiyoda joylashgan mustaqil davlat. Poytaxti — Toshkent. Davlatning rasmiy nomi — O‘zbekiston Respublikasi. Qaysi yo‘nalish haqida batafsil ma’lumot kerak: tarixi, geografiyasi, aholisi, iqtisodiyoti yoki viloyatlari?";
