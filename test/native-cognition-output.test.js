@@ -34,5 +34,5 @@ test("native cognition returns one concise synthesized answer, not a numbered ev
 test("native cognition clearly says when evidence is insufficient", () => {
   const result = cognition.respond("QWERTY noma'lum mavzu 92831", [], context);
   assert.equal(result.reasoning.answerable, false);
-  assert.match(result.reply, /ishonchli ma’lumot topa olmadim/i);
+  assert.match(result.reply, /ishonchli javob topa olmadim/i);
 });
