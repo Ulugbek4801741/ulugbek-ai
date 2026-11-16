@@ -108,3 +108,10 @@ test("worldwide hourly-pay search returns only opened individual pages with acti
   assert.equal(result.results[0].minimumHourlyUsd, 35);
   assert.equal(result.results[0].activeStatus, "active-application-evidence-found");
 });
+
+
+test("routes Uzbek job requests to the dedicated job-search pipeline", () => {
+  const { detectSearchIntent } = require("../modules/universal-web-search");
+  assert.equal(detectSearchIntent("Butun dunyo bo'ylab soatiga 30 AQSh dollari beradigan 15 ta ish top").isJobSearch, true);
+  assert.equal(detectSearchIntent("Menga hozir faol vakansiyalarni topib ber").isJobSearch, true);
+});
