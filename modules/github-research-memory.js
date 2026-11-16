@@ -6,6 +6,17 @@ function trimWords(value, maxWords = 100) {
   return String(value || "").replace(/\s+/g, " ").trim().split(" ").filter(Boolean).slice(0, maxWords).join(" ");
 }
 
+function isGitHubRepositoryUrl(value) {
+  try {
+    const url = new URL(String(value || ""));
+    return url.protocol === "https:" && url.hostname === "github.com" &&
+      !url.username && !url.password &&
+      /^\\/[A-Za-z0-9_.-]+\\/[A-Za-z0-9_.-]+\\/?$/.test(url.pathname);
+  } catch (_) {
+    return false;
+  }
+}
+
 function buildKnowledgeEntries(report) {
   if (!report || !Array.isArray(report.repositories)) return [];
   const generatedAt = String(report.generatedAt || new Date().toISOString());
@@ -37,4 +48,4 @@ function buildKnowledgeEntries(report) {
     .filter(Boolean);
 }
 
-module.exports = { ALLOWED_LICENSES, trimWords, buildKnowledgeEntries };
+module.exports = { ALLOWED_LICENSES, trimWords, isGitHubRepositoryUrl, buildKnowledgeEntries };
