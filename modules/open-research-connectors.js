@@ -133,6 +133,52 @@ async function zenodoSearch(query, options) {
     qualityScore: 4
   })).filter(Boolean);
 }
+async function doajSearch(query, options) {
+  const endpoint = "https://doaj.org/api/search/articles/" + encodeURIComponent(query) +
+    "?page=1&pageSize=" + options.perSource;
+  const data = await json(endpoint, options);
+  return (data.results || []).map(item => {
+    const bib = item.bibjson || {};
+    const doi = (bib.identifier || []).find(x => String(x.type || "").toLowerCase() === "doi")?.id;
+    const link = (bib.link || []).find(x => safeUrl(x.url));
+    return normalizeRecord({
+      provider: "DOAJ", title: bib.title,
+      authors: authorsFrom(bib.author?.map(x => x.name)),
+      year: yearFrom(bib.year), doi, url: link?.url || (doi ? "https://doi.org/" + doi : ""),
+      abstract: bib.abstract, openAccessUrl: link?.url, qualityScore: 4
+    });
+  }).filter(Boolean);
+}
+async function coreSearch(query, options) {
+  const apiKey = process.env.CORE_API_KEY || "";
+  if (!apiKey) return [];
+  const fetchImpl = options.fetchImpl || globalThis.fetch;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), options.timeoutMs || DEFAULT_TIMEOUT_MS);
+  try {
+    const response = await fetchImpl("https://api.core.ac.uk/v3/search/works", {
+      method: "POST", signal: controller.signal,
+      headers: { "Authorization": "Bearer " + apiKey, "Content-Type": "application/json",
+        "Accept": "application/json", "User-Agent": USER_AGENT },
+      body: JSON.stringify({ q: query, limit: options.perSource })
+    });
+    if (!response?.ok) throw new Error("http-" + (response?.status || "unknown"));
+    const text = await response.text();
+    if (Buffer.byteLength(text, "utf8") > MAX_RESPONSE_BYTES) throw new Error("response-too-large");
+    const data = JSON.parse(text);
+    return (data.results || []).map(item => {
+      const doi = item.doi || (item.identifiers || []).find(x => /^10\./.test(String(x))) || "";
+      const download = safeUrl(item.downloadUrl || item.fullTextUrl);
+      return normalizeRecord({
+        provider: "CORE", title: item.title, authors: authorsFrom(item.authors?.map(x => x.name || x)),
+        year: yearFrom(item.yearPublished || item.publishedDate), doi,
+        url: item.links?.find(x => x.type === "display")?.url || item.sourceFulltextUrls?.[0] ||
+          (doi ? "https://doi.org/" + doi : item.id ? "https://core.ac.uk/works/" + item.id : ""),
+        abstract: item.abstract, openAccessUrl: download, qualityScore: 4
+      });
+    }).filter(Boolean);
+  } finally { clearTimeout(timeout); }
+}
 async function openAlexSearch(query, options) {
   const apiKey = process.env.OPENALEX_API_KEY || "";
   if (!apiKey) return [];
@@ -167,6 +213,8 @@ async function searchOpenResearch(query, options = {}) {
     ["Europe PMC", europePmcSearch],
     ["arXiv", arxivSearch],
     ["Zenodo", zenodoSearch],
+    ["DOAJ", doajSearch],
+    ["CORE", coreSearch],
     ["OpenAlex", openAlexSearch]
   ];
   const settled = await Promise.all(providers.map(async ([name, fn]) => {
