@@ -292,7 +292,6 @@ async function searchJobs(message, webSearch, options = {}) {
   const criteria = extractJobCriteria(message);
   const limit = Math.max(1, Math.min(25, Number(options.limit) || criteria.requestedCount));
   const queries = buildJobSearchQueries(message);
-  const feedPromise = publicJobFeeds.fetchPublicJobFeeds(message, options.feedOptions || {}).catch(error => ({ results: [], providers: [], failures: [String(error?.message || error)], feedsChecked: 0, fetchedRecords: 0 }));
   const requestedRole = extractJobRole(message);
   const requestedKogon = /kogon/iu.test(message);
   const roleEvidence = /(?:dasturchi|dasturlash|developer|programmer|software engineer|frontend|backend|javascript|python|kotlin|java|qa engineer|web developer)/iu;
@@ -342,7 +341,9 @@ async function searchJobs(message, webSearch, options = {}) {
       return details.listingSpecific ? { ...normalized, ...details, host: (() => { try { return new URL(normalized.url).hostname; } catch (_) { return ""; } })() } : null;
     } catch (_) { return null; }
   });
-  const feeds = await feedPromise;
+  const openedPageResults = pages.filter(Boolean);
+  const feeds = openedPageResults.length ? { results: [], providers: [], failures: [], feedsChecked: 0, fetchedRecords: 0 } :
+    await publicJobFeeds.fetchPublicJobFeeds(message, options.feedOptions || {}).catch(error => ({ results: [], providers: [], failures: [String(error?.message || error)], feedsChecked: 0, fetchedRecords: 0 }));
   const feedResults = (feeds.results || []).filter(item => {
     const content = [item.title, item.company, item.location, item.salary, item.description].join(" ");
     if (requestedRole && !roleEvidence.test(content)) return false;
@@ -359,7 +360,7 @@ async function searchJobs(message, webSearch, options = {}) {
     return true;
   });
   const usable = [], seenTitles = new Set(), hostCounts = new Map();
-  for (const item of [...feedResults, ...pages.filter(Boolean)]) {
+  for (const item of [...openedPageResults, ...feedResults]) {
     const key = item.title.toLowerCase().replace(/[^a-z0-9а-яё]+/giu, " ").trim();
     if (!key || seenTitles.has(key)) continue;
     const hostCount = hostCounts.get(item.host) || 0;
@@ -369,7 +370,6 @@ async function searchJobs(message, webSearch, options = {}) {
     if (usable.length >= limit) break;
   }
   return {
-    ok: true,
     queries,
     requestedRole: requestedRole?.label || null,
     criteria,
