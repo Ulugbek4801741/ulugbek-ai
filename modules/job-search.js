@@ -1,6 +1,7 @@
 "use strict";
 
 const currencyConverter = require("./currency-converter");
+const publicJobFeeds = require("./public-job-feeds");
 
 const JOB_INTENT = /(?:\bish\s*(?:top(?:ib)?\s*ber|qidir(?:ib)?\s*ber|kerak|o\s*rin(?:lar)?|vakans(?:iya|iyalar)?|izlay(?:apman|man)?|qidir)|\bvakans(?:iya|iyalar)\b|\bjob\s*(?:search|opening|vacanc(?:y|ies))\b|\bfind\s+(?:me\s+)?a?\s*jobs?\b|\bemployment\s+(?:opportunit|jobs?)|\bработ(?:а|у)\s*(?:найти|ищу|нужна)|\bваканси)/iu;
 
@@ -135,6 +136,14 @@ function extractPhones(value) {
 function extractEmails(value) {
   return [...new Set((String(value || "").match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi) || []).map(x => x.toLowerCase()))].slice(0, 3);
 }
+
+function extractTelegram(value) {
+  const text = String(value || "");
+  const urls = text.match(/https?:\/\/(?:t\.me|telegram\.me)\/[A-Za-z0-9_]{4,}/gi) || [];
+  const handles = [...text.matchAll(/(?:telegram|tg|телеграм)\s*[:：]?\s*@([A-Za-z0-9_]{4,})/giu)].map(match => "@" + match[1]);
+  return [...new Set([...urls, ...handles])].slice(0, 4);
+}
+
 function extractSalary(value) {
   const text = String(value || "");
   const patterns = [
@@ -187,6 +196,7 @@ function extractJobDetails(item, message) {
   const text = String(item?.snippet || "");
   const phones = extractPhones(text);
   const emails = extractEmails(text);
+  const telegram = extractTelegram(text);
   const salary = extractSalary(text);
   const location = extractLabeledValue(text, ["manzil", "joylashuv", "location", "address", "город", "адрес"]);
   const minimumHourlyUsd = extractMinimumHourlyUsd(text, location);
@@ -211,7 +221,8 @@ function extractJobDetails(item, message) {
     experience,
     phones,
     emails,
-    contactAvailable: phones.length > 0 || emails.length > 0 || apply,
+    telegram,
+    contactAvailable: phones.length > 0 || emails.length > 0 || telegram.length > 0 || apply,
     jobSignals,
     listingSpecific: Boolean(item?.officialStatus === "published" || (item?.pageRead && !isCategoryPage(item.url) && text.length >= 240 && jobSignals >= 2)),
     activeStatus: closed ? "closed-or-expired-indicator-found" : item?.officialStatus === "published" ? "official-board-published" : activeEvidence ? "active-application-evidence-found" : "not-independently-confirmed",
@@ -239,6 +250,7 @@ function formatJobResults(results, message = "", criteria = extractJobCriteria(m
       "Tajriba: " + (item.experience || "Sahifada ko‘rsatilmagan"),
       "Telefon: " + (item.phones.length ? item.phones.join(", ") : "Sahifada topilmadi"),
       "Email: " + (item.emails.length ? item.emails.join(", ") : "Sahifada topilmadi"),
+      "Telegram: " + (item.telegram?.length ? item.telegram.join(", ") : "Sahifada topilmadi"),
       "Vakansiya sahifasi: " + item.url,
       item.applicationUrl ? "Ariza topshirish: " + item.applicationUrl : "",
       "E’lon holati: " + (item.activeStatus === "closed-or-expired-indicator-found" ? "Yopilgan yoki muddati o‘tgan bo‘lishi mumkin" : item.activeStatus === "official-board-published" ? "Rasmiy ish e’lonlari tizimida e’lon qilingan; ariza sahifasi ochiq" : "Sahifada ariza topshirish belgisi topildi; ish beruvchining yakuniy qabul holatini ariza sahifasida yana tekshiring"),
@@ -275,6 +287,7 @@ async function searchJobs(message, webSearch, options = {}) {
   const criteria = extractJobCriteria(message);
   const limit = Math.max(1, Math.min(25, Number(options.limit) || criteria.requestedCount));
   const queries = buildJobSearchQueries(message);
+  const feedPromise = publicJobFeeds.fetchPublicJobFeeds(message, options.feedOptions || {}).catch(error => ({ results: [], providers: [], failures: [String(error?.message || error)], feedsChecked: 0, fetchedRecords: 0 }));
   const requestedRole = extractJobRole(message);
   const requestedKogon = /kogon/iu.test(message);
   const roleEvidence = /(?:dasturchi|dasturlash|developer|programmer|software engineer|frontend|backend|javascript|python|kotlin|java|qa engineer|web developer)/iu;
@@ -297,7 +310,7 @@ async function searchJobs(message, webSearch, options = {}) {
   if (batches.every(batch => batch === null)) {
     return { ok: false, results: [], reply: "ULUGBEK AI ish vakansiyalarini qidirishda internet manbasiga ulana olmadi. Keyinroq qayta urinib ko‘ring." };
   }
-  const pageCandidates = candidates.slice(0, Math.max(60, limit * 6));
+  const pageCandidates = candidates.slice(0, Math.min(24, Math.max(12, limit * 2)));
   const pages = await mapWithConcurrency(pageCandidates, 5, async item => {
     if (typeof webSearch.fetchPage !== "function" && typeof webSearch.fetchOfficialJob !== "function") return null;
     try {
@@ -326,8 +339,24 @@ async function searchJobs(message, webSearch, options = {}) {
       return details.listingSpecific ? { ...normalized, ...details, host: (() => { try { return new URL(normalized.url).hostname; } catch (_) { return ""; } })() } : null;
     } catch (_) { return null; }
   });
+  const feeds = await feedPromise;
+  const feedResults = (feeds.results || []).filter(item => {
+    const content = [item.title, item.company, item.location, item.salary, item.description].join(" ");
+    if (requestedRole && !roleEvidence.test(content)) return false;
+    if (locationEvidence && !locationEvidence.test(content)) return false;
+    if (criteria.minHourlyUsd !== null) {
+      const hourly = extractMinimumHourlyUsd(content, item.location);
+      if (hourly === null || hourly < criteria.minHourlyUsd) return false;
+      item.minimumHourlyUsd = hourly;
+    } else {
+      item.minimumHourlyUsd = extractMinimumHourlyUsd(content, item.location);
+    }
+    const details = extractJobDetails({ title: item.title, snippet: item.content, url: item.url, pageRead: true, officialStatus: "published", applicationUrl: item.applicationUrl }, message);
+    Object.assign(item, details, { title: item.title, url: item.url, host: (() => { try { return new URL(item.url).hostname; } catch (_) { return ""; } })(), feedVerified: true, officialProvider: item.officialProvider });
+    return true;
+  });
   const usable = [], seenTitles = new Set(), hostCounts = new Map();
-  for (const item of pages.filter(Boolean)) {
+  for (const item of [...feedResults, ...pages.filter(Boolean)]) {
     const key = item.title.toLowerCase().replace(/[^a-z0-9а-яё]+/giu, " ").trim();
     if (!key || seenTitles.has(key)) continue;
     const hostCount = hostCounts.get(item.host) || 0;
@@ -344,6 +373,10 @@ async function searchJobs(message, webSearch, options = {}) {
     results: usable,
     searchedPages: candidates.length,
     openedPages: pages.filter(Boolean).length,
+    feedsChecked: feeds.feedsChecked || 0,
+    feedProviders: feeds.providers || [],
+    fetchedFeedRecords: feeds.fetchedRecords || 0,
+    feedFailures: feeds.failures || [],
     reply: formatJobResults(usable, message, criteria)
   };
 }
