@@ -18,7 +18,6 @@ function createMarketplaceRouter() {
   const sessionSecret = process.env.AUTH_SESSION_SECRET || process.env.ADMIN_SESSION_SECRET || "";
   const otpSecret = process.env.AUTH_OTP_SECRET || sessionSecret;
   const schema = [
-    "CREATE EXTENSION IF NOT EXISTS pgcrypto",
     "CREATE TABLE IF NOT EXISTS marketplace_users (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), phone TEXT NOT NULL UNIQUE, email TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, phone_verified_at TIMESTAMPTZ, email_verified_at TIMESTAMPTZ, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())",
     "CREATE TABLE IF NOT EXISTS marketplace_verification_codes (id BIGSERIAL PRIMARY KEY, user_id UUID NOT NULL REFERENCES marketplace_users(id) ON DELETE CASCADE, channel TEXT NOT NULL CHECK (channel IN ('email','phone')), code_hash TEXT NOT NULL, expires_at TIMESTAMPTZ NOT NULL, attempts INTEGER NOT NULL DEFAULT 0, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), UNIQUE(user_id, channel))",
     "CREATE TABLE IF NOT EXISTS marketplace_sessions (token_hash TEXT PRIMARY KEY, user_id UUID NOT NULL REFERENCES marketplace_users(id) ON DELETE CASCADE, expires_at TIMESTAMPTZ NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())",
@@ -71,7 +70,7 @@ function createMarketplaceRouter() {
   function requireOrigin(req, res, next) {
     const origin = req.get("origin");
     if (!origin) return next();
-    const allowed = new Set(["https://ulugbek4801741.github.io","https://localhost","capacitor://localhost","http://localhost",...(process.env.FRONTEND_ORIGIN || "").split(",").map(x => x.trim().replace(/\/$/, "")).filter(Boolean)]);
+    const allowed = new Set(["https://ulugbek4801741.github.io","https://localhost","capacitor://localhost","http://localhost",...(process.env.FRONTEND_ORIGIN || "").split(",").map(x => x.trim().replace(/\/$/, "")).filter(Boolean),process.env.RENDER_EXTERNAL_URL,process.env.PUBLIC_BASE_URL].filter(Boolean).map(x => x.replace(/\/$/, "")));
     if (!allowed.has(origin)) return res.status(403).json({ ok: false, error: "Ushbu manbadan so‘rovga ruxsat yo‘q." });
     next();
   }
