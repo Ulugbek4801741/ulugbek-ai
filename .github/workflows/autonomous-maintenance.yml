@@ -99,7 +99,7 @@ jobs:
           mkdir -p reports
           for attempt in $(seq 1 40); do
             if curl --fail --silent --show-error --location \
-              --connect-timeout 10 --max-time 25 \
+              --connect-timeout 10 --max-time 15 \
               https://ulugbek-ai2.onrender.com/api/health \
               --output reports/learning-health.json; then
               if node -e "const h=require('./reports/learning-health.json'); const s=h.publicResearchWorker?.githubResearchMemory?.savedSources||0; const c=h.languageTraining?.corpusSources||0; const trained=h.languageTraining?.modelTrained===true; if(s>=5 && c>=5 && trained) process.exit(0); process.exit(1)"; then
@@ -210,9 +210,9 @@ jobs:
           DEPLOYED: ${{ steps.deploy.outputs.deployed }}
         run: |
           mkdir -p reports
-          for attempt in $(seq 1 60); do
+          for attempt in $(seq 1 40); do
             if curl --fail --silent --show-error --location \
-              --connect-timeout 10 --max-time 30 \
+              --connect-timeout 10 --max-time 15 \
               https://ulugbek-ai2.onrender.com/api/health \
               --output reports/post-deploy-health.json; then
               if node -e "const h=require('./reports/post-deploy-health.json'); if(h.ok!==true) process.exit(1); if(process.env.DEPLOYED==='true' && h.buildCommit!==process.env.EXPECTED_COMMIT) process.exit(1)"; then
