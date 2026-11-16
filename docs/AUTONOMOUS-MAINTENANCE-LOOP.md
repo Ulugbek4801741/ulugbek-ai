@@ -19,7 +19,7 @@ The public GitHub repository runs the workflow after every merge to `main`, ever
 
 - The workflow does not edit application source code or the `main` branch. Its only write is a public, source-attributed research snapshot on `autonomous-research-memory` after all checks pass.
 - It never runs code downloaded from an upstream repository.
-- It never copies code, installs upstream projects, changes dependencies, edits model weights, pushes commits, merges pull requests, changes secrets, or deploys.
+- It never copies or executes upstream code, installs upstream projects, edits model weights, pushes commits to `main`, merges pull requests, or changes secrets. A production deploy is possible only through the separately configured deploy hook after the quality gate passes.
 - Upstream README and release-note excerpts are limited to 100 words each (at most 200 words from one repository per run).
 - An upstream repository is a research lead, not automatically trusted training data. Its license and security posture must be reviewed before any code reuse.
 - Production deployment is triggered only after the main-branch quality checks pass, and only when the repository secret `RENDER_DEPLOY_HOOK_URL` is configured. The workflow then waits for the expected commit to appear on Render and re-tests chat.
@@ -36,7 +36,7 @@ Until this secret exists, the workflow deliberately skips automatic production d
 
 ## What "learning" means here
 
-This first stage performs recurring source discovery and evidence collection. It does not train a foundation model or autonomously rewrite its own intelligence. Retrieved README/release information is an audit artifact, not permanent model memory. A later stage needs a persistent knowledge store and a configured code-reasoning provider or bounded deterministic repair rules to convert reviewed findings into tested pull requests.
+This first stage performs recurring source discovery and evidence collection. It stores public research reports on a separate Git branch, but does not train a foundation model or autonomously rewrite its own intelligence. A later stage needs a configured code-reasoning provider or bounded deterministic repair rules to convert reviewed findings into tested pull requests.
 
 ## Scheduling
 
