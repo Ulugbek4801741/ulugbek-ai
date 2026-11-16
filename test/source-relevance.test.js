@@ -37,3 +37,34 @@ test("does not treat generic question words as subject evidence", () => {
   });
   assert.equal(score.relevant, false);
 });
+
+
+test("rejects a medicine passage that only lists India and separately mentions history", () => {
+  const reply = "Tabobat tarixi insoniyat tarixi bilan bog‘liq. Qadimgi Sharqda Misr, Hindiston va Markaziy Osiyo xalqlari kasalliklarni o‘rgangan.";
+  const score = relevance.scoreSource("Hindiston tarixi haqida ma'lumot ber", { title: "", snippet: reply });
+  assert.equal(score.relevant, false);
+});
+
+test("rejects a world internet statistic for an India population question", () => {
+  const reply = "Dunyo aholisining soni yetti milliarddan oshgan, shundan uch milliarddan ziyodi internetga ulangan.";
+  const score = relevance.scoreSource("Menga hozir Hindiston aholi soni haqida ma'lumot ber", { title: "", snippet: reply });
+  assert.equal(score.relevant, false);
+});
+
+test("accepts a focused India history passage", () => {
+  const reply = "Hindiston tarixi qadimgi Hind vodiysi sivilizatsiyasidan boshlanadi. Keyinchalik Hindistonda Maurya va Gupta imperiyalari rivojlangan.";
+  const score = relevance.scoreSource("Hindiston tarixi haqida ma'lumot ber", { title: "", snippet: reply });
+  assert.equal(score.relevant, true);
+});
+
+test("accepts a focused India population answer", () => {
+  const reply = "Hindiston aholisi 2025-yilda BMT ma'lumotiga ko‘ra taxminan 1,464 milliard kishini tashkil etgan.";
+  const score = relevance.scoreSource("Menga hozir Hindiston aholi soni haqida ma'lumot ber", { title: "", snippet: reply });
+  assert.equal(score.relevant, true);
+});
+
+
+test("removes Uzbek request stop words before suffix normalization", () => {
+  const queryTerms = relevance.terms("Menga hozir Hindiston aholi soni haqida ma'lumot ber");
+  assert.deepEqual(queryTerms, ["hindiston", "ahol", "son"]);
+});

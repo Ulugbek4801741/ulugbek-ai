@@ -1265,8 +1265,17 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   } catch (_) {}
   // Search the public web when the local approved knowledge and persistent research cache
   // cannot answer the user's question. Explicit/current searches always refresh evidence.
+  const sourceRelevance = require("./modules/source-relevance");
+  // Cached and locally learned notes are untrusted candidates too: filter them
+  // against this exact user question before either fallback generation or synthesis.
+  const relevantLocalKnowledge = sourceRelevance.filterRelevantSources(conversationMessage, localKnowledge);
+  const relevantCachedKnowledge = sourceRelevance.filterRelevantSources(conversationMessage, cachedKnowledge);
+  const relevantStoredKnowledge = sourceRelevance.filterRelevantSources(conversationMessage, storedKnowledge);
   const localCandidate = nativeBrain.buildLocalReply(
-    conversationMessage, [...localKnowledge, ...cachedKnowledge, ...storedKnowledge.map(item => ({ title: item.title, content: item.content, source: item.source, status: "approved-local-knowledge", sourceQuality: 4 }))], conversationContext
+    conversationMessage,
+    [...relevantLocalKnowledge, ...relevantCachedKnowledge,
+      ...relevantStoredKnowledge.map(item => ({ ...item, status: "approved-local-knowledge", sourceQuality: 4 }))],
+    conversationContext
   );
   const hasLocalAnswer = localCandidate?.reasoning?.answerable === true;
   // Keep known native answers local, but do not bypass configured models for unrelated dialogue.
@@ -1360,7 +1369,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
         title: item.title, content: item.content, source: item.source,
         status: "approved-local-knowledge", sourceQuality: 4
       })),
-      ...localKnowledge.map(item => ({
+      ...relevantLocalKnowledge.map(item => ({
         title: item.title, content: item.content, source: item.source,
         status: "approved-local-knowledge", sourceQuality: 3
       }))
@@ -1380,7 +1389,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
 
     // If web evidence is weak or model synthesis fails, keep a valid local answer
     // instead of discarding it and returning a generic "not enough evidence" reply.
-    result = answerSelection.selectAnswer(result, localCandidate);
+    result = answerSelection.selectAnswer(result, localCandidate, conversationMessage);
 
     // Keep evidence URLs available to users so historical and factual answers are auditable.
 
@@ -1390,8 +1399,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       reply = result.reply;
       reasoning = result.reasoning;
     } else {
-      reply = universalSearch.formatEvidenceReply(found.results,
-        found.ok ? "" : "Internet qidiruvi vaqtincha ishlamadi; mahalliy bilimlardan ham ishonchli javob topilmadi.");
+      reply = "Topilgan ma’lumotlar savolingiz mavzusiga mosligi tekshiruvidan o‘tmadi. Noto‘g‘ri yoki boshqa mavzudagi matnni javob sifatida bermayman. Savolga bevosita mos ishonchli dalil topilmadi; keyinroq qayta urinib ko‘ring.";
       reasoning = result?.reasoning || {
         method: found.ok ? "public-web-research-no-language-model-synthesis" : "local-fallback-search-unavailable",
         answerable: false,
