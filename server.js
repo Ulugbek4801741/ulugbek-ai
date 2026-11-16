@@ -211,6 +211,7 @@ app.use("/api/", rateLimit({
   standardHeaders: "draft-8",
   legacyHeaders: false
 }));
+app.use("/api/marketplace", require("./modules/regional-marketplace-api"));
 const chatRateLimit = rateLimit({
   windowMs: 60 * 1000, limit: 8, standardHeaders: "draft-8", legacyHeaders: false,
   message: { error: "Chat so‘rovlari vaqtinchalik chegaraga yetdi. Bir daqiqadan keyin qayta urinib ko‘ring." }
