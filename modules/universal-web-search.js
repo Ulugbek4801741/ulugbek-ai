@@ -49,7 +49,8 @@ function buildUniversalSearchQueries(value) {
     queries.push(original + " official information facts explanation");
     queries.push(original + " evidence research detailed answer");
   }
-  return [...new Set(queries.map(q => cleanText(q, 500)).filter(Boolean))].slice(0, 3);
+  return [...new Set(queries.map(q => cleanText(q, 500)).filter(Boolean))]
+    .slice(0, historyIntent.isHistorical ? 5 : 3);
 }
 function buildUniversalSearchQuery(value) { return buildUniversalSearchQueries(value)[1] || cleanText(value, 500); }
 function hostOf(value) {
