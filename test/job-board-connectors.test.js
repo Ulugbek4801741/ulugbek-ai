@@ -126,3 +126,31 @@ test("job search accepts a live published ATS posting and prints its direct appl
   assert.match(result.reply, /https:\/\/jobs\.lever\.co\/acme\/abc-123\/apply/);
   assert.match(result.reply, /Rasmiy ish e’lonlari tizimida/);
 });
+
+
+test("converts an international hourly salary before applying the USD minimum filter", async () => {
+  const { searchJobs } = require("../modules/job-search");
+  const result = await searchJobs("Worldwide jobs paying at least $30 per hour, 1 job, currently hiring", {
+    async search() {
+      return [{ title: "Berlin Support Engineer", url: "https://careers.example.org/vacancy/berlin-support", snippet: "Support Engineer vacancy" }];
+    },
+    async fetchOfficialJob() {
+      return {
+        title: "Berlin Support Engineer",
+        url: "https://careers.example.org/vacancy/berlin-support",
+        applicationUrl: "https://careers.example.org/vacancy/berlin-support/apply",
+        content: ("Employer: Example GmbH. Location: Berlin, Germany. Salary: €30-€35 per hour. Requirements: 3 years experience. ").repeat(4),
+        officialStatus: "published",
+        officialProvider: "lever",
+        pageRead: true
+      };
+    },
+    async fetchExchangeRates() {
+      return { rates: { EUR: 0.9 }, date: "2026-11-15", source: "Frankfurter daily reference rates" };
+    }
+  });
+  assert.equal(result.results.length, 1);
+  assert.equal(result.results[0].minimumHourlyUsd, 33.33);
+  assert.equal(result.results[0].salaryConversion.currency, "EUR");
+  assert.match(result.reply, /taxminiy konvertatsiya/);
+});
