@@ -56,6 +56,11 @@ function configuration(env = process.env) {
   const token = tokenFor(provider, env);
   if (provider === "none" || !provider) return { configured: false, provider: "not-configured", apiKeyRequired: false };
   if (!model) return { configured: false, provider, reason: "model-name-missing", apiKeyRequired: provider !== "openai-compatible" };
+  if (provider === "groq") {
+    const url = validHttpUrl(endpointFor(provider, env));
+    if (!url || url.hostname !== "api.groq.com" || url.protocol !== "https:") return { configured: false, provider, reason: "endpoint-invalid", apiKeyRequired: true };
+    return { configured: Boolean(token), provider, model, endpoint: url.toString(), apiKeyRequired: true, tokenConfigured: Boolean(token) };
+  }
   if (provider === "openai-compatible") {
     const url = validHttpUrl(endpointFor(provider, env));
     if (!url) return { configured: false, provider, reason: "endpoint-invalid", apiKeyRequired: false };
