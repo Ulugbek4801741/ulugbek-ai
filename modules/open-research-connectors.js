@@ -278,7 +278,7 @@ async function searchUniversities(query, options = {}) {
         provider: "Research Organization Registry (ROR)", qualityScore: 4
       })).filter(x => x.title && x.url);
     })()
-  ].map(p => p.then(results => ({ ok: true, results })).catch(error => ({ ok: false, results: [], error: error.name || "provider-error" })));
+  ].map(p => p.then(results => ({ ok: true, results })).catch(error => ({ ok: false, results: [], error: error.name || "provider-error" }))));
   return {
     results: settled.flatMap(x => x.results).slice(0, params.page_size),
     providers: settled.filter(x => x.ok).map(() => "ROR"),
