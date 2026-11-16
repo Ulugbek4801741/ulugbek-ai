@@ -65,12 +65,10 @@ function matchesRequestedRole(role, title, description) {
   const titleText = String(title || "");
   const descriptionText = String(description || "");
   if (role.label === "Python dasturchi") {
-    // A generic mention of Python in an unrelated vacancy is not enough.
-    const pythonDeveloperTitle = /\bpython\b.{0,45}\b(?:developer|engineer|programmer|software|backend)\b|\b(?:developer|engineer|programmer|software|backend)\b.{0,45}\bpython\b/iu;
-    if (pythonDeveloperTitle.test(titleText)) return true;
-    const developerTitle = /\b(?:programmer|software|backend|back-end|full[ -]?stack|application|platform)\s+(?:developer|engineer)\b|\b(?:backend|back-end|full[ -]?stack)\s+developer\b/iu.test(titleText);
-    const explicitPythonRequirement = /(?:\b(?:required|must have|experience with|proficient in|proficiency in|skills? in|using|primary language|main language)\b.{0,65}\bpython\b|\bpython\b.{0,65}\b(?:required|must have|experience|proficient|proficiency|skills?|primary language|main language)\b)/iu;
-    return developerTitle && explicitPythonRequirement.test(descriptionText);
+    // Strict title gate: generic React/backend/data roles are not Python vacancies
+    // merely because Python appears somewhere in a long description.
+    const pythonDeveloperTitle = /\bpython\b.{0,55}\b(?:developer|engineer|programmer|software|backend|full[ -]?stack)\b|\b(?:developer|engineer|programmer|software|backend|full[ -]?stack)\b.{0,55}\bpython\b/iu;
+    return pythonDeveloperTitle.test(titleText);
   }
   const evidence = role.evidencePattern || /(?:dasturchi|dasturlash|developer|programmer|software engineer|frontend|backend|javascript|python|kotlin|java|qa engineer|web developer)/iu;
   return evidence.test(titleText) || evidence.test(descriptionText);
@@ -312,9 +310,26 @@ async function searchJobs(message, webSearch, options = {}) {
   const limit = Math.max(1, Math.min(25, Number(options.limit) || criteria.requestedCount));
   const queries = buildJobSearchQueries(message);
   const requestedRole = extractJobRole(message);
-  const requestedKogon = /kogon/iu.test(message);
-
-  const locationEvidence = requestedKogon ? /(?:kogon|kog‘on|kogon tumani|buxoro viloyati)/iu : null;
+  const requestedPlace = /kogon|kog‘on/iu.test(message) ? "kogon"
+    : /buxoro|bukhara/iu.test(message) ? "buxoro"
+    : /toshkent|tashkent/iu.test(message) ? "toshkent"
+    : /samarqand|samarkand/iu.test(message) ? "samarqand"
+    : /navoiy|navoi/iu.test(message) ? "navoiy"
+    : /andijon/iu.test(message) ? "andijon"
+    : /farg['’ʻ]?ona|fergana/iu.test(message) ? "fargona"
+    : /namangan/iu.test(message) ? "namangan"
+    : /qarshi/iu.test(message) ? "qarshi"
+    : /nukus/iu.test(message) ? "nukus" : "";
+  const locationEvidence = requestedPlace === "kogon" ? /(?:kogon|kog‘on|kogon tumani)/iu
+    : requestedPlace === "buxoro" ? /(?:buxoro|bukhara)/iu
+    : requestedPlace === "toshkent" ? /(?:toshkent|tashkent)/iu
+    : requestedPlace === "samarqand" ? /(?:samarqand|samarkand)/iu
+    : requestedPlace === "navoiy" ? /(?:navoiy|navoi)/iu
+    : requestedPlace === "andijon" ? /(?:andijon|andijan)/iu
+    : requestedPlace === "fargona" ? /(?:farg['’ʻ]?ona|fergana)/iu
+    : requestedPlace === "namangan" ? /(?:namangan)/iu
+    : requestedPlace === "qarshi" ? /(?:qarshi|karshi)/iu
+    : requestedPlace === "nukus" ? /(?:nukus)/iu : null;
   const batches = await Promise.all(queries.map(async query => {
     try { const value = await webSearch.search(query); return Array.isArray(value) ? value : []; }
     catch (_) { return null; }
