@@ -41,7 +41,11 @@ function terms(value) {
     .toLocaleLowerCase("uz")
     .replace(/[’‘ʼ`]/g, "'")
     .match(/[\p{L}\p{N}]{3,}/gu) || [];
-  return [...new Set(raw.map(normalizeToken)
+  // Remove complete stop words before stemming. Otherwise "menga" -> "men"
+  // and "haqida" -> "haq" become false subject terms and shift the subject pair.
+  return [...new Set(raw
+    .filter(token => !STOP_WORDS.has(token))
+    .map(normalizeToken)
     .filter(token => token && !STOP_WORDS.has(token)))];
 }
 
