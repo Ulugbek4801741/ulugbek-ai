@@ -34,3 +34,9 @@ test("does not confuse a modern Boburshox athlete with the historical ruler", ()
   const result = history.normalizeHistoryIntent("Boburshox polvon Malibu otida Zomin Oqtoshda");
   assert.equal(result.canonicalEntity, null);
 });
+
+
+test("does not confuse Navoiy region history with the poet without person context", () => {
+  const result = history.normalizeHistoryIntent("Navoiy viloyati tarixi haqida ma'lumot ber");
+  assert.equal(result.canonicalEntity, null);
+});
