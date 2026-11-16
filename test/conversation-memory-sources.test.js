@@ -8,6 +8,7 @@ test("source requests are detected in Uzbek and English", () => {
   assert.equal(memory.isSourceRequest("Bu ma'lumotni qaysi manbadan olding?"), true);
   assert.equal(memory.isSourceRequest("Manbaning aniq havolasini yubor"), true);
   assert.equal(memory.isSourceRequest("Where did you get this source?"), true);
+  assert.equal(memory.isSourceRequest("Instagram linkini topib ber"), false);
   assert.equal(memory.isSourceRequest("Xitoy tarixi haqida ma'lumot ber"), false);
 });
 
