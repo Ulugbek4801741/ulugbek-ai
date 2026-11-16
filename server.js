@@ -23,6 +23,8 @@ const userPreferences = require("./modules/user-preferences").createUserPreferen
 const researchCache = require("./modules/research-cache");
 const knowledgeStore = require("./modules/knowledge-store");
 const publicWebReader = require("./modules/public-web-reader");
+const youtubeTranscript = require("./modules/youtube-transcript");
+const multiSourceResearch = require("./modules/multi-source-research");
 const developerAgent = require("./developer-agent");
 const agentPermissions = require("./agent-permissions");
 const learningWorkerForAdmin = require("./lab-learning-worker");
@@ -212,6 +214,11 @@ const chatRateLimit = rateLimit({
 const plannerRateLimit = rateLimit({
   windowMs: 60 * 1000, limit: 10, standardHeaders: "draft-8", legacyHeaders: false,
   message: { error: "Reja so‘rovlari vaqtinchalik chegaraga yetdi. Bir daqiqadan keyin qayta urinib ko‘ring." }
+});
+
+const capabilityRateLimit = rateLimit({
+  windowMs: 60 * 1000, limit: 4, standardHeaders: "draft-8", legacyHeaders: false,
+  message: { error: "Tadqiqot so‘rovlari limiti tugadi. Bir daqiqadan keyin qayta urinib ko‘ring." }
 });
 
 
@@ -777,6 +784,45 @@ app.post("/api/workflows", (req, res) => {
     });
   } catch (error) {
     res.status(400).json({ error: "Workflow yaratilmadi: " + (error.message || "noto‘g‘ri so‘rov.") });
+  }
+});
+
+// Capability endpoints expose real readiness rather than planned feature labels.
+app.get("/api/capabilities", async (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  try {
+    const [knowledge, tools] = await Promise.all([knowledgeStore.status(), Promise.resolve(universalToolHub.status())]);
+    return res.json({
+      ok: true, agentCount: 1, architecture: "single-universal-agent",
+      multiSourceResearch: { ready: true, mode: "cross-domain-open-page-reading", automaticFactVerification: false },
+      youtube: youtubeTranscript.status(),
+      coding: codingLanguageEngine.status(),
+      files: tools.documents,
+      persistentKnowledge: knowledge,
+      practicalAgent: { ready: true, taskQueue: true, externalExecution: false, resultVerification: "per-tool" }
+    });
+  } catch (_) {
+    return res.status(503).json({ ok: false, error: "Imkoniyatlar holatini o‘qib bo‘lmadi." });
+  }
+});
+
+app.post("/api/research/compare", capabilityRateLimit, async (req, res) => {
+  try {
+    const result = await multiSourceResearch.compareSources(req.body?.query);
+    res.set("Cache-Control", "no-store");
+    return res.json(result);
+  } catch (error) {
+    return res.status(error.statusCode || 502).json({ ok: false, error: error.message || "Ko‘p manbali tekshiruv bajarilmadi." });
+  }
+});
+
+app.post("/api/youtube/transcript", capabilityRateLimit, async (req, res) => {
+  try {
+    const result = await youtubeTranscript.getTranscript(req.body?.url || req.body?.videoId);
+    res.set("Cache-Control", "no-store");
+    return res.json({ ok: true, ...result });
+  } catch (error) {
+    return res.status(error.statusCode || 502).json({ ok: false, error: error.message || "YouTube subtitrini o‘qib bo‘lmadi." });
   }
 });
 
