@@ -133,6 +133,23 @@ async function zenodoSearch(query, options) {
     qualityScore: 4
   })).filter(Boolean);
 }
+async function openLibrarySearch(query, options) {
+  const data = await json(queryUrl("https://openlibrary.org/search.json", {
+    q: query, limit: options.perSource,
+    fields: "key,title,author_name,first_publish_year,edition_count,ebook_access"
+  }), options);
+  return (data.docs || []).map(item => {
+    const key = String(item.key || "");
+    const landing = key.startsWith("/works/") ? "https://openlibrary.org" + key : "";
+    return normalizeRecord({
+      provider: "Open Library", title: item.title,
+      authors: authorsFrom(item.author_name), year: item.first_publish_year,
+      url: landing, description: "Nashrlar soni: " + (item.edition_count || 0) +
+        "; elektron kirish: " + clean(item.ebook_access || "ko'rsatilmagan", 80),
+      qualityScore: 2
+    });
+  }).filter(Boolean);
+}
 async function doajSearch(query, options) {
   const endpoint = "https://doaj.org/api/search/articles/" + encodeURIComponent(query) +
     "?page=1&pageSize=" + options.perSource;
@@ -214,6 +231,7 @@ async function searchOpenResearch(query, options = {}) {
     ["arXiv", arxivSearch],
     ["Zenodo", zenodoSearch],
     ["DOAJ", doajSearch],
+    ["Open Library", openLibrarySearch],
     ["CORE", coreSearch],
     ["OpenAlex", openAlexSearch]
   ];
