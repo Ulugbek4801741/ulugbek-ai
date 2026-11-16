@@ -217,6 +217,7 @@ function formatJobResults(results, message = "", criteria = extractJobCriteria(m
     const place = /kogon/iu.test(message) ? "Kogon" : /buxoro/iu.test(message) ? "Buxoro" : "";
     if (role && place) return place + " hududida " + role.label.toLowerCase() +
       " bo‘yicha alohida vakansiya sahifasini ochib, tekshirish mumkin bo‘lgan e’lon topilmadi. Umumiy ish saytlari yoki aloqasiz vakansiyalarni ish o‘rni deb ko‘rsatmayman. Qidiruvni Buxoro shahri, masofaviy ish yoki boshqa dasturlash yo‘nalishlariga kengaytirish mumkin.";
+    if (criteria.minHourlyUsd !== null) return "Hozircha soatiga kamida $" + criteria.minHourlyUsd + " to‘laydigan, sahifasi ochilgan va ariza qabul qilish belgisi tasdiqlangan vakansiya topilmadi. Maoshi noma’lum yoki faol ariza tugmasi ko‘rinmagan e’lonlarni ro‘yxatga qo‘shmadim.";
     return "Qidiruv sahifalari ochildi, ammo alohida vakansiya sifatida tekshirish mumkin bo‘lgan e’lonlar topilmadi. Saytlarning umumiy sahifalarini ish o‘rni deb ko‘rsatmayman. Boshqa kasb yoki yaqin hududni ham qo‘shib qidirish mumkin.";
   }
   const lines = results.map((item, index) => {
@@ -236,7 +237,11 @@ function formatJobResults(results, message = "", criteria = extractJobCriteria(m
     ];
     return details.join("\n");
   }).join("\n\n");
-  const requested = Number(criteria.requestedCount) || results.length;\n  const countNote = results.length < requested ? "\\n\\nSo‘ralgan " + requested + " ta ishning " + results.length + " tasi qat’iy tekshiruvdan o‘tdi. Yetishmagan natijalar o‘ylab topilmadi." : "";\n  return "ULUGBEK AI " + results.length + " ta alohida vakansiya sahifasini ochib tekshirdi. Quyida faqat sahifasi o‘qilgan va ariza topshirish belgisi topilgan e’lonlar berilgan. Topilmagan telefon, maosh yoki ish beruvchi ma’lumoti taxmin qilinmadi." + countNote + "\\n\\n" + lines;
+  const requested = Number(criteria.requestedCount) || results.length;
+  const countNote = results.length < requested
+    ? "\n\nSo‘ralgan " + requested + " ta ishning " + results.length + " tasi qat’iy tekshiruvdan o‘tdi. Yetishmagan natijalar o‘ylab topilmadi."
+    : "";
+  return "ULUGBEK AI " + results.length + " ta alohida vakansiya sahifasini ochib tekshirdi. Quyida faqat sahifasi o‘qilgan va ariza topshirish belgisi topilgan e’lonlar berilgan. Topilmagan telefon, maosh yoki ish beruvchi ma’lumoti taxmin qilinmadi." + countNote + "\n\n" + lines;
 }
 
 async function searchJobs(message, webSearch, options = {}) {
