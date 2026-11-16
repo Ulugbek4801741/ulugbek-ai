@@ -89,11 +89,13 @@ async function searchWeb(message, webSearch, options = {}) {
   const openResearch = require("./open-research-connectors");
   let scholarly = { results: [], providers: [], failedProviders: [] };
   let institutions = { results: [], providers: [], failedProviders: [] };
-  try {
-    scholarly = await openResearch.searchOpenResearch(message, { limit, perSource: 4 });
-  } catch (_) {}
-  if (openResearch.isUniversityQuery(message)) {
-    try { institutions = await openResearch.searchUniversities(message, { limit: 6 }); } catch (_) {}
+  if (options.includeScholarly === true) {
+    try {
+      scholarly = await openResearch.searchOpenResearch(message, { limit, perSource: 4 });
+    } catch (_) {}
+    if (openResearch.isUniversityQuery(message)) {
+      try { institutions = await openResearch.searchUniversities(message, { limit: 6 }); } catch (_) {}
+    }
   }
   if (!candidates.length && !scholarly.results.length && !institutions.results.length) return {
     ok: true, searchFailed: failedQueries === queries.length, results: [], queries,
