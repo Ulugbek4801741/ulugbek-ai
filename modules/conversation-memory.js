@@ -6,7 +6,7 @@ const TTL_MS = 30 * 60 * 1000;
 const JOB_INTENT = /(?:\bish\s*(?:top(?:ib)?\s*ber|qidir(?:ib)?\s*ber|kerak|o\s*rin|vakans)|\bjob\s*(?:search|opening)|\bваканси|\bработ)/iu;
 const LOCATION_ONLY = /^(?:kogon|buxoro|buxoro shahri|buxoroda|kogonda|toshkent|toshkentda|samarqand|samarqandda|navoiy|navoiyda|qarshi|qarshida|andijon|andijonda|farg'ona|farg'onada|namangan|namanganda|nukus|nukusda|urganch|urganchda|jizzax|jizzaxda|termiz|termizda|olot|g'ijduvon)(?:\s+(?:shahri|tumani))?$/iu;
 const KNOWN_LOCATIONS = /\b(kogon|buxoro|toshkent|samarqand|navoiy|qarshi|andijon|farg'ona|namangan|nukus|urganch|jizzax|termiz|guliston|denov|olot|g'ijduvon)(?:da|ga|dan|ning|ni)?\b/iu;
-const SOURCE_REQUEST = /(?:\\bmanba(?:lar|si)?\\b|\\bqaysi\\s+(?:sayt|maqola|sahifa|manba)\\b|\\bqayerdan\\b|\\bhavola(?:si|ni)?\\b|\\blink(?:ni|ini)?\\b|\\burl\\b|\\bweb.?sayt\\b|\\baniq\\s+(?:joy|qism|manzil)\\b|\\bsource(?:s)?\\b|\\bcitation(?:s)?\\b|\\bwhere\\s+did\\s+you\\s+get\\b)/iu;
+const SOURCE_REQUEST = /(?:\bmanba(?:lar|si)?\b|\bqaysi\s+(?:sayt|maqola|sahifa|manba)\b|\bqayerdan\b|\bhavola(?:si|ni)?\b|\blink(?:ni|ini)?\b|\burl\b|\bweb.?sayt\b|\baniq\s+(?:joy|qism|manzil)\b|\bsource(?:s)?\b|\bcitation(?:s)?\b|\bwhere\s+did\s+you\s+get\b)/iu;
 const FOLLOW_UP_JOB = /(?:^(?:ish(?:\s+(?:topib\s+ber|qidirib\s+ber|kerak))?|\bish\s+top|vakansiya(?:\s+topib\s+ber)?|job(?:\s+search)?|yana\s+qidir|davom\s+et)[!.?\s]*$|\bshu\s+(?:yo['’]?nalish(?:da|ga)?|soha|kasb)\b|\bmen\s+.{0,45}\b(?:dasturchi|dasturlovchi|programmist|programmer|developer|frontend|backend|android\s+dasturchi)\w*|\b(?:dasturchiman|dasturlovchiman)\b)/iu;
 
 function prune(now = Date.now()) {
@@ -41,7 +41,6 @@ function remember(sessionId, prompt) {
   const text = String(prompt || "").trim().slice(0, 4000);
   if (!key || !text) return;
   prune();
-  sessions.delete(key);
   const existing = sessions.get(key);
   sessions.set(key, { lastPrompt: text, sources: existing?.sources || [], updatedAt: Date.now() });
 }
@@ -69,10 +68,10 @@ function rememberSources(sessionId, prompt, results) {
     .map(item => ({
       title: String(item.title || "Ochiq manba").slice(0, 220),
       url: item.url,
-      excerpt: String(item.snippet || item.content || "").replace(/\\s+/g, " ").trim().slice(0, 1800),
+      excerpt: String(item.snippet || item.content || "").replace(/\s+/g, " ").trim().slice(0, 1800),
       fetchedAt: new Date().toISOString()
     }));
-  sessions.set(key, { ...existing, sources, updatedAt: Date.now() });
+  sessions.set(key, { ...existing, lastPrompt: String(prompt || existing.lastPrompt || "").slice(0, 4000), sources, updatedAt: Date.now() });
 }
 function getSources(sessionId) {
   const key = String(sessionId || "").slice(0, 80);
