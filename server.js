@@ -1136,6 +1136,27 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   }
   let conversationMessage = conversationMemory.expand(sessionId, message);
   req.chatContextMessage = conversationMessage;
+  // Reveal previously read sources only when the user explicitly asks for them.
+  if (conversationMemory.isSourceRequest(message)) {
+    const previousSources = conversationMemory.getSources(sessionId);
+    if (!previousSources.length) {
+      return res.json({
+        reply: "Avvalgi javob uchun o‘qilgan manbalar ushbu suhbat xotirasida topilmadi. Asosiy savolingizni qayta yuboring, manbalarni tekshirib javob beraman.",
+        mode: "source-history-unavailable",
+        webSearchUsed: false
+      });
+    }
+    const lines = previousSources.slice(0, 3).map((item, index) => {
+      const excerpt = item.excerpt ? "\nTegishli joy: " + item.excerpt.slice(0, 520) : "";
+      return (index + 1) + ". " + item.title + "\nManzil: " + item.url + excerpt;
+    });
+    return res.json({
+      reply: "Oldingi javobda foydalanilgan, o‘qilgan manbalar:\n\n" + lines.join("\n\n"),
+      mode: "previous-answer-sources",
+      webSearchUsed: false,
+      sourceCount: previousSources.length
+    });
+  }
   const inputSafety = require("./modules/input-safety").inspectUserMessage(message);
   const shieldDecision = globalSafetyShield.inspectChat({ message, sessionId, ip: req.ip, inputSafety });
   if (!shieldDecision.allowed) {
@@ -1240,8 +1261,9 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
         } catch (_) {}
       }
       const reply = legalAnswer?.reply || legalResearch.noEvidenceReply(legalEvidence.jurisdiction);
+      conversationMemory.rememberSources(sessionId, conversationMessage, legalEvidence.results);
       return res.json({
-        reply: reply + "\n\nTekshirilgan rasmiy manbalar:\n" + legalResearch.sourceSummary(legalEvidence.results),
+        reply,
         mode: "official-jurisdiction-legal-research",
         agents: ["ULUGBEK Universal Agent"],
         webSearchUsed: true,
@@ -1284,6 +1306,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     }
 
     try { await researchCache.save(found.results, conversationMessage); } catch (_) {}
+    conversationMemory.rememberSources(sessionId, conversationMessage, found.results);
     const evidence = [
       ...universalSearch.evidenceEntries(found.results),
       ...cachedKnowledge,
@@ -1330,24 +1353,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       };
     }
 
-    const verifiedSourceLines = found.results
-      .filter(item => item.pageRead === true && item.url && item.title)
-      .slice(0, 5)
-      .map((item, index) => {
-        const label = item.sourceType === "institution-registry-record"
-          ? "universitet/tashkilot reyestri yozuvi"
-          : item.recordRead ? "ilmiy katalog yozuvi o‘qildi"
-            : "sahifa matni o‘qildi";
-        const doi = item.doi ? " — DOI: " + item.doi : "";
-        const access = item.openAccessUrl ? " — ochiq nusxa: " + item.openAccessUrl
-          : item.recordRead && !item.openAccess ? " — to‘liq matn ochiqligi tasdiqlanmagan" : "";
-        return (index + 1) + ". [" + String(item.title).replace(/[\[\]]/g, "") + "](" + item.url + ") — " + label + doi + access;
-      });
-    if (verifiedSourceLines.length) {
-      reply += "\n\nTekshirish uchun o‘qilgan manbalar:\n" + verifiedSourceLines.join("\n");
-    } else if (found.results.length) {
-      reply += "\n\nEslatma: qidiruv natijalari topildi, ammo sahifa matnlari to‘liq o‘qilmadi; shu sababli ular tasdiqlangan manba sifatida keltirilmadi.";
-    }
+    // Sources are retained for this chat session and shown only on explicit request.
 
     return res.json({
       reply,
