@@ -21,7 +21,7 @@ function splitFacts(text) {
 function reason(query, entries) {
   const history = require("./modules/history-intent").normalizeHistoryIntent(query);
   const retrievalQuery = history.canonicalEntity
-    ? String(query) + " Zahiriddin Muhammad Bobur Boburshoh Babur Boburnoma Baburnama 1483 1530"
+    ? [String(query), history.canonicalEntity, ...(history.aliases || []), ...(history.queryBoost || [])].join(" ")
     : query;
   const linguistic = languageCognition.analyze(retrievalQuery);
   const languageCode = ["uz", "en", "ru", "tr", "kk"].includes(linguistic.language.code) ? linguistic.language.code : "uz";
