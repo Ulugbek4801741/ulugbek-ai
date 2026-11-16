@@ -19,9 +19,13 @@ function splitFacts(text) {
     .map(x=>x.trim()).filter(x=>x.length > 25 && x.length < 700).slice(0,20);
 }
 function reason(query, entries) {
-  const linguistic = languageCognition.analyze(query);
+  const history = require("./modules/history-intent").normalizeHistoryIntent(query);
+  const retrievalQuery = history.canonicalEntity
+    ? String(query) + " Zahiriddin Muhammad Bobur Boburshoh Babur Boburnoma Baburnama 1483 1530"
+    : query;
+  const linguistic = languageCognition.analyze(retrievalQuery);
   const languageCode = ["uz", "en", "ru", "tr", "kk"].includes(linguistic.language.code) ? linguistic.language.code : "uz";
-  const q = new Set([...words(query).map(word => languageCognition.stemToken(word, languageCode)), ...linguistic.concepts]);
+  const q = new Set([...words(retrievalQuery).map(word => languageCognition.stemToken(word, languageCode)), ...linguistic.concepts]);
   const ranked = [];
   for (const entry of entries || []) {
     for (const fact of splitFacts(entry.content)) {
@@ -209,7 +213,7 @@ function respond(query, entries, suppliedContext = null) {
     if (fact.length > 420) fact = fact.slice(0, 417).replace(/\s+\S*$/, "") + "...";
     return fact;
   }).filter(Boolean);
-  // Source metadata remains internal for evidence ranking; never expose it in the user-facing answer.
+  // The API layer appends only pages that were actually opened as clickable source references.
   const reply = sentences.length ? sentences.join(" ") :
     "Bu savol bo‘yicha hozircha yetarli ishonchli ma’lumot topilmadi.";
   const conciseReasoning = { ...result, facts: selected, outputPolicy: "single-concise-synthesized-answer" };
