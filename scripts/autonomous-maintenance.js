@@ -42,6 +42,10 @@ function trimText(value, limit = 1800) {
   return String(value || "").replace(/\r/g, "").trim().slice(0, limit);
 }
 
+function trimWords(value, maxWords = 100) {
+  return String(value || "").replace(/\s+/g, " ").trim().split(" ").slice(0, maxWords).join(" ");
+}
+
 async function inspectRepository(entry, allowedLicenses) {
   const encoded = entry.fullName.split("/").map(encodeURIComponent).join("/");
   const base = "https://api.github.com/repos/" + encoded;
@@ -69,7 +73,7 @@ async function inspectRepository(entry, allowedLicenses) {
         tag: release.tag_name,
         publishedAt: release.published_at,
         url: release.html_url,
-        notes: trimText(release.body, 1400)
+        notes: trimWords(release.body, 100)
       };
     } catch (error) {
       result.latestRelease = { status: error.status === 404 ? "no-published-release" : "unavailable" };
@@ -78,7 +82,7 @@ async function inspectRepository(entry, allowedLicenses) {
     try {
       const readme = await requestJson(base + "/readme");
       const decoded = Buffer.from(readme.content || "", "base64").toString("utf8");
-      result.readmeExcerpt = trimText(decoded, 1800);
+      result.readmeExcerpt = trimWords(decoded, 100);
     } catch (error) {
       result.readmeExcerpt = "README could not be retrieved.";
     }
