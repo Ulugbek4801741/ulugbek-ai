@@ -4,6 +4,7 @@ const rateLimit = require("express-rate-limit");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const agentRuntime = require("./agent-runtime");
+const universalAgentCore = require("./modules/universal-agent-core");
 const singleAgent = require("./modules/single-agent").createSingleAgent();
 const answerSelection = require("./modules/answer-selection");
 const languageModule = require("./modules/language-module");
@@ -783,6 +784,26 @@ app.get("/api/modules", (_req, res) => {
   res.json({ ok: true, product: "ULUGBEK AI", note: "planned modullar hali ishlaydigan integratsiya emas.", modules: capabilityCatalog.listModules() });
 });
 
+
+app.get("/api/agent/core/status", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  return res.json({ ok: true, agent: universalAgentCore.getStatus() });
+});
+
+app.post("/api/agent/core/plan", plannerRateLimit, (req, res) => {
+  try {
+    const plan = universalAgentCore.createTaskPlan(req.body?.task);
+    res.set("Cache-Control", "no-store");
+    return res.status(plan.status === "blocked" ? 403 : 201).json({
+      ok: plan.status !== "blocked",
+      plan,
+      note: "Bu professional core vazifani tahlil qiladi va xavfsiz reja tuzadi. Tashqi amallar hozircha avtomatik bajarilmaydi."
+    });
+  } catch (error) {
+    return res.status(error.statusCode || 400).json({ ok: false, error: error.message || "Vazifa rejasi tuzilmadi." });
+  }
+});
+
 app.post("/api/agent/plan", plannerRateLimit, async (req, res) => {
   const task = typeof req.body?.task === "string" ? req.body.task.trim() : "";
   if (!task) return res.status(400).json({ error: "Vazifa matni bo‘sh bo‘lmasligi kerak." });
@@ -1047,6 +1068,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   // Keep the original message in its detected language. The native language module
   // handles Uzbek, English, Russian, Turkish, and Kazakh without requiring a translation API.
   const conversationContext = conversationOrchestrator.analyze(conversationMessage);
+  conversationContext.agentPlan = universalAgentCore.createTaskPlan(conversationMessage);
   const savedLanguagePreference = userPreferences.get(sessionId);
   if (savedLanguagePreference) {
     conversationContext.language = { ...conversationContext.language, code: savedLanguagePreference.code, confidence: 1, explicit: true };
