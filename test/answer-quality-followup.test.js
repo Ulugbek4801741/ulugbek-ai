@@ -32,7 +32,7 @@ test("does not claim to have found a Kogon vacancy when no individual listing is
     async search() { return []; }
   });
   assert.equal(result.results.length, 0);
-  assert.match(result.reply, /alohida vakansiya sifatida tekshirish mumkin bo'lgan e'lonlar topilmadi/i);
+  assert.match(result.reply, /alohida vakansiya sifatida tekshirish mumkin bo[‘’']lgan e'lonlar topilmadi/i);
   assert.doesNotMatch(result.reply, /ishga qabul qilindingiz|siz uchun ish topildi/i);
 });
 
