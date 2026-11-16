@@ -38,7 +38,7 @@ test("multi-source research deduplicates domains and distinguishes read from unr
     read: async url => url.includes("beta") ? null : ({ title: "Read", content: "x".repeat(120) })
   });
   assert.equal(result.sources.length, 3);
-  assert.equal(result.independentDomains, 2);
+  assert.equal(result.distinctDomains, 2);
   assert.equal(result.sourceCount, 2);
   assert.equal(result.verification.verifiedFacts, 0);
   assert.equal(result.verification.status, "evidence-collected-needs-claim-level-comparison");
