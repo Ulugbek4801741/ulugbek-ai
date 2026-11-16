@@ -60,12 +60,11 @@ function scoreSource(question, source) {
   // appear together in one sentence. A passing mention in an unrelated list
   // (e.g. "Egypt, India, Central Asia") is not enough.
   const subjectPair = queryTerms.length >= 2 ? queryTerms.slice(0, 2) : [];
-  const pairInSameSentence = !subjectPair.length || normalizedBody
-    .split(/[.!?\n]+/u)
-    .some(sentence => {
+  const pairInSameSentence = !subjectPair.length || [title, normalizedBody]
+    .some(text => text.split(/[.!?\n]+/u).some(sentence => {
       const sentenceTerms = new Set(terms(sentence));
       return subjectPair.every(term => sentenceTerms.has(term));
-    });
+    }));
   const relevant = matchedTerms.length >= minimumMatches &&
     (coverage >= 0.34 || phrase) && pairInSameSentence;
   return { relevant, score: Number(score.toFixed(3)), matchedTerms, queryTerms };
