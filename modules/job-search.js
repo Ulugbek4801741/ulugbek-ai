@@ -173,7 +173,7 @@ function extractMinimumHourlyUsd(value) {
   return null;
 }
 function hasActiveApplicationEvidence(value) {
-  return /(?:apply\s*now|apply\s*for\s*this\s*(?:job|role|position)|submit\s*application|start\s*application|application\s*form|apply\s*today|apply\s*online|apply\s*here|accepting\s*applications|applications?\s*are\s*open|ariza\s*topshirish|hozir\s*ariza\s*ber|откликнуться|подать\s*заявку)/iu.test(String(value || ""));
+  return /(?:apply\s*now|apply\s*for\s*this\s*(?:job|role|position)|submit\s*application|start\s*application|application\s*form|apply\s*today|apply\s*online|apply\s*here|\bapply\b|accepting\s*applications|applications?\s*are\s*open|ariza\s*topshirish|hozir\s*ariza\s*ber|откликнуться|подать\s*заявку)/iu.test(String(value || ""));
 }
 
 function extractJobDetails(item, message) {
