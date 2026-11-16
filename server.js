@@ -1261,8 +1261,9 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
         } catch (_) {}
       }
       const reply = legalAnswer?.reply || legalResearch.noEvidenceReply(legalEvidence.jurisdiction);
+      conversationMemory.rememberSources(sessionId, conversationMessage, legalEvidence.results);
       return res.json({
-        reply: reply + "\n\nTekshirilgan rasmiy manbalar:\n" + legalResearch.sourceSummary(legalEvidence.results),
+        reply,
         mode: "official-jurisdiction-legal-research",
         agents: ["ULUGBEK Universal Agent"],
         webSearchUsed: true,
