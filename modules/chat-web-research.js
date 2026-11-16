@@ -170,4 +170,7 @@ async function search(query) {
     return parseResults(html);
   } finally { clearTimeout(timeout); }
 }
-module.exports = { search, parseResults, safePublicUrl, fetchPage, stripHtml, isPrivateAddress, resolvePublicHost };
+async function fetchOfficialJob(value, options = {}) {
+  return require("./job-board-connectors").fetchOfficialJob(value, options);
+}
+module.exports = { search, parseResults, safePublicUrl, fetchPage, fetchOfficialJob, stripHtml, isPrivateAddress, resolvePublicHost };
