@@ -122,8 +122,8 @@ router.post("/products", createLimit, async (req, res) => {
       !region || !district || !category) {
     return fail(res, 400, "Mahsulot, narx, sotuvchi, telefon, viloyat, tuman va toifa ma’lumotlarini to‘liq kiriting.");
   }
-  if (imageData && (!/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(imageData) || imageData.length > 360000)) {
-    return fail(res, 400, "Rasm JPG, PNG yoki WEBP bo‘lishi va 260 KB dan oshmasligi kerak.");
+  if (imageData && (!/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(imageData) || imageData.length > 80000)) {
+    return fail(res, 400, "Rasm JPG, PNG yoki WEBP bo‘lishi va 60 KB dan oshmasligi kerak.");
   }
   const product = {
     id: crypto.randomUUID(),
