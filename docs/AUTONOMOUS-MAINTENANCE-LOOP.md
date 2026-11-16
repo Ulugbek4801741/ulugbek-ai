@@ -9,9 +9,10 @@ The public GitHub repository runs a scheduled workflow daily and can also be sta
 3. Audits production dependencies for high-severity vulnerabilities.
 4. Reads metadata, latest release notes, declared license and a short README excerpt from a curated list of public upstream repositories.
 5. Calls the deployed Render health endpoint and validates its JSON response.
-6. Stores a time-limited workflow artifact with the upstream research and health report.
-7. Creates or updates one maintenance issue when a check fails.
-8. Dependabot checks npm packages and GitHub Actions weekly, then opens update PRs that go through CI.
+6. Sends a real Uzbek population question to the deployed chat API and rejects unrelated replies (a safe "insufficient evidence" response is accepted).
+7. Stores a time-limited workflow artifact with upstream research, health and chat reports.
+8. Creates or updates one maintenance issue when a check fails.
+9. Dependabot checks npm packages and GitHub Actions weekly, then opens update PRs that go through CI.
 
 ## Safety boundaries
 
