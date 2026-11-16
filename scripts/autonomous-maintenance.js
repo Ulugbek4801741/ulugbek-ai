@@ -150,7 +150,11 @@ async function main() {
   }
 }
 
-main().catch(error => {
-  process.stderr.write("Autonomous research failed: " + String(error.message || error) + "\n");
-  process.exitCode = 1;
-});
+if (require.main === module) {
+  main().catch(error => {
+    process.stderr.write("Autonomous research failed: " + String(error.message || error) + "\n");
+    process.exitCode = 1;
+  });
+}
+
+module.exports = { trimWords, licenseDecision, inspectRepository };
