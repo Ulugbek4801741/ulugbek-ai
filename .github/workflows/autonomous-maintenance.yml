@@ -50,7 +50,6 @@ jobs:
         run: node scripts/autonomous-maintenance.js
 
       - name: Check deployed Render health endpoint
-        if: github.event_name != 'pull_request'
         id: live
         continue-on-error: true
         run: |
@@ -91,7 +90,7 @@ jobs:
               exit 1
             fi
           done
-          if [ "$EVENT_NAME" != "pull_request" ] && [ "$LIVE_RESULT" != "success" ]; then
+          if [ "$LIVE_RESULT" != "success" ]; then
             echo "Render health check failed."
             exit 1
           fi
