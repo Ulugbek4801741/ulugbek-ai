@@ -165,8 +165,8 @@ function isCategoryPage(url) {
 }
 function extractMinimumHourlyUsd(value, location = "") {
   const text = String(value || "");
-  if (/(?:C\\$|A\\$|NZ\\$|S\\$|R\\$|\\b(?:CAD|AUD|NZD|SGD|EUR|GBP|CHF|PLN|INR|AED|ZAR|BRL|MXN)\\b|€|£|₹|zł)/iu.test(text)) return null;
-  if (/\\$/.test(text) && !/(?:USD|US\\$)/iu.test(text) && /(?:canada|australia|new\\s*zealand|singapore)/iu.test(location)) return null;
+  if (/(?:C\$|A\$|NZ\$|S\$|R\$|\b(?:CAD|AUD|NZD|SGD|EUR|GBP|CHF|PLN|INR|AED|ZAR|BRL|MXN)\b|€|£|₹|zł)/iu.test(text)) return null;
+  if (/\$/.test(text) && !/(?:USD|US\$)/iu.test(text) && /(?:canada|australia|new\s*zealand|singapore)/iu.test(location)) return null;
   const patterns = [
     /(?:\$|USD\s*)\s*(\d{1,4}(?:[.,]\d{1,2})?)\s*(?:-|–|to)\s*(?:\$|USD\s*)?\d{1,4}(?:[.,]\d{1,2})?\s*(?:per\s*hour|\/\s*(?:h|hr|hour)|hourly|an\s*hour)/iu,
     /(?:\$|USD\s*)\s*(\d{1,4}(?:[.,]\d{1,2})?)\s*(?:per\s*hour|\/\s*(?:h|hr|hour)|hourly|an\s*hour)/iu,
