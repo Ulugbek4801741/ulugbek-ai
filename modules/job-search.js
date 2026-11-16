@@ -364,6 +364,7 @@ async function searchJobs(message, webSearch, options = {}) {
   const feeds = openedPageResults.length ? { results: [], providers: [], failures: [], feedsChecked: 0, fetchedRecords: 0 } :
     await publicJobFeeds.fetchPublicJobFeeds(message, options.feedOptions || {}).catch(error => ({ results: [], providers: [], failures: [String(error?.message || error)], feedsChecked: 0, fetchedRecords: 0 }));
   const feedResults = (feeds.results || []).filter(item => {
+    const content = [item.title, item.company, item.location, item.salary, item.description].join(" ");
     if (!matchesRequestedRole(requestedRole, item.title, item.description)) return false;
     if (locationEvidence && !locationEvidence.test(content)) return false;
     if (criteria.minHourlyUsd !== null) {
