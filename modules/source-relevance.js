@@ -20,11 +20,18 @@ function normalizeToken(value) {
     .replace(/[’‘ʼ`]/g, "'")
     .replace(/[^\p{L}\p{N}]+/gu, "");
   if (token.length < 3) return "";
-  for (const suffix of SUFFIXES) {
-    if (token.length - suffix.length >= 3 && token.endsWith(suffix)) {
-      token = token.slice(0, -suffix.length);
-      break;
+  // Uzbek words can carry more than one suffix (aholisi -> aholi -> ahol).
+  // Strip at most two layers and preserve a minimum three-letter stem.
+  for (let pass = 0; pass < 2; pass++) {
+    let stripped = false;
+    for (const suffix of SUFFIXES) {
+      if (token.length - suffix.length >= 3 && token.endsWith(suffix)) {
+        token = token.slice(0, -suffix.length);
+        stripped = true;
+        break;
+      }
     }
+    if (!stripped) break;
   }
   return token;
 }
