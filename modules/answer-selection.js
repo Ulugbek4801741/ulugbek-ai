@@ -10,6 +10,9 @@ function isAnswerable(result) {
 function isTopicallyRelevant(question, result) {
   if (!String(question || "").trim()) return true;
   if (!isAnswerable(result)) return false;
+  // Deterministic built-in dialogue replies are matched by intent rules
+  // (e.g. language lessons and programming guidance), not factual evidence.
+  if (result.reasoning?.method === "built-in-dialogue") return true;
   return sourceRelevance.scoreSource(question, {
     title: "",
     snippet: result.reply
