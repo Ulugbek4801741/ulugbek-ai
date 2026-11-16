@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "purpose": "Read public project metadata, README and release notes for review; never execute or copy upstream code automatically.",
+  "allowedLicenses": [
+    "MIT",
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC"
+  ],
+  "repositories": [
+    {
+      "fullName": "nodejs/node",
+      "reason": "Node.js runtime used by the backend"
+    },
+    {
+      "fullName": "expressjs/express",
+      "reason": "HTTP server framework used by the backend"
+    },
+    {
+      "fullName": "ionic-team/capacitor",
+      "reason": "Android application bridge"
+    },
+    {
+      "fullName": "OWASP/NodeGoat",
+      "reason": "Node.js application security learning reference"
+    },
+    {
+      "fullName": "langchain-ai/langchainjs",
+      "reason": "Agent orchestration and retrieval patterns to evaluate"
+    },
+    {
+      "fullName": "modelcontextprotocol/typescript-sdk",
+      "reason": "Tool integration and capability protocol reference"
+    },
+    {
+      "fullName": "actions/runner",
+      "reason": "CI runner and automation infrastructure reference"
+    }
+  ]
+}
