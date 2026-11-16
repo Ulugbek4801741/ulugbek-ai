@@ -96,3 +96,32 @@ test("verifies published Lever postings and preserves the application URL and ho
   assert.equal(job.applicationUrl, "https://jobs.lever.co/acme/abc-123/apply");
   assert.match(job.content, /Salary: \$35-\$45 per hour/);
 });
+
+
+test("job search accepts a live published ATS posting and prints its direct apply link", async () => {
+  const { searchJobs } = require("../modules/job-search");
+  const result = await searchJobs("Worldwide jobs paying at least $30 per hour, 1 job, currently hiring", {
+    async search() {
+      return [{ title: "Support Engineer", url: "https://jobs.lever.co/acme/abc-123", snippet: "Support Engineer vacancy" }];
+    },
+    async fetchOfficialJob() {
+      return {
+        title: "Support Engineer",
+        url: "https://jobs.lever.co/acme/abc-123",
+        applicationUrl: "https://jobs.lever.co/acme/abc-123/apply",
+        content: ("Employer: Acme. Location: Worldwide remote. Salary: $35-$45 per hour. Requirements: 3 years experience. ").repeat(4),
+        officialStatus: "published",
+        officialProvider: "lever",
+        pageRead: true
+      };
+    },
+    async fetchPage() {
+      throw new Error("Official ATS response should be used before HTML page reading");
+    }
+  });
+  assert.equal(result.results.length, 1);
+  assert.equal(result.results[0].activeStatus, "official-board-published");
+  assert.equal(result.results[0].minimumHourlyUsd, 35);
+  assert.match(result.reply, /https:\/\/jobs\.lever\.co\/acme\/abc-123\/apply/);
+  assert.match(result.reply, /Rasmiy ish e’lonlari tizimida/);
+});
