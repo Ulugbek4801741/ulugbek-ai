@@ -16,7 +16,7 @@ function hasLocationHint(value) {
 }
 
 function isWorldwideRequest(value) {
-  return /(?:dunyo\s*bo['’ʻ]ylab|butun\s*dunyo|worldwide|global(?:ly)?|remote\s*worldwide|anywhere\s*(?:in\s*the\s*world)?|all\s*countries|international(?:ly)?)/iu.test(String(value || ""));
+  return /(?:dunyo\s*bo['’‘ʻʼ]ylab|butun\s*dunyo|worldwide|global(?:ly)?|remote\s*worldwide|anywhere\s*(?:in\s*the\s*world)?|all\s*countries|international(?:ly)?)/iu.test(String(value || ""));
 }
 
 function extractJobCriteria(value) {
