@@ -682,6 +682,7 @@ app.get("/api/health", (_req, res) => {
     modelProvider: singleAgent.status().provider,
     modelName: singleAgent.status().model || null,
     agentCount: 1,
+    agentFleet: agentFleet.status(),
     mode: !singleAgent.status().configured ? "native-single-agent-fallback-no-model" :
       singleAgent.status().provider === "openai-compatible" ? "openai-compatible-model" : "external-ai-provider",
     storageMode: "local-json",
@@ -1369,6 +1370,10 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
         jobResultsCount: jobs.results.length,
         searchedPages: jobs.searchedPages || 0,
         openedVacancyPages: jobs.results.length,
+        feedsChecked: jobs.feedsChecked || 0,
+        feedProviders: jobs.feedProviders || [],
+        fetchedFeedRecords: jobs.fetchedFeedRecords || 0,
+        feedFailures: jobs.feedFailures || [],
         cognition
       });
     }
