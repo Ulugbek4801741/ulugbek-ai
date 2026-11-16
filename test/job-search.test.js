@@ -181,7 +181,7 @@ test("does not present unrelated vacancies as programming jobs in Kogon", async 
     },
     async fetchPage(url) {
       if (url.endsWith("warehouse")) return { title: "Ombor ishchisi", url, content: ("Kogon ombor ishchisi. Ish beruvchi: Kogon. Maosh: 4 000 000 so'm. Talablar: tajriba. Telefon: +998 90 123 45 67. ").repeat(3) };
-      return { title: "Junior Python Developer", url, content: ("Kogon shahrida Junior Python Developer vakansiyasi. Ish beruvchi: Tech Kogon. Maosh: 5 000 000 so'm. Talablar: Python dasturlash tajribasi. Telefon: +998 90 123 45 67. ").repeat(3) };
+      return { title: "Junior Python Developer", url, content: ("Kogon shahrida Junior Python Developer vakansiyasi. Ish beruvchi: Tech Kogon. Maosh: 5 000 000 so'm. Talablar: Python dasturlash tajribasi. Telefon: +998 90 123 45 67. Ariza topshirish uchun murojaat qiling. ").repeat(3) };
     }
   });
   assert.equal(result.results.length, 1);

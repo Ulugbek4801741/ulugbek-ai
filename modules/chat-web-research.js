@@ -7,7 +7,7 @@ const https = require("node:https");
 
 const MAX_QUERY = 240;
 const TIMEOUT_MS = 10000;
-const MAX_RESULTS = 5;
+const MAX_RESULTS = 10;
 const MAX_PAGE_BYTES = 900000;
 const MAX_PAGE_CHARS = 12000;
 const MAX_REDIRECTS = 3;
@@ -170,4 +170,10 @@ async function search(query) {
     return parseResults(html);
   } finally { clearTimeout(timeout); }
 }
-module.exports = { search, parseResults, safePublicUrl, fetchPage, stripHtml, isPrivateAddress, resolvePublicHost };
+async function fetchOfficialJob(value, options = {}) {
+  return require("./job-board-connectors").fetchOfficialJob(value, options);
+}
+async function fetchExchangeRates() {
+  return require("./currency-converter").getUsdRates();
+}
+module.exports = { search, parseResults, safePublicUrl, fetchPage, fetchOfficialJob, fetchExchangeRates, stripHtml, isPrivateAddress, resolvePublicHost };
