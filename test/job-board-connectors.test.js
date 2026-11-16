@@ -28,7 +28,7 @@ test("verifies a Greenhouse listing through its public job-board API", async () 
         async json() {
           return {
             id: 12345,
-            internal_job_id: 999,
+            internal_job_id: null,
             title: "Senior Analyst",
             company_name: "Acme",
             location: { name: "Remote — Worldwide" },
@@ -55,8 +55,9 @@ test("rejects unpublished or expired Greenhouse jobs", async () => {
     headers: { get() { return null; } },
     async json() {
       return {
+        id: 12345,
         internal_job_id: null,
-        title: "Prospect",
+        title: "Expired prospect",
         absolute_url: "https://boards.greenhouse.io/acme/jobs/12345",
         application_deadline: "2026-11-01T00:00:00Z"
       };
