@@ -8,6 +8,8 @@ const agentRuntime = require("./agent-runtime");
 const universalAgentCore = require("./modules/universal-agent-core");
 const universalToolHub = require("./modules/universal-tool-hub");
 const singleAgent = require("./modules/single-agent").createSingleAgent();
+const { createAgentFleet } = require("./modules/agent-fleet");
+const agentFleet = createAgentFleet({ answer: (...args) => singleAgent.answer(...args), maxAgents: 100, concurrency: 3 });
 const answerSelection = require("./modules/answer-selection");
 const languageModule = require("./modules/language-module");
 const codingLanguageEngine = require("./modules/coding-language-engine");
@@ -835,6 +837,20 @@ app.get("/api/modules", (_req, res) => {
 });
 
 
+app.get("/api/agent/fleet/status", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  return res.json({ ok: true, fleet: agentFleet.status() });
+});
+
+app.post("/api/agent/fleet/run", requireAdmin, plannerRateLimit, async (req, res) => {
+  try {
+    const result = await agentFleet.runTask(req.body?.task, { evidence: [], context: null });
+    return res.status(result.ok ? 200 : 503).set("Cache-Control", "no-store").json(result);
+  } catch (error) {
+    return res.status(error.statusCode || 400).json({ ok: false, error: error.message || "Agent jamoasi ishlamadi." });
+  }
+});
+
 app.get("/api/agent/core/status", (_req, res) => {
   res.set("Cache-Control", "no-store");
   return res.json({ ok: true, agent: universalAgentCore.getStatus() });
@@ -1383,10 +1399,19 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     ].slice(0, 12);
     let result = null;
     try {
-      // If configured, the self-hosted language model synthesizes one answer from the question and evidence.
-      // No hosted AI provider or external API key is called by this path.
-      result = await singleAgent.answer(conversationMessage, evidence, conversationContext);
+      // Use short-lived specialist agents only when a real model provider is configured.
+      // They share the configured model, run with bounded concurrency, and are deleted after the task.
+      if (singleAgent.status().configured) {
+        const fleet = await agentFleet.runTask(conversationMessage, { evidence, context: conversationContext });
+        if (fleet.ok) result = {
+          reply: fleet.reply, modelUsed: fleet.modelUsed, provider: fleet.provider, externalProviderUsed: fleet.externalProviderUsed, reasoning: fleet.reasoning,
+          agentFleet: { requestedAgents: fleet.requestedAgents, completedAgents: fleet.completedAgents, roles: fleet.roles }
+        };
+      }
     } catch (_) {}
+    if (!result) {
+      try { result = await singleAgent.answer(conversationMessage, evidence, conversationContext); } catch (_) {}
+    }
 
     if (!result) {
       try {
@@ -1443,6 +1468,15 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   try {
     const nativeBrain = require("./lab-learning-worker");
     const answerWithOneAgent = async entries => {
+      if (singleAgent.status().configured) {
+        try {
+          const fleet = await agentFleet.runTask(conversationMessage, { evidence: entries, context: conversationContext });
+          if (fleet.ok) return {
+            reply: fleet.reply, modelUsed: fleet.modelUsed, provider: fleet.provider, externalProviderUsed: fleet.externalProviderUsed, reasoning: fleet.reasoning,
+            agentFleet: { requestedAgents: fleet.requestedAgents, completedAgents: fleet.completedAgents, roles: fleet.roles }
+          };
+        } catch (_) {}
+      }
       const modelAnswer = await singleAgent.answer(conversationMessage, entries, conversationContext);
       return modelAnswer || nativeBrain.buildLocalReply(conversationMessage, entries, conversationContext);
     };
