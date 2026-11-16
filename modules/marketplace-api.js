@@ -1,5 +1,6 @@
 "use strict";
 const express = require("express");
+const rateLimit = require("express-rate-limit");
 const crypto = require("node:crypto");
 const { Pool } = require("pg");
 
@@ -109,6 +110,8 @@ function createMarketplaceRouter() {
     try { const u=new URL(value); return u.protocol==="https:" && ["youtube.com","www.youtube.com","m.youtube.com","youtu.be","www.youtu.be","www.youtube-nocookie.com"].includes(u.hostname); }
     catch (_) { return false; }
   }
+
+  router.use("/auth", rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: "draft-8", legacyHeaders: false, message: { ok: false, error: "Kirish va tasdiqlash urinishlari ko‘paydi. 15 daqiqadan keyin qayta urinib ko‘ring." } }));
 
   router.get("/status",(_req,res)=>{
     res.set("Cache-Control","no-store");
