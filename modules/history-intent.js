@@ -1,7 +1,7 @@
 "use strict";
 
 const BOBUR_NAME = /(?:bobur(?:shox|shoh)?|bobir(?:shox|shoh)?|babur|zahiriddin\s+muhammad\s+bobur)/iu;
-const HISTORY_CUE = /(?:tarix|tarixiy|\b\d{3,4}\s*yil\b|\b\d+\s*(?:yil|asr|ming\s*yil)\w*\s*(?:oldin|avval|ilgari)|\b(?:asr|sulola|hukmdor|podshoh|imperiya|boburnoma|saltanat|jang|taxt|hukmronlik)\w*|histor\w*|centur\w*|dynast\w*)/iu;
+const HISTORY_CUE = /(?:tarix|tarixiy|\b\d{3,4}\s*yil\b|\b\d+\s*(?:yil|asr|ming\s*yil)\w*\s*(?:oldin|oldingi|avval|avvalgi|ilgari)|\b(?:asr|sulola|hukmdor|podshoh|imperiya|boburnoma|saltanat|jang|taxt|hukmronlik)\w*|histor\w*|centur\w*|dynast\w*)/iu;
 
 function normalizeHistoryIntent(value) {
   const question = String(value || "").replace(/\s+/g, " ").trim();
