@@ -37,7 +37,7 @@ Until this secret exists, the workflow deliberately skips automatic production d
 
 ## What "learning" means here
 
-This first stage performs recurring source discovery and evidence collection. It now incrementally trains local word-ngram language patterns from bounded, license-checked excerpts, but it does not train neural model weights, learn factual answers automatically, or autonomously rewrite its own intelligence. A later stage needs a configured code-reasoning provider or bounded deterministic repair rules to convert reviewed findings into tested pull requests.
+This first stage performs recurring source discovery and evidence collection. It incrementally trains local word-ngram language patterns from bounded, license-checked excerpts, but it does not train neural model weights, learn factual answers automatically, or autonomously rewrite its own intelligence. The trained corpus is currently stored as local JSON on Render; the public GitHub research branch preserves source snapshots, not the trained model. Durable corpus retention across service restarts requires persistent storage. A later stage needs a configured code-reasoning provider or bounded deterministic repair rules to convert reviewed findings into tested pull requests.
 
 ## Scheduling
 
