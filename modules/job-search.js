@@ -321,15 +321,15 @@ async function searchJobs(message, webSearch, options = {}) {
     : /qarshi/iu.test(message) ? "qarshi"
     : /nukus/iu.test(message) ? "nukus" : "";
   const locationEvidence = requestedPlace === "kogon" ? /(?:kogon|kog‘on|kogon tumani)/iu
-    : requestedPlace === "buxoro" ? /(?:buxoro|bukhara|uzbekistan)/iu
-    : requestedPlace === "toshkent" ? /(?:toshkent|tashkent|uzbekistan)/iu
-    : requestedPlace === "samarqand" ? /(?:samarqand|samarkand|uzbekistan)/iu
-    : requestedPlace === "navoiy" ? /(?:navoiy|navoi|uzbekistan)/iu
-    : requestedPlace === "andijon" ? /(?:andijon|andijan|uzbekistan)/iu
-    : requestedPlace === "fargona" ? /(?:farg['’ʻ]?ona|fergana|uzbekistan)/iu
-    : requestedPlace === "namangan" ? /(?:namangan|uzbekistan)/iu
-    : requestedPlace === "qarshi" ? /(?:qarshi|karshi|uzbekistan)/iu
-    : requestedPlace === "nukus" ? /(?:nukus|uzbekistan)/iu : null;
+    : requestedPlace === "buxoro" ? /(?:buxoro|bukhara)/iu
+    : requestedPlace === "toshkent" ? /(?:toshkent|tashkent)/iu
+    : requestedPlace === "samarqand" ? /(?:samarqand|samarkand)/iu
+    : requestedPlace === "navoiy" ? /(?:navoiy|navoi)/iu
+    : requestedPlace === "andijon" ? /(?:andijon|andijan)/iu
+    : requestedPlace === "fargona" ? /(?:farg['’ʻ]?ona|fergana)/iu
+    : requestedPlace === "namangan" ? /(?:namangan)/iu
+    : requestedPlace === "qarshi" ? /(?:qarshi|karshi)/iu
+    : requestedPlace === "nukus" ? /(?:nukus)/iu : null;
   const batches = await Promise.all(queries.map(async query => {
     try { const value = await webSearch.search(query); return Array.isArray(value) ? value : []; }
     catch (_) { return null; }
