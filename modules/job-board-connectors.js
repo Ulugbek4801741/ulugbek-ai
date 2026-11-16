@@ -52,7 +52,8 @@ function salaryFromLever(data) {
   if (currency === "USD" && /hour|hourly|hr/.test(interval)) {
     return "Salary: $" + min + "-$" + max + " per hour";
   }
-  return "Salary: " + currency + " " + min + "-" + max + " " + interval;
+  const normalizedInterval = /^(?:hour|hr)$/i.test(interval) ? "per hour" : interval;
+  return "Salary: " + currency + " " + min + "-" + max + " " + normalizedInterval;
 }
 
 async function fetchOfficialJob(value, options = {}) {
