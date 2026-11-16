@@ -230,7 +230,7 @@ jobs:
 
       - name: Create or update maintenance issue on failure
         if: failure()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const title = "ULUGBEK AI autonomous maintenance detected a failure";
