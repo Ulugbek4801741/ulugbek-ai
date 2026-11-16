@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-16T11:06:31.874Z",
+  "generatedAt": "2026-11-16T11:14:22.551Z",
   "mode": "read-only-public-source-review",
   "automaticCodeImport": false,
   "automaticDependencyInstall": false,
@@ -10,7 +10,7 @@
     {
       "repository": "nodejs/node",
       "reason": "Node.js runtime used by the backend",
-      "fetchedAt": "2026-11-16T11:06:30.886Z",
+      "fetchedAt": "2026-11-16T11:14:21.714Z",
       "status": "license-review-required",
       "reviewRequired": true,
       "description": "Node.js JavaScript runtime ✨🐢🚀✨",
@@ -28,7 +28,7 @@
     {
       "repository": "expressjs/express",
       "reason": "HTTP server framework used by the backend",
-      "fetchedAt": "2026-11-16T11:06:30.923Z",
+      "fetchedAt": "2026-11-16T11:14:21.743Z",
       "status": "review-candidate",
       "reviewRequired": true,
       "description": "Fast, unopinionated, minimalist web framework for node.",
@@ -49,7 +49,7 @@
     {
       "repository": "ionic-team/capacitor",
       "reason": "Android application bridge",
-      "fetchedAt": "2026-11-16T11:06:30.924Z",
+      "fetchedAt": "2026-11-16T11:14:21.744Z",
       "status": "review-candidate",
       "reviewRequired": true,
       "description": "Build cross-platform Native Progressive Web Apps for iOS, Android, and the Web ⚡️",
@@ -70,7 +70,7 @@
     {
       "repository": "OWASP/NodeGoat",
       "reason": "Node.js application security learning reference",
-      "fetchedAt": "2026-11-16T11:06:30.925Z",
+      "fetchedAt": "2026-11-16T11:14:21.745Z",
       "status": "review-candidate",
       "reviewRequired": true,
       "description": "The OWASP NodeGoat project provides an environment to learn how OWASP Top 10 security risks apply to web applications developed using Node.js and how to effectively address them.",
@@ -91,7 +91,7 @@
     {
       "repository": "langchain-ai/langchainjs",
       "reason": "Agent orchestration and retrieval patterns to evaluate",
-      "fetchedAt": "2026-11-16T11:06:30.926Z",
+      "fetchedAt": "2026-11-16T11:14:21.746Z",
       "status": "review-candidate",
       "reviewRequired": true,
       "description": "The agent engineering platform",
@@ -112,7 +112,7 @@
     {
       "repository": "modelcontextprotocol/typescript-sdk",
       "reason": "Tool integration and capability protocol reference",
-      "fetchedAt": "2026-11-16T11:06:30.928Z",
+      "fetchedAt": "2026-11-16T11:14:21.747Z",
       "status": "license-review-required",
       "reviewRequired": true,
       "description": "The official TypeScript SDK for Model Context Protocol servers and clients",
@@ -130,14 +130,14 @@
     {
       "repository": "actions/runner",
       "reason": "CI runner and automation infrastructure reference",
-      "fetchedAt": "2026-11-16T11:06:30.929Z",
+      "fetchedAt": "2026-11-16T11:14:21.748Z",
       "status": "review-candidate",
       "reviewRequired": true,
       "description": "The Runner for GitHub Actions :rocket:",
       "htmlUrl": "https://github.com/actions/runner",
       "defaultBranch": "main",
       "stars": 6398,
-      "pushedAt": "2026-11-16T08:09:59Z",
+      "pushedAt": "2026-11-16T11:13:27Z",
       "license": "MIT",
       "licenseDecision": "permissive-license-review-still-required",
       "latestRelease": {
