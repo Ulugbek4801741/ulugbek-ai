@@ -1,0 +1,2 @@
+-- ULUGBEK AI account and course marketplace schema.
+-- The API applies its idempotent schema automatically on first request.
