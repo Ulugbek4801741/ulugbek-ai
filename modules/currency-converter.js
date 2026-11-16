@@ -29,6 +29,11 @@ function parseNumber(value) {
 
 function parseHourlyCompensation(value, location = "") {
   const text = String(value || "");
+  const suffix = text.match(/(\d{1,4}(?:[.,]\d{1,2})?)(?:\s*(?:-|–|to)\s*\d{1,4}(?:[.,]\d{1,2})?)?\s*(USD|EUR|GBP|CAD|AUD|NZD|SGD|CHF|PLN|INR|AED|ZAR|BRL|MXN)\s*(?:per\s*hour|\/\s*(?:h|hr|hour)|hourly|an\s*hour|soatiga)/iu);
+  if (suffix) {
+    const amount = Number(String(suffix[1]).replace(",", "."));
+    if (Number.isFinite(amount) && amount > 0) return { amount, currency: suffix[2].toUpperCase(), original: suffix[0].trim() };
+  }
   for (const item of HOURLY_PAY_PATTERNS) {
     const match = text.match(item.regex);
     if (!match) continue;
