@@ -85,7 +85,8 @@ async function crossrefSearch(query, options) {
     provider: "Crossref", title: item.title?.[0], authors: authorsFrom(item.author),
     year: yearFrom(item.published?.["date-parts"]?.[0]?.[0] || item.created?.["date-time"]),
     doi: item.DOI, url: item.URL, abstract: item.abstract,
-    openAccessUrl: (item.link || []).find(link => /pdf/i.test(link["content-type"] || ""))?.URL,
+    openAccessUrl: item.license?.some(license => /creativecommons\.org|publicdomain|creativecommons/i.test(license.URL || "")) ?
+      (item.link || []).find(link => /pdf/i.test(link["content-type"] || ""))?.URL : "",
     qualityScore: 3
   })).filter(Boolean);
 }
@@ -236,6 +237,8 @@ async function searchOpenResearch(query, options = {}) {
     ["OpenAlex", openAlexSearch]
   ];
   const settled = await Promise.all(providers.map(async ([name, fn]) => {
+    if (name === "CORE" && !process.env.CORE_API_KEY) return { name, results: [], ok: true, skipped: true };
+    if (name === "OpenAlex" && !process.env.OPENALEX_API_KEY) return { name, results: [], ok: true, skipped: true };
     try { return { name, results: await fn(text, config), ok: true }; }
     catch (error) { return { name, results: [], ok: false, error: error.name || "provider-error" }; }
   }));
@@ -250,7 +253,8 @@ async function searchOpenResearch(query, options = {}) {
     b.qualityScore - a.qualityScore || (b.year || 0) - (a.year || 0));
   return {
     results: results.slice(0, Math.max(3, Math.min(12, Number(options.limit) || 8))),
-    providers: settled.filter(x => x.ok).map(x => x.name),
+    providers: settled.filter(x => x.ok && !x.skipped).map(x => x.name),
+    skippedProviders: settled.filter(x => x.skipped).map(x => x.name),
     failedProviders: settled.filter(x => !x.ok).map(x => x.name)
   };
 }
