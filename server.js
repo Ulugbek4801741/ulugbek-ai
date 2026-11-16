@@ -5,6 +5,7 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 const agentRuntime = require("./agent-runtime");
 const universalAgentCore = require("./modules/universal-agent-core");
+const universalToolHub = require("./modules/universal-tool-hub");
 const singleAgent = require("./modules/single-agent").createSingleAgent();
 const answerSelection = require("./modules/answer-selection");
 const languageModule = require("./modules/language-module");
@@ -801,6 +802,84 @@ app.post("/api/agent/core/plan", plannerRateLimit, (req, res) => {
     });
   } catch (error) {
     return res.status(error.statusCode || 400).json({ ok: false, error: error.message || "Vazifa rejasi tuzilmadi." });
+  }
+});
+
+// Scoped tool adapters: all writes are authenticated and repository allowlisted.
+app.get("/api/agent/tools/status", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  return res.json({ ok: true, tools: universalToolHub.status() });
+});
+
+app.get("/api/agent/reports", requireAdmin, async (req, res) => {
+  try {
+    const reports = await universalToolHub.listReports(req.query.limit);
+    res.set("Cache-Control", "no-store");
+    return res.json({ ok: true, reports });
+  } catch (_) {
+    return res.status(503).json({ ok: false, error: "Agent hisobotlarini o‘qib bo‘lmadi." });
+  }
+});
+
+app.post("/api/agent/github/pull-request", requireAdmin, plannerRateLimit, async (req, res) => {
+  try {
+    const result = await universalToolHub.createPullRequest(req.body || {});
+    const report = await universalToolHub.writeReport({
+      task: "GitHub PR: " + result.url,
+      status: "submitted-for-review",
+      actions: ["Allowlist ichidagi repository uchun branch va PR yaratildi."],
+      checks: ["GitHub API PR raqami: " + result.number, "Merge avtomatik bajarilmadi."],
+      limitations: ["CI va code review PR ochilgandan keyin tekshiriladi."]
+    });
+    res.set("Cache-Control", "no-store");
+    return res.status(201).json({ ok: true, pullRequest: result, report });
+  } catch (error) {
+    return res.status(error.statusCode || 502).json({ ok: false, error: error.message || "GitHub PR yaratilmadi." });
+  }
+});
+
+app.post("/api/agent/python/run", requireAdmin, plannerRateLimit, async (req, res) => {
+  try {
+    const result = await universalToolHub.runPythonSandbox(req.body?.source);
+    const report = await universalToolHub.writeReport({
+      task: "Izolyatsiyalangan Python kodini bajarish",
+      status: result.ok ? "completed" : "failed",
+      actions: ["Kod faqat masofaviy sandbox adapteriga yuborildi."],
+      checks: ["Sandbox exitCode: " + result.exitCode],
+      limitations: ["Natija sandbox konfiguratsiyasiga bog‘liq."]
+    });
+    res.set("Cache-Control", "no-store");
+    return res.json({ ok: result.ok, result, report });
+  } catch (error) {
+    return res.status(error.statusCode || 502).json({ ok: false, error: error.message || "Python sandbox bajarilmadi." });
+  }
+});
+
+function signedAgentUser(req) {
+  const header = String(req.get("Authorization") || "");
+  const token = header.startsWith("Bearer ") ? header.slice(7) : "";
+  return universalToolHub.verifyUserToken(token);
+}
+app.get("/api/agent/private-memory", async (req, res) => {
+  const userId = signedAgentUser(req);
+  if (!userId) return res.status(401).json({ ok: false, error: "Shaxsiy xotira uchun haqiqiy imzolangan foydalanuvchi tokeni kerak." });
+  try {
+    const memory = await universalToolHub.readPrivateMemory(userId);
+    res.set("Cache-Control", "no-store");
+    return res.json({ ok: true, memory });
+  } catch (error) {
+    return res.status(error.statusCode || 503).json({ ok: false, error: error.message });
+  }
+});
+app.put("/api/agent/private-memory", async (req, res) => {
+  const userId = signedAgentUser(req);
+  if (!userId) return res.status(401).json({ ok: false, error: "Shaxsiy xotira uchun haqiqiy imzolangan foydalanuvchi tokeni kerak." });
+  try {
+    const result = await universalToolHub.savePrivateMemory(userId, req.body?.content);
+    res.set("Cache-Control", "no-store");
+    return res.json({ ok: true, memory: result });
+  } catch (error) {
+    return res.status(error.statusCode || 503).json({ ok: false, error: error.message });
   }
 });
 
