@@ -41,12 +41,12 @@ function isCurrentPopulationEvidence(item, currentYear = new Date().getUTCFullYe
   const text = (String(item?.title || "") + " " + String(item?.snippet || item?.content || "")).toLowerCase();
   if (!/(?:population|aholi|inhabitants|residents)/iu.test(text)) return false;
   if (/(?:2025[- ]?yilga borib|by 2025|2025.{0,50}(?:kutil\w*|expected|projected|forecast|will overtake|will surpass))/iu.test(text)) return false;
-  const explicitYears = [...text.matchAll(/\\b(20\\d{2})\\b/g)].map(match => Number(match[1]));
+  const explicitYears = [...text.matchAll(/\b(20\d{2})\b/g)].map(match => Number(match[1]));
   const sourceYear = Number(item?.year) || Number(item?.publishedYear) || 0;
   const hasRecentYear = [...explicitYears, sourceYear].some(year =>
     year >= currentYear - 1 && year <= currentYear
   );
-  const hasPopulationNumber = /\\b\\d{1,3}(?:,\\d{3}){2,}\\b|\\b\\d+(?:\\.\\d+)?\\s*(?:billion|milliard|million|mln|thousand|ming)\\b/iu.test(text);
+  const hasPopulationNumber = /\b\d{1,3}(?:,\d{3}){2,}\b|\b\d+(?:\.\d+)?\s*(?:billion|milliard|million|mln|thousand|ming)\b/iu.test(text);
   return hasRecentYear && hasPopulationNumber;
 }
 function filterCurrentPopulationEvidence(results, currentYear = new Date().getUTCFullYear()) {
