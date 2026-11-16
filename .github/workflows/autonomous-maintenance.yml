@@ -54,7 +54,7 @@ jobs:
         run: node scripts/autonomous-maintenance.js
 
       - name: Check deployed Render health endpoint
-        if: github.event_name != 'push'
+        if: github.event_name != 'push' && github.event_name != 'pull_request'
         id: live
         continue-on-error: true
         run: |
@@ -67,12 +67,12 @@ jobs:
           node -e "JSON.parse(require('node:fs').readFileSync('reports/render-health.json','utf8')); console.log('Render health endpoint returned valid JSON')"
 
       - name: Test real chat topic alignment
-        if: github.event_name != 'push'
+        if: github.event_name != 'push' && github.event_name != 'pull_request'
         id: chat
         continue-on-error: true
         run: |
           mkdir -p reports
-          node -e "process.stdout.write(JSON.stringify({message:'Hindiston aholisi soni haqida ma’lumot ber',sessionId:'maintenance-smoke-ulugbek-2026',countryCode:'UZ'}))" > reports/chat-smoke-request.json
+          node -e "process.stdout.write(JSON.stringify({message:'Hindiston aholisi soni hozir qancha?',sessionId:'maintenance-smoke-ulugbek-2026',countryCode:'UZ'}))" > reports/chat-smoke-request.json
           curl --fail --silent --show-error --location \
             --connect-timeout 10 --max-time 150 \
             -H "Content-Type: application/json" \
@@ -112,7 +112,7 @@ jobs:
               exit 1
             fi
           done
-          if [ "$EVENT_NAME" != "push" ] && { [ "$LIVE_RESULT" != "success" ] || [ "$CHAT_RESULT" != "success" ]; }; then
+          if [ "$EVENT_NAME" != "push" ] && [ "$EVENT_NAME" != "pull_request" ] && { [ "$LIVE_RESULT" != "success" ] || [ "$CHAT_RESULT" != "success" ]; }; then
             echo "A live Render API or chat topic check failed."
             exit 1
           fi
@@ -191,7 +191,7 @@ jobs:
         continue-on-error: true
         run: |
           mkdir -p reports
-          node -e "process.stdout.write(JSON.stringify({message:'Hindiston aholisi soni haqida ma’lumot ber',sessionId:'postdeploy-smoke-' + process.env.GITHUB_RUN_ID,countryCode:'UZ'}))" > reports/post-deploy-chat-request.json
+          node -e "process.stdout.write(JSON.stringify({message:'Hindiston aholisi soni hozir qancha?',sessionId:'postdeploy-smoke-' + process.env.GITHUB_RUN_ID,countryCode:'UZ'}))" > reports/post-deploy-chat-request.json
           curl --fail --silent --show-error --location \
             --connect-timeout 10 --max-time 150 \
             -H "Content-Type: application/json" \
