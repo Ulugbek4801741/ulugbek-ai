@@ -111,7 +111,7 @@ function createAgentFleet(options = {}) {
       ].join("\n");
       try {
         const result = await answer(instruction, evidence, context);
-        return { agentId: agent.id, role: agent.role, ok: Boolean(result && result.reply), reply: result && result.reply ? clean(result.reply, 10000) : "", modelUsed: result && result.modelUsed || null };
+        return { agentId: agent.id, role: agent.role, ok: Boolean(result && result.reply), reply: result && result.reply ? clean(result.reply, 10000) : "", modelUsed: result && result.modelUsed || null, provider: result && result.provider || null, externalProviderUsed: result && result.externalProviderUsed === true };
       } catch (error) {
         return { agentId: agent.id, role: agent.role, ok: false, reply: "", error: clean(error && error.message || "Agent xatosi", 300) };
       } finally {
@@ -123,7 +123,7 @@ function createAgentFleet(options = {}) {
     const usable = results.filter(item => item.ok);
     let final = null;
     if (usable.length === 1) {
-      final = { reply: usable[0].reply, modelUsed: usable[0].modelUsed, reasoning: { method: "dynamic-specialist-agent", answerable: true, facts: [] } };
+      final = { reply: usable[0].reply, modelUsed: usable[0].modelUsed, provider: usable[0].provider, externalProviderUsed: usable[0].externalProviderUsed, reasoning: { method: "dynamic-specialist-agent", answerable: true, facts: [] } };
     } else if (usable.length > 1) {
       const synthesisPrompt = [
         "Siz ULUGBEK AI bosh koordinatorsiz. Quyidagi vaqtinchalik mutaxassis agentlar tahlillarini solishtiring.",
@@ -149,6 +149,8 @@ function createAgentFleet(options = {}) {
       durationMs: Math.max(0, completedAt - startedAt),
       reply: final && final.reply || null,
       modelUsed: final && final.modelUsed || null,
+      provider: final && final.provider || null,
+      externalProviderUsed: final && final.externalProviderUsed === true,
       reasoning: final && final.reasoning || null,
       agents: results.map(item => ({ role: item.role, ok: item.ok, error: item.error || null })),
       lifecycle: "ephemeral-agents-deleted-after-task",
