@@ -73,19 +73,7 @@ jobs:
             --data-binary @reports/chat-smoke-request.json \
             https://ulugbek-ai2.onrender.com/api/chat \
             --output reports/chat-smoke.json
-          node -e '
-            const fs = require("node:fs");
-            const data = JSON.parse(fs.readFileSync("reports/chat-smoke.json", "utf8"));
-            const reply = String(data.reply || "").toLowerCase();
-            const safeFallback = reply.includes("mavzusiga mosligi tekshiruvidan o‘tmadi") ||
-              reply.includes("mavzusiga mosligi tekshiruvidan o'tmadi");
-            const onTopic = /hindiston|india/.test(reply) &&
-              /aholi|population|soni|million|milliard|billion/.test(reply);
-            if (!reply || (!safeFallback && !onTopic)) {
-              throw new Error("Chat mavzuga mos javob bermadi: " + reply.slice(0, 280));
-            }
-            console.log("Chat smoke test passed; mode=" + (data.mode || "unknown"));
-          '
+          node scripts/chat-smoke-check.js reports/chat-smoke.json
 
       - name: Upload audit and upstream research report
         if: always()
