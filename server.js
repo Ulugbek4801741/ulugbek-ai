@@ -203,8 +203,6 @@ app.use(helmet({
   }
 }));
 app.use(express.json({ limit: "12mb", strict: true, type: "application/json" }));
-const socialNetwork = require("./modules/social-network").createSocialNetwork();
-app.use("/api/social", socialNetwork);
 // Capture only failure metadata automatically; raw chat text is not stored without explicit feedback.
 app.use("/api/chat", errorLearning.middleware(), conversationMemory.middleware());
 app.use("/api/", rateLimit({
@@ -213,6 +211,8 @@ app.use("/api/", rateLimit({
   standardHeaders: "draft-8",
   legacyHeaders: false
 }));
+const socialNetwork = require("./modules/social-network").createSocialNetwork();
+app.use("/api/social", socialNetwork);
 const chatRateLimit = rateLimit({
   windowMs: 60 * 1000, limit: 8, standardHeaders: "draft-8", legacyHeaders: false,
   message: { error: "Chat so‘rovlari vaqtinchalik chegaraga yetdi. Bir daqiqadan keyin qayta urinib ko‘ring." }
