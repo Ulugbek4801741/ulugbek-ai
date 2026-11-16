@@ -1068,6 +1068,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   // Keep the original message in its detected language. The native language module
   // handles Uzbek, English, Russian, Turkish, and Kazakh without requiring a translation API.
   const conversationContext = conversationOrchestrator.analyze(conversationMessage);
+  conversationContext.agentPlan = universalAgentCore.createTaskPlan(conversationMessage);
   const savedLanguagePreference = userPreferences.get(sessionId);
   if (savedLanguagePreference) {
     conversationContext.language = { ...conversationContext.language, code: savedLanguagePreference.code, confidence: 1, explicit: true };
