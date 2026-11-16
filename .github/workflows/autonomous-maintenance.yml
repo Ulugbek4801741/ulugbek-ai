@@ -138,6 +138,9 @@ jobs:
           git add memory/latest.json memory/snapshots
           git commit -m "chore: refresh autonomous public research memory"
           git push origin HEAD:autonomous-research-memory
+          # Restore the tested application checkout: later deployment verification
+          # needs scripts/chat-smoke-check.js from the main commit.
+          git checkout -B main "$GITHUB_SHA"
 
       - name: Trigger Render deploy after all checks pass
         id: deploy
