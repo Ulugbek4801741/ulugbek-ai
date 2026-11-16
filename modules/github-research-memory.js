@@ -11,7 +11,7 @@ function isGitHubRepositoryUrl(value) {
     const url = new URL(String(value || ""));
     return url.protocol === "https:" && url.hostname === "github.com" &&
       !url.username && !url.password &&
-      /^\\/[A-Za-z0-9_.-]+\\/[A-Za-z0-9_.-]+\\/?$/.test(url.pathname);
+      /^\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/?$/.test(url.pathname);
   } catch (_) {
     return false;
   }
