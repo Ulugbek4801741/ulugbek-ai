@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-11-16T06:57:11.420Z",
+  "mode": "read-only-public-source-review",
+  "note": "Public repository metadata and release pointers only. No upstream code or text excerpts are stored in this seed snapshot. The scheduled maintenance workflow will replace it with bounded, license-checked reports.",
+  "repositories": [
+    {
+      "repository": "nodejs/node",
+      "url": "https://github.com/nodejs/node",
+      "license": "NOASSERTION",
+      "status": "license-review-required",
+      "licenseDecision": "do-not-copy-code-review-license",
+      "stars": 123751,
+      "pushedAt": "2026-11-16T00:52:58Z",
+      "reason": "Node.js runtime used by the backend"
+    },
+    {
+      "repository": "expressjs/express",
+      "url": "https://github.com/expressjs/express",
+      "license": "MIT",
+      "status": "review-candidate",
+      "licenseDecision": "permissive-license-review-still-required",
+      "stars": 69684,
+      "pushedAt": "2026-11-02T20:15:26Z",
+      "latestRelease": "v5.3.0",
+      "releaseUrl": "https://github.com/expressjs/express/releases/tag/v5.3.0",
+      "reason": "HTTP server framework used by the backend"
+    },
+    {
+      "repository": "ionic-team/capacitor",
+      "url": "https://github.com/ionic-team/capacitor",
+      "license": "MIT",
+      "status": "review-candidate",
+      "licenseDecision": "permissive-license-review-still-required",
+      "stars": 17099,
+      "pushedAt": "2026-11-13T18:07:03Z",
+      "latestRelease": "8.6.2",
+      "releaseUrl": "https://github.com/ionic-team/capacitor/releases/tag/8.6.2",
+      "reason": "Android application bridge"
+    },
+    {
+      "repository": "OWASP/NodeGoat",
+      "url": "https://github.com/OWASP/NodeGoat",
+      "license": "Apache-2.0",
+      "status": "review-candidate",
+      "licenseDecision": "permissive-license-review-still-required",
+      "stars": 2084,
+      "pushedAt": "2024-06-15T01:20:40Z",
+      "latestRelease": "v1.4",
+      "releaseUrl": "https://github.com/OWASP/NodeGoat/releases/tag/v1.4",
+      "reason": "Node.js application security learning reference"
+    },
+    {
+      "repository": "langchain-ai/langchainjs",
+      "url": "https://github.com/langchain-ai/langchainjs",
+      "license": "MIT",
+      "status": "review-candidate",
+      "licenseDecision": "permissive-license-review-still-required",
+      "stars": 18348,
+      "pushedAt": "2026-11-13T18:26:23Z",
+      "latestRelease": "@langchain/google@0.2.15",
+      "releaseUrl": "https://github.com/langchain-ai/langchainjs/releases/tag/%40langchain/google%400.2.15",
+      "reason": "Agent orchestration and retrieval patterns to evaluate"
+    },
+    {
+      "repository": "modelcontextprotocol/typescript-sdk",
+      "url": "https://github.com/modelcontextprotocol/typescript-sdk",
+      "license": "NOASSERTION",
+      "status": "license-review-required",
+      "licenseDecision": "do-not-copy-code-review-license",
+      "stars": 13772,
+      "pushedAt": "2026-11-10T14:38:41Z",
+      "reason": "Tool integration and capability protocol reference"
+    },
+    {
+      "repository": "actions/runner",
+      "url": "https://github.com/actions/runner",
+      "license": "MIT",
+      "status": "review-candidate",
+      "licenseDecision": "permissive-license-review-still-required",
+      "stars": 6398,
+      "pushedAt": "2026-11-16T06:18:33Z",
+      "latestRelease": "v2.338.2",
+      "releaseUrl": "https://github.com/actions/runner/releases/tag/v2.338.2",
+      "reason": "CI runner and automation infrastructure reference"
+    }
+  ]
+}
