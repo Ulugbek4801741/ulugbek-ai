@@ -7,7 +7,7 @@ ULUGBEK AI tadqiqot oqimi umumiy veb-qidiruvga qo‘shimcha ravishda federativ o
 - **Crossref** — DOI va nashr metama’lumotlari; bepul ommaviy API.
 - **Europe PMC** — biotibbiyot maqolalari, annotatsiya va ochiq matn mavjudligi.
 - **arXiv** — ochiq preprintlar; peer-review qilingan deb avtomatik belgilanmaydi.
-- **Zenodo** — maqola, ma’lumotlar to‘plami va dasturiy tadqiqot materiallari.
+- **Zenodo** — maqola, ma’lumotlar to‘plami va dasturiy tadqiqot materiallari.\n- **Open Library** — kitob va nashr metama’lumotlari; elektron nusxa huquqi har bir nashr uchun alohida tekshiriladi.
 - **DOAJ** — ochiq kirish jurnallari va maqolalari.
 - **ROR** — universitetlar va ilmiy tashkilotlar reyestri, rasmiy sayt havolalari.
 - **OpenAlex** — ilmiy ishlar va tashkilotlar grafigi; `OPENALEX_API_KEY` bo‘lsa ulanadi.
