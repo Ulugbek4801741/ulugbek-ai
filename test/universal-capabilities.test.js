@@ -9,7 +9,7 @@ test("YouTube video IDs are accepted only from supported public URL forms", () =
   assert.equal(youtube.extractVideoId("https://youtu.be/abcdefghijk"), "abcdefghijk");
   assert.equal(youtube.extractVideoId("https://www.youtube.com/watch?v=abcdefghijk"), "abcdefghijk");
   assert.equal(youtube.extractVideoId("https://example.com/watch?v=abcdefghijk"), null);
-  assert.equal(youtube.extractVideoId("not-a-video"), null);
+  assert.equal(youtube.extractVideoId("not-a-video-id"), null);
 });
 
 test("captionTracks JSON array parser handles nested arrays and escaped quotes", () => {
