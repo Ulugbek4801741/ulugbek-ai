@@ -66,7 +66,8 @@ function buildJobSearchQueries(value) {
     "jobs vacancies hiring employer contact phone salary",
     "site:hh.uz OR site:ishkop.uz OR site:olx.uz OR site:ish.uz"
   ];
-  const queries = [original, ...suffixes.map(suffix => original + " " + suffix)];
+  const querySuffixes = criteria.worldwide ? suffixes.slice(0, 3) : suffixes;
+  const queries = [original, ...querySuffixes.map(suffix => original + " " + suffix)];
   if (criteria.worldwide || criteria.minHourlyUsd !== null) {
     const pay = criteria.minHourlyUsd === null ? "" : ' "$' + criteria.minHourlyUsd + ' per hour" OR "' + criteria.minHourlyUsd + ' USD/hour"';
     queries.push("worldwide remote jobs" + pay + " hiring now apply");
@@ -75,6 +76,8 @@ function buildJobSearchQueries(value) {
     queries.push("site:boards.greenhouse.io jobs" + pay + " remote");
     queries.push("site:jobs.lever.co" + pay + " remote hiring");
     queries.push("site:jobs.ashbyhq.com" + pay + " remote");
+    queries.push("international on-site hybrid remote jobs" + pay + " hiring now apply");
+    queries.push("jobs" + pay + " hiring now USA Canada UK Australia Europe Middle East Asia");
   }
   if (role) {
     if (/kogon/iu.test(original)) queries.push("Kogon " + role.terms + " Buxoro viloyati vakansiya ish beruvchi");
