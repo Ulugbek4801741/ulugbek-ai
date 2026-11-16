@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   issues: write
 
 concurrency:
@@ -110,6 +110,30 @@ jobs:
             echo "A live Render API or chat topic check failed."
             exit 1
           fi
+
+      - name: Persist public research snapshot on isolated memory branch
+        if: success() && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp reports/autonomous-upstream-review.json /tmp/autonomous-upstream-review.json
+          git fetch origin autonomous-research-memory || true
+          if git show-ref --verify --quiet refs/remotes/origin/autonomous-research-memory; then
+            git checkout -B autonomous-research-memory origin/autonomous-research-memory
+          else
+            git checkout --orphan autonomous-research-memory
+            git rm -rf . >/dev/null 2>&1 || true
+          fi
+          mkdir -p memory/snapshots
+          cp /tmp/autonomous-upstream-review.json memory/latest.json
+          snapshot="memory/snapshots/$(date -u +%Y%m%dT%H%M%SZ).json"
+          cp /tmp/autonomous-upstream-review.json "$snapshot"
+          find memory/snapshots -type f -mtime +30 -delete
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add memory/latest.json memory/snapshots
+          git commit -m "chore: refresh autonomous public research memory"
+          git push origin HEAD:autonomous-research-memory
 
       - name: Create or update maintenance issue on failure
         if: failure()
