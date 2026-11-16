@@ -49,6 +49,7 @@ function locationClarification() {
 function extractJobRole(value) {
   const text = String(value || "").toLowerCase();
   const roles = [
+    { pattern: /\bpython\b/iu, evidencePattern: /\bpython\b/iu, label: "Python dasturchi", terms: "Python developer Python engineer Python software developer" },
     { pattern: /(?:dasturchi|dasturlovchi|dasturlash|dastur\s+yozish|programmist|programmer|developer|software\s+engineer|software\s+developer)/iu, label: "Dasturchi", terms: "dasturchi dasturlash programmer developer software engineer software developer junior frontend backend Python JavaScript" },
     { pattern: /(?:frontend|front-end|front\s+end)/iu, label: "Frontend dasturchi", terms: "frontend developer front-end engineer JavaScript React" },
     { pattern: /(?:backend|back-end|back\s+end)/iu, label: "Backend dasturchi", terms: "backend developer back-end engineer Node.js Python Java" },
@@ -146,14 +147,16 @@ function extractTelegram(value) {
 
 function extractSalary(value) {
   const text = String(value || "");
+  // Only explicit monthly pay is shown; local so'm labels retain their conventional monthly meaning.
   const patterns = [
-    /(?:maosh|ish haqi|salary|зарплат[аы])[^.!?\n]{0,100}/iu,
-    /(?:\d[\d\s.,]{2,}\s*(?:so'm|som|uzs|сум|руб(?:лей)?|₽|usd|eur|\$|€))[^.!?\n]{0,35}/iu,
-    /(?:\$|€)\s?\d[\d\s.,]{2,}(?:\s*[-–—]\s*(?:\$|€)?\s?\d[\d\s.,]{2,})?/u
+    /(?:salary|compensation|pay|maosh|ish haqi|зарплат[аы])[^.!?\n]{0,90}(?:USD\s*|US\$|\$|CHF\s*|EUR\s*|GBP\s*|CAD\s*|AUD\s*)\s?\d[\d\s,]*(?:\.\d{1,2})?(?:\s*[-–—]\s*(?:USD\s*|US\$|\$|CHF\s*|EUR\s*|GBP\s*|CAD\s*|AUD\s*)?\s?\d[\d\s,]*(?:\.\d{1,2})?)?\s*(?:per month|\/\s*month|monthly|a month|oyiga|har oy)/iu,
+    /(?:salary|compensation|pay|maosh|ish haqi|зарплат[аы])[^.!?\n]{0,90}\d[\d\s,]*(?:\.\d{1,2})?\s*(?:CHF|EUR|GBP|CAD|AUD)\s*(?:per month|\/\s*month|monthly|a month|oyiga|har oy)/iu,
+    /(?:USD\s*|US\$|\$|CHF\s*|EUR\s*|GBP\s*|CAD\s*|AUD\s*)\s?\d[\d\s,]*(?:\.\d{1,2})?(?:\s*[-–—]\s*(?:USD\s*|US\$|\$|CHF\s*|EUR\s*|GBP\s*|CAD\s*|AUD\s*)?\s?\d[\d\s,]*(?:\.\d{1,2})?)?\s*(?:per month|\/\s*month|monthly|a month|oyiga|har oy)/iu,
+    /(?:maosh|ish haqi|salary)\s*[:：-]\s*\d[\d\s,.]*(?:so['’ʻ]?m|som|UZS)\b[^.!?\n]{0,30}/iu
   ];
   for (const pattern of patterns) {
     const match = text.match(pattern);
-    if (match) return cleanText(match[0], 180);
+    if (match && !/(?:sign[ -]?on|bonus|per task|per project|annual|yearly|per year)/iu.test(match[0])) return cleanText(match[0], 180);
   }
   return "";
 }
@@ -222,7 +225,7 @@ function extractJobDetails(item, message) {
     phones,
     emails,
     telegram,
-    contactAvailable: phones.length > 0 || emails.length > 0 || telegram.length > 0 || apply,
+    contactAvailable: phones.length > 0 || emails.length > 0 || telegram.length > 0,
     jobSignals,
     listingSpecific: Boolean(item?.officialStatus === "published" || (item?.pageRead && !isCategoryPage(item.url) && text.length >= 240 && jobSignals >= 2)),
     activeStatus: closed ? "closed-or-expired-indicator-found" : item?.officialStatus === "published" ? "official-board-published" : activeEvidence ? "active-application-evidence-found" : "not-independently-confirmed",
@@ -244,7 +247,7 @@ function formatJobResults(results, message = "", criteria = extractJobCriteria(m
       (index + 1) + ". " + item.title,
       "Ish beruvchi: " + (item.employer || "Sahifada aniq ko‘rsatilmagan"),
       "Hudud: " + (item.location || "Sahifada aniq ko‘rsatilmagan"),
-      "Maosh: " + (item.minimumHourlyUsd !== null && item.minimumHourlyUsd !== undefined ? (item.salaryConversion ? "$" + item.minimumHourlyUsd + " USD/soat (taxminiy konvertatsiya; asl: " + item.salaryConversion.original + ", kurs: " + (item.salaryConversion.rateDate || "joriy reference kurs") + ")" : "$" + item.minimumHourlyUsd + " USD/soat (e’londa ko‘rsatilgan eng kam stavka)") : (item.salary || "Sahifada ko‘rsatilmagan")),
+      (item.minimumHourlyUsd !== null && item.minimumHourlyUsd !== undefined ? "Soatlik stavka: " : "Oylik maoshi: ") + (item.minimumHourlyUsd !== null && item.minimumHourlyUsd !== undefined ? (item.salaryConversion ? "$" + item.minimumHourlyUsd + " USD/soat (taxminiy konvertatsiya; asl: " + item.salaryConversion.original + ", kurs: " + (item.salaryConversion.rateDate || "joriy reference kurs") + ")" : "$" + item.minimumHourlyUsd + " USD/soat (e’londa ko‘rsatilgan eng kam stavka)") : (item.salary || "Sahifada ko‘rsatilmagan")),
       "Talablar: " + (item.requirements || "Sahifada batafsil ko‘rsatilmagan"),
       "Ish vaqti: " + (item.schedule || "Sahifada ko‘rsatilmagan"),
       "Tajriba: " + (item.experience || "Sahifada ko‘rsatilmagan"),
@@ -294,7 +297,7 @@ async function searchJobs(message, webSearch, options = {}) {
   const queries = buildJobSearchQueries(message);
   const requestedRole = extractJobRole(message);
   const requestedKogon = /kogon/iu.test(message);
-  const roleEvidence = /(?:dasturchi|dasturlash|developer|programmer|software engineer|frontend|backend|javascript|python|kotlin|java|qa engineer|web developer)/iu;
+  const roleEvidence = requestedRole?.evidencePattern || /(?:dasturchi|dasturlash|developer|programmer|software engineer|frontend|backend|javascript|python|kotlin|java|qa engineer|web developer)/iu;
   const locationEvidence = requestedKogon ? /(?:kogon|kog‘on|kogon tumani|buxoro viloyati)/iu : null;
   const batches = await Promise.all(queries.map(async query => {
     try { const value = await webSearch.search(query); return Array.isArray(value) ? value : []; }
@@ -392,9 +395,24 @@ async function searchJobs(message, webSearch, options = {}) {
   };
 }
 
+
+function formatJobContactSummary(results) {
+  if (!Array.isArray(results) || !results.length) return "Oldingi vakansiyalar ro‘yxati ushbu suhbatda saqlanmagan. Qidiruv so‘rovini qayta yuboring.";
+  return "Oldingi qidiruvdagi " + results.length + " ta vakansiya bo‘yicha qisqa aloqa va oylik maosh ma’lumoti:\n\n" +
+    results.map((item, index) => [
+      (index + 1) + ". " + (item.title || "Vakansiya") + " — " + (item.employer || "Ish beruvchi ko‘rsatilmagan"),
+      "Oylik maoshi: " + (item.salary || "Aniq oylik maosh e’londa ko‘rsatilmagan"),
+      "Telefon: " + (item.phones?.length ? item.phones.join(", ") : "Topilmadi"),
+      "Telegram: " + (item.telegram?.length ? item.telegram.join(", ") : "Topilmadi"),
+      "Email: " + (item.emails?.length ? item.emails.join(", ") : "Topilmadi"),
+      "Ariza: " + (item.applicationUrl || item.url || "Havola topilmadi")
+    ].join("\n")).join("\n\n") +
+    "\n\nEslatma: faqat e’londa aniq ko‘rsatilgan oylik maosh keltirildi; bonus, topshiriq haqi yoki davri noma’lum summalar oylik maosh deb olinmadi.";
+}
+
 module.exports = {
   isJobSearchRequest, hasLocationHint, locationClarification,
   buildJobSearchQuery, buildJobSearchQueries, searchJobs,
   cleanText, decodeHtmlEntities, extractPhones, extractEmails,
-  extractSalary, extractMinimumHourlyUsd, hasActiveApplicationEvidence, extractJobCriteria, isWorldwideRequest, extractJobDetails, formatJobResults, extractJobRole
+  extractSalary, extractMinimumHourlyUsd, hasActiveApplicationEvidence, extractJobCriteria, isWorldwideRequest, extractJobDetails, formatJobResults, formatJobContactSummary, extractJobRole
 };
