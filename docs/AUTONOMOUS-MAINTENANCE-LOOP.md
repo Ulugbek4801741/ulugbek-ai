@@ -2,7 +2,7 @@
 
 ## What runs automatically
 
-The public GitHub repository runs a scheduled workflow daily and can also be started manually. It:
+The public GitHub repository runs the workflow after every merge to `main`, every 6 hours, and on manual request. It:
 
 1. Installs project dependencies without executing package lifecycle scripts.
 2. Runs the complete Node.js test suite.
