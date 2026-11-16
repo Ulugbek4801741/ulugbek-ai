@@ -125,8 +125,8 @@ function mountMcpBridge(app, options = {}) {
       transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
       await server.connect(transport);
       res.on("close", () => {
-        transport.close().catch(() => {});
-        server.close().catch(() => {});
+        try { Promise.resolve(transport.close()).catch(() => {}); } catch (_) {}
+        try { Promise.resolve(server.close()).catch(() => {}); } catch (_) {}
       });
       await transport.handleRequest(req, res, req.body);
     } catch (error) {
@@ -138,8 +138,12 @@ function mountMcpBridge(app, options = {}) {
           id: null
         });
       }
-      if (transport) await transport.close().catch(() => {});
-      if (server) await server.close().catch(() => {});
+      if (transport) {
+        try { await transport.close(); } catch (_) {}
+      }
+      if (server) {
+        try { await server.close(); } catch (_) {}
+      }
     }
   });
 
