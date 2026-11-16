@@ -119,7 +119,7 @@ function request(prompt, systemPrompt, env = process.env) {
 }
 
 function extract(payload, provider) {
-  if (provider === "openai-compatible") {
+  if (provider === "openai-compatible" || provider === "groq") {
     const value = payload?.choices?.[0]?.message?.content;
     return typeof value === "string" ? value.trim() : "";
   }
