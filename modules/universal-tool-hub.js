@@ -4,8 +4,8 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 const crypto = require("node:crypto");
 
-const DATA_DIR = path.resolve(process.env.ULUGBEK_DATA_DIR || path.join(__dirname, "..", "data"));
-const REPORT_FILE = path.join(DATA_DIR, "agent-reports.jsonl");
+function dataDir() { return path.resolve(process.env.ULUGBEK_DATA_DIR || path.join(__dirname, "..", "data")); }
+function reportFile() { return path.join(dataDir(), "agent-reports.jsonl"); }
 const MAX_FILE_BYTES = 250_000;
 
 function secret() {
@@ -53,7 +53,7 @@ function status() {
       mode: "per-user-aes-256-gcm-encrypted-files",
       authentication: "signed-user-token-required"
     },
-    reports: { ready: true, storage: REPORT_FILE, format: "append-only-jsonl" },
+    reports: { ready: true, storage: reportFile(), format: "append-only-jsonl" },
     renderLogs: { ready: false, mode: "external-render-connector-required" }
   };
 }
@@ -72,7 +72,7 @@ function verifyUserToken(token) {
 }
 function userPaths(userId) {
   const id = crypto.createHmac("sha256", secret()).update(userId).digest("hex");
-  return path.join(DATA_DIR, "private-memory", id + ".json");
+  return path.join(dataDir(), "private-memory", id + ".json");
 }
 function encrypt(value, userId) {
   const key = crypto.createHash("sha256").update(secret()).digest();
@@ -113,7 +113,7 @@ async function readPrivateMemory(userId) {
   }
 }
 async function writeReport(report) {
-  await fs.mkdir(DATA_DIR, { recursive: true });
+  await fs.mkdir(dataDir(), { recursive: true });
   const safe = {
     id: "uar_" + crypto.randomUUID().replace(/-/g, "").slice(0, 18),
     task: String(report.task || "").slice(0, 2000),
@@ -123,12 +123,12 @@ async function writeReport(report) {
     limitations: Array.isArray(report.limitations) ? report.limitations.slice(0, 20) : [],
     createdAt: new Date().toISOString()
   };
-  await fs.appendFile(REPORT_FILE, JSON.stringify(safe) + "\n", { encoding: "utf8", mode: 0o600 });
+  await fs.appendFile(reportFile(), JSON.stringify(safe) + "\n", { encoding: "utf8", mode: 0o600 });
   return safe;
 }
 async function listReports(limit = 20) {
   let raw = "";
-  try { raw = await fs.readFile(REPORT_FILE, "utf8"); } catch (error) { if (error.code !== "ENOENT") throw error; }
+  try { raw = await fs.readFile(reportFile(), "utf8"); } catch (error) { if (error.code !== "ENOENT") throw error; }
   return raw.split("\n").filter(Boolean).slice(-Math.max(1, Math.min(Number(limit) || 20, 50))).reverse()
     .flatMap(line => { try { return [JSON.parse(line)]; } catch (_) { return []; } });
 }
