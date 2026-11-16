@@ -245,7 +245,7 @@ function formatJobResults(results, message = "", criteria = extractJobCriteria(m
       (index + 1) + ". " + item.title,
       "Ish beruvchi: " + (item.employer || "Sahifada aniq ko‘rsatilmagan"),
       "Hudud: " + (item.location || "Sahifada aniq ko‘rsatilmagan"),
-      "Oylik maoshi: " + (item.minimumHourlyUsd !== null && item.minimumHourlyUsd !== undefined ? (item.salaryConversion ? "$" + item.minimumHourlyUsd + " USD/soat (taxminiy konvertatsiya; asl: " + item.salaryConversion.original + ", kurs: " + (item.salaryConversion.rateDate || "joriy reference kurs") + ")" : "$" + item.minimumHourlyUsd + " USD/soat (e’londa ko‘rsatilgan eng kam stavka)") : (item.salary || "Sahifada ko‘rsatilmagan")),
+      (item.minimumHourlyUsd !== null && item.minimumHourlyUsd !== undefined ? "Soatlik stavka: " : "Oylik maoshi: ") + (item.minimumHourlyUsd !== null && item.minimumHourlyUsd !== undefined ? (item.salaryConversion ? "$" + item.minimumHourlyUsd + " USD/soat (taxminiy konvertatsiya; asl: " + item.salaryConversion.original + ", kurs: " + (item.salaryConversion.rateDate || "joriy reference kurs") + ")" : "$" + item.minimumHourlyUsd + " USD/soat (e’londa ko‘rsatilgan eng kam stavka)") : (item.salary || "Sahifada ko‘rsatilmagan")),
       "Talablar: " + (item.requirements || "Sahifada batafsil ko‘rsatilmagan"),
       "Ish vaqti: " + (item.schedule || "Sahifada ko‘rsatilmagan"),
       "Tajriba: " + (item.experience || "Sahifada ko‘rsatilmagan"),
