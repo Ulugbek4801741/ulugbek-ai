@@ -1333,7 +1333,16 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     const verifiedSourceLines = found.results
       .filter(item => item.pageRead === true && item.url && item.title)
       .slice(0, 5)
-      .map((item, index) => (index + 1) + ". [" + String(item.title).replace(/[\[\]]/g, "") + "](" + item.url + ") — sahifa matni o‘qildi");
+      .map((item, index) => {
+        const label = item.sourceType === "institution-registry-record"
+          ? "universitet/tashkilot reyestri yozuvi"
+          : item.recordRead ? "ilmiy katalog yozuvi o‘qildi"
+            : "sahifa matni o‘qildi";
+        const doi = item.doi ? " — DOI: " + item.doi : "";
+        const access = item.openAccessUrl ? " — ochiq nusxa: " + item.openAccessUrl
+          : item.recordRead && !item.openAccess ? " — to‘liq matn ochiqligi tasdiqlanmagan" : "";
+        return (index + 1) + ". [" + String(item.title).replace(/[\[\]]/g, "") + "](" + item.url + ") — " + label + doi + access;
+      });
     if (verifiedSourceLines.length) {
       reply += "\n\nTekshirish uchun o‘qilgan manbalar:\n" + verifiedSourceLines.join("\n");
     } else if (found.results.length) {
