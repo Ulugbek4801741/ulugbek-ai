@@ -84,7 +84,7 @@ test("verifies published Lever postings and preserves the application URL and ho
             applyUrl: "https://jobs.lever.co/acme/abc-123/apply",
             company: "Acme",
             categories: { location: "Worldwide remote" },
-            salaryRange: { currency: "USD", interval: "hourly", min: 35, max: 45 },
+            salaryRange: { currency: "USD", interval: "hour", min: 35, max: 45 },
             descriptionPlain: "Support customers and maintain systems. Requirements: experience."
           };
         }
