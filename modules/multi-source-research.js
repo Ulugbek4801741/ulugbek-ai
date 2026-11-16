@@ -41,13 +41,13 @@ async function compareSources(query, options = {}) {
   return {
     ok: true, query: question, searchedAt: new Date().toISOString(),
     sourceCount: readable.length,
-    independentDomains: [...new Set(readable.map(item => item.host))].length,
+    distinctDomains: [...new Set(readable.map(item => item.host))].length,
     sources: pages,
     verification: {
       method: "cross-domain-public-page-comparison",
       verifiedFacts: 0,
-      status: readable.length >= 2 ? "evidence-collected-needs-claim-level-comparison" : "insufficient-independent-evidence",
-      note: "Turli domenlardan sahifalar yig‘ildi. Bu avtomatik fakt tasdig‘i emas; har bir da’vo matnlar bilan alohida solishtirilishi kerak."
+      status: readable.length >= 2 ? "evidence-collected-needs-claim-level-comparison" : "insufficient-domain-diverse-evidence",
+      note: "Turli domenlardan sahifalar yig‘ildi; domenlar turlicha bo‘lishi manbalar tahririy jihatdan mustaqil degani emas. Bu avtomatik fakt tasdig‘i emas."
     }
   };
 }
