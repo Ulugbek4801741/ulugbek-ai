@@ -37,10 +37,15 @@ function buildUniversalSearchQueries(value) {
   if (intent.isJobSearch) suffix.push("vakansiya ish o'rinlari ish beruvchi maosh shartlari jobs vacancies employer salary hiring");
   if (intent.platforms.length) suffix.push(intent.platforms.join(" "));
   if (intent.isLinkSearch) suffix.push("official website official page link");
+  const historyIntent = require("./history-intent").normalizeHistoryIntent(original);
+  if (historyIntent.isHistorical && historyIntent.queryBoost.length) suffix.push(historyIntent.queryBoost[0]);
   const queries = [original, [original, ...suffix].join(" ")];
   if (intent.isJobSearch) queries.push(original + " official employer careers application requirements");
   else if (intent.isLinkSearch) queries.push(original + " rasmiy sayt official contact");
-  else {
+  else if (historyIntent.isHistorical && historyIntent.queryBoost.length) {
+    queries.push(historyIntent.queryBoost[1]);
+    queries.push(historyIntent.queryBoost[2]);
+  } else {
     queries.push(original + " official information facts explanation");
     queries.push(original + " evidence research detailed answer");
   }
