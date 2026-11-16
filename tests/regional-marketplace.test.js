@@ -99,7 +99,9 @@ test("only seller can confirm; email is blocked until seller approval", async ()
   });
   assert.equal(unauth.status, 401);
   const sellerOrders = await fetch(base + "/seller/orders", { headers: { authorization: "Bearer " + sellerToken } });
-  assert.equal((await sellerOrders.json()).orders.length, 1);
+  const sellerOrderData = await sellerOrders.json();
+  assert.equal(sellerOrderData.orders.length, 1);
+  assert.equal("buyerEmail" in sellerOrderData.orders[0], false);
   const decision = await fetch(base + "/orders/" + orderId + "/decision", {
     method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + sellerToken },
     body: JSON.stringify({ decision: "accept" })
@@ -108,6 +110,11 @@ test("only seller can confirm; email is blocked until seller approval", async ()
   assert.equal(decision.status, 200);
   assert.equal(data.status, "confirmed");
   assert.equal(data.emailStatus, "not_configured");
+  const duplicate = await fetch(base + "/orders/" + orderId + "/decision", {
+    method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + sellerToken },
+    body: JSON.stringify({ decision: "accept" })
+  });
+  assert.equal(duplicate.status, 409);
 });
 
 test("buyer and seller can chat and ULUGBEK AI mediates the conversation", async () => {
@@ -122,7 +129,7 @@ test("buyer and seller can chat and ULUGBEK AI mediates the conversation", async
   assert.equal((await history.json()).messages.length, 2);
 });
 
-test("email cannot be resent before seller approval", async () => {
+test("seller can retry email only after seller approval", async () => {
   const response = await fetch(base + "/orders/" + orderId + "/email", {
     method: "POST", headers: { authorization: "Bearer " + sellerToken }
   });
