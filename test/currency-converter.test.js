@@ -15,6 +15,8 @@ test("parses explicit hourly compensation in USD and major foreign currencies", 
   });
   assert.equal(parseHourlyCompensation("€30–€35 per hour").currency, "EUR");
   assert.equal(parseHourlyCompensation("£32 per hour").currency, "GBP");
+  assert.equal(parseHourlyCompensation("30 EUR/hour").currency, "EUR");
+  assert.equal(parseHourlyCompensation("32 USD per hour").currency, "USD");
   assert.equal(parseHourlyCompensation("$35 per hour", "Toronto, Canada").currency, "CAD");
   assert.equal(parseHourlyCompensation("C$35 per hour").currency, "CAD");
   assert.equal(parseHourlyCompensation("30 EUR per month"), null);
