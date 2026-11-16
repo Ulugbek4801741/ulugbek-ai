@@ -27,3 +27,10 @@ test("chat question extracts arithmetic before equals sign", () => {
     expression: "1+1", result: 2
   });
 });
+
+test("colon is division and division by zero is reported, never truncated", () => {
+  assert.throws(() => math.calculateExpression("558+559:0"), /Nolga/);
+  assert.deepEqual(math.findExpression("558+559:0= javob ber"), {
+    expression: "558+559:0", error: "Nolga bo‘lish mumkin emas."
+  });
+});
