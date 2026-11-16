@@ -12,7 +12,7 @@ const STOP_WORDS = new Set((
 const SUFFIXES = [
   "larining", "laridan", "lariga", "larning", "lardan", "larga", "larni",
   "ning", "dagi", "dan", "den", "gan", "gen", "kan", "ken", "ini", "iga",
-  "ida", "idan", "lar", "lik", "chi", "cha", "si", "ni", "ga", "da", "ta", "mi"
+  "ida", "idan", "lar", "lik", "chi", "cha", "si", "ni", "ga", "da", "ta", "mi", "i"
 ].sort((a, b) => b.length - a.length);
 
 function normalizeToken(value) {
@@ -55,7 +55,19 @@ function scoreSource(question, source) {
   const titleCoverage = titleMatches.length / queryTerms.length;
   const score = Math.min(1, coverage * 0.7 + titleCoverage * 0.2 + (phrase ? 0.1 : 0));
   const minimumMatches = queryTerms.length >= 4 ? 2 : 1;
-  const relevant = matchedTerms.length >= minimumMatches && (coverage >= 0.34 || phrase);
+  const normalizedBody = body.toLocaleLowerCase("uz").replace(/[’‘ʼ`]/g, "'");
+  // For multi-word subjects, the main entity and the next subject term must
+  // appear together in one sentence. A passing mention in an unrelated list
+  // (e.g. "Egypt, India, Central Asia") is not enough.
+  const subjectPair = queryTerms.length >= 2 ? queryTerms.slice(0, 2) : [];
+  const pairInSameSentence = !subjectPair.length || normalizedBody
+    .split(/[.!?\n]+/u)
+    .some(sentence => {
+      const sentenceTerms = new Set(terms(sentence));
+      return subjectPair.every(term => sentenceTerms.has(term));
+    });
+  const relevant = matchedTerms.length >= minimumMatches &&
+    (coverage >= 0.34 || phrase) && pairInSameSentence;
   return { relevant, score: Number(score.toFixed(3)), matchedTerms, queryTerms };
 }
 
