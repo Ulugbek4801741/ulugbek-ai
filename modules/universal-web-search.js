@@ -1,5 +1,7 @@
 "use strict";
 
+const sourceRelevance = require("./source-relevance");
+
 const PLATFORM_HINTS = [
   { pattern: /\b(youtube|ютуб)\b|youtube\.com/i, domain: "site:youtube.com" },
   { pattern: /\b(facebook|фейсбук)\b|facebook\.com/i, domain: "site:facebook.com" },
@@ -84,15 +86,11 @@ async function searchWeb(message, webSearch, options = {}) {
     seenUrls.add(item.url);
     candidates.push(item);
   }
-  // Add scholarly APIs independently from general web search. A provider outage
-  // must not prevent other repositories or the ordinary web from returning results.
   const openResearch = require("./open-research-connectors");
   let scholarly = { results: [], providers: [], failedProviders: [] };
   let institutions = { results: [], providers: [], failedProviders: [] };
   if (options.includeScholarly === true) {
-    try {
-      scholarly = await openResearch.searchOpenResearch(message, { limit, perSource: 4 });
-    } catch (_) {}
+    try { scholarly = await openResearch.searchOpenResearch(message, { limit, perSource: 4 }); } catch (_) {}
     if (openResearch.isUniversityQuery(message)) {
       try { institutions = await openResearch.searchUniversities(message, { limit: 6 }); } catch (_) {}
     }
@@ -121,8 +119,13 @@ async function searchWeb(message, webSearch, options = {}) {
   const academicPages = [...scholarly.results, ...institutions.results].map(item => ({
     ...item, host: hostOf(item.url), qualityScore: item.qualityScore || 3
   }));
-  const ranked = [...pages, ...academicPages].filter(item => item.title && item.url).sort((a, b) =>
-    Number(b.pageRead) - Number(a.pageRead) || b.qualityScore - a.qualityScore || b.snippet.length - a.snippet.length
+  // Relevance is a hard gate: domain reputation or page-read status cannot rescue
+  // a source that does not discuss the user's actual subject.
+  const relevant = sourceRelevance.filterRelevantSources(message, [...pages, ...academicPages]);
+  const ranked = relevant.sort((a, b) =>
+    b.relevance.score - a.relevance.score ||
+    Number(b.pageRead) - Number(a.pageRead) ||
+    b.qualityScore - a.qualityScore
   );
   const selected = [], hostCounts = new Map();
   for (const item of ranked) {
@@ -133,12 +136,12 @@ async function searchWeb(message, webSearch, options = {}) {
   }
   return {
     ok: true, results: selected, queries,
-    reply: "ULUGBEK AI " + queries.length + " xil qidiruv orqali " + selected.length +
-      " ta turli ochiq manbani topdi; " + selected.filter(x => x.pageRead).length +
-      " ta sahifa yoki ilmiy katalog yozuvini o'qidi. " +
-      "Ilmiy API manbalari: " + scholarly.providers.join(", ") + ". " +
-      "Universitet katalogi: " + institutions.providers.join(", ") + ". " +
-      "Ochiq nusxa mavjudligi har bir material bo'yicha alohida tekshiriladi."
+    relevanceChecked: true,
+    rejectedIrrelevantCount: pages.length + academicPages.length - relevant.length,
+    reply: selected.length
+      ? "ULUGBEK AI savolga mos " + selected.length + " ta manbani tanladi; " +
+        selected.filter(x => x.pageRead).length + " ta sahifa o'qildi."
+      : "Qidiruv natijalari topildi, ammo savolga bevosita mosligi tasdiqlanmadi. Noto'g'ri manbalarni javobga qo'shmayman."
   };
 }
 function evidenceEntries(results) {
@@ -152,16 +155,14 @@ function evidenceEntries(results) {
     year: item.year || null,
     openAccess: item.openAccess === true,
     openAccessUrl: item.openAccessUrl || "",
-    sourceQuality: item.qualityScore || 1
+    sourceQuality: item.qualityScore || 1,
+    relevance: item.relevance || null
   }));
 }
 function formatEvidenceReply(results, reason = "") {
-  const items = (Array.isArray(results) ? results : [])
-    .filter(item => item && item.pageRead === true && typeof item.url === "string")
-    .slice(0, 2);
   const message = reason
     ? "Hozircha savolga ishonchli yakuniy javob tuzish uchun yetarli tasdiqlangan dalil topilmadi. " + cleanText(reason, 220)
     : "Hozircha savolga ishonchli yakuniy javob tuzish uchun yetarli tasdiqlangan dalil topilmadi. Qidiruv parchalari fakt sifatida qabul qilinmadi.";
   return message + " Bilmagan ma’lumotimni taxmin qilib aytmayman.";
 }
-module.exports = { detectSearchIntent, buildUniversalSearchQuery, buildUniversalSearchQueries, searchWeb, cleanText, evidenceEntries, formatEvidenceReply };
+module.exports = { detectSearchIntent, buildUniversalSearchQuery, buildUniversalSearchQueries, searchWeb, cleanText, evidenceEntries, formatEvidenceReply, sourceRelevance };

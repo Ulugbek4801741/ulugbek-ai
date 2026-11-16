@@ -33,8 +33,8 @@ test("creates multiple distinct search queries for independent discovery", () =>
 test("reads pages, searches in parallel and deduplicates results from same URL", async () => {
   const calls = [];
   const web = {
-    async search(q) { calls.push(q); return [{ title: "Example", url: "https://example.org/a", snippet: "short" }, { title: "Second", url: "https://gov.example/a", snippet: "short" }]; },
-    async fetchPage(url) { return { title: "Read " + url, url, content: "Full page text and evidence. ".repeat(60) }; }
+    async search(q) { calls.push(q); return [{ title: "Fotosintez — Example", url: "https://example.org/a", snippet: "Fotosintez va o‘simliklarda quyosh nuri orqali oziqa hosil bo‘lishi." }, { title: "Fotosintez tadqiqoti", url: "https://gov.example/a", snippet: "Fotosintez jarayonining ilmiy izohi." }]; },
+    async fetchPage(url) { return { title: "Read " + url, url, content: "Fotosintez — o‘simliklarda yorug‘lik energiyasi yordamida organik modda hosil bo‘lish jarayoni. ".repeat(60) }; }
   };
   const result = await searchWeb("Fotosintez nima?", web);
   assert.equal(calls.length, 3);
