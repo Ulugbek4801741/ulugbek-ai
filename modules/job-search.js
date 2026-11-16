@@ -23,7 +23,8 @@ function extractJobCriteria(value) {
   const hourlyPatterns = [
     /(?:\$|USD\s*)\s*(\d{1,4}(?:[.,]\d{1,2})?)\s*(?:-|–|to)\s*(?:\$|USD\s*)?\d{1,4}(?:[.,]\d{1,2})?\s*(?:per\s*hour|\/\s*(?:h|hr|hour)|hourly|an\s*hour)/iu,
     /(?:\$|USD\s*)\s*(\d{1,4}(?:[.,]\d{1,2})?)\s*(?:per\s*hour|\/\s*(?:h|hr|hour)|hourly|an\s*hour)/iu,
-    /(?:hourly\s*(?:pay|rate|salary)?|per\s*hour)\s*(?:of|:|is|at)?\s*(?:USD\s*|\$)?(\d{1,4}(?:[.,]\d{1,2})?)/iu
+    /(?:hourly\s*(?:pay|rate|salary)?|per\s*hour)\s*(?:of|:|is|at)?\s*(?:USD\s*|\$)?(\d{1,4}(?:[.,]\d{1,2})?)/iu,
+    /soatiga\s*(?:kamida|min(?:imum)?)?\s*(?:USD\s*|\$)?(\d{1,4}(?:[.,]\d{1,2})?)\s*(?:AQSh\s*dollari|dollar|USD)/iu
   ];
   let minHourlyUsd = null;
   for (const pattern of hourlyPatterns) {
@@ -34,7 +35,7 @@ function extractJobCriteria(value) {
     requestedCount: count,
     minHourlyUsd: Number.isFinite(minHourlyUsd) ? minHourlyUsd : null,
     worldwide: isWorldwideRequest(text),
-    requireActive: /(?:hozir|faol|active|currently\s*hiring|hiring\s*now|open\s*position|accepting\s*applications)/iu.test(text)
+    requireActive: /(?:hozir|faol|active|currently\s*hiring|hiring\s*now|open\s*position|apply\\s*here|\\bapply\\b|accepting\s*applications)/iu.test(text)
   };
 }
 
@@ -155,7 +156,8 @@ function extractMinimumHourlyUsd(value) {
   const patterns = [
     /(?:\$|USD\s*)\s*(\d{1,4}(?:[.,]\d{1,2})?)\s*(?:-|–|to)\s*(?:\$|USD\s*)?\d{1,4}(?:[.,]\d{1,2})?\s*(?:per\s*hour|\/\s*(?:h|hr|hour)|hourly|an\s*hour)/iu,
     /(?:\$|USD\s*)\s*(\d{1,4}(?:[.,]\d{1,2})?)\s*(?:per\s*hour|\/\s*(?:h|hr|hour)|hourly|an\s*hour)/iu,
-    /(?:hourly\s*(?:pay|rate|salary)?|per\s*hour)\s*(?:of|:|is|at)?\s*(?:USD\s*|\$)?(\d{1,4}(?:[.,]\d{1,2})?)/iu
+    /(?:hourly\s*(?:pay|rate|salary)?|per\s*hour)\s*(?:of|:|is|at)?\s*(?:USD\s*|\$)?(\d{1,4}(?:[.,]\d{1,2})?)/iu,
+    /soatiga\s*(?:kamida|min(?:imum)?)?\s*(?:USD\s*|\$)?(\d{1,4}(?:[.,]\d{1,2})?)\s*(?:AQSh\s*dollari|dollar|USD)/iu
   ];
   for (const pattern of patterns) {
     const match = text.match(pattern);
