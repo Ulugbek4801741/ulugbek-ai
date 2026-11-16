@@ -35,7 +35,7 @@ function extractJobCriteria(value) {
     requestedCount: count,
     minHourlyUsd: Number.isFinite(minHourlyUsd) ? minHourlyUsd : null,
     worldwide: isWorldwideRequest(text),
-    requireActive: /(?:hozir|faol|active|currently\s*hiring|hiring\s*now|open\s*position|accepting\s*applications)/iuiu.test(text)
+    requireActive: /(?:hozir|faol|active|currently\s*hiring|hiring\s*now|open\s*position|accepting\s*applications)/iu.test(text)
   };
 }
 
