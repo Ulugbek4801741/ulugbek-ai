@@ -40,6 +40,7 @@ function normalizeRecord(record) {
     record.openAccessUrl ? "Ochiq nusxa: " + record.openAccessUrl : "",
     record.description ? "Tavsif: " + clean(record.description, 1800) : ""
   ].filter(Boolean);
+  const openAccessUrl = record.openAccess === true ? safeUrl(record.openAccessUrl || "") : "";
   return {
     title: clean(record.title, 260),
     snippet: parts.join("\n").slice(0, 5200),
@@ -50,8 +51,8 @@ function normalizeRecord(record) {
     provider: record.provider,
     year: record.year || null,
     doi: record.doi || null,
-    openAccess: Boolean(record.openAccessUrl),
-    openAccessUrl: safeUrl(record.openAccessUrl || ""),
+    openAccess: Boolean(openAccessUrl),
+    openAccessUrl,
     qualityScore: Number(record.qualityScore) || 3
   };
 }
@@ -85,6 +86,7 @@ async function crossrefSearch(query, options) {
     provider: "Crossref", title: item.title?.[0], authors: authorsFrom(item.author),
     year: yearFrom(item.published?.["date-parts"]?.[0]?.[0] || item.created?.["date-time"]),
     doi: item.DOI, url: item.URL, abstract: item.abstract,
+    openAccess: item.license?.some(license => /creativecommons\.org|publicdomain|creativecommons/i.test(license.URL || "")) === true,
     openAccessUrl: item.license?.some(license => /creativecommons\.org|publicdomain|creativecommons/i.test(license.URL || "")) ?
       (item.link || []).find(link => /pdf/i.test(link["content-type"] || ""))?.URL : "",
     qualityScore: 3
@@ -102,7 +104,8 @@ async function europePmcSearch(query, options) {
     return normalizeRecord({
       provider: "Europe PMC", title: item.title, authors: item.authorString,
       year: yearFrom(item.firstPublicationDate || item.pubYear), doi: item.doi,
-      url: landing, abstract: item.abstractText, openAccessUrl: item.isOpenAccess === "Y" ? open : "",
+      url: landing, abstract: item.abstractText,
+      openAccess: item.isOpenAccess === "Y" && Boolean(open), openAccessUrl: item.isOpenAccess === "Y" ? open : "",
       qualityScore: 4
     });
   }).filter(Boolean);
@@ -120,7 +123,7 @@ async function arxivSearch(query, options) {
     return normalizeRecord({
       provider: "arXiv", title: value("title"), authors: (entry.match(/<author>[\s\S]*?<name>([\s\S]*?)<\/name>[\s\S]*?<\/author>/g) || []).map(x => clean((x.match(/<name>([\s\S]*?)<\/name>/) || [,""])[1], 100)).join(", "),
       year: yearFrom(value("published")), url: id, abstract: value("summary"),
-      openAccessUrl: id ? id.replace(/abs\//, "pdf/") + ".pdf" : "", qualityScore: 3
+      openAccess: Boolean(id), openAccessUrl: id ? id.replace(/abs\//, "pdf/") + ".pdf" : "", qualityScore: 3
     });
   }).filter(Boolean);
 }
@@ -130,6 +133,7 @@ async function zenodoSearch(query, options) {
     provider: "Zenodo", title: item.metadata?.title, authors: authorsFrom(item.metadata?.creators?.map(x => x.name)),
     year: yearFrom(item.metadata?.publication_date), doi: item.doi,
     url: item.links?.html || item.links?.self, description: item.metadata?.description,
+    openAccess: item.metadata?.access_right === "open" && Boolean(item.files?.find(f => f.links?.self)?.links?.self),
     openAccessUrl: item.metadata?.access_right === "open" ? item.files?.find(f => f.links?.self)?.links?.self : "",
     qualityScore: 4
   })).filter(Boolean);
@@ -163,7 +167,7 @@ async function doajSearch(query, options) {
       provider: "DOAJ", title: bib.title,
       authors: authorsFrom(bib.author?.map(x => x.name)),
       year: yearFrom(bib.year), doi, url: link?.url || (doi ? "https://doi.org/" + doi : ""),
-      abstract: bib.abstract, openAccessUrl: link?.url, qualityScore: 4
+      abstract: bib.abstract, openAccess: Boolean(link?.url), openAccessUrl: link?.url, qualityScore: 4
     });
   }).filter(Boolean);
 }
@@ -192,7 +196,7 @@ async function coreSearch(query, options) {
         year: yearFrom(item.yearPublished || item.publishedDate), doi,
         url: item.links?.find(x => x.type === "display")?.url || item.sourceFulltextUrls?.[0] ||
           (doi ? "https://doi.org/" + doi : item.id ? "https://core.ac.uk/works/" + item.id : ""),
-        abstract: item.abstract, openAccessUrl: download, qualityScore: 4
+        abstract: item.abstract, openAccess: Boolean(download), openAccessUrl: download, qualityScore: 4
       });
     }).filter(Boolean);
   } finally { clearTimeout(timeout); }
@@ -217,7 +221,8 @@ async function openAlexSearch(query, options) {
       authors: authorsFrom((item.authorships || []).map(x => x.author?.display_name)),
       year: item.publication_year, doi: item.doi,
       url: location.landing_page_url || item.doi || item.id,
-      abstract, openAccessUrl: item.open_access?.is_oa ? location.pdf_url : "",
+      abstract, openAccess: item.open_access?.is_oa === true && Boolean(location.pdf_url),
+      openAccessUrl: item.open_access?.is_oa ? location.pdf_url : "",
       qualityScore: 4
     });
   }).filter(Boolean);
