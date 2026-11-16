@@ -20,3 +20,23 @@ test("recognizes Babur spelling and historical context", () => {
   const result = history.normalizeHistoryIntent("Babur haqida tarixiy ma'lumot");
   assert.equal(result.canonicalEntity, "Zahiriddin Muhammad Bobur (Boburshoh)");
 });
+
+
+test("recognizes Alisher Navoiy life and works without requiring the word history", () => {
+  const result = history.normalizeHistoryIntent("Alisher Navoiy hayoti va ijodi haqida ma'lumot ber");
+  assert.equal(result.isHistorical, true);
+  assert.equal(result.canonicalEntity, "Alisher Navoiy (Nizomiddin Mir Alisher)");
+  assert.ok(result.queryBoost.some(query => /Xamsa/i.test(query)));
+  assert.match(history.buildHistoricalInstruction(result), /TARIXIY TADQIQOT QOIDALARI/);
+});
+
+test("does not confuse a modern Boburshox athlete with the historical ruler", () => {
+  const result = history.normalizeHistoryIntent("Boburshox polvon Malibu otida Zomin Oqtoshda");
+  assert.equal(result.canonicalEntity, null);
+});
+
+
+test("does not confuse Navoiy region history with the poet without person context", () => {
+  const result = history.normalizeHistoryIntent("Navoiy viloyati tarixi haqida ma'lumot ber");
+  assert.equal(result.canonicalEntity, null);
+});
