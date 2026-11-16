@@ -50,7 +50,7 @@ function extractJobRole(value) {
   const text = String(value || "").toLowerCase();
   const roles = [
     { pattern: /\bpython\b/iu, evidencePattern: /\bpython\b/iu, label: "Python dasturchi", terms: "Python developer Python engineer Python software developer" },
-    { pattern: /(?:dasturchi|dasturlovchi|dasturlash|dastur\s+yozish|programmist|programmer|developer|software\s+engineer|software\s+developer)/iu, label: "Dasturchi", terms: "dasturchi dasturlash programmer developer software engineer software developer junior frontend backend" },
+    { pattern: /(?:dasturchi|dasturlovchi|dasturlash|dastur\s+yozish|programmist|programmer|developer|software\s+engineer|software\s+developer)/iu, label: "Dasturchi", terms: "dasturchi dasturlash programmer developer software engineer software developer junior frontend backend Python JavaScript" },
     { pattern: /(?:frontend|front-end|front\s+end)/iu, label: "Frontend dasturchi", terms: "frontend developer front-end engineer JavaScript React" },
     { pattern: /(?:backend|back-end|back\s+end)/iu, label: "Backend dasturchi", terms: "backend developer back-end engineer Node.js Python Java" },
     { pattern: /(?:full[ -]?stack)/iu, label: "Full-stack dasturchi", terms: "full stack developer frontend backend" },
@@ -147,10 +147,11 @@ function extractTelegram(value) {
 
 function extractSalary(value) {
   const text = String(value || "");
-  // Only report amounts explicitly described as monthly pay.
+  // Oylik maosh davri ko'rsatilsa olinadi; so'mdagi "Maosh" yorlig'i ham mahalliy odatiy format.
   const patterns = [
-    /(?:salary|compensation|pay|maosh|ish haqi|зарплат[аы])[^.!?\n]{0,90}(?:USD\s*|US\$|\$)\s?\d[\d,]*(?:\.\d{1,2})?(?:\s*[-–—]\s*(?:USD\s*|US\$|\$)?\s?\d[\d,]*(?:\.\d{1,2})?)?\s*(?:per month|\/\s*month|monthly|a month|oyiga|har oy)/iu,
-    /(?:USD\s*|US\$|\$)\s?\d[\d,]*(?:\.\d{1,2})?(?:\s*[-–—]\s*(?:USD\s*|US\$|\$)?\s?\d[\d,]*(?:\.\d{1,2})?)?\s*(?:per month|\/\s*month|monthly|a month|oyiga|har oy)/iu
+    /(?:salary|compensation|pay|maosh|ish haqi|зарплат[аы])[^.!?\n]{0,90}(?:USD\s*|US\$|\$|CHF\s*|EUR\s*|GBP\s*|CAD\s*|AUD\s*)\s?\d[\d\s,]*(?:\.\d{1,2})?(?:\s*[-–—]\s*(?:USD\s*|US\$|\$|CHF\s*|EUR\s*|GBP\s*|CAD\s*|AUD\s*)?\s?\d[\d\s,]*(?:\.\d{1,2})?)?\s*(?:per month|\/\s*month|monthly|a month|oyiga|har oy)/iu,
+    /(?:USD\s*|US\$|\$|CHF\s*|EUR\s*|GBP\s*|CAD\s*|AUD\s*)\s?\d[\d\s,]*(?:\.\d{1,2})?(?:\s*[-–—]\s*(?:USD\s*|US\$|\$|CHF\s*|EUR\s*|GBP\s*|CAD\s*|AUD\s*)?\s?\d[\d\s,]*(?:\.\d{1,2})?)?\s*(?:per month|\/\s*month|monthly|a month|oyiga|har oy)/iu,
+    /(?:maosh|ish haqi|salary)\s*[:：-]\s*\d[\d\s,.]*(?:so['’ʻ]?m|som|UZS)\b[^.!?\n]{0,30}/iu
   ];
   for (const pattern of patterns) {
     const match = text.match(pattern);
