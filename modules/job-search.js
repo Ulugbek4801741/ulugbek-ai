@@ -67,7 +67,7 @@ function matchesRequestedRole(role, title, description) {
   if (role.label === "Python dasturchi") {
     // Strict title gate: generic React/backend/data roles are not Python vacancies
     // merely because Python appears somewhere in a long description.
-    const pythonDeveloperTitle = /\\bpython\\b.{0,55}\\b(?:developer|engineer|programmer|software|backend|full[ -]?stack)\\b|\\b(?:developer|engineer|programmer|software|backend|full[ -]?stack)\\b.{0,55}\\bpython\\b/iu;
+    const pythonDeveloperTitle = /\bpython\b.{0,55}\b(?:developer|engineer|programmer|software|backend|full[ -]?stack)\b|\b(?:developer|engineer|programmer|software|backend|full[ -]?stack)\b.{0,55}\bpython\b/iu;
     return pythonDeveloperTitle.test(titleText);
   }
   const evidence = role.evidencePattern || /(?:dasturchi|dasturlash|developer|programmer|software engineer|frontend|backend|javascript|python|kotlin|java|qa engineer|web developer)/iu;
