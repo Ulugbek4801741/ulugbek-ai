@@ -116,7 +116,7 @@ function createMarketplaceRouter() {
 
   router.get("/status",(_req,res)=>{
     res.set("Cache-Control","no-store");
-    res.json({ok:true,databaseConfigured:Boolean(pool),authReady:Boolean(pool&&sessionSecret&&otpSecret),emailDeliveryReady:Boolean(process.env.RESEND_API_KEY),smsDeliveryReady:Boolean(process.env.TWILIO_ACCOUNT_SID&&process.env.TWILIO_AUTH_TOKEN&&process.env.TWILIO_FROM_NUMBER),payments:{paymeReady:Boolean(process.env.PAYME_MERCHANT_ID&&process.env.PAYME_SECRET_KEY),clickReady:Boolean(process.env.CLICK_SERVICE_ID&&process.env.CLICK_MERCHANT_ID&&process.env.CLICK_SECRET_KEY),liveCallbacksImplemented:false},storage:"postgresql"});
+    res.json({ok:true,databaseConfigured:Boolean(pool),authReady:Boolean(pool&&sessionSecret&&sessionSecret.length>=32&&otpSecret&&otpSecret.length>=32),emailDeliveryReady:Boolean(process.env.RESEND_API_KEY),smsDeliveryReady:Boolean(process.env.TWILIO_ACCOUNT_SID&&process.env.TWILIO_AUTH_TOKEN&&process.env.TWILIO_FROM_NUMBER),payments:{paymeReady:Boolean(process.env.PAYME_MERCHANT_ID&&process.env.PAYME_SECRET_KEY),clickReady:Boolean(process.env.CLICK_SERVICE_ID&&process.env.CLICK_MERCHANT_ID&&process.env.CLICK_SECRET_KEY),liveCallbacksImplemented:false},storage:"postgresql"});
   });
   router.post("/auth/register",requireOrigin,async(req,res)=>{
     try{
