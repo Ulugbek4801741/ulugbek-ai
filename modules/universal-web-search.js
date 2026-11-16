@@ -37,14 +37,20 @@ function buildUniversalSearchQueries(value) {
   if (intent.isJobSearch) suffix.push("vakansiya ish o'rinlari ish beruvchi maosh shartlari jobs vacancies employer salary hiring");
   if (intent.platforms.length) suffix.push(intent.platforms.join(" "));
   if (intent.isLinkSearch) suffix.push("official website official page link");
+  const historyIntent = require("./history-intent").normalizeHistoryIntent(original);
+  if (historyIntent.isHistorical && historyIntent.queryBoost.length) suffix.push(historyIntent.queryBoost[0]);
   const queries = [original, [original, ...suffix].join(" ")];
   if (intent.isJobSearch) queries.push(original + " official employer careers application requirements");
-  else if (intent.isLinkSearch) queries.push(original + " rasmiy sayt official contact");
+  else if (historyIntent.isHistorical && historyIntent.queryBoost.length) {
+    queries.push(historyIntent.queryBoost[1]);
+    queries.push(historyIntent.queryBoost[2]);
+  } else if (intent.isLinkSearch) queries.push(original + " rasmiy sayt official contact");
   else {
     queries.push(original + " official information facts explanation");
     queries.push(original + " evidence research detailed answer");
   }
-  return [...new Set(queries.map(q => cleanText(q, 500)).filter(Boolean))].slice(0, 3);
+  return [...new Set(queries.map(q => cleanText(q, 500)).filter(Boolean))]
+    .slice(0, historyIntent.isHistorical ? 5 : 3);
 }
 function buildUniversalSearchQuery(value) { return buildUniversalSearchQueries(value)[1] || cleanText(value, 500); }
 function hostOf(value) {

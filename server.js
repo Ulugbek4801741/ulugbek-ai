@@ -1313,7 +1313,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     // instead of discarding it and returning a generic "not enough evidence" reply.
     result = answerSelection.selectAnswer(result, localCandidate);
 
-    // Evidence source URLs stay server-side; only the synthesized answer is returned.
+    // Keep evidence URLs available to users so historical and factual answers are auditable.
 
     let reply;
     let reasoning;
@@ -1328,6 +1328,16 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
         answerable: false,
         facts: []
       };
+    }
+
+    const verifiedSourceLines = found.results
+      .filter(item => item.pageRead === true && item.url && item.title)
+      .slice(0, 5)
+      .map((item, index) => (index + 1) + ". [" + String(item.title).replace(/[\[\]]/g, "") + "](" + item.url + ") — sahifa matni o‘qildi");
+    if (verifiedSourceLines.length) {
+      reply += "\n\nTekshirish uchun o‘qilgan manbalar:\n" + verifiedSourceLines.join("\n");
+    } else if (found.results.length) {
+      reply += "\n\nEslatma: qidiruv natijalari topildi, ammo sahifa matnlari to‘liq o‘qilmadi; shu sababli ular tasdiqlangan manba sifatida keltirilmadi.";
     }
 
     return res.json({
