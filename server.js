@@ -1147,11 +1147,11 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       });
     }
     const lines = previousSources.slice(0, 3).map((item, index) => {
-      const excerpt = item.excerpt ? "\\nTegishli joy: " + item.excerpt.slice(0, 520) : "";
-      return (index + 1) + ". " + item.title + "\\nManzil: " + item.url + excerpt;
+      const excerpt = item.excerpt ? "\nTegishli joy: " + item.excerpt.slice(0, 520) : "";
+      return (index + 1) + ". " + item.title + "\nManzil: " + item.url + excerpt;
     });
     return res.json({
-      reply: "Oldingi javobda foydalanilgan, o‘qilgan manbalar:\\n\\n" + lines.join("\\n\\n"),
+      reply: "Oldingi javobda foydalanilgan, o‘qilgan manbalar:\n\n" + lines.join("\n\n"),
       mode: "previous-answer-sources",
       webSearchUsed: false,
       sourceCount: previousSources.length
