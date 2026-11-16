@@ -22,7 +22,17 @@ The public GitHub repository runs the workflow after every merge to `main`, ever
 - It never copies code, installs upstream projects, changes dependencies, edits model weights, pushes commits, merges pull requests, changes secrets, or deploys.
 - Upstream README and release-note excerpts are limited to 100 words each (at most 200 words from one repository per run).
 - An upstream repository is a research lead, not automatically trusted training data. Its license and security posture must be reviewed before any code reuse.
-- Production deployment and paid infrastructure changes remain owner-approved.
+- Production deployment is triggered only after the main-branch quality checks pass, and only when the repository secret `RENDER_DEPLOY_HOOK_URL` is configured. The workflow then waits for the expected commit to appear on Render and re-tests chat.
+- Paid infrastructure changes remain owner-approved.
+
+## One-time Render deployment connection
+
+1. In the Render Dashboard, open the `ulugbek-ai2` service and create a Deploy Hook in its Settings.
+2. In GitHub, open Settings → Secrets and variables → Actions → New repository secret.
+3. Set the secret name to `RENDER_DEPLOY_HOOK_URL` and paste the Deploy Hook URL as its value.
+4. Never paste the hook URL into chat or commit it to the repository.
+
+Until this secret exists, the workflow deliberately skips automatic production deployment and reports that it needs setup.
 
 ## What "learning" means here
 
