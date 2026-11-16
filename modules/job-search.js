@@ -163,8 +163,10 @@ function isCategoryPage(url) {
     return /^\/(?:oz\/)?(?:rabota|jobs?|vacancies|search|q|vakansii?)$/.test(path);
   } catch (_) { return true; }
 }
-function extractMinimumHourlyUsd(value) {
+function extractMinimumHourlyUsd(value, location = "") {
   const text = String(value || "");
+  if (/(?:C\\$|A\\$|NZ\\$|S\\$|R\\$|\\b(?:CAD|AUD|NZD|SGD|EUR|GBP|CHF|PLN|INR|AED|ZAR|BRL|MXN)\\b|€|£|₹|zł)/iu.test(text)) return null;
+  if (/\\$/.test(text) && !/(?:USD|US\\$)/iu.test(text) && /(?:canada|australia|new\\s*zealand|singapore)/iu.test(location)) return null;
   const patterns = [
     /(?:\$|USD\s*)\s*(\d{1,4}(?:[.,]\d{1,2})?)\s*(?:-|–|to)\s*(?:\$|USD\s*)?\d{1,4}(?:[.,]\d{1,2})?\s*(?:per\s*hour|\/\s*(?:h|hr|hour)|hourly|an\s*hour)/iu,
     /(?:\$|USD\s*)\s*(\d{1,4}(?:[.,]\d{1,2})?)\s*(?:per\s*hour|\/\s*(?:h|hr|hour)|hourly|an\s*hour)/iu,
@@ -186,11 +188,11 @@ function extractJobDetails(item, message) {
   const phones = extractPhones(text);
   const emails = extractEmails(text);
   const salary = extractSalary(text);
-  const minimumHourlyUsd = extractMinimumHourlyUsd(text);
+  const location = extractLabeledValue(text, ["manzil", "joylashuv", "location", "address", "город", "адрес"]);
+  const minimumHourlyUsd = extractMinimumHourlyUsd(text, location);
   const closed = /(?:vakansiya yopildi|e[’'‘]lon yopildi|qabul tugadi|позиция закрыта|vacancy closed|no longer accepting|applications? closed|position filled)/iu.test(text);
   const activeEvidence = item?.officialStatus === "published" || hasActiveApplicationEvidence(text);
   const employer = extractLabeledValue(text, ["ish beruvchi", "kompaniya", "tashkilot", "company", "employer", "работодатель"]);
-  const location = extractLabeledValue(text, ["manzil", "joylashuv", "location", "address", "город", "адрес"]);
   const requirements = extractLabeledValue(text, ["talablar", "malaka talablari", "requirements", "qualifications", "требования"]);
   const schedule = extractLabeledValue(text, ["ish grafigi", "ish vaqti", "jadval", "schedule", "working hours", "график работы"]);
   const experience = extractLabeledValue(text, ["tajriba", "ish tajribasi", "experience", "стаж"]);
