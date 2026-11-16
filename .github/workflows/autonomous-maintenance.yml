@@ -1,0 +1,181 @@
+name: ULUGBEK AI Autonomous Maintenance
+
+on:
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: autonomous-maintenance-main
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    name: Daily health, tests and public-source review
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install project dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Run complete test suite
+        id: tests
+        continue-on-error: true
+        run: npm test
+
+      - name: Check production dependency security
+        id: audit
+        continue-on-error: true
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Read approved public open-source references
+        id: research
+        continue-on-error: true
+        run: node scripts/autonomous-maintenance.js
+
+      - name: Check deployed Render health endpoint
+        id: live
+        continue-on-error: true
+        run: |
+          mkdir -p reports
+          curl --fail --silent --show-error --location \
+            --connect-timeout 10 --max-time 180 \
+            --retry 8 --retry-delay 5 --retry-all-errors \
+            https://ulugbek-ai2.onrender.com/api/health \
+            --output reports/render-health.json
+          node -e "JSON.parse(require('node:fs').readFileSync('reports/render-health.json','utf8')); console.log('Render health endpoint returned valid JSON')"
+
+      - name: Test real chat topic alignment
+        id: chat
+        continue-on-error: true
+        run: |
+          mkdir -p reports
+          node -e "process.stdout.write(JSON.stringify({message:'Hindiston aholisi soni haqida ma’lumot ber',sessionId:'maintenance-smoke-ulugbek-2026',countryCode:'UZ'}))" > reports/chat-smoke-request.json
+          curl --fail --silent --show-error --location \
+            --connect-timeout 10 --max-time 150 \
+            -H "Content-Type: application/json" \
+            --data-binary @reports/chat-smoke-request.json \
+            https://ulugbek-ai2.onrender.com/api/chat \
+            --output reports/chat-smoke.json
+          node scripts/chat-smoke-check.js reports/chat-smoke.json
+
+      - name: Upload audit and upstream research report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ulugbek-ai-autonomous-report
+          path: |
+            reports/autonomous-upstream-review.json
+            reports/render-health.json
+            reports/chat-smoke.json
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Enforce final quality result
+        if: always()
+        env:
+          TEST_RESULT: ${{ steps.tests.outcome }}
+          AUDIT_RESULT: ${{ steps.audit.outcome }}
+          RESEARCH_RESULT: ${{ steps.research.outcome }}
+          LIVE_RESULT: ${{ steps.live.outcome }}
+          CHAT_RESULT: ${{ steps.chat.outcome }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          printf 'Tests: %s\nSecurity audit: %s\nOpen-source review: %s\nRender health: %s\nChat topic smoke: %s\n' \
+            "$TEST_RESULT" "$AUDIT_RESULT" "$RESEARCH_RESULT" "$LIVE_RESULT" "$CHAT_RESULT" \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+          for result in "$TEST_RESULT" "$AUDIT_RESULT" "$RESEARCH_RESULT"; do
+            if [ "$result" != "success" ]; then
+              echo "At least one autonomous maintenance check failed."
+              exit 1
+            fi
+          done
+          if [ "$LIVE_RESULT" != "success" ] || [ "$CHAT_RESULT" != "success" ]; then
+            echo "A live Render API or chat topic check failed."
+            exit 1
+          fi
+
+      - name: Persist public research snapshot on isolated memory branch
+        if: success() && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp reports/autonomous-upstream-review.json /tmp/autonomous-upstream-review.json
+          git fetch origin autonomous-research-memory || true
+          if git show-ref --verify --quiet refs/remotes/origin/autonomous-research-memory; then
+            git checkout -B autonomous-research-memory origin/autonomous-research-memory
+          else
+            git checkout --orphan autonomous-research-memory
+            git rm -rf . >/dev/null 2>&1 || true
+          fi
+          mkdir -p memory/snapshots
+          cp /tmp/autonomous-upstream-review.json memory/latest.json
+          snapshot="memory/snapshots/$(date -u +%Y%m%dT%H%M%SZ).json"
+          cp /tmp/autonomous-upstream-review.json "$snapshot"
+          find memory/snapshots -type f -mtime +30 -delete
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add memory/latest.json memory/snapshots
+          git commit -m "chore: refresh autonomous public research memory"
+          git push origin HEAD:autonomous-research-memory
+
+      - name: Create or update maintenance issue on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = "ULUGBEK AI autonomous maintenance detected a failure";
+            const labels = ["autonomous-maintenance"];
+            const body = [
+              "The scheduled maintenance workflow detected a failure.",
+              "",
+              "Run: " + context.serverUrl + "/" + context.repo.owner + "/" + context.repo.repo + "/actions/runs/" + context.runId,
+              "",
+              "Test result: ${{ steps.tests.outcome }}",
+              "Security audit: ${{ steps.audit.outcome }}",
+              "Open-source review: ${{ steps.research.outcome }}",
+              "Render health: ${{ steps.live.outcome }}",
+              "Chat topic smoke: ${{ steps.chat.outcome }}",
+              "",
+              "This automation is diagnostic-only. It does not change source code, merge branches, or deploy to production.",
+              "Inspect the workflow artifact and logs, then prepare a tested repair in an isolated branch."
+            ].join("\n");
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open",
+              labels: labels.join(","),
+              per_page: 100
+            });
+            if (existing.data.length) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.data[0].number,
+                body
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels
+              });
+            }
