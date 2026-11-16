@@ -312,9 +312,7 @@ async function searchJobs(message, webSearch, options = {}) {
       candidates.push(item);
     }
   }
-  if (batches.every(batch => batch === null)) {
-    return { ok: false, results: [], reply: "ULUGBEK AI ish vakansiyalarini qidirishda internet manbasiga ulana olmadi. Keyinroq qayta urinib ko‘ring." };
-  }
+  const searchFailed = batches.every(batch => batch === null);
   const pageCandidates = candidates.slice(0, Math.min(24, Math.max(12, limit * 2)));
   const pages = await mapWithConcurrency(pageCandidates, 5, async item => {
     if (typeof webSearch.fetchPage !== "function" && typeof webSearch.fetchOfficialJob !== "function") return null;
@@ -384,7 +382,13 @@ async function searchJobs(message, webSearch, options = {}) {
     feedVerifiedVacancies: feedResults.length,
     verifiedListingsCount: usable.length,
     feedFailures: feeds.failures || [],
-    reply: formatJobResults(usable, message, criteria)
+    searchFailed,
+    ok: !searchFailed || usable.length > 0,
+    reply: usable.length
+      ? formatJobResults(usable, message, criteria)
+      : searchFailed
+        ? "ULUGBEK AI internet qidiruv manbalariga hozircha ulana olmadi. Ochiq ish e’lonlari API manbalari ham natija bermadi; keyinroq qayta urinib ko‘ring."
+        : formatJobResults(usable, message, criteria)
   };
 }
 
