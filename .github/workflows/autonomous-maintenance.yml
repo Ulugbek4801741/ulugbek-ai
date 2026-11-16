@@ -52,6 +52,7 @@ jobs:
         run: node scripts/autonomous-maintenance.js
 
       - name: Check deployed Render health endpoint
+        if: github.event_name != 'push'
         id: live
         continue-on-error: true
         run: |
@@ -64,6 +65,7 @@ jobs:
           node -e "JSON.parse(require('node:fs').readFileSync('reports/render-health.json','utf8')); console.log('Render health endpoint returned valid JSON')"
 
       - name: Test real chat topic alignment
+        if: github.event_name != 'push'
         id: chat
         continue-on-error: true
         run: |
@@ -108,7 +110,7 @@ jobs:
               exit 1
             fi
           done
-          if [ "$LIVE_RESULT" != "success" ] || [ "$CHAT_RESULT" != "success" ]; then
+          if [ "$EVENT_NAME" != "push" ] && { [ "$LIVE_RESULT" != "success" ] || [ "$CHAT_RESULT" != "success" ]; }; then
             echo "A live Render API or chat topic check failed."
             exit 1
           fi
@@ -137,6 +139,95 @@ jobs:
           git commit -m "chore: refresh autonomous public research memory"
           git push origin HEAD:autonomous-research-memory
 
+      - name: Trigger Render deploy after all checks pass
+        id: deploy
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "deployed=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::RENDER_DEPLOY_HOOK_URL secret is not configured; automatic Render deployment was skipped."
+            echo "Render deployment skipped: add the Render deploy hook URL as repository secret RENDER_DEPLOY_HOOK_URL." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          curl --fail --silent --show-error --location --max-time 30 \
+            --request POST "$RENDER_DEPLOY_HOOK_URL" \
+            --output /tmp/render-deploy-hook-response.json
+          echo "deployed=true" >> "$GITHUB_OUTPUT"
+          echo "Render deploy hook accepted the tested main commit." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Verify the new Render commit is live
+        id: post_deploy_health
+        if: steps.deploy.outputs.deployed == 'true'
+        continue-on-error: true
+        env:
+          EXPECTED_COMMIT: ${{ github.sha }}
+        run: |
+          mkdir -p reports
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent --show-error --location \
+              --connect-timeout 10 --max-time 30 \
+              https://ulugbek-ai2.onrender.com/api/health \
+              --output reports/post-deploy-health.json; then
+              if node -e "const h=require('./reports/post-deploy-health.json'); if(h.buildCommit!==process.env.EXPECTED_COMMIT) process.exit(1)"; then
+                echo "The tested commit is live on Render: $EXPECTED_COMMIT"
+                exit 0
+              fi
+            fi
+            sleep 15
+          done
+          echo "Render did not report the expected commit within 15 minutes."
+          exit 1
+
+      - name: Re-test chat after Render deployment
+        id: post_deploy_chat
+        if: steps.deploy.outputs.deployed == 'true'
+        continue-on-error: true
+        run: |
+          mkdir -p reports
+          node -e "process.stdout.write(JSON.stringify({message:'Hindiston aholisi soni haqida ma’lumot ber',sessionId:'postdeploy-smoke-' + process.env.GITHUB_RUN_ID,countryCode:'UZ'}))" > reports/post-deploy-chat-request.json
+          curl --fail --silent --show-error --location \
+            --connect-timeout 10 --max-time 150 \
+            -H "Content-Type: application/json" \
+            --data-binary @reports/post-deploy-chat-request.json \
+            https://ulugbek-ai2.onrender.com/api/chat \
+            --output reports/post-deploy-chat.json
+          node scripts/chat-smoke-check.js reports/post-deploy-chat.json
+
+      - name: Upload post-deploy verification report
+        if: always() && steps.deploy.outputs.deployed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ulugbek-ai-post-deploy-report
+          path: |
+            reports/post-deploy-health.json
+            reports/post-deploy-chat.json
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Enforce deployment verification
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          DEPLOYED: ${{ steps.deploy.outputs.deployed }}
+          DEPLOY_RESULT: ${{ steps.deploy.outcome }}
+          POST_HEALTH_RESULT: ${{ steps.post_deploy_health.outcome }}
+          POST_CHAT_RESULT: ${{ steps.post_deploy_chat.outcome }}
+        run: |
+          if [ "$DEPLOY_RESULT" != "success" ]; then
+            echo "Render deployment trigger failed."
+            exit 1
+          fi
+          if [ "$DEPLOYED" = "true" ]; then
+            if [ "$POST_HEALTH_RESULT" != "success" ] || [ "$POST_CHAT_RESULT" != "success" ]; then
+              echo "Post-deploy verification failed."
+              exit 1
+            fi
+            echo "Render deploy and post-deploy verification passed." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Automatic deployment is waiting for the RENDER_DEPLOY_HOOK_URL secret." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Create or update maintenance issue on failure
         if: failure()
         uses: actions/github-script@v7
@@ -154,6 +245,9 @@ jobs:
               "Open-source review: ${{ steps.research.outcome }}",
               "Render health: ${{ steps.live.outcome }}",
               "Chat topic smoke: ${{ steps.chat.outcome }}",
+              "Render deploy: ${{ steps.deploy.outcome }}",
+              "Post-deploy health: ${{ steps.post_deploy_health.outcome }}",
+              "Post-deploy chat: ${{ steps.post_deploy_chat.outcome }}",
               "",
               "This automation is diagnostic-only. It does not change source code, merge branches, or deploy to production.",
               "Inspect the workflow artifact and logs, then prepare a tested repair in an isolated branch."
