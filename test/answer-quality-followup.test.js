@@ -59,3 +59,52 @@ test("only returns an opened individual Kogon vacancy page, not a category page"
   assert.ok(result.results.every(item => item.url.includes("/vacancy/")));
   assert.equal(result.results.length, 1);
 });
+
+
+test("understands worldwide job search, requested count, and minimum hourly USD pay", () => {
+  const criteria = require("../modules/job-search").extractJobCriteria(
+    "Butun dunyo bo'ylab soatiga kamida 30 AQSh dollari to'laydigan 15 ta faol ish top"
+  );
+  assert.equal(criteria.worldwide, true);
+  assert.equal(criteria.requestedCount, 15);
+  assert.equal(criteria.minHourlyUsd, 30);
+  assert.equal(criteria.requireActive, true);
+  assert.equal(require("../modules/job-search").hasLocationHint("Butun dunyo bo'ylab"), true);
+});
+
+test("extracts hourly USD pay and recognizes an application action", () => {
+  const jobs = require("../modules/job-search");
+  assert.equal(jobs.extractMinimumHourlyUsd("Compensation: $35-$45 per hour"), 35);
+  assert.equal(jobs.extractMinimumHourlyUsd("Hourly rate: USD 32"), 32);
+  assert.equal(jobs.hasActiveApplicationEvidence("Apply now to submit your application"), true);
+  assert.equal(jobs.hasActiveApplicationEvidence("This position is closed"), false);
+});
+
+test("worldwide hourly-pay search returns only opened individual pages with active application evidence and qualifying pay", async () => {
+  const jobs = require("../modules/job-search");
+  const result = await jobs.searchJobs(
+    "Worldwide jobs paying at least $30 per hour, 15 jobs, currently hiring",
+    {
+      async search() {
+        return [
+          { title: "Remote analyst", url: "https://careers.example.org/jobs/remote-analyst", snippet: "Remote analyst vacancy" },
+          { title: "Remote assistant", url: "https://careers.example.org/jobs/remote-assistant", snippet: "Remote assistant vacancy" },
+          { title: "Closed developer", url: "https://careers.example.org/jobs/closed-developer", snippet: "Developer vacancy" }
+        ];
+      },
+      async fetchPage(url) {
+        if (url.includes("remote-analyst")) {
+          return { title: "Remote analyst", url, content: ("Remote analyst position. Employer: Example Corp. Location: Worldwide remote. Salary: $35 per hour. Requirements: 3 years experience. Apply now. ").repeat(3) };
+        }
+        if (url.includes("remote-assistant")) {
+          return { title: "Remote assistant", url, content: ("Remote assistant position. Employer: Example Corp. Location: Worldwide remote. Salary: $22 per hour. Requirements: 1 year experience. Apply now. ").repeat(3) };
+        }
+        return { title: "Closed developer", url, content: ("Developer position. Employer: Example Corp. Salary: $55 per hour. Requirements: 5 years experience. This position is closed. ").repeat(3) };
+      }
+    },
+    { limit: 15 }
+  );
+  assert.equal(result.results.length, 1);
+  assert.equal(result.results[0].minimumHourlyUsd, 35);
+  assert.equal(result.results[0].activeStatus, "active-application-evidence-found");
+});
