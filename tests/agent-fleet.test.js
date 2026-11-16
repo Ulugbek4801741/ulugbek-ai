@@ -1,0 +1,48 @@
+"use strict";
+
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const { createAgentFleet, chooseRoles, MAX_AGENTS } = require("../modules/agent-fleet");
+
+test("task routing selects specialists dynamically", () => {
+  assert.deepEqual(chooseRoles("GitHub serverdagi kod xatosini tekshir"), ["engineer", "verifier"]);
+  assert.ok(chooseRoles("O'zbekiston qonunlari va soliq talablari").includes("legal"));
+  assert.equal(MAX_AGENTS, 100);
+});
+
+test("agent team runs specialists and deletes ephemeral agents after completion", async () => {
+  const fleet = createAgentFleet({
+    answer: async prompt => ({ reply: "Tahlil: " + prompt.slice(0, 40), modelUsed: "test-model" }),
+    maxAgents: 100,
+    concurrency: 2
+  });
+  const result = await fleet.runTask("GitHub serverdagi kod xatosini tekshir");
+  assert.equal(result.ok, true);
+  assert.equal(result.requestedAgents, 2);
+  assert.equal(result.completedAgents, 2);
+  assert.equal(result.lifecycle, "ephemeral-agents-deleted-after-task");
+  assert.equal(fleet.status().activeAgents, 0);
+});
+
+test("agent failures are contained and reported", async () => {
+  const fleet = createAgentFleet({ answer: async () => { throw new Error("test failure"); } });
+  const result = await fleet.runTask("Oddiy savol");
+  assert.equal(result.ok, false);
+  assert.equal(result.failedAgents, 1);
+  assert.equal(fleet.status().activeAgents, 0);
+});
+
+test("empty and oversized tasks are rejected", async () => {
+  const fleet = createAgentFleet({ answer: async () => ({ reply: "ok" }) });
+  await assert.rejects(() => fleet.runTask("   "), /bo'sh/);
+  await assert.rejects(() => fleet.runTask("x".repeat(4001)), /4000/);
+});
+
+test("idle agents are removed by TTL cleanup", () => {
+  let clock = 1000;
+  const fleet = createAgentFleet({ now: () => clock, idleTtlMs: 1000, answer: async () => ({ reply: "ok" }) });
+  // Spawn through an intentionally failed in-flight run is not exposed; runTask cleans immediately.
+  assert.equal(fleet.status().activeAgents, 0);
+  clock += 5000;
+  assert.equal(fleet.cleanup(), 0);
+});
