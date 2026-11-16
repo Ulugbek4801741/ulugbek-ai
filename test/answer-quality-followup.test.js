@@ -115,3 +115,12 @@ test("routes Uzbek job requests to the dedicated job-search pipeline", () => {
   assert.equal(detectSearchIntent("Butun dunyo bo'ylab soatiga 30 AQSh dollari beradigan 15 ta ish top").isJobSearch, true);
   assert.equal(detectSearchIntent("Menga hozir faol vakansiyalarni topib ber").isJobSearch, true);
 });
+
+
+test("worldwide search includes onsite and regional markets without exceeding query budget", () => {
+  const { buildJobSearchQueries } = require("../modules/job-search");
+  const queries = buildJobSearchQueries("Butun dunyo bo'ylab soatiga 30 AQSh dollari beradigan 15 ta ish top");
+  assert.ok(queries.length <= 12);
+  assert.ok(queries.some(query => /on-site hybrid remote/i.test(query)));
+  assert.ok(queries.some(query => /USA Canada UK Australia Europe/i.test(query)));
+});
