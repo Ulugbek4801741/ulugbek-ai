@@ -1338,7 +1338,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
         });
       }
       const jobWebSearch = require("./modules/chat-web-research");
-      const jobs = await jobSearch.searchJobs(conversationMessage, jobWebSearch, { limit: 15 });
+      const jobs = await jobSearch.searchJobs(conversationMessage, jobWebSearch);
       return res.json({
         reply: jobs.reply,
         mode: "verified-individual-vacancy-search",
