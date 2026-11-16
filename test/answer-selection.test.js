@@ -66,3 +66,39 @@ test("keeps deterministic intent-based learning and programming replies", () => 
   assert.equal(selectAnswer(lesson, null, "Menga ingliz tilidan yordam ber"), lesson);
   assert.equal(selectAnswer(programming, null, "Menga dasturlashda yordam ber"), programming);
 });
+
+
+test("accepts a current population answer only when its number appears in recent evidence", () => {
+  const answer = {
+    reply: "Hindiston aholisi 1,463,900,000 kishini tashkil etadi.",
+    reasoning: { answerable: true }
+  };
+  const evidence = [{ title: "UNFPA India population", content: "2025 total population: 1,463,900,000." }];
+  assert.equal(selectAnswer(answer, null, "Hindiston aholisi soni hozir qancha?", evidence, { requireEvidenceBackedNumber: true }), answer);
+});
+
+test("rejects an outdated population forecast for a current question", () => {
+  const stale = {
+    reply: "Hindiston aholisi 2025-yilga borib Xitoydan oshib ketishi kutilmoqda.",
+    reasoning: { answerable: true }
+  };
+  const evidence = [{ title: "India population", content: "Expected to overtake China by 2025." }];
+  assert.equal(selectAnswer(stale, null, "Hindiston aholisi soni hozir qancha?", evidence, { requireEvidenceBackedNumber: true }), null);
+});
+
+test("rejects a population number that is not supported by evidence", () => {
+  const invented = {
+    reply: "Hindiston aholisi 1,900,000,000 kishini tashkil etadi.",
+    reasoning: { answerable: true }
+  };
+  const evidence = [{ title: "UNFPA India population", content: "2025 total population: 1,463,900,000." }];
+  assert.equal(selectAnswer(invented, null, "Hindiston aholisi soni hozir qancha?", evidence, { requireEvidenceBackedNumber: true }), null);
+});
+
+test("does not fall back to cached local answers for current population questions", () => {
+  const local = {
+    reply: "Hindiston aholisi 2025-yilga borib Xitoydan oshib ketishi kutilmoqda.",
+    reasoning: { answerable: true }
+  };
+  assert.equal(selectAnswer(null, local, "Hindiston aholisi soni hozir qancha?", [], { requireEvidenceBackedNumber: true }), null);
+});
