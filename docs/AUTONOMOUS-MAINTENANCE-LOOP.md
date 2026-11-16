@@ -13,8 +13,8 @@ The public GitHub repository runs the workflow after every merge to `main`, ever
 7. Stores a time-limited workflow artifact with upstream research, health and chat reports.
 8. Persists the latest public-source report plus 30 days of snapshots on the separate `autonomous-research-memory` branch; it never writes these reports to `main`.
 9. The Render learning worker reads the report every 15 minutes, imports only MIT/Apache/BSD/ISC README and release-note excerpts (maximum 200 words per repository), and sends them to the local word-ngram model for language-pattern training only. Entries remain `pending-review`; they are never factual chat knowledge or auto-approved.
-9. Creates or updates one maintenance issue when a check fails.
-10. Dependabot checks npm packages and GitHub Actions weekly, then opens update PRs that go through CI.
+10. Creates or updates one maintenance issue when a check fails.
+11. Dependabot checks npm packages and GitHub Actions weekly, then opens update PRs that go through CI.
 
 ## Safety boundaries
 
