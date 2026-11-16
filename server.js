@@ -1,6 +1,7 @@
 const express = require("express");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
+const { mountMcpBridge } = require("./modules/mcp-bridge");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const agentRuntime = require("./agent-runtime");
@@ -1474,6 +1475,10 @@ app.get("/api/lab/learning/status", (_req, res) => {
   res.set("Cache-Control", "no-store");
   res.json({ ok:true, learning:learningWorker.status() });
 });
+
+// Expose only the public chat and health tools through the MCP bridge.
+// Administrative APIs remain unavailable through this integration.
+mountMcpBridge(app, { port: PORT });
 
 // Keep the administration UI on the API origin so its HttpOnly, SameSite=Strict
 // session cookie and every privileged request use the same trusted server.
