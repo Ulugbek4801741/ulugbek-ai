@@ -88,7 +88,7 @@ async function fetchOfficialJob(value, options = {}) {
     if (parsed.provider === "greenhouse") {
       const deadline = data.application_deadline ? Date.parse(data.application_deadline) : NaN;
       const expired = Number.isFinite(deadline) && deadline < (options.now ? Date.parse(options.now) : Date.now());
-      if (data.internal_job_id == null || !data.absolute_url || expired) return null;
+      if (!data.id || !data.absolute_url || expired) return null;
       const location = data.location?.name || "";
       const description = stripHtml(data.content || "");
       const content = [
