@@ -65,3 +65,12 @@ test("keeps explicit USD wages independent of FX availability", async () => {
   assert.equal(converted.usdPerHour, 32);
   assert.equal(converted.rateSource, "explicit USD pay");
 });
+
+
+test("does not misclassify bare Canadian or Australian dollar symbols as USD", () => {
+  const { extractMinimumHourlyUsd } = require("../modules/job-search");
+  assert.equal(extractMinimumHourlyUsd("$30 per hour", "Toronto, Canada"), null);
+  assert.equal(extractMinimumHourlyUsd("$30 per hour", "Sydney, Australia"), null);
+  assert.equal(extractMinimumHourlyUsd("$30 per hour", "Austin, United States"), 30);
+  assert.equal(extractMinimumHourlyUsd("USD 30 per hour", "Toronto, Canada"), 30);
+});
