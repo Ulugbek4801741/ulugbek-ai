@@ -50,10 +50,10 @@ function detectLanguage(value) {
   const lower = text.toLocaleLowerCase();
   const explicit = [
     { code: "uz", pattern: /\b(o'zbekcha|o‘zbekcha|o'zbek tilida|o‘zbek tilida|узбекча|на узбекском)\b/i },
-    { code: "en", pattern: /\b(in english|english please|на английском|инглиз тилида)\b/i },
-    { code: "ru", pattern: /\b(in russian|по-русски|на русском|рус тилида)\b/i },
-    { code: "tr", pattern: /\b(türkçe|turkce|по-турецки)\b/i },
-    { code: "kk", pattern: /\b(қазақша|казахский язык|қазақ тілінде)\b/i }
+    { code: "en", pattern: /\b(in english|english please|answer in english|respond in english|на английском|инглиз тилида|ingliz(?:cha| tilida)|ingliz tilida javob ber)\b/i },
+    { code: "ru", pattern: /\b(in russian|по-русски|на русском|рус тилида|ruscha|rus tilida)\b/i },
+    { code: "tr", pattern: /\b(türkçe|turkce|по-турецки|turkcha|turk tilida)\b/i },
+    { code: "kk", pattern: /\b(қазақша|казахский язык|қазақ тілінде|qozoqcha|qozoq tilida)\b/i }
   ].find(item => item.pattern.test(text));
   if (explicit) return { code: explicit.code, confidence: 1, script: scriptOf(text), explicit: true };
   const cyrillic = (text.match(/[\u0400-\u04FF]/g) || []).length;
