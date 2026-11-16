@@ -164,10 +164,11 @@ jobs:
 
       - name: Verify the new Render commit is live
         id: post_deploy_health
-        if: steps.deploy.outputs.deployed == 'true'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.deploy.outcome == 'success'
         continue-on-error: true
         env:
           EXPECTED_COMMIT: ${{ github.sha }}
+          DEPLOYED: ${{ steps.deploy.outputs.deployed }}
         run: |
           mkdir -p reports
           for attempt in $(seq 1 60); do
@@ -175,8 +176,12 @@ jobs:
               --connect-timeout 10 --max-time 30 \
               https://ulugbek-ai2.onrender.com/api/health \
               --output reports/post-deploy-health.json; then
-              if node -e "const h=require('./reports/post-deploy-health.json'); if(h.buildCommit!==process.env.EXPECTED_COMMIT) process.exit(1)"; then
-                echo "The tested commit is live on Render: $EXPECTED_COMMIT"
+              if node -e "const h=require('./reports/post-deploy-health.json'); if(h.ok!==true) process.exit(1); if(process.env.DEPLOYED==='true' && h.buildCommit!==process.env.EXPECTED_COMMIT) process.exit(1)"; then
+                if [ "$DEPLOYED" = "true" ]; then
+                  echo "The tested commit is live on Render: $EXPECTED_COMMIT"
+                else
+                  echo "Render health endpoint is live; deploy hook is not configured, so the current deployed commit was checked."
+                fi
                 exit 0
               fi
             fi
@@ -187,7 +192,7 @@ jobs:
 
       - name: Re-test chat after Render deployment
         id: post_deploy_chat
-        if: steps.deploy.outputs.deployed == 'true'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.deploy.outcome == 'success'
         continue-on-error: true
         run: |
           mkdir -p reports
@@ -201,7 +206,7 @@ jobs:
           node scripts/chat-smoke-check.js reports/post-deploy-chat.json
 
       - name: Upload post-deploy verification report
-        if: always() && steps.deploy.outputs.deployed == 'true'
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.deploy.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: ulugbek-ai-post-deploy-report
@@ -223,14 +228,14 @@ jobs:
             echo "Render deployment trigger failed."
             exit 1
           fi
+          if [ "$POST_HEALTH_RESULT" != "success" ] || [ "$POST_CHAT_RESULT" != "success" ]; then
+            echo "Live Render health or chat verification failed."
+            exit 1
+          fi
           if [ "$DEPLOYED" = "true" ]; then
-            if [ "$POST_HEALTH_RESULT" != "success" ] || [ "$POST_CHAT_RESULT" != "success" ]; then
-              echo "Post-deploy verification failed."
-              exit 1
-            fi
             echo "Render deploy and post-deploy verification passed." >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "Automatic deployment is waiting for the RENDER_DEPLOY_HOOK_URL secret." >> "$GITHUB_STEP_SUMMARY"
+            echo "Live Render health and chat were verified, but automatic deployment is waiting for the RENDER_DEPLOY_HOOK_URL secret." >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Create or update maintenance issue on failure
