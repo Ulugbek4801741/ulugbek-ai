@@ -53,6 +53,16 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: node scripts/autonomous-maintenance.js
 
+      - name: Verify persistent public research memory branch
+        id: memory
+        run: |
+          mkdir -p reports
+          curl --fail --silent --show-error --location \
+            --connect-timeout 10 --max-time 30 \
+            https://raw.githubusercontent.com/Ulugbek4801741/ulugbek-ai/autonomous-research-memory/memory/latest.json \
+            --output reports/persistent-research-memory.json
+          node -e "const r=require('./reports/persistent-research-memory.json'); if(!r.generatedAt || !Array.isArray(r.repositories) || r.repositories.length < 5) process.exit(1); console.log('Persistent public research sources:', r.repositories.length)"
+
       - name: Check deployed Render health endpoint
         if: github.event_name != 'push' && github.event_name != 'pull_request'
         id: live
@@ -81,6 +91,27 @@ jobs:
             --output reports/chat-smoke.json
           node scripts/chat-smoke-check.js reports/chat-smoke.json
 
+      - name: Verify GitHub research notes reached the local language corpus
+        id: learning
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        continue-on-error: true
+        run: |
+          mkdir -p reports
+          for attempt in $(seq 1 40); do
+            if curl --fail --silent --show-error --location \
+              --connect-timeout 10 --max-time 25 \
+              https://ulugbek-ai2.onrender.com/api/health \
+              --output reports/learning-health.json; then
+              if node -e "const h=require('./reports/learning-health.json'); const s=h.publicResearchWorker?.githubResearchMemory?.savedSources||0; const c=h.languageTraining?.corpusSources||0; const trained=h.languageTraining?.modelTrained===true; if(s>=5 && c>=5 && trained) process.exit(0); process.exit(1)"; then
+                echo "GitHub research notes reached the local language-pattern corpus."
+                exit 0
+              fi
+            fi
+            sleep 15
+          done
+          echo "GitHub research notes did not reach the local language corpus within 10 minutes."
+          exit 1
+
       - name: Upload audit and upstream research report
         if: always()
         uses: actions/upload-artifact@v4
@@ -99,6 +130,9 @@ jobs:
           TEST_RESULT: ${{ steps.tests.outcome }}
           AUDIT_RESULT: ${{ steps.audit.outcome }}
           RESEARCH_RESULT: ${{ steps.research.outcome }}
+          MEMORY_RESULT: ${{ steps.memory.outcome }}
+          LEARNING_RESULT: ${{ steps.learning.outcome }}
+          EVENT_NAME: ${{ github.event_name }}
           LIVE_RESULT: ${{ steps.live.outcome }}
           CHAT_RESULT: ${{ steps.chat.outcome }}
           EVENT_NAME: ${{ github.event_name }}
