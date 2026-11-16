@@ -50,7 +50,7 @@ function detectLanguage(value) {
   const lower = text.toLocaleLowerCase();
   const explicit = [
     { code: "uz", pattern: /\b(o'zbekcha|o‘zbekcha|o'zbek tilida|o‘zbek tilida|узбекча|на узбекском)\b/i },
-    { code: "en", pattern: /\b(in english|english please|answer in english|respond in english|на английском|инглиз тилида|ingliz(?:cha| tilida)|ingliz tilida javob ber)\b/i },
+    { code: "en", pattern: /\b(in english|english please|answer in english|respond in english|на английском|инглиз тилида|ing(?:i)?liz(?:cha| tilida)|ing(?:i)?liz tilida javob ber)\b/i },
     { code: "ru", pattern: /\b(in russian|по-русски|на русском|рус тилида|ruscha|rus tilida)\b/i },
     { code: "tr", pattern: /\b(türkçe|turkce|по-турецки|turkcha|turk tilida)\b/i },
     { code: "kk", pattern: /\b(қазақша|казахский язык|қазақ тілінде|qozoqcha|qozoq tilida)\b/i }
