@@ -11,6 +11,7 @@ The public GitHub repository runs a scheduled workflow daily and can also be sta
 5. Calls the deployed Render health endpoint and validates its JSON response.
 6. Stores a time-limited workflow artifact with the upstream research and health report.
 7. Creates or updates one maintenance issue when a check fails.
+8. Dependabot checks npm packages and GitHub Actions weekly, then opens update PRs that go through CI.
 
 ## Safety boundaries
 
