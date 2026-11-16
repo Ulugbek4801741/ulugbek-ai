@@ -313,7 +313,7 @@ async function searchJobs(message, webSearch, options = {}) {
         });
         if (converted) {
           details.minimumHourlyUsd = converted.usdPerHour;
-          details.salaryConversion = converted;
+          if (converted.currency !== "USD") details.salaryConversion = converted;
         }
       }
       const relevanceText = normalized.title + " " + combined;
