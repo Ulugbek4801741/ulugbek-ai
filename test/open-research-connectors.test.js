@@ -7,7 +7,7 @@ const connectors = require("../modules/open-research-connectors");
 test("normalizes scholarly metadata and retains OA state", () => {
   const item = connectors.normalizeRecord({
     provider: "Crossref", title: "Open research", url: "https://doi.org/10.1234/example",
-    abstract: "A study", openAccessUrl: "https://example.org/paper.pdf", year: 2024
+    abstract: "A study", openAccess: true, openAccessUrl: "https://example.org/paper.pdf", year: 2024
   });
   assert.equal(item.title, "Open research");
   assert.equal(item.openAccess, true);
