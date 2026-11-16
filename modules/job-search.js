@@ -244,6 +244,21 @@ function formatJobResults(results, message = "", criteria = extractJobCriteria(m
   return "ULUGBEK AI " + results.length + " ta alohida vakansiya sahifasini ochib tekshirdi. Quyida faqat sahifasi o‘qilgan va ariza topshirish belgisi topilgan e’lonlar berilgan. Topilmagan telefon, maosh yoki ish beruvchi ma’lumoti taxmin qilinmadi." + countNote + "\n\n" + lines;
 }
 
+async function mapWithConcurrency(items, concurrency, mapper) {
+  const input = Array.isArray(items) ? items : [];
+  const output = new Array(input.length);
+  let cursor = 0;
+  const workers = Array.from({ length: Math.min(input.length, Math.max(1, concurrency)) }, async () => {
+    while (cursor < input.length) {
+      const index = cursor++;
+      try { output[index] = await mapper(input[index], index); }
+      catch (_) { output[index] = null; }
+    }
+  });
+  await Promise.all(workers);
+  return output;
+}
+
 async function searchJobs(message, webSearch, options = {}) {
   if (!webSearch || typeof webSearch.search !== "function") {
     return { ok: false, results: [], reply: "ULUGBEK AI internet qidiruv moduliga ulana olmadi." };
@@ -273,7 +288,8 @@ async function searchJobs(message, webSearch, options = {}) {
   if (batches.every(batch => batch === null)) {
     return { ok: false, results: [], reply: "ULUGBEK AI ish vakansiyalarini qidirishda internet manbasiga ulana olmadi. Keyinroq qayta urinib ko‘ring." };
   }
-  const pages = await Promise.all(candidates.slice(0, Math.max(60, limit * 6)).map(async item => {
+  const pageCandidates = candidates.slice(0, Math.max(60, limit * 6));
+  const pages = await mapWithConcurrency(pageCandidates, 5, async item => {
     if (typeof webSearch.fetchPage !== "function") return null;
     try {
       const page = await webSearch.fetchPage(item.url);
@@ -289,7 +305,7 @@ async function searchJobs(message, webSearch, options = {}) {
       if (criteria.minHourlyUsd !== null && (details.minimumHourlyUsd === null || details.minimumHourlyUsd < criteria.minHourlyUsd)) return null;
       return details.listingSpecific ? { ...normalized, ...details, host: (() => { try { return new URL(normalized.url).hostname; } catch (_) { return ""; } })() } : null;
     } catch (_) { return null; }
-  }));
+  });
   const usable = [], seenTitles = new Set(), hostCounts = new Map();
   for (const item of pages.filter(Boolean)) {
     const key = item.title.toLowerCase().replace(/[^a-z0-9а-яё]+/giu, " ").trim();
