@@ -8,6 +8,7 @@
     {"id":"zenodo","name":"Zenodo","kind":"research-output-api","access":"public-api","url":"https://zenodo.org/api/records","full_text":"only public records and item-level access rights"},
     {"id":"openalex","name":"OpenAlex","kind":"scholarly-graph-api","access":"free-api-key-required","url":"https://api.openalex.org/works","full_text":"resolve OA locations; optional OPENALEX_API_KEY"},
     {"id":"ror","name":"Research Organization Registry","kind":"university-institution-api","access":"public-api","url":"https://api.ror.org/v2/organizations","full_text":"institution metadata and official website links"},
+    {"id":"openlibrary-api","name":"Open Library Search API","kind":"book-catalog-api","access":"public-api","url":"https://openlibrary.org/search.json","full_text":"bibliographic metadata; check ebook_access per edition"},
     {"id":"doaj","name":"Directory of Open Access Journals","kind":"open-access-journal-catalog","access":"public-api","url":"https://doaj.org/api/search/articles","full_text":"open access journal/article metadata"},
     {"id":"core","name":"CORE","kind":"open-access-repository-aggregator","access":"free-api-key-required","url":"https://api.core.ac.uk/v3/search/works","full_text":"open repository copies; optional CORE_API_KEY"},
     {"id":"openaire","name":"OpenAIRE Explore","kind":"research-graph-api","access":"public-api-key-policy-check","url":"https://api.openaire.eu/search/publications","full_text":"repository and research-output discovery"}
