@@ -11,12 +11,13 @@ The public GitHub repository runs a scheduled workflow daily and can also be sta
 5. Calls the deployed Render health endpoint and validates its JSON response.
 6. Sends a real Uzbek population question to the deployed chat API and rejects unrelated replies (a safe "insufficient evidence" response is accepted).
 7. Stores a time-limited workflow artifact with upstream research, health and chat reports.
-8. Creates or updates one maintenance issue when a check fails.
-9. Dependabot checks npm packages and GitHub Actions weekly, then opens update PRs that go through CI.
+8. Persists the latest public-source report plus 30 days of snapshots on the separate `autonomous-research-memory` branch; it never writes these reports to `main`.
+9. Creates or updates one maintenance issue when a check fails.
+10. Dependabot checks npm packages and GitHub Actions weekly, then opens update PRs that go through CI.
 
 ## Safety boundaries
 
-- The workflow is read-only with respect to repository contents.
+- The workflow does not edit application source code or the `main` branch. Its only write is a public, source-attributed research snapshot on `autonomous-research-memory` after all checks pass.
 - It never runs code downloaded from an upstream repository.
 - It never copies code, installs upstream projects, changes dependencies, edits model weights, pushes commits, merges pull requests, changes secrets, or deploys.
 - Upstream README and release-note excerpts are limited to 100 words each (at most 200 words from one repository per run).
