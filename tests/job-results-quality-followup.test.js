@@ -11,6 +11,7 @@ test("Python developer requests require Python-specific vacancy evidence", () =>
   assert.equal(role.evidencePattern.test("Python Engineer"), true);
   assert.equal(jobs.matchesRequestedRole(role, "Senior React Full-stack Developer", "Python is mentioned in an unrelated paragraph"), false);
   assert.equal(jobs.matchesRequestedRole(role, "Senior Backend Developer", "Experience with Python is required"), true);
+  assert.equal(jobs.matchesRequestedRole(role, "Senior Data Engineer", "Experience with Python is required"), false);
   assert.equal(jobs.matchesRequestedRole(role, "Python Software Engineer", ""), true);
 });
 
