@@ -26,7 +26,9 @@ function expand(sessionId, message) {
   const previousWasJobSearch = JOB_INTENT.test(previous.lastJobSearchPrompt || previous.lastPrompt);
   if (previousWasJobSearch && previous.jobResults?.length && FOLLOW_UP_JOB_DETAILS.test(text)) return previous.lastJobSearchPrompt || previous.lastPrompt;
   if (LOCATION_ONLY.test(text) && previousWasJobSearch) {
-    return (previous.lastPrompt + " " + text).slice(0, 4000);
+    // Keep the original job title/filters even after an intervening follow-up.
+    const basePrompt = previous.lastJobSearchPrompt || previous.lastPrompt;
+    return (basePrompt + " " + text).slice(0, 4000);
   }
   // Preserve the earlier city when a user clarifies their profession naturally.
   if (previousWasJobSearch && FOLLOW_UP_JOB.test(text) && !KNOWN_LOCATIONS.test(text)) {

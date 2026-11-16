@@ -60,6 +60,22 @@ function extractJobRole(value) {
   return roles.find(role => role.pattern.test(text)) || null;
 }
 
+function matchesRequestedRole(role, title, description) {
+  if (!role) return true;
+  const titleText = String(title || "");
+  const descriptionText = String(description || "");
+  if (role.label === "Python dasturchi") {
+    // A generic mention of Python in an unrelated vacancy is not enough.
+    const pythonDeveloperTitle = /\bpython\b.{0,45}\b(?:developer|engineer|programmer|software|backend)\b|\b(?:developer|engineer|programmer|software|backend)\b.{0,45}\bpython\b/iu;
+    if (pythonDeveloperTitle.test(titleText)) return true;
+    const developerTitle = /\b(?:programmer|software|backend|back-end|full[ -]?stack|application|platform)\s+(?:developer|engineer)\b|\b(?:backend|back-end|full[ -]?stack)\s+developer\b/iu.test(titleText);
+    const explicitPythonRequirement = /(?:\b(?:required|must have|experience with|proficient in|proficiency in|skills? in|using|primary language|main language)\b.{0,65}\bpython\b|\bpython\b.{0,65}\b(?:required|must have|experience|proficient|proficiency|skills?|primary language|main language)\b)/iu;
+    return developerTitle && explicitPythonRequirement.test(descriptionText);
+  }
+  const evidence = role.evidencePattern || /(?:dasturchi|dasturlash|developer|programmer|software engineer|frontend|backend|javascript|python|kotlin|java|qa engineer|web developer)/iu;
+  return evidence.test(titleText) || evidence.test(descriptionText);
+}
+
 function buildJobSearchQueries(value) {
   const original = String(value || "").replace(/\s+/g, " ").trim().slice(0, 240);
   const role = extractJobRole(original);
@@ -247,7 +263,7 @@ function formatJobResults(results, message = "", criteria = extractJobCriteria(m
       (index + 1) + ". " + item.title,
       "Ish beruvchi: " + (item.employer || "Sahifada aniq ko‘rsatilmagan"),
       "Hudud: " + (item.location || "Sahifada aniq ko‘rsatilmagan"),
-      (item.minimumHourlyUsd !== null && item.minimumHourlyUsd !== undefined ? "Soatlik stavka: " : "Oylik maoshi: ") + (item.minimumHourlyUsd !== null && item.minimumHourlyUsd !== undefined ? (item.salaryConversion ? "$" + item.minimumHourlyUsd + " USD/soat (taxminiy konvertatsiya; asl: " + item.salaryConversion.original + ", kurs: " + (item.salaryConversion.rateDate || "joriy reference kurs") + ")" : "$" + item.minimumHourlyUsd + " USD/soat (e’londa ko‘rsatilgan eng kam stavka)") : (item.salary || "Sahifada ko‘rsatilmagan")),
+      (item.minimumHourlyUsd !== null && item.minimumHourlyUsd !== undefined ? "Soatlik stavka: " : "Oylik maoshi: ") + (item.minimumHourlyUsd !== null && item.minimumHourlyUsd !== undefined ? (item.salaryConversion ? "$" + item.minimumHourlyUsd + " USD/soat (taxminiy konvertatsiya; asl: " + item.salaryConversion.original + ", kurs: " + (item.salaryConversion.rateDate || "joriy reference kurs") + ")" : "$" + item.minimumHourlyUsd + " USD/soat (e’londa ko‘rsatilgan eng kam stavka)") : (item.salary || "Aniq oylik maosh e’londa ko‘rsatilmagan")),
       "Talablar: " + (item.requirements || "Sahifada batafsil ko‘rsatilmagan"),
       "Ish vaqti: " + (item.schedule || "Sahifada ko‘rsatilmagan"),
       "Tajriba: " + (item.experience || "Sahifada ko‘rsatilmagan"),
@@ -297,7 +313,7 @@ async function searchJobs(message, webSearch, options = {}) {
   const queries = buildJobSearchQueries(message);
   const requestedRole = extractJobRole(message);
   const requestedKogon = /kogon/iu.test(message);
-  const roleEvidence = requestedRole?.evidencePattern || /(?:dasturchi|dasturlash|developer|programmer|software engineer|frontend|backend|javascript|python|kotlin|java|qa engineer|web developer)/iu;
+
   const locationEvidence = requestedKogon ? /(?:kogon|kog‘on|kogon tumani|buxoro viloyati)/iu : null;
   const batches = await Promise.all(queries.map(async query => {
     try { const value = await webSearch.search(query); return Array.isArray(value) ? value : []; }
@@ -337,7 +353,7 @@ async function searchJobs(message, webSearch, options = {}) {
         }
       }
       const relevanceText = normalized.title + " " + combined;
-      if (requestedRole && !roleEvidence.test(relevanceText)) return null;
+      if (!matchesRequestedRole(requestedRole, normalized.title, combined)) return null;
       if (locationEvidence && !locationEvidence.test(relevanceText)) return null;
       if (!["active-application-evidence-found", "official-board-published"].includes(details.activeStatus)) return null;
       if (criteria.minHourlyUsd !== null && (details.minimumHourlyUsd === null || details.minimumHourlyUsd < criteria.minHourlyUsd)) return null;
@@ -349,7 +365,7 @@ async function searchJobs(message, webSearch, options = {}) {
     await publicJobFeeds.fetchPublicJobFeeds(message, options.feedOptions || {}).catch(error => ({ results: [], providers: [], failures: [String(error?.message || error)], feedsChecked: 0, fetchedRecords: 0 }));
   const feedResults = (feeds.results || []).filter(item => {
     const content = [item.title, item.company, item.location, item.salary, item.description].join(" ");
-    if (requestedRole && !roleEvidence.test(content)) return false;
+    if (!matchesRequestedRole(requestedRole, item.title, item.description)) return false;
     if (locationEvidence && !locationEvidence.test(content)) return false;
     if (criteria.minHourlyUsd !== null) {
       const hourly = extractMinimumHourlyUsd(content, item.location);
@@ -414,5 +430,5 @@ module.exports = {
   isJobSearchRequest, hasLocationHint, locationClarification,
   buildJobSearchQuery, buildJobSearchQueries, searchJobs,
   cleanText, decodeHtmlEntities, extractPhones, extractEmails,
-  extractSalary, extractMinimumHourlyUsd, hasActiveApplicationEvidence, extractJobCriteria, isWorldwideRequest, extractJobDetails, formatJobResults, formatJobContactSummary, extractJobRole
+  extractSalary, extractMinimumHourlyUsd, hasActiveApplicationEvidence, extractJobCriteria, isWorldwideRequest, extractJobDetails, formatJobResults, formatJobContactSummary, extractJobRole, matchesRequestedRole
 };
