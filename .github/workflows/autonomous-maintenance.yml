@@ -49,6 +49,8 @@ jobs:
       - name: Read approved public open-source references
         id: research
         continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: node scripts/autonomous-maintenance.js
 
       - name: Check deployed Render health endpoint
