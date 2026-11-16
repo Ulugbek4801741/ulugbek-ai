@@ -31,4 +31,4 @@ Payme and Click keys are not sufficient on their own. Their merchant callback ha
 
 Passwords use Node.js scrypt; sessions are random, stored hashed, and issued as HttpOnly Secure cookies. Verification codes are hashed, expire after ten minutes, and are limited to five attempts. Course mutations are constrained by owner ID in SQL. Paid content is not exposed in the catalog response unless the signed-in buyer has a paid purchase record.
 
-This is a backend foundation only. A Render PostgreSQL database and email/SMS credentials must be configured; the frontend still needs to be connected to these endpoints. Do not enable production payment until Payme/Click callback validation, idempotency, refunds, and sandbox tests are complete.
+The course menu is connected to the API through marketplace-ui.js. The rest of the ULUGBEK AI application is not yet globally gated by this account. A Render PostgreSQL database and email/SMS credentials must be configured before registration can work. Do not enable production payment until Payme/Click callback validation, idempotency, refunds, and sandbox tests are complete.
