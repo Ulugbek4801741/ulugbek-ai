@@ -9,6 +9,9 @@ test("Python developer requests require Python-specific vacancy evidence", () =>
   assert.equal(role.label, "Python dasturchi");
   assert.equal(role.evidencePattern.test("Senior React Full-stack Developer"), false);
   assert.equal(role.evidencePattern.test("Python Engineer"), true);
+  assert.equal(jobs.matchesRequestedRole(role, "Senior React Full-stack Developer", "Python is mentioned in an unrelated paragraph"), false);
+  assert.equal(jobs.matchesRequestedRole(role, "Senior Backend Developer", "Experience with Python is required"), true);
+  assert.equal(jobs.matchesRequestedRole(role, "Python Software Engineer", ""), true);
 });
 
 test("only explicit monthly pay is extracted as monthly salary", () => {
@@ -30,6 +33,34 @@ test("application link is not misreported as phone, email or Telegram contact", 
   assert.deepEqual(item.phones, []);
   assert.deepEqual(item.emails, []);
   assert.deepEqual(item.telegram, []);
+});
+
+test("worldwide clarification preserves the original Python job query after a follow-up", () => {
+  const session = "job-worldwide-followup-session";
+  const prompt = "Dunyo bo‘ylab masofaviy Python dasturchi ishlarini top";
+  memory.remember(session, prompt);
+  memory.rememberJobResults(session, prompt, [{ title: "Python Developer", url: "https://example.com/jobs/python" }]);
+  memory.remember(session, "Oldingi vakansiyalar bo‘yicha aloqa ma’lumotlarini chiqar");
+  const expanded = memory.expand(session, "Dunyo bo‘ylab");
+  assert.match(expanded, /Python dasturchi/);
+  assert.match(expanded, /Dunyo bo‘ylab/);
+});
+
+test("salary output never labels an unqualified amount as monthly pay", () => {
+  const reply = jobs.formatJobResults([{
+    title: "Software Engineer",
+    employer: "Example",
+    location: "Remote",
+    salary: "",
+    minimumHourlyUsd: null,
+    phones: [], emails: [], telegram: [],
+    url: "https://example.com/jobs/1",
+    applicationUrl: "https://example.com/apply",
+    activeStatus: "official-board-published",
+    feedVerified: true,
+    contactAvailable: false
+  }], "Python dasturchi ishlarini top");
+  assert.match(reply, /Aniq oylik maosh e’londa ko‘rsatilmagan/);
 });
 
 test("job contact follow-up reuses prior results in the same session", () => {
