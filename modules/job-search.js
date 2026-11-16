@@ -253,8 +253,8 @@ function formatJobResults(results, message = "", criteria = extractJobCriteria(m
       "Telegram: " + (item.telegram?.length ? item.telegram.join(", ") : "Sahifada topilmadi"),
       "Vakansiya sahifasi: " + item.url,
       item.applicationUrl ? "Ariza topshirish: " + item.applicationUrl : "",
-      "E’lon holati: " + (item.activeStatus === "closed-or-expired-indicator-found" ? "Yopilgan yoki muddati o‘tgan bo‘lishi mumkin" : item.activeStatus === "official-board-published" ? "Rasmiy ish e’lonlari tizimida e’lon qilingan; ariza sahifasi ochiq" : "Sahifada ariza topshirish belgisi topildi; ish beruvchining yakuniy qabul holatini ariza sahifasida yana tekshiring"),
-      "Tekshiruv: " + (item.contactAvailable ? "Aloqa usuli sahifada topildi" : "Aloqa ma’lumoti ochiq sahifada topilmadi")
+      "E’lon holati: " + (item.activeStatus === "closed-or-expired-indicator-found" ? "Yopilgan yoki muddati o‘tgan bo‘lishi mumkin" : item.activeStatus === "official-board-published" ? (item.feedVerified ? "Ochiq ish e’lonlari API’sida published; ish beruvchining yakuniy qabul holati mustaqil tasdiqlanmagan" : "Rasmiy ish e’lonlari tizimida e’lon qilingan") : "Sahifada ariza topshirish belgisi topildi; ish beruvchining yakuniy qabul holatini ariza sahifasida yana tekshiring"),
+      "Tekshiruv: " + (item.contactAvailable ? "Aloqa usuli ochiq e’londa topildi" : "Aloqa ma’lumoti ochiq e’londa topilmadi")
     ];
     return details.join("\n");
   }).join("\n\n");
@@ -262,7 +262,12 @@ function formatJobResults(results, message = "", criteria = extractJobCriteria(m
   const countNote = results.length < requested
     ? "\n\nSo‘ralgan " + requested + " ta ishning " + results.length + " tasi qat’iy tekshiruvdan o‘tdi. Yetishmagan natijalar o‘ylab topilmadi."
     : "";
-  return "ULUGBEK AI " + results.length + " ta alohida vakansiya sahifasini ochib tekshirdi. Quyida faqat sahifasi o‘qilgan va ariza topshirish belgisi topilgan e’lonlar berilgan. Topilmagan telefon, maosh yoki ish beruvchi ma’lumoti taxmin qilinmadi." + countNote + "\n\n" + lines;
+  const feedCount = results.filter(item => item.feedVerified).length;
+  const pageCount = results.length - feedCount;
+  return "ULUGBEK AI " + results.length + " ta alohida vakansiya yozuvini tekshirdi: " +
+    feedCount + " tasi ochiq ish e’lonlari API manbalaridan, " + pageCount +
+    " tasi alohida sahifalarni o‘qish orqali. API’dagi published holati ish beruvchining hozir ham xodim olayotganini kafolatlamaydi; ariza havolasini yuborishdan oldin ochib tekshiring. Topilmagan telefon, Telegram, maosh yoki ish beruvchi ma’lumoti taxmin qilinmadi." +
+    countNote + "\n\n" + lines;
 }
 
 async function mapWithConcurrency(items, concurrency, mapper) {
@@ -376,6 +381,8 @@ async function searchJobs(message, webSearch, options = {}) {
     feedsChecked: feeds.feedsChecked || 0,
     feedProviders: feeds.providers || [],
     fetchedFeedRecords: feeds.fetchedRecords || 0,
+    feedVerifiedVacancies: feedResults.length,
+    verifiedListingsCount: usable.length,
     feedFailures: feeds.failures || [],
     reply: formatJobResults(usable, message, criteria)
   };
