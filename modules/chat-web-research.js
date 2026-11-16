@@ -173,4 +173,4 @@ async function search(query) {
 async function fetchOfficialJob(value, options = {}) {
   return require("./job-board-connectors").fetchOfficialJob(value, options);
 }
-module.exports = { search, parseResults, safePublicUrl, fetchPage, fetchOfficialJob, stripHtml, isPrivateAddress, resolvePublicHost };
+async function fetchExchangeRates() {\n  return require("./currency-converter").getUsdRates();\n}\nmodule.exports = { search, parseResults, safePublicUrl, fetchPage, fetchOfficialJob, fetchExchangeRates, stripHtml, isPrivateAddress, resolvePublicHost };
