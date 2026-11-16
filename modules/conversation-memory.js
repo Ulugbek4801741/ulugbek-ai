@@ -3,7 +3,7 @@
 const sessions = new Map();
 const MAX_SESSIONS = 500;
 const TTL_MS = 30 * 60 * 1000;
-const JOB_INTENT = /(?:\bish\w*\s*(?:top(?:ib)?\s*ber|qidir(?:ib)?\s*ber|kerak|o\s*rin|vakans)|\bvakans(?:iya|iyalar)?|\bjob\s*(?:search|opening)|\bваканси|\bработ)/iu;
+const JOB_INTENT = /(?:\bish\w*\s*(?:top(?:ib)?(?:\s*ber)?|qidir(?:ib)?(?:\s*ber)?|kerak|o\s*rin|vakans)|\bvakans(?:iya|iyalar)?|\bjob\s*(?:search|opening)|\bваканси|\bработ)/iu;
 const LOCATION_ONLY = /^(?:kogon|buxoro|buxoro shahri|buxoroda|kogonda|toshkent|toshkentda|samarqand|samarqandda|navoiy|navoiyda|qarshi|qarshida|andijon|andijonda|farg'ona|farg'onada|namangan|namanganda|nukus|nukusda|urganch|urganchda|jizzax|jizzaxda|termiz|termizda|olot|g'ijduvon|dunyo\s*bo['’‘ʻʼ]?ylab|butun\s*dunyo|worldwide|global(?:ly)?|international(?:ly)?)(?:\s+(?:shahri|tumani))?$/iu;
 const KNOWN_LOCATIONS = /\b(kogon|buxoro|toshkent|samarqand|navoiy|qarshi|andijon|farg'ona|namangan|nukus|urganch|jizzax|termiz|guliston|denov|olot|g'ijduvon)(?:da|ga|dan|ning|ni)?\b/iu;
 const SOURCE_REQUEST = /(?:\bmanba(?:lar|si|dan|ga|ni|ning)?\b|\bqaysi\s+manba\b|\bmanba.{0,35}(?:havola|url|manzil)\b|\bqayerdan\s+(?:old|ol|olgan|foydalan|o['’]?q|o['’]?rgangan)\w*|\bsource(?:s)?\b|\bcitation(?:s)?\b|\bwhere\s+did\s+you\s+get\b)/iu;
