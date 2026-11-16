@@ -3,6 +3,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const feeds = require("../modules/public-job-feeds");
+const jobSearch = require("../modules/job-search");
 
 test("normalizes only recent public remote job records with secure apply links", () => {
   const now = Date.parse("2026-11-16T10:00:00Z");
@@ -62,4 +63,37 @@ test("queries public feeds and deduplicates structured job records", async () =>
 
 test("feed query terms include the user's programming language", () => {
   assert.ok(feeds.buildFeedQueries("Python dasturchi ish").includes("python"));
+});
+
+
+test("job search falls back to public feeds when web search fails", async () => {
+  const now = Date.parse("2026-11-16T10:00:00Z");
+  const webSearch = {
+    search: async () => { throw new Error("search engine unavailable"); },
+    fetchPage: async () => null,
+    fetchOfficialJob: async () => null
+  };
+  const fetchImpl = async url => {
+    let payload;
+    if (url.includes("remotive.com")) payload = { jobs: [{
+      title: "Python Software Developer", company_name: "Remote Hiring Ltd",
+      candidate_required_location: "Worldwide", description: "Python backend. Telegram: @remote_hiring",
+      url: "https://remotive.com/remote-jobs/software-dev/python-developer-456",
+      publication_date: "2026-11-15T10:00:00Z", salary: "$35 per hour"
+    }] };
+    else if (url.includes("remoteok.com")) payload = [];
+    else payload = { data: [] };
+    return { ok: true, status: 200, headers: { get: () => "500" }, text: async () => JSON.stringify(payload) };
+  };
+  const result = await jobSearch.searchJobs(
+    "Dunyo bo'ylab dasturchi uchun masofaviy ish topib ber",
+    webSearch,
+    { limit: 5, feedOptions: { fetchImpl, now } }
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.searchFailed, true);
+  assert.equal(result.results.length, 1);
+  assert.equal(result.results[0].feedVerified, true);
+  assert.deepEqual(result.results[0].telegram, ["@remote_hiring"]);
+  assert.match(result.reply, /Ariza topshirish:/);
 });
