@@ -7,7 +7,7 @@ const https = require("node:https");
 
 const MAX_QUERY = 240;
 const TIMEOUT_MS = 10000;
-const MAX_RESULTS = 5;
+const MAX_RESULTS = 10;
 const MAX_PAGE_BYTES = 900000;
 const MAX_PAGE_CHARS = 12000;
 const MAX_REDIRECTS = 3;
