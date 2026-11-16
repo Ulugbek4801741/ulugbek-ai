@@ -14,6 +14,15 @@ test("normalizes scholarly metadata and retains OA state", () => {
   assert.match(item.snippet, /Annotatsiya: A study/);
 });
 
+test("does not label publisher PDF links open access without an open license", () => {
+  const item = connectors.normalizeRecord({
+    provider: "Crossref", title: "Publisher copy", url: "https://doi.org/10.1234/paywall",
+    openAccessUrl: "https://publisher.example/paper.pdf", qualityScore: 3
+  });
+  assert.equal(item.openAccess, false);
+  assert.equal(item.openAccessUrl, "");
+});
+
 test("rejects non-HTTPS or credential-bearing source URLs", () => {
   assert.equal(connectors.safeUrl("http://example.org/paper"), "");
   assert.equal(connectors.safeUrl("https://user:pass@example.org/paper"), "");
