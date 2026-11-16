@@ -1201,6 +1201,13 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     return res.json({ reply: "Tushundim. Endi sizga " + languageName + " tilida javob beraman. Bu sozlama ushbu brauzer suhbat identifikatoriga saqlanadi.", mode: "language-preference-saved", languagePreference: preferenceUpdate.preference?.code || null });
   }
   let conversationMessage = conversationMemory.expand(sessionId, message);
+  if (conversationMemory.isJobDetailsRequest(message)) {
+    const previousJobs = conversationMemory.getLastJobResults(sessionId);
+    if (previousJobs.length) {
+      const jobSearch = require("./modules/job-search");
+      return res.json({ reply: jobSearch.formatJobContactSummary(previousJobs), mode: "job-search-contact-follow-up", jobSearchUsed: false, jobResultsCount: previousJobs.length });
+    }
+  }
   req.chatContextMessage = conversationMessage;
   // Reveal previously read sources only when the user explicitly asks for them.
   if (conversationMemory.isSourceRequest(message)) {
@@ -1361,6 +1368,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       }
       const jobWebSearch = require("./modules/chat-web-research");
       const jobs = await jobSearch.searchJobs(conversationMessage, jobWebSearch);
+      conversationMemory.rememberJobResults(sessionId, conversationMessage, jobs.results);
       return res.json({
         reply: jobs.reply,
         mode: "verified-individual-vacancy-search",
