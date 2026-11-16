@@ -31,16 +31,16 @@ function normalizeRecord(record) {
   const url = safeUrl(record.url);
   if (!url) return null;
   const abstract = clean(record.abstract || "", 4200);
+  const openAccessUrl = record.openAccess === true ? safeUrl(record.openAccessUrl || "") : "";
   const parts = [
     record.title,
     record.authors ? "Mualliflar: " + record.authors : "",
     record.year ? "Yil: " + record.year : "",
     record.doi ? "DOI: " + record.doi : "",
     abstract ? "Annotatsiya: " + abstract : "",
-    record.openAccessUrl ? "Ochiq nusxa: " + record.openAccessUrl : "",
+    openAccessUrl ? "Ochiq nusxa: " + openAccessUrl : "",
     record.description ? "Tavsif: " + clean(record.description, 1800) : ""
   ].filter(Boolean);
-  const openAccessUrl = record.openAccess === true ? safeUrl(record.openAccessUrl || "") : "";
   return {
     title: clean(record.title, 260),
     snippet: parts.join("\n").slice(0, 5200),
