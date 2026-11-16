@@ -52,3 +52,17 @@ test("accepts an answer that directly addresses India population", () => {
   };
   assert.equal(selectAnswer(good, null, "Hindiston aholi soni haqida ma'lumot ber"), good);
 });
+
+
+test("keeps deterministic intent-based learning and programming replies", () => {
+  const lesson = {
+    reply: "Bugungi 1-dars: Hello — Salom.",
+    reasoning: { answerable: true, method: "built-in-dialogue" }
+  };
+  const programming = {
+    reply: "Qaysi til — Python, JavaScript yoki Kotlin?",
+    reasoning: { answerable: true, method: "built-in-dialogue" }
+  };
+  assert.equal(selectAnswer(lesson, null, "Menga ingliz tilidan yordam ber"), lesson);
+  assert.equal(selectAnswer(programming, null, "Menga dasturlashda yordam ber"), programming);
+});
