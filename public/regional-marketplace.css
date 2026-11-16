@@ -58,3 +58,12 @@
 
 .marketplace-district{width:92px;min-width:72px;border:1px solid #dce5e1;border-radius:10px;padding:8px;background:#fff;color:#1a1d1f;font-size:12px}
 @media(max-width:430px){.marketplace-district{width:68px;min-width:60px;padding:7px 4px;font-size:10px}.marketplace-brand{font-size:12px}}
+
+.marketplace-order-actions{display:flex;flex-direction:column;gap:6px}
+.marketplace-order-actions button{border:1px solid #dce5e1;border-radius:8px;background:#fff;padding:7px;font-size:11px}
+.marketplace-order-actions button:first-child{background:#0d7a5f;color:#fff}
+.marketplace-chat-line{padding:9px 11px;margin:8px 0;border-radius:11px;background:#f0f4f1;font-size:12px}
+.marketplace-chat-line p{margin:5px 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.marketplace-chat-line small{color:#758078;font-size:10px}
+.marketplace-chat-ai{background:#e6f4ed;border:1px solid #cce8d8}
+#market-chat-messages{max-height:42dvh;overflow:auto}
