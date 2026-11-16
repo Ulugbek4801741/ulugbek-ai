@@ -202,7 +202,9 @@ app.use(helmet({
     directives: { microphone: ["self"], camera: [], geolocation: [] }
   }
 }));
-app.use(express.json({ limit: "1.2mb", strict: true, type: "application/json" }));
+app.use(express.json({ limit: "12mb", strict: true, type: "application/json" }));
+const socialNetwork = require("./modules/social-network").createSocialNetwork();
+app.use("/api/social", socialNetwork);
 // Capture only failure metadata automatically; raw chat text is not stored without explicit feedback.
 app.use("/api/chat", errorLearning.middleware(), conversationMemory.middleware());
 app.use("/api/", rateLimit({
