@@ -21,6 +21,7 @@ test("does not label publisher PDF links open access without an open license", (
   });
   assert.equal(item.openAccess, false);
   assert.equal(item.openAccessUrl, "");
+  assert.doesNotMatch(item.snippet, /Ochiq nusxa/);
 });
 
 test("rejects non-HTTPS or credential-bearing source URLs", () => {
