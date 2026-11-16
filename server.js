@@ -5,6 +5,7 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 const agentRuntime = require("./agent-runtime");
 const universalAgentCore = require("./modules/universal-agent-core");
+const noCodeBuilder = require("./modules/no-code-builder");
 const universalToolHub = require("./modules/universal-tool-hub");
 const singleAgent = require("./modules/single-agent").createSingleAgent();
 const answerSelection = require("./modules/answer-selection");
@@ -833,6 +834,16 @@ app.get("/api/modules", (_req, res) => {
   res.json({ ok: true, product: "ULUGBEK AI", note: "planned modullar hali ishlaydigan integratsiya emas.", modules: capabilityCatalog.listModules() });
 });
 
+
+app.post("/api/builder/generate", plannerRateLimit, (req, res) => {
+  try {
+    const project = noCodeBuilder.buildProject({ task: req.body?.task });
+    res.set("Cache-Control", "no-store");
+    return res.status(201).json(project);
+  } catch (error) {
+    return res.status(error.statusCode || 400).json({ ok: false, error: error.message || "Boshlang‘ich loyiha yaratilmadi." });
+  }
+});
 
 app.get("/api/agent/core/status", (_req, res) => {
   res.set("Cache-Control", "no-store");

@@ -31,7 +31,7 @@ ULUGBEK AI is an early web/Android MVP for an Uzbek-first AI assistant, agent ta
 
 These are planning and safety controls, not a claim that phone/computer automation, real quantum hardware, medical procedures, or autonomous production deployment are implemented.
 
-## Run locally
+## No-Code builder (first working slice)\n\n- `POST /api/builder/generate` accepts a natural-language Uzbek project idea and returns a responsive static web/PWA starter as `index.html`, `manifest.webmanifest`, and `README.md`.\n- The chat UI No-Code panel downloads each generated file directly; generation does not depend on server disk or a paid model key.\n- Current templates: universal landing page, storefront, portfolio, and course information site. User-provided text is HTML-escaped and no third-party scripts are injected.\n- This first slice does **not** yet build an Android APK, connect authentication/payments/database, create a GitHub repository automatically, deploy a public site, or run browser/device tests. Those require a sandbox/build pipeline and hosting credentials.\n- Tests: `node --test test/no-code-builder.test.js` and `npm test`.\n\n## Run locally
 
 Requires Node.js 20 or newer.
 
