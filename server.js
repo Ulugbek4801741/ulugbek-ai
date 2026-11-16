@@ -192,6 +192,7 @@ app.use(helmet({
       connectSrc: ["'self'", ...FRONTEND_ORIGINS],
       manifestSrc: ["'self'"],
       workerSrc: ["'self'"],
+      frameSrc: ["'self'", "https://www.youtube-nocookie.com"],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
       frameAncestors: ["'none'"]
