@@ -142,7 +142,14 @@ async function searchWeb(message, webSearch, options = {}) {
 function evidenceEntries(results) {
   return (Array.isArray(results) ? results : []).map(item => ({
     title: item.title, content: item.snippet, source: item.url,
-    status: item.pageRead ? "unverified-public-page-content" : "unverified-search-snippet",
+    status: item.recordRead ? "unverified-scholarly-api-record" :
+      item.pageRead ? "unverified-public-page-content" : "unverified-search-snippet",
+    sourceType: item.sourceType || "public-web-page",
+    provider: item.provider || "",
+    doi: item.doi || "",
+    year: item.year || null,
+    openAccess: item.openAccess === true,
+    openAccessUrl: item.openAccessUrl || "",
     sourceQuality: item.qualityScore || 1
   }));
 }
