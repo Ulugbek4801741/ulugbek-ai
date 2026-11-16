@@ -175,4 +175,5 @@ async function fetchOfficialJob(value, options = {}) {
 }
 async function fetchExchangeRates() {
   return require("./currency-converter").getUsdRates();
-}\nmodule.exports = { search, parseResults, safePublicUrl, fetchPage, fetchOfficialJob, fetchExchangeRates, stripHtml, isPrivateAddress, resolvePublicHost };
+}
+module.exports = { search, parseResults, safePublicUrl, fetchPage, fetchOfficialJob, fetchExchangeRates, stripHtml, isPrivateAddress, resolvePublicHost };
