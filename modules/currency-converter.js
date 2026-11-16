@@ -5,15 +5,21 @@ const CACHE_TTL_MS = 60 * 60 * 1000;
 const REQUEST_TIMEOUT_MS = 7000;
 let cachedRates = null;
 
-const CURRENCIES = [
-  ["CAD", "C\\$|CAD"], ["AUD", "A\\$|AUD"], ["NZD", "NZ\\$|NZD"], ["SGD", "S\\$|SGD"],
-  ["USD", "US\\$|USD|\\$"], ["EUR", "EUR|€"], ["GBP", "GBP|£"], ["CHF", "CHF"],
-  ["PLN", "PLN|zł"], ["CZK", "CZK"], ["HUF", "HUF"], ["SEK", "SEK"],
-  ["NOK", "NOK"], ["DKK", "DKK"], ["AED", "AED"], ["SAR", "SAR"],
-  ["INR", "INR|₹"], ["ZAR", "ZAR"], ["BRL", "BRL|R\\$"], ["MXN", "MXN"],
-  ["TRY", "TRY"], ["ILS", "ILS"], ["JPY", "JPY"], ["KRW", "KRW"],
-  ["PHP", "PHP"], ["THB", "THB"], ["IDR", "IDR"], ["MYR", "MYR"],
-  ["HKD", "HKD"], ["TWD", "TWD"], ["CNY", "CNY"]
+const HOURLY_PAY_PATTERNS = [
+  { currency: "CAD", regex: /(?:C\$|CAD)\s*(\d{1,4}(?:[.,]\d{1,2})?)(?:\s*(?:-|–|to)\s*(?:(?:C\$|CAD)\s*)?\d{1,4}(?:[.,]\d{1,2})?)?\s*(?:per\s*hour|\/\s*(?:h|hr|hour)|hourly|an\s*hour|soatiga)/iu },
+  { currency: "AUD", regex: /(?:A\$|AUD)\s*(\d{1,4}(?:[.,]\d{1,2})?)(?:\s*(?:-|–|to)\s*(?:(?:A\$|AUD)\s*)?\d{1,4}(?:[.,]\d{1,2})?)?\s*(?:per\s*hour|\/\s*(?:h|hr|hour)|hourly|an\s*hour|soatiga)/iu },
+  { currency: "NZD", regex: /(?:NZ\$|NZD)\s*(\d{1,4}(?:[.,]\d{1,2})?)(?:\s*(?:-|–|to)\s*(?:(?:NZ\$|NZD)\s*)?\d{1,4}(?:[.,]\d{1,2})?)?\s*(?:per\s*hour|\/\s*(?:h|hr|hour)|hourly|an\s*hour|soatiga)/iu },
+  { currency: "SGD", regex: /(?:S\$|SGD)\s*(\d{1,4}(?:[.,]\d{1,2})?)(?:\s*(?:-|–|to)\s*(?:(?:S\$|SGD)\s*)?\d{1,4}(?:[.,]\d{1,2})?)?\s*(?:per\s*hour|\/\s*(?:h|hr|hour)|hourly|an\s*hour|soatiga)/iu },
+  { currency: "USD", regex: /(?:USD|US\$|\$)\s*(\d{1,4}(?:[.,]\d{1,2})?)(?:\s*(?:-|–|to)\s*(?:(?:USD|US\$|\$)\s*)?\d{1,4}(?:[.,]\d{1,2})?)?\s*(?:per\s*hour|\/\s*(?:h|hr|hour)|hourly|an\s*hour|soatiga)/iu },
+  { currency: "EUR", regex: /(?:EUR|€)\s*(\d{1,4}(?:[.,]\d{1,2})?)(?:\s*(?:-|–|to)\s*(?:(?:EUR|€)\s*)?\d{1,4}(?:[.,]\d{1,2})?)?\s*(?:per\s*hour|\/\s*(?:h|hr|hour)|hourly|an\s*hour|soatiga)/iu },
+  { currency: "GBP", regex: /(?:GBP|£)\s*(\d{1,4}(?:[.,]\d{1,2})?)(?:\s*(?:-|–|to)\s*(?:(?:GBP|£)\s*)?\d{1,4}(?:[.,]\d{1,2})?)?\s*(?:per\s*hour|\/\s*(?:h|hr|hour)|hourly|an\s*hour|soatiga)/iu },
+  { currency: "CHF", regex: /CHF\s*(\d{1,4}(?:[.,]\d{1,2})?)(?:\s*(?:-|–|to)\s*(?:CHF\s*)?\d{1,4}(?:[.,]\d{1,2})?)?\s*(?:per\s*hour|\/\s*(?:h|hr|hour)|hourly|an\s*hour|soatiga)/iu },
+  { currency: "PLN", regex: /(?:PLN|zł)\s*(\d{1,4}(?:[.,]\d{1,2})?)(?:\s*(?:-|–|to)\s*(?:(?:PLN|zł)\s*)?\d{1,4}(?:[.,]\d{1,2})?)?\s*(?:per\s*hour|\/\s*(?:h|hr|hour)|hourly|an\s*hour|soatiga)/iu },
+  { currency: "INR", regex: /(?:INR|₹)\s*(\d{1,4}(?:[.,]\d{1,2})?)(?:\s*(?:-|–|to)\s*(?:(?:INR|₹)\s*)?\d{1,4}(?:[.,]\d{1,2})?)?\s*(?:per\s*hour|\/\s*(?:h|hr|hour)|hourly|an\s*hour|soatiga)/iu },
+  { currency: "AED", regex: /AED\s*(\d{1,4}(?:[.,]\d{1,2})?)(?:\s*(?:-|–|to)\s*(?:AED\s*)?\d{1,4}(?:[.,]\d{1,2})?)?\s*(?:per\s*hour|\/\s*(?:h|hr|hour)|hourly|an\s*hour|soatiga)/iu },
+  { currency: "ZAR", regex: /ZAR\s*(\d{1,4}(?:[.,]\d{1,2})?)(?:\s*(?:-|–|to)\s*(?:ZAR\s*)?\d{1,4}(?:[.,]\d{1,2})?)?\s*(?:per\s*hour|\/\s*(?:h|hr|hour)|hourly|an\s*hour|soatiga)/iu },
+  { currency: "BRL", regex: /(?:BRL|R\$)\s*(\d{1,4}(?:[.,]\d{1,2})?)(?:\s*(?:-|–|to)\s*(?:(?:BRL|R\$)\s*)?\d{1,4}(?:[.,]\d{1,2})?)?\s*(?:per\s*hour|\/\s*(?:h|hr|hour)|hourly|an\s*hour|soatiga)/iu },
+  { currency: "MXN", regex: /MXN\s*(\d{1,4}(?:[.,]\d{1,2})?)(?:\s*(?:-|–|to)\s*(?:MXN\s*)?\d{1,4}(?:[.,]\d{1,2})?)?\s*(?:per\s*hour|\/\s*(?:h|hr|hour)|hourly|an\s*hour|soatiga)/iu }
 ];
 
 function parseNumber(value) {
@@ -23,26 +29,18 @@ function parseNumber(value) {
 
 function parseHourlyCompensation(value, location = "") {
   const text = String(value || "");
-  const interval = "(?:per\\\\s*hour|\\\\/\\\\s*(?:h|hr|hour)|hourly|an\\\\s*hour|soatiga)";
-  if (!new RegExp(interval, "iu").test(text)) return null;
-  const amount = "(\\\\d{1,4}(?:[.,]\\\\d{1,2})?)";
-  for (const [currency, token] of CURRENCIES) {
-    let effectiveCurrency = currency;
-    if (currency === "USD" && /\\$/.test(text) && !/(?:USD|US\\$)/i.test(text)) {
-      if (/\\bcanada\\b/i.test(location)) effectiveCurrency = "CAD";
-      else if (/\\baustralia\\b/i.test(location)) effectiveCurrency = "AUD";
-      else if (/\\bnew\\s*zealand\\b/i.test(location)) effectiveCurrency = "NZD";
-      else if (/\\bsingapore\\b/i.test(location)) effectiveCurrency = "SGD";
+  for (const item of HOURLY_PAY_PATTERNS) {
+    const match = text.match(item.regex);
+    if (!match) continue;
+    let currency = item.currency;
+    if (currency === "USD" && /\$/.test(match[0]) && !/(?:USD|US\$)/i.test(match[0])) {
+      if (/\bcanada\b/i.test(location)) currency = "CAD";
+      else if (/\baustralia\b/i.test(location)) currency = "AUD";
+      else if (/\bnew\s*zealand\b/i.test(location)) currency = "NZD";
+      else if (/\bsingapore\b/i.test(location)) currency = "SGD";
     }
-    const tokenGroup = "(?:" + token + ")";
-    const prefix = new RegExp(tokenGroup + "\\\\s*" + amount +
-      "(?:\\\\s*(?:-|–|to)\\\\s*" + tokenGroup + "\\\\s*\\\\d{1,4}(?:[.,]\\\\d{1,2})?)?\\\\s*" + interval, "iu");
-    const suffix = new RegExp(amount + "\\\\s*" + tokenGroup + "\\\\s*" + interval, "iu");
-    const match = text.match(prefix) || text.match(suffix);
-    if (match) {
-      const minimum = parseNumber(match[1]);
-      if (minimum !== null) return { amount: minimum, currency: effectiveCurrency, original: match[0].trim() };
-    }
+    const amount = Number(String(match[1]).replace(",", "."));
+    if (Number.isFinite(amount) && amount > 0) return { amount, currency, original: match[0].trim() };
   }
   return null;
 }
