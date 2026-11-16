@@ -2,19 +2,18 @@
 
 const STOP_WORDS = new Set((
   "ha yo'q yoq va yoki ammo lekin uchun haqida bilan bu shu u uni unga ular qanday nima qaysi qachon " +
-  "ber menga menga kerak ayt ma'lumot ma lumot maʼlumot tushuntir tushuntirib izohla izoh " +
+  "ber menga kerak ayt ma'lumot ma lumot maʼlumot tushuntir tushuntirib izohla izoh " +
   "the a an and or but for about with from into on in at to of is are was were be been " +
-  "what when where why how tell me explain give information facts history " +
+  "what when where why how tell me explain give information facts " +
   "это как что где когда почему для про о об и или но на в из к по с со " +
-  "иcтория информация расскажи объясни"
+  "информация расскажи объясни"
 ).split(/\s+/u));
 
 const SUFFIXES = [
-  "larining", "laridan", "lariga", "larning", "lardan", "larga", "ning",
-  "dagi", "dagi", "dagi", "dan", "den", "gan", "gen", "kan", "ken",
-  "ini", "iga", "iga", "ida", "idan", " bilan", "ning", "lar", "lik",
-  "chi", "cha", "si", "ni", "ga", "da", "ta", "mi"
-].map(value => value.trim()).filter(Boolean).sort((a, b) => b.length - a.length);
+  "larining", "laridan", "lariga", "larning", "lardan", "larga", "larni",
+  "ning", "dagi", "dan", "den", "gan", "gen", "kan", "ken", "ini", "iga",
+  "ida", "idan", "lar", "lik", "chi", "cha", "si", "ni", "ga", "da", "ta", "mi"
+].sort((a, b) => b.length - a.length);
 
 function normalizeToken(value) {
   let token = String(value || "").toLocaleLowerCase("uz")
@@ -31,12 +30,12 @@ function normalizeToken(value) {
 }
 
 function terms(value) {
-  return [...new Set(String(value || "")
+  const raw = String(value || "")
     .toLocaleLowerCase("uz")
     .replace(/[’‘ʼ`]/g, "'")
-    .match(/[\p{L}\p{N}]{3,}/gu) || [])
-    .map(normalizeToken)
-    .filter(token => token && !STOP_WORDS.has(token))];
+    .match(/[\p{L}\p{N}]{3,}/gu) || [];
+  return [...new Set(raw.map(normalizeToken)
+    .filter(token => token && !STOP_WORDS.has(token)))];
 }
 
 function scoreSource(question, source) {
@@ -57,12 +56,7 @@ function scoreSource(question, source) {
   const score = Math.min(1, coverage * 0.7 + titleCoverage * 0.2 + (phrase ? 0.1 : 0));
   const minimumMatches = queryTerms.length >= 4 ? 2 : 1;
   const relevant = matchedTerms.length >= minimumMatches && (coverage >= 0.34 || phrase);
-  return {
-    relevant,
-    score: Number(score.toFixed(3)),
-    matchedTerms,
-    queryTerms
-  };
+  return { relevant, score: Number(score.toFixed(3)), matchedTerms, queryTerms };
 }
 
 function filterRelevantSources(question, sources) {
