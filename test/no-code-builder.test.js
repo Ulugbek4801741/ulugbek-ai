@@ -6,7 +6,7 @@ test("creates a universal starter project",()=>{
  const result=builder.buildProject({task:"Chat Universal nomli ChatGPTga o‘xshash chat ilova yarat"});
  assert.equal(result.ok,true); assert.equal(result.product.name,"Chat Universal");
  assert.equal(result.product.template,"universal");
- assert.deepEqual(result.files.map(f=>f.path),["index.html","manifest.webmanifest","README.md"]);
+ assert.deepEqual(result.files.map(f=>f.path),["index.html","style.css","manifest.webmanifest","README.md"]);
  assert.equal(result.verification.apkBuilt,false); assert.match(result.files[0].content,/Chat Universal/);
 });
 test("selects suitable starter templates",()=>{
