@@ -9,7 +9,7 @@ The public GitHub repository runs the workflow after every merge to `main`, ever
 3. Audits production dependencies for high-severity vulnerabilities.
 4. Reads metadata, latest release notes, declared license and a short README excerpt from a curated list of public upstream repositories.
 5. Calls the deployed Render health endpoint and validates its JSON response.
-6. Sends a real Uzbek population question to the deployed chat API and rejects unrelated replies (a safe "insufficient evidence" response is accepted).
+6. Sends a current Uzbek population question to the deployed chat API and requires either a numeric estimate backed by a matching recent source or a safe insufficient-evidence response.
 7. Stores a time-limited workflow artifact with upstream research, health and chat reports.
 8. Persists the latest public-source report plus 30 days of snapshots on the separate `autonomous-research-memory` branch; it never writes these reports to `main`.
 9. Creates or updates one maintenance issue when a check fails.
