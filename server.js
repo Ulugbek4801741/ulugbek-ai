@@ -1404,7 +1404,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       if (singleAgent.status().configured) {
         const fleet = await agentFleet.runTask(conversationMessage, { evidence, context: conversationContext });
         if (fleet.ok) result = {
-          reply: fleet.reply, modelUsed: fleet.modelUsed, reasoning: fleet.reasoning,
+          reply: fleet.reply, modelUsed: fleet.modelUsed, provider: fleet.provider, externalProviderUsed: fleet.externalProviderUsed, reasoning: fleet.reasoning,
           agentFleet: { requestedAgents: fleet.requestedAgents, completedAgents: fleet.completedAgents, roles: fleet.roles }
         };
       }
