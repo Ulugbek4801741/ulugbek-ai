@@ -183,13 +183,13 @@ function extractJobDetails(item, message) {
   const salary = extractSalary(text);
   const minimumHourlyUsd = extractMinimumHourlyUsd(text);
   const closed = /(?:vakansiya yopildi|e[’'‘]lon yopildi|qabul tugadi|позиция закрыта|vacancy closed|no longer accepting|applications? closed|position filled)/iu.test(text);
-  const activeEvidence = hasActiveApplicationEvidence(text);
+  const activeEvidence = item?.officialStatus === "published" || hasActiveApplicationEvidence(text);
   const employer = extractLabeledValue(text, ["ish beruvchi", "kompaniya", "tashkilot", "company", "employer", "работодатель"]);
   const location = extractLabeledValue(text, ["manzil", "joylashuv", "location", "address", "город", "адрес"]);
   const requirements = extractLabeledValue(text, ["talablar", "malaka talablari", "requirements", "qualifications", "требования"]);
   const schedule = extractLabeledValue(text, ["ish grafigi", "ish vaqti", "jadval", "schedule", "working hours", "график работы"]);
   const experience = extractLabeledValue(text, ["tajriba", "ish tajribasi", "experience", "стаж"]);
-  const apply = /(?:ariza|murojaat|bog'lan|aloqa|telefon|apply|contact|отклик|связаться)/iu.test(text);
+  const apply = Boolean(item?.applicationUrl) || /(?:ariza|murojaat|bog'lan|aloqa|telefon|apply|contact|отклик|связаться)/iu.test(text);
   const jobSignals = (/(?:vakans|bo'sh ish|ish o'rni|lavozim|talablar|vazifalar|tajriba|ish grafigi|ishga qabul|jobs?|position|requirements|responsibilit|employment|зарплат|ваканси|должност|обязанност)/iu.test(text) ? 1 : 0) +
     (salary ? 1 : 0) + (phones.length || emails.length || apply ? 1 : 0) +
     (/(?:talab qilinadi|kerak bo'ladi|experience|full.?time|part.?time|ish vaqti)/iu.test(text) ? 1 : 0);
@@ -206,9 +206,10 @@ function extractJobDetails(item, message) {
     emails,
     contactAvailable: phones.length > 0 || emails.length > 0 || apply,
     jobSignals,
-    listingSpecific: Boolean(item?.pageRead && !isCategoryPage(item.url) && text.length >= 240 && jobSignals >= 2),
-    activeStatus: closed ? "closed-or-expired-indicator-found" : activeEvidence ? "active-application-evidence-found" : "not-independently-confirmed",
-    activeEvidence
+    listingSpecific: Boolean(item?.officialStatus === "published" || (item?.pageRead && !isCategoryPage(item.url) && text.length >= 240 && jobSignals >= 2)),
+    activeStatus: closed ? "closed-or-expired-indicator-found" : item?.officialStatus === "published" ? "official-board-published" : activeEvidence ? "active-application-evidence-found" : "not-independently-confirmed",
+    activeEvidence,
+    applicationUrl: item?.applicationUrl || ""
   };
 }
 function formatJobResults(results, message = "", criteria = extractJobCriteria(message)) {
@@ -232,6 +233,7 @@ function formatJobResults(results, message = "", criteria = extractJobCriteria(m
       "Telefon: " + (item.phones.length ? item.phones.join(", ") : "Sahifada topilmadi"),
       "Email: " + (item.emails.length ? item.emails.join(", ") : "Sahifada topilmadi"),
       "Vakansiya sahifasi: " + item.url,
+      item.applicationUrl ? "Ariza topshirish: " + item.applicationUrl : "",
       "E’lon holati: " + (item.activeStatus === "closed-or-expired-indicator-found" ? "Yopilgan yoki muddati o‘tgan bo‘lishi mumkin" : "Sahifada ariza topshirish belgisi topildi; ish beruvchining yakuniy qabul holatini ariza sahifasida yana tekshiring"),
       "Tekshiruv: " + (item.contactAvailable ? "Aloqa usuli sahifada topildi" : "Aloqa ma’lumoti ochiq sahifada topilmadi")
     ];
@@ -292,11 +294,13 @@ async function searchJobs(message, webSearch, options = {}) {
   const pages = await mapWithConcurrency(pageCandidates, 5, async item => {
     if (typeof webSearch.fetchPage !== "function") return null;
     try {
-      const page = await webSearch.fetchPage(item.url);
+      let page = null;
+      if (typeof webSearch.fetchOfficialJob === "function") page = await webSearch.fetchOfficialJob(item.url);
+      if (!page && typeof webSearch.fetchPage === "function") page = await webSearch.fetchPage(item.url);
       if (!page) return null;
       const content = decodeHtmlEntities(String(page.content || "").replace(/<[^>]*>/g, " ")).replace(/[ \t]+/g, " ").replace(/\n\s*/g, "\n").trim().slice(0, 12000);
       const combined = [content, item.snippet || ""].filter(Boolean).join("\n");
-      const normalized = { title: cleanText(page.title || item.title, 220), snippet: combined, url: page.url || item.url, pageRead: true };
+      const normalized = { title: cleanText(page.title || item.title, 220), snippet: combined, url: page.url || item.url, pageRead: true, officialStatus: page.officialStatus || "", officialProvider: page.officialProvider || "", applicationUrl: page.applicationUrl || "" };
       const details = extractJobDetails(normalized, message);
       const relevanceText = normalized.title + " " + combined;
       if (requestedRole && !roleEvidence.test(relevanceText)) return null;
