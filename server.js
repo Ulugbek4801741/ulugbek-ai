@@ -1,6 +1,7 @@
 const express = require("express");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
+const { createMarketplaceRouter } = require("./modules/marketplace-api");
 const { mountMcpBridge } = require("./modules/mcp-bridge");
 const path = require("node:path");
 const crypto = require("node:crypto");
@@ -171,6 +172,7 @@ app.use((req, res, next) => {
   const origin = req.headers.origin || "";
   if (origin && FRONTEND_ORIGINS.has(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
     res.setHeader("Vary", "Origin");
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
@@ -211,6 +213,7 @@ app.use("/api/", rateLimit({
   standardHeaders: "draft-8",
   legacyHeaders: false
 }));
+app.use("/api/marketplace", createMarketplaceRouter());
 const chatRateLimit = rateLimit({
   windowMs: 60 * 1000, limit: 8, standardHeaders: "draft-8", legacyHeaders: false,
   message: { error: "Chat so‘rovlari vaqtinchalik chegaraga yetdi. Bir daqiqadan keyin qayta urinib ko‘ring." }
