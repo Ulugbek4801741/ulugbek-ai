@@ -68,3 +68,20 @@ test("removes Uzbek request stop words before suffix normalization", () => {
   const queryTerms = relevance.terms("Menga hozir Hindiston aholi soni haqida ma'lumot ber");
   assert.deepEqual(queryTerms, ["hindiston", "ahol", "son"]);
 });
+
+
+test("matches English India population sources to an Uzbek current population question", () => {
+  const score = relevance.scoreSource("Hindiston aholisi soni hozir qancha?", {
+    title: "India population 2026 estimate",
+    snippet: "India population in 2026 is estimated at 1,476,625,576 people."
+  });
+  assert.equal(score.relevant, true);
+});
+
+test("matches English history sources to an Uzbek India history question", () => {
+  const score = relevance.scoreSource("Hindiston tarixi haqida ma'lumot ber", {
+    title: "History of India",
+    snippet: "The history of India begins with the Indus Valley civilization."
+  });
+  assert.equal(score.relevant, true);
+});

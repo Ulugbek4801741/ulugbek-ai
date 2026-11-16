@@ -15,11 +15,12 @@ function decodeEntities(value) {
 
 function isAcceptableChatReply(value) {
   const reply = decodeEntities(value).toLocaleLowerCase("uz");
-  const safeFallback = reply.includes("mavzusiga mosligi tekshiruvidan o‘tmadi") ||
+  const safeFallback = reply.includes("yangilangan, raqamli manba topilmadi") ||
+    reply.includes("mavzusiga mosligi tekshiruvidan o‘tmadi") ||
     reply.includes("mavzusiga mosligi tekshiruvidan o'tmadi");
-  const onTopic = /hindiston|india/.test(reply) &&
-    /aholi|population|soni|million|milliard|billion/.test(reply);
-  return Boolean(reply.trim()) && (safeFallback || onTopic);
+  const onTopic = /hindiston|india/.test(reply) && /aholi|population|soni/.test(reply);
+  const hasPopulationNumber = /\b\d{1,3}(?:,\d{3}){2,}\b|\b\d+(?:\.\d+)?\s*(?:billion|milliard|million|mln|ming)\b/i.test(reply);
+  return Boolean(reply.trim()) && (safeFallback || (onTopic && hasPopulationNumber));
 }
 
 function main() {

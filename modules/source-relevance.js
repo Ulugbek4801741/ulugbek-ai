@@ -1,13 +1,27 @@
 "use strict";
 
 const STOP_WORDS = new Set((
-  "ha yo'q yoq va yoki ammo lekin uchun haqida bilan bu shu u uni unga ular qanday nima qaysi qachon " +
+  "ha yo'q yoq va yoki ammo lekin uchun haqida bilan bu shu u uni unga ular qanday nima qaysi qachon qancha necha nechta " +
   "ber menga kerak ayt hozir bugun bugungi ayni paytda ma'lumot ma lumot maʼlumot tushuntir tushuntirib izohla izoh " +
   "the a an and or but for about with from into on in at to of is are was were be been " +
   "what when where why how tell me explain give information facts " +
   "это как что где когда почему для про о об и или но на в из к по с со " +
   "информация расскажи объясни"
 ).split(/\s+/u));
+
+const TERM_ALIASES = Object.freeze({
+  india: "hindiston",
+  bharat: "hindiston",
+  population: "ahol",
+  inhabitants: "ahol",
+  residents: "ahol",
+  people: "ahol",
+  number: "son",
+  count: "son",
+  total: "son",
+  history: "tarix",
+  historical: "tarix"
+});
 
 const SUFFIXES = [
   "larining", "laridan", "lariga", "larning", "lardan", "larga", "larni",
@@ -46,6 +60,7 @@ function terms(value) {
   return [...new Set(raw
     .filter(token => !STOP_WORDS.has(token))
     .map(normalizeToken)
+    .map(token => TERM_ALIASES[token] || token)
     .filter(token => token && !STOP_WORDS.has(token)))];
 }
 
