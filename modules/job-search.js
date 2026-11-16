@@ -297,7 +297,7 @@ async function searchJobs(message, webSearch, options = {}) {
   }
   const pageCandidates = candidates.slice(0, Math.max(60, limit * 6));
   const pages = await mapWithConcurrency(pageCandidates, 5, async item => {
-    if (typeof webSearch.fetchPage !== "function") return null;
+    if (typeof webSearch.fetchPage !== "function" && typeof webSearch.fetchOfficialJob !== "function") return null;
     try {
       let page = null;
       if (typeof webSearch.fetchOfficialJob === "function") page = await webSearch.fetchOfficialJob(item.url);
