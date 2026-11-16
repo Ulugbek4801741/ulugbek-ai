@@ -74,8 +74,9 @@
     try {
       if (tab === "catalog") {
         const result = await request("/courses?q="+encodeURIComponent(query)+"&type="+filter);
-        view.innerHTML = '<div class="marketplace-toolbar"><input id="marketplace-search" type="search" placeholder="Kurs qidirish..." value="'+esc(query)+'"><select id="marketplace-filter"><option value="all">Barcha kurslar</option><option value="free">Bepul</option><option value="paid">Pullik</option></select></div><div class="marketplace-course-list">' + (result.courses.length ? result.courses.map(c => '<article class="marketplace-course"><h3>'+esc(c.title)+'</h3><p>'+esc(c.description)+'</p><small>'+esc(c.instructor||"O‘qituvchi ko‘rsatilmagan")+' · '+Number(c.price_uzs).toLocaleString("uz-UZ")+' so‘m</small>'+(c.canWatch?'<div class="marketplace-video"><iframe src="https://www.youtube-nocookie.com/embed/'+esc(youtubeId(c.youtube_url))+'" title="'+esc(c.title)+'" loading="lazy" allowfullscreen></iframe></div>':'<p class="marketplace-locked">Pullik kurs. Xarid va to‘lov tasdiqlanishi talab qilinadi.</p>')+'</article>').join("") : '<p class="marketplace-empty">Hozircha kurs topilmadi.</p>')+'</div>';
-        view.querySelector("#marketplace-search").addEventListener("input",e=>{query=e.target.value;clearTimeout(window.__marketplaceSearchTimer);window.__marketplaceSearchTimer=setTimeout(renderTab,250);});
+        view.innerHTML = '<div class="marketplace-toolbar"><input id="marketplace-search" type="search" placeholder="Kurs qidirish..." value="'+esc(query)+'"><button type="button" id="marketplace-search-button">Qidirish</button><select id="marketplace-filter"><option value="all">Barcha kurslar</option><option value="free">Bepul</option><option value="paid">Pullik</option></select></div><div class="marketplace-course-list">' + (result.courses.length ? result.courses.map(c => '<article class="marketplace-course"><h3>'+esc(c.title)+'</h3><p>'+esc(c.description)+'</p><small>'+esc(c.instructor||"O‘qituvchi ko‘rsatilmagan")+' · '+Number(c.price_uzs).toLocaleString("uz-UZ")+' so‘m</small>'+(c.canWatch?'<div class="marketplace-video"><iframe src="https://www.youtube-nocookie.com/embed/'+esc(youtubeId(c.youtube_url))+'" title="'+esc(c.title)+'" loading="lazy" allowfullscreen></iframe></div>':'<p class="marketplace-locked">Pullik kurs. Xarid va to‘lov tasdiqlanishi talab qilinadi.</p>')+'</article>').join("") : '<p class="marketplace-empty">Hozircha kurs topilmadi.</p>')+'</div>';
+        view.querySelector("#marketplace-search").addEventListener("input",e=>{query=e.target.value;});
+        view.querySelector("#marketplace-search-button").addEventListener("click",renderTab);
         view.querySelector("#marketplace-filter").value=filter;
         view.querySelector("#marketplace-filter").addEventListener("change",e=>{filter=e.target.value;renderTab();});
       } else if (tab === "teacher") {
@@ -95,6 +96,8 @@
     try { const u=new URL(value); if(u.hostname==="youtu.be"||u.hostname==="www.youtu.be")return u.pathname.split("/").filter(Boolean)[0]||""; return u.searchParams.get("v")||u.pathname.match(/\/(?:embed|shorts|live)\/([\w-]{6,})/)?.[1]||""; } catch(_){return "";}
   }
   async function openCourses() {
+    const oldMenu = document.getElementById("business-menu"); if (oldMenu) oldMenu.hidden = true;
+    const oldModal = document.getElementById("business-modal"); if (oldModal) oldModal.hidden = true;
     ensureModal(); tab="catalog"; filter="all"; query=""; editing=null;
     if (await checkUser()) await dashboard(); else authView("login");
   }
