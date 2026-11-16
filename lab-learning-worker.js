@@ -6,6 +6,7 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const { readPublicPage, normalizePublicUrl } = require("./modules/public-web-reader");
+const { buildKnowledgeEntries } = require("./modules/github-research-memory");
 
 const DATA_DIR = path.resolve(process.env.ULUGBEK_DATA_DIR || path.join(__dirname, "data"));
 const FILE = path.join(DATA_DIR, "knowledge.json");
@@ -14,6 +15,8 @@ const INTERVAL_MS = Math.max(60_000, Number(process.env.LEARNING_INTERVAL_MS) ||
 const REQUEST_TIMEOUT_MS = 15_000;
 const MAX_RESPONSE_BYTES = 1_000_000;
 const MAX_KNOWLEDGE_ITEMS = 2000;
+const GITHUB_RESEARCH_MEMORY_URL = "https://raw.githubusercontent.com/Ulugbek4801741/ulugbek-ai/autonomous-research-memory/memory/latest.json";
+const GITHUB_RESEARCH_REFRESH_MS = 15 * 60 * 1000;
 
 // O‘zbek tili ustuvor: 12/20 sikl, ingliz tili 5/20, rus tili 3/20.
 const LANGUAGE_PLAN = [
@@ -46,7 +49,9 @@ let state = {
   enabled: true, running: false, startedAt: null, lastCycleAt: null,
   lastSuccessAt: null, cycles: 0, saved: 0, lastError: null,
   lastTopic: null, lastLanguage: null, openWebSaved: 0,
-  lastOpenWebAt: null, lastOpenWebError: null
+  lastOpenWebAt: null, lastOpenWebError: null,
+  githubResearchSaved: 0, lastGithubResearchAt: null,
+  lastGithubResearchGeneratedAt: null, lastGithubResearchError: null
 };
 let timer = null;
 let cursor = 0;
@@ -57,6 +62,8 @@ let writeChain = Promise.resolve();
 const visitedPages = new Set();
 let visitedLoaded = false;
 let stateWriteChain = Promise.resolve();
+let lastGithubResearchCheckAt = 0;
+let lastGithubResearchGeneratedAt = null;
 
 async function loadVisitedPages() {
   if (visitedLoaded) return;
@@ -328,6 +335,56 @@ function parseOpenWebResults(html) {
   return results;
 }
 
+async function researchGitHubMemory() {
+  if (Date.now() - lastGithubResearchCheckAt < GITHUB_RESEARCH_REFRESH_MS) return 0;
+  lastGithubResearchCheckAt = Date.now();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    const response = await fetch(GITHUB_RESEARCH_MEMORY_URL, {
+      headers: {
+        "User-Agent": "ULUGBEK-AI-OpenKnowledge/1.0 (public read-only research memory)",
+        "Accept": "application/json"
+      },
+      signal: controller.signal,
+      redirect: "error"
+    });
+    if (!response.ok) throw new Error("GitHub research memory HTTP " + response.status);
+    const declared = Number(response.headers.get("content-length") || 0);
+    if (declared > MAX_RESPONSE_BYTES) throw new Error("GitHub research memory hajmi limitdan oshdi.");
+    const raw = await response.text();
+    if (Buffer.byteLength(raw, "utf8") > MAX_RESPONSE_BYTES) throw new Error("GitHub research memory hajmi limitdan oshdi.");
+    const report = JSON.parse(raw);
+    const generatedAt = String(report.generatedAt || "");
+    if (!generatedAt) throw new Error("GitHub research memory sanasi mavjud emas.");
+    state.lastGithubResearchAt = new Date().toISOString();
+    state.lastGithubResearchError = null;
+    state.lastGithubResearchGeneratedAt = generatedAt;
+    if (generatedAt === lastGithubResearchGeneratedAt) return 0;
+
+    const additions = buildKnowledgeEntries(report);
+    if (!additions.length) {
+      lastGithubResearchGeneratedAt = generatedAt;
+      state.githubResearchSaved = 0;
+      state.lastGithubResearchError = null;
+      return 0;
+    }
+    const current = await readKnowledge();
+    const retained = current.filter(item => item?.agent !== "AutonomousGitHubResearchAgent");
+    await writeKnowledge([...retained, ...additions]);
+    lastGithubResearchGeneratedAt = generatedAt;
+    state.githubResearchSaved = additions.length;
+    state.saved += additions.length;
+    state.lastGithubResearchError = null;
+    return additions.length;
+  } catch (error) {
+    state.lastGithubResearchError = clean(error.name === "AbortError" ? "GitHub research memory so‘rovi vaqti tugadi." : error.message, 220);
+    return 0;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function researchOpenWeb(topic, language) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 12000);
@@ -393,6 +450,7 @@ async function cycle() {
   try {
     let findings = 0;
     let openWebFindings = 0;
+    let githubResearchFindings = 0;
   let wikipediaError = null;
   state.lastOpenWebError = null;
 
@@ -408,15 +466,16 @@ async function cycle() {
   } catch (error) {
     state.lastOpenWebError = clean(error.name === "AbortError" ? "Ochiq internet qidiruvi vaqti tugadi." : error.message, 180);
   }
+  githubResearchFindings = await researchGitHubMemory();
 
   state.cycles += 1;
   state.lastTopic = topic;
   state.lastLanguage = language;
-  if ((Array.isArray(findings) ? findings.length : findings) || openWebFindings) {
+  if ((Array.isArray(findings) ? findings.length : findings) || openWebFindings || githubResearchFindings) {
     state.lastSuccessAt = new Date().toISOString();
     state.lastError = null;
-  } else if (wikipediaError || state.lastOpenWebError) {
-    state.lastError = [wikipediaError && "Wikipedia: " + wikipediaError, state.lastOpenWebError && "Ochiq internet: " + state.lastOpenWebError]
+  } else if (wikipediaError || state.lastOpenWebError || state.lastGithubResearchError) {
+    state.lastError = [wikipediaError && "Wikipedia: " + wikipediaError, state.lastOpenWebError && "Ochiq internet: " + state.lastOpenWebError, state.lastGithubResearchError && "GitHub: " + state.lastGithubResearchError]
       .filter(Boolean).join(" | ").slice(0, 240);
   } else {
     // Search completed but no new readable pages were found; this is not a crash.
@@ -464,19 +523,29 @@ function status() {
     openWebPagesSaved: state.openWebSaved,
     lastOpenWebAt: state.lastOpenWebAt,
     lastOpenWebError: state.lastOpenWebError,
+    githubResearchMemory: {
+      url: GITHUB_RESEARCH_MEMORY_URL,
+      savedSources: state.githubResearchSaved,
+      lastFetchedAt: state.lastGithubResearchAt,
+      reportGeneratedAt: state.lastGithubResearchGeneratedAt,
+      lastError: state.lastGithubResearchError,
+      allowedLicenses: ["MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "ISC"],
+      trainingScope: "unreviewed-language-patterns-only",
+      factualAutoApproval: false
+    },
     minimumRequestGapSeconds: 1,
     requestConcurrency: 1,
     robotsTxtEnforced: true,
     obeysCrawlDelay: true,
     pausesOnHttp403Or429: true,
     neverBypassesBlocks: true,
-    mode: "continuous-multilingual-public-read-only-knowledge-retrieval",
+    mode: "continuous-multilingual-public-read-only-knowledge-retrieval-with-github-research-memory",
     writesToExternalSites: false,
     executesDownloadedCode: false,
     chatUsesOnlyApprovedKnowledge: true,
     modelWeightsRetrained: false,
     uptimeGuarantee: "host-process-and-persistent-storage-dependent",
-    note: "Har siklda o‘zbek, ingliz yoki rus mavzusi bo‘yicha Wikipedia va umumiy ochiq HTTPS internet qidiriladi. Umumiy internetdan ko‘pi bilan 2 sahifa olinadi; robots.txt, DNS va HTTP cheklovlari tekshiriladi. Olingan yozuvlar pending-review holatida saqlanadi; chat faqat tasdiqlangan bilimlardan foydalanadi. Bu model vaznlarini o‘qitmaydi."
+    note: "Har siklda o‘zbek, ingliz yoki rus mavzusi bo‘yicha Wikipedia va umumiy ochiq HTTPS internet qidiriladi. Har 15 daqiqada litsenziyasi ruxsatli GitHub research memory hisobotidan README va release notes andozalari olinadi. Olingan yozuvlar pending-review holatida; faqat til andozalariga ishlatiladi, fakt sifatida tasdiqlanmaydi va chatga bevosita berilmaydi. Bu neyron model vaznlarini o‘qitmaydi."
   };
 }
 async function searchKnowledge(query, limit = 5) {

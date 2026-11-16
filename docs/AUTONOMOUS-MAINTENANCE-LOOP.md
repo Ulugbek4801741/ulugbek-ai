@@ -12,8 +12,9 @@ The public GitHub repository runs the workflow after every merge to `main`, ever
 6. Sends a current Uzbek population question to the deployed chat API and requires either a numeric estimate backed by a matching recent source or a safe insufficient-evidence response.
 7. Stores a time-limited workflow artifact with upstream research, health and chat reports.
 8. Persists the latest public-source report plus 30 days of snapshots on the separate `autonomous-research-memory` branch; it never writes these reports to `main`.
-9. Creates or updates one maintenance issue when a check fails.
-10. Dependabot checks npm packages and GitHub Actions weekly, then opens update PRs that go through CI.
+9. The Render learning worker reads the report every 15 minutes, imports only MIT/Apache/BSD/ISC README and release-note excerpts (maximum 200 words per repository), and sends them to the local word-ngram model for language-pattern training only. Entries remain `pending-review`; they are never factual chat knowledge or auto-approved.
+10. Creates or updates one maintenance issue when a check fails.
+11. Dependabot checks npm packages and GitHub Actions weekly, then opens update PRs that go through CI.
 
 ## Safety boundaries
 
@@ -36,7 +37,7 @@ Until this secret exists, the workflow deliberately skips automatic production d
 
 ## What "learning" means here
 
-This first stage performs recurring source discovery and evidence collection. It stores public research reports on a separate Git branch, but does not train a foundation model or autonomously rewrite its own intelligence. A later stage needs a configured code-reasoning provider or bounded deterministic repair rules to convert reviewed findings into tested pull requests.
+This first stage performs recurring source discovery and evidence collection. It incrementally trains local word-ngram language patterns from bounded, license-checked excerpts, but it does not train neural model weights, learn factual answers automatically, or autonomously rewrite its own intelligence. The trained corpus is currently stored as local JSON on Render; the public GitHub research branch preserves source snapshots, not the trained model. Durable corpus retention across service restarts requires persistent storage. A later stage needs a configured code-reasoning provider or bounded deterministic repair rules to convert reviewed findings into tested pull requests.
 
 ## Scheduling
 
