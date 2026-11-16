@@ -28,7 +28,7 @@ function chooseRoles(task) {
   if (/(kod|dastur|sayt|ilova|api|server|github|render|xato|debug|deploy|avtomatlashtir)/i.test(text)) roles.push("engineer");
   if (/(biznes|bozor|mijoz|savdo|daromad|marketing|kompaniya|loyiha)/i.test(text)) roles.push("business");
   if (/(tarjima|ingliz|rus til|o'zbek til|o‘zbek til|grammatika)/i.test(text)) roles.push("translator");
-  if (/(tahlil|solishtir|reja|strategiya|murakkab|batafsil|tekshir)/i.test(text)) roles.push("analyst");
+  if (/(tahlil|solishtir|reja|strategiya|murakkab|batafsil)/i.test(text)) roles.push("analyst");
   if (roles.length === 0) roles.push("generalist");
   if (roles.length > 1 || /(tekshir|isbot|manba|xavfsiz|ishonchli)/i.test(text)) roles.push("verifier");
   return [...new Set(roles)].slice(0, 6);
@@ -85,9 +85,10 @@ function createAgentFleet(options = {}) {
   }
 
   async function runTask(task, options = {}) {
-    const prompt = clean(task);
-    if (!prompt) throw Object.assign(new Error("Vazifa matni bo'sh."), { statusCode: 400 });
-    if (prompt.length > 4000) throw Object.assign(new Error("Vazifa 4000 belgidan oshmasligi kerak."), { statusCode: 413 });
+    const rawPrompt = typeof task === "string" ? task.trim() : "";
+    if (!rawPrompt) throw Object.assign(new Error("Vazifa matni bo'sh."), { statusCode: 400 });
+    if (rawPrompt.length > 4000) throw Object.assign(new Error("Vazifa 4000 belgidan oshmasligi kerak."), { statusCode: 413 });
+    const prompt = clean(rawPrompt, 4000);
     const roles = Array.isArray(options.roles) ? [...new Set(options.roles)].filter(role => ROLE_DEFINITIONS[role]).slice(0, 6) : chooseRoles(prompt);
     if (!roles.length) roles.push("generalist");
     const taskId = "task_" + crypto.randomUUID().replace(/-/g, "").slice(0, 16);
