@@ -61,6 +61,32 @@ jobs:
             --output reports/render-health.json
           node -e "JSON.parse(require('node:fs').readFileSync('reports/render-health.json','utf8')); console.log('Render health endpoint returned valid JSON')"
 
+      - name: Test real chat topic alignment
+        id: chat
+        continue-on-error: true
+        run: |
+          mkdir -p reports
+          node -e "process.stdout.write(JSON.stringify({message:'Hindiston aholisi soni haqida ma’lumot ber',sessionId:'maintenance-smoke-ulugbek-2026',countryCode:'UZ'}))" > reports/chat-smoke-request.json
+          curl --fail --silent --show-error --location \
+            --connect-timeout 10 --max-time 150 \
+            -H "Content-Type: application/json" \
+            --data-binary @reports/chat-smoke-request.json \
+            https://ulugbek-ai2.onrender.com/api/chat \
+            --output reports/chat-smoke.json
+          node -e '
+            const fs = require("node:fs");
+            const data = JSON.parse(fs.readFileSync("reports/chat-smoke.json", "utf8"));
+            const reply = String(data.reply || "").toLowerCase();
+            const safeFallback = reply.includes("mavzusiga mosligi tekshiruvidan o‘tmadi") ||
+              reply.includes("mavzusiga mosligi tekshiruvidan o'tmadi");
+            const onTopic = /hindiston|india/.test(reply) &&
+              /aholi|population|soni|million|milliard|billion/.test(reply);
+            if (!reply || (!safeFallback && !onTopic)) {
+              throw new Error("Chat mavzuga mos javob bermadi: " + reply.slice(0, 280));
+            }
+            console.log("Chat smoke test passed; mode=" + (data.mode || "unknown"));
+          '
+
       - name: Upload audit and upstream research report
         if: always()
         uses: actions/upload-artifact@v4
@@ -69,6 +95,7 @@ jobs:
           path: |
             reports/autonomous-upstream-review.json
             reports/render-health.json
+            reports/chat-smoke.json
           if-no-files-found: ignore
           retention-days: 30
 
@@ -79,10 +106,11 @@ jobs:
           AUDIT_RESULT: ${{ steps.audit.outcome }}
           RESEARCH_RESULT: ${{ steps.research.outcome }}
           LIVE_RESULT: ${{ steps.live.outcome }}
+          CHAT_RESULT: ${{ steps.chat.outcome }}
           EVENT_NAME: ${{ github.event_name }}
         run: |
-          printf 'Tests: %s\nSecurity audit: %s\nOpen-source review: %s\nRender health: %s\n' \
-            "$TEST_RESULT" "$AUDIT_RESULT" "$RESEARCH_RESULT" "$LIVE_RESULT" \
+          printf 'Tests: %s\nSecurity audit: %s\nOpen-source review: %s\nRender health: %s\nChat topic smoke: %s\n' \
+            "$TEST_RESULT" "$AUDIT_RESULT" "$RESEARCH_RESULT" "$LIVE_RESULT" "$CHAT_RESULT" \
             | tee -a "$GITHUB_STEP_SUMMARY"
           for result in "$TEST_RESULT" "$AUDIT_RESULT" "$RESEARCH_RESULT"; do
             if [ "$result" != "success" ]; then
@@ -90,8 +118,8 @@ jobs:
               exit 1
             fi
           done
-          if [ "$LIVE_RESULT" != "success" ]; then
-            echo "Render health check failed."
+          if [ "$LIVE_RESULT" != "success" ] || [ "$CHAT_RESULT" != "success" ]; then
+            echo "A live Render API or chat topic check failed."
             exit 1
           fi
 
@@ -111,6 +139,7 @@ jobs:
               "Security audit: ${{ steps.audit.outcome }}",
               "Open-source review: ${{ steps.research.outcome }}",
               "Render health: ${{ steps.live.outcome }}",
+              "Chat topic smoke: ${{ steps.chat.outcome }}",
               "",
               "This automation is diagnostic-only. It does not change source code, merge branches, or deploy to production.",
               "Inspect the workflow artifact and logs, then prepare a tested repair in an isolated branch."
