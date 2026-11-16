@@ -234,7 +234,7 @@ function formatJobResults(results, message = "", criteria = extractJobCriteria(m
       "Email: " + (item.emails.length ? item.emails.join(", ") : "Sahifada topilmadi"),
       "Vakansiya sahifasi: " + item.url,
       item.applicationUrl ? "Ariza topshirish: " + item.applicationUrl : "",
-      "E’lon holati: " + (item.activeStatus === "closed-or-expired-indicator-found" ? "Yopilgan yoki muddati o‘tgan bo‘lishi mumkin" : "Sahifada ariza topshirish belgisi topildi; ish beruvchining yakuniy qabul holatini ariza sahifasida yana tekshiring"),
+      "E’lon holati: " + (item.activeStatus === "closed-or-expired-indicator-found" ? "Yopilgan yoki muddati o‘tgan bo‘lishi mumkin" : item.activeStatus === "official-board-published" ? "Rasmiy ish e’lonlari tizimida e’lon qilingan; ariza sahifasi ochiq" : "Sahifada ariza topshirish belgisi topildi; ish beruvchining yakuniy qabul holatini ariza sahifasida yana tekshiring"),
       "Tekshiruv: " + (item.contactAvailable ? "Aloqa usuli sahifada topildi" : "Aloqa ma’lumoti ochiq sahifada topilmadi")
     ];
     return details.join("\n");
@@ -305,7 +305,7 @@ async function searchJobs(message, webSearch, options = {}) {
       const relevanceText = normalized.title + " " + combined;
       if (requestedRole && !roleEvidence.test(relevanceText)) return null;
       if (locationEvidence && !locationEvidence.test(relevanceText)) return null;
-      if (details.activeStatus !== "active-application-evidence-found") return null;
+      if (!["active-application-evidence-found", "official-board-published"].includes(details.activeStatus)) return null;
       if (criteria.minHourlyUsd !== null && (details.minimumHourlyUsd === null || details.minimumHourlyUsd < criteria.minHourlyUsd)) return null;
       return details.listingSpecific ? { ...normalized, ...details, host: (() => { try { return new URL(normalized.url).hostname; } catch (_) { return ""; } })() } : null;
     } catch (_) { return null; }
