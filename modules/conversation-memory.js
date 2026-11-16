@@ -6,7 +6,7 @@ const TTL_MS = 30 * 60 * 1000;
 const JOB_INTENT = /(?:\bish\s*(?:top(?:ib)?\s*ber|qidir(?:ib)?\s*ber|kerak|o\s*rin|vakans)|\bjob\s*(?:search|opening)|\bваканси|\bработ)/iu;
 const LOCATION_ONLY = /^(?:kogon|buxoro|buxoro shahri|buxoroda|kogonda|toshkent|toshkentda|samarqand|samarqandda|navoiy|navoiyda|qarshi|qarshida|andijon|andijonda|farg'ona|farg'onada|namangan|namanganda|nukus|nukusda|urganch|urganchda|jizzax|jizzaxda|termiz|termizda|olot|g'ijduvon)(?:\s+(?:shahri|tumani))?$/iu;
 const KNOWN_LOCATIONS = /\b(kogon|buxoro|toshkent|samarqand|navoiy|qarshi|andijon|farg'ona|namangan|nukus|urganch|jizzax|termiz|guliston|denov|olot|g'ijduvon)(?:da|ga|dan|ning|ni)?\b/iu;
-const SOURCE_REQUEST = /(?:\bmanba(?:lar|si)?\b|\bqaysi\s+(?:sayt|maqola|sahifa|manba)\b|\bqayerdan\b|\bhavola(?:si|ni)?\b|\blink(?:ni|ini)?\b|\burl\b|\bweb.?sayt\b|\baniq\s+(?:joy|qism|manzil)\b|\bsource(?:s)?\b|\bcitation(?:s)?\b|\bwhere\s+did\s+you\s+get\b)/iu;
+const SOURCE_REQUEST = /(?:\bmanba(?:lar|si|dan|ga|ni|ning)?\b|\bqaysi\s+(?:sayt|maqola|sahifa|manba)\b|\bqayerdan\b|\bhavola(?:si|ni)?\b|\blink(?:ni|ini)?\b|\burl\b|\bweb.?sayt\b|\baniq\s+(?:joy|qism|manzil)\b|\bsource(?:s)?\b|\bcitation(?:s)?\b|\bwhere\s+did\s+you\s+get\b)/iu;
 const FOLLOW_UP_JOB = /(?:^(?:ish(?:\s+(?:topib\s+ber|qidirib\s+ber|kerak))?|\bish\s+top|vakansiya(?:\s+topib\s+ber)?|job(?:\s+search)?|yana\s+qidir|davom\s+et)[!.?\s]*$|\bshu\s+(?:yo['’]?nalish(?:da|ga)?|soha|kasb)\b|\bmen\s+.{0,45}\b(?:dasturchi|dasturlovchi|programmist|programmer|developer|frontend|backend|android\s+dasturchi)\w*|\b(?:dasturchiman|dasturlovchiman)\b)/iu;
 
 function prune(now = Date.now()) {
