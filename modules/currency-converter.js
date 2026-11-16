@@ -6,37 +6,14 @@ const REQUEST_TIMEOUT_MS = 7000;
 let cachedRates = null;
 
 const CURRENCIES = [
-  ["CAD", "C\\$|CAD"],
-  ["AUD", "A\\$|AUD"],
-  ["NZD", "NZ\\$|NZD"],
-  ["SGD", "S\\$|SGD"],
-  ["USD", "US\\$|USD|\\$"],
-  ["EUR", "EUR|€"],
-  ["GBP", "GBP|£"],
-  ["CHF", "CHF"],
-  ["PLN", "PLN|zł"],
-  ["CZK", "CZK"],
-  ["HUF", "HUF"],
-  ["SEK", "SEK"],
-  ["NOK", "NOK"],
-  ["DKK", "DKK"],
-  ["AED", "AED"],
-  ["SAR", "SAR"],
-  ["INR", "INR|₹"],
-  ["ZAR", "ZAR"],
-  ["BRL", "BRL|R\\$"],
-  ["MXN", "MXN"],
-  ["TRY", "TRY"],
-  ["ILS", "ILS"],
-  ["JPY", "JPY"],
-  ["KRW", "KRW"],
-  ["PHP", "PHP"],
-  ["THB", "THB"],
-  ["IDR", "IDR"],
-  ["MYR", "MYR"],
-  ["HKD", "HKD"],
-  ["TWD", "TWD"],
-  ["CNY", "CNY"]
+  ["CAD", "C\\$|CAD"], ["AUD", "A\\$|AUD"], ["NZD", "NZ\\$|NZD"], ["SGD", "S\\$|SGD"],
+  ["USD", "US\\$|USD|\\$"], ["EUR", "EUR|€"], ["GBP", "GBP|£"], ["CHF", "CHF"],
+  ["PLN", "PLN|zł"], ["CZK", "CZK"], ["HUF", "HUF"], ["SEK", "SEK"],
+  ["NOK", "NOK"], ["DKK", "DKK"], ["AED", "AED"], ["SAR", "SAR"],
+  ["INR", "INR|₹"], ["ZAR", "ZAR"], ["BRL", "BRL|R\\$"], ["MXN", "MXN"],
+  ["TRY", "TRY"], ["ILS", "ILS"], ["JPY", "JPY"], ["KRW", "KRW"],
+  ["PHP", "PHP"], ["THB", "THB"], ["IDR", "IDR"], ["MYR", "MYR"],
+  ["HKD", "HKD"], ["TWD", "TWD"], ["CNY", "CNY"]
 ];
 
 function parseNumber(value) {
@@ -46,10 +23,9 @@ function parseNumber(value) {
 
 function parseHourlyCompensation(value, location = "") {
   const text = String(value || "");
-  if (!/(?:per\\s*hour|\\/\\s*(?:h|hr|hour)|hourly|an\\s*hour|soatiga)/iu.test(text)) return null;
-  const amount = "(\\\\d{1,4}(?:[.,]\\\\d{1,2})?)";
-  const rangeTail = "(?:\\\\s*(?:-|–|to)\\\\s*(?:TOKEN)?\\\\s*\\\\d{1,4}(?:[.,]\\\\d{1,2})?)?";
   const interval = "(?:per\\\\s*hour|\\\\/\\\\s*(?:h|hr|hour)|hourly|an\\\\s*hour|soatiga)";
+  if (!new RegExp(interval, "iu").test(text)) return null;
+  const amount = "(\\\\d{1,4}(?:[.,]\\\\d{1,2})?)";
   for (const [currency, token] of CURRENCIES) {
     let effectiveCurrency = currency;
     if (currency === "USD" && /\\$/.test(text) && !/(?:USD|US\\$)/i.test(text)) {
@@ -59,7 +35,8 @@ function parseHourlyCompensation(value, location = "") {
       else if (/\\bsingapore\\b/i.test(location)) effectiveCurrency = "SGD";
     }
     const tokenGroup = "(?:" + token + ")";
-    const prefix = new RegExp(tokenGroup + "\\\\s*" + amount + rangeTail.replace("TOKEN", tokenGroup) + "\\\\s*" + interval, "iu");
+    const prefix = new RegExp(tokenGroup + "\\\\s*" + amount +
+      "(?:\\\\s*(?:-|–|to)\\\\s*" + tokenGroup + "\\\\s*\\\\d{1,4}(?:[.,]\\\\d{1,2})?)?\\\\s*" + interval, "iu");
     const suffix = new RegExp(amount + "\\\\s*" + tokenGroup + "\\\\s*" + interval, "iu");
     const match = text.match(prefix) || text.match(suffix);
     if (match) {
@@ -90,10 +67,10 @@ async function getUsdRates(options = {}) {
     const rates = { USD: 1 };
     let date = "";
     for (const row of rows) {
-      const quote = String(row?.quote || "").toUpperCase();
-      const rate = Number(row?.rate);
+      const quote = String(row && row.quote || "").toUpperCase();
+      const rate = Number(row && row.rate);
       if (/^[A-Z]{3}$/.test(quote) && Number.isFinite(rate) && rate > 0) rates[quote] = rate;
-      if (!date && row?.date) date = String(row.date);
+      if (!date && row && row.date) date = String(row.date);
     }
     cachedRates = { rates, date, fetchedAt: now, source: "Frankfurter daily reference rates" };
     return cachedRates;
@@ -113,7 +90,7 @@ async function convertHourlyPayToUsd(value, location = "", options = {}) {
   const rates = typeof options.fetchRates === "function"
     ? await options.fetchRates()
     : await getUsdRates({ fetchImpl: options.fetchImpl, forceRefresh: options.forceRefresh });
-  const usdToLocal = Number(rates?.rates?.[parsed.currency]);
+  const usdToLocal = Number(rates && rates.rates && rates.rates[parsed.currency]);
   if (!Number.isFinite(usdToLocal) || usdToLocal <= 0) return null;
   return {
     ...parsed,
