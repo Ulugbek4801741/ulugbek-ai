@@ -77,6 +77,6 @@ test("course catalog fails clearly when PostgreSQL is not configured", async () 
     const data = await response.json();
     assert.equal(response.status, 503);
     assert.equal(data.ok, false);
-    assert.match(data.error, /PostgreSQL/);
+    assert.equal(data.error, "Kurslar katalogini yuklab bo‘lmadi.");
   });
 });
