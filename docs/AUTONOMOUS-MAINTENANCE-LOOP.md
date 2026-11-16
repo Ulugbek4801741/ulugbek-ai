@@ -19,6 +19,7 @@ The public GitHub repository runs a scheduled workflow daily and can also be sta
 - The workflow is read-only with respect to repository contents.
 - It never runs code downloaded from an upstream repository.
 - It never copies code, installs upstream projects, changes dependencies, edits model weights, pushes commits, merges pull requests, changes secrets, or deploys.
+- Upstream README and release-note excerpts are limited to 100 words each (at most 200 words from one repository per run).
 - An upstream repository is a research lead, not automatically trusted training data. Its license and security posture must be reviewed before any code reuse.
 - Production deployment and paid infrastructure changes remain owner-approved.
 
