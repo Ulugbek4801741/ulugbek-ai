@@ -62,3 +62,9 @@ test("accepts a focused India population answer", () => {
   const score = relevance.scoreSource("Menga hozir Hindiston aholi soni haqida ma'lumot ber", { title: "", snippet: reply });
   assert.equal(score.relevant, true);
 });
+
+
+test("removes Uzbek request stop words before suffix normalization", () => {
+  const queryTerms = relevance.terms("Menga hozir Hindiston aholi soni haqida ma'lumot ber");
+  assert.deepEqual(queryTerms, ["hindiston", "ahol", "son"]);
+});
