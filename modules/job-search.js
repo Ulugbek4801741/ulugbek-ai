@@ -68,7 +68,7 @@ function matchesRequestedRole(role, title, description) {
     // A generic mention of Python in an unrelated vacancy is not enough.
     const pythonDeveloperTitle = /\bpython\b.{0,45}\b(?:developer|engineer|programmer|software|backend)\b|\b(?:developer|engineer|programmer|software|backend)\b.{0,45}\bpython\b/iu;
     if (pythonDeveloperTitle.test(titleText)) return true;
-    const developerTitle = /\b(?:developer|engineer|programmer|software engineer|backend developer|full[ -]?stack developer)\b/iu.test(titleText);
+    const developerTitle = /\b(?:programmer|software|backend|back-end|full[ -]?stack|application|platform)\s+(?:developer|engineer)\b|\b(?:backend|back-end|full[ -]?stack)\s+developer\b/iu.test(titleText);
     const explicitPythonRequirement = /(?:\b(?:required|must have|experience with|proficient in|proficiency in|skills? in|using|primary language|main language)\b.{0,65}\bpython\b|\bpython\b.{0,65}\b(?:required|must have|experience|proficient|proficiency|skills?|primary language|main language)\b)/iu;
     return developerTitle && explicitPythonRequirement.test(descriptionText);
   }
