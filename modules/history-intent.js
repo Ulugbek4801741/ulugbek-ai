@@ -10,7 +10,7 @@ function normalizeHistoryIntent(value) {
   if (!boburMentioned || !historyRequested) {
     return { isHistorical: historyRequested, entity: null, canonicalEntity: null, aliases: [], periodHint: null, queryBoost: [] };
   }
-  const oldYears = question.match(/(\d{1,4})\s*(?:yil|asr|ming\s*yil)\w*\s*(?:oldin|avval|ilgari)/iu);
+  const oldYears = question.match(/(\d{1,4})\s*(?:yil|asr|ming\s*yil)\w*\s*(?:oldin|oldingi|avval|avvalgi|ilgari)/iu);
   return {
     isHistorical: true,
     entity: "Boburshoh",
