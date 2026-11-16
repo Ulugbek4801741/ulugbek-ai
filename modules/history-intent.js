@@ -77,6 +77,10 @@ function normalizeHistoryIntent(value) {
   const entity = HISTORICAL_ENTITIES.find(item => {
     if (!item.pattern.test(question)) return false;
     if (item.canonicalEntity.startsWith("Zahiriddin")) return historyRequested;
+    if (item.canonicalEntity.startsWith("Alisher Navoiy")) {
+      const personContext = /\balisher\b|\bmir\s+alisher\b|\bshoir\b|(?:navoiy|navoi).*(?:hayot|ijod|asar|tarjimai|biograf)/iu.test(question);
+      return personContext && (historyRequested || /(?:kim\s+bo‘lgan|kim\s+edi|haqida|to‘g‘risida)/iu.test(question));
+    }
     return historyRequested || /(?:kim\s+bo‘lgan|kim\s+edi|haqida|to‘g‘risida)/iu.test(question);
   });
   if (!entity && !historyRequested) {
