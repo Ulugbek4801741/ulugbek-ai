@@ -1,5 +1,7 @@
 "use strict";
 
+const currencyConverter = require("./currency-converter");
+
 const JOB_INTENT = /(?:\bish\s*(?:top(?:ib)?\s*ber|qidir(?:ib)?\s*ber|kerak|o\s*rin(?:lar)?|vakans(?:iya|iyalar)?|izlay(?:apman|man)?|qidir)|\bvakans(?:iya|iyalar)\b|\bjob\s*(?:search|opening|vacanc(?:y|ies))\b|\bfind\s+(?:me\s+)?a?\s*jobs?\b|\bemployment\s+(?:opportunit|jobs?)|\bработ(?:а|у)\s*(?:найти|ищу|нужна)|\bваканси)/iu;
 
 function isJobSearchRequest(value) {
@@ -229,7 +231,7 @@ function formatJobResults(results, message = "", criteria = extractJobCriteria(m
       (index + 1) + ". " + item.title,
       "Ish beruvchi: " + (item.employer || "Sahifada aniq ko‘rsatilmagan"),
       "Hudud: " + (item.location || "Sahifada aniq ko‘rsatilmagan"),
-      "Maosh: " + (item.minimumHourlyUsd !== null && item.minimumHourlyUsd !== undefined ? "$" + item.minimumHourlyUsd + " USD/soat (e’londa ko‘rsatilgan eng kam stavka)" : (item.salary || "Sahifada ko‘rsatilmagan")),
+      "Maosh: " + (item.minimumHourlyUsd !== null && item.minimumHourlyUsd !== undefined ? (item.salaryConversion ? "$" + item.minimumHourlyUsd + " USD/soat (taxminiy konvertatsiya; asl: " + item.salaryConversion.original + ", kurs: " + (item.salaryConversion.rateDate || "joriy reference kurs") + ")" : "$" + item.minimumHourlyUsd + " USD/soat (e’londa ko‘rsatilgan eng kam stavka)") : (item.salary || "Sahifada ko‘rsatilmagan")),
       "Talablar: " + (item.requirements || "Sahifada batafsil ko‘rsatilmagan"),
       "Ish vaqti: " + (item.schedule || "Sahifada ko‘rsatilmagan"),
       "Tajriba: " + (item.experience || "Sahifada ko‘rsatilmagan"),
@@ -305,6 +307,15 @@ async function searchJobs(message, webSearch, options = {}) {
       const combined = [content, item.snippet || ""].filter(Boolean).join("\n");
       const normalized = { title: cleanText(page.title || item.title, 220), snippet: combined, url: page.url || item.url, pageRead: true, officialStatus: page.officialStatus || "", officialProvider: page.officialProvider || "", applicationUrl: page.applicationUrl || "" };
       const details = extractJobDetails(normalized, message);
+      if (criteria.minHourlyUsd !== null && details.minimumHourlyUsd === null) {
+        const converted = await currencyConverter.convertHourlyPayToUsd(combined, details.location, {
+          fetchRates: typeof webSearch.fetchExchangeRates === "function" ? webSearch.fetchExchangeRates : undefined
+        });
+        if (converted) {
+          details.minimumHourlyUsd = converted.usdPerHour;
+          details.salaryConversion = converted;
+        }
+      }
       const relevanceText = normalized.title + " " + combined;
       if (requestedRole && !roleEvidence.test(relevanceText)) return null;
       if (locationEvidence && !locationEvidence.test(relevanceText)) return null;
