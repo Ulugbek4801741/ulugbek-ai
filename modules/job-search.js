@@ -147,9 +147,10 @@ function extractTelegram(value) {
 
 function extractSalary(value) {
   const text = String(value || "");
-  // Oylik maosh davri ko'rsatilsa olinadi; so'mdagi "Maosh" yorlig'i ham mahalliy odatiy format.
+  // Only explicit monthly pay is shown; local so'm labels retain their conventional monthly meaning.
   const patterns = [
     /(?:salary|compensation|pay|maosh|ish haqi|зарплат[аы])[^.!?\n]{0,90}(?:USD\s*|US\$|\$|CHF\s*|EUR\s*|GBP\s*|CAD\s*|AUD\s*)\s?\d[\d\s,]*(?:\.\d{1,2})?(?:\s*[-–—]\s*(?:USD\s*|US\$|\$|CHF\s*|EUR\s*|GBP\s*|CAD\s*|AUD\s*)?\s?\d[\d\s,]*(?:\.\d{1,2})?)?\s*(?:per month|\/\s*month|monthly|a month|oyiga|har oy)/iu,
+    /(?:salary|compensation|pay|maosh|ish haqi|зарплат[аы])[^.!?\n]{0,90}\d[\d\s,]*(?:\.\d{1,2})?\s*(?:CHF|EUR|GBP|CAD|AUD)\s*(?:per month|\/\s*month|monthly|a month|oyiga|har oy)/iu,
     /(?:USD\s*|US\$|\$|CHF\s*|EUR\s*|GBP\s*|CAD\s*|AUD\s*)\s?\d[\d\s,]*(?:\.\d{1,2})?(?:\s*[-–—]\s*(?:USD\s*|US\$|\$|CHF\s*|EUR\s*|GBP\s*|CAD\s*|AUD\s*)?\s?\d[\d\s,]*(?:\.\d{1,2})?)?\s*(?:per month|\/\s*month|monthly|a month|oyiga|har oy)/iu,
     /(?:maosh|ish haqi|salary)\s*[:：-]\s*\d[\d\s,.]*(?:so['’ʻ]?m|som|UZS)\b[^.!?\n]{0,30}/iu
   ];
