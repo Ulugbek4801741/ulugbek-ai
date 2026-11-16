@@ -32,6 +32,26 @@ function detectSearchIntent(value) {
 function cleanText(value, max = 1200) {
   return String(value || "").replace(/\s+/g, " ").trim().slice(0, max);
 }
+function isCurrentPopulationQuestion(value) {
+  const text = String(value || "");
+  return detectSearchIntent(text).currentInfo &&
+    /(?:aholi|population|inhabitants|residents)/iu.test(text);
+}
+function isCurrentPopulationEvidence(item, currentYear = new Date().getUTCFullYear()) {
+  const text = (String(item?.title || "") + " " + String(item?.snippet || item?.content || "")).toLowerCase();
+  if (!/(?:population|aholi|inhabitants|residents)/iu.test(text)) return false;
+  if (/(?:2025[- ]?yilga borib|by 2025|2025.{0,50}(?:kutil\w*|expected|projected|forecast|will overtake|will surpass))/iu.test(text)) return false;
+  const explicitYears = [...text.matchAll(/\\b(20\\d{2})\\b/g)].map(match => Number(match[1]));
+  const sourceYear = Number(item?.year) || Number(item?.publishedYear) || 0;
+  const hasRecentYear = [...explicitYears, sourceYear].some(year =>
+    year >= currentYear - 1 && year <= currentYear
+  );
+  const hasPopulationNumber = /\\b\\d{1,3}(?:,\\d{3}){2,}\\b|\\b\\d+(?:\\.\\d+)?\\s*(?:billion|milliard|million|mln|thousand|ming)\\b/iu.test(text);
+  return hasRecentYear && hasPopulationNumber;
+}
+function filterCurrentPopulationEvidence(results, currentYear = new Date().getUTCFullYear()) {
+  return (Array.isArray(results) ? results : []).filter(item => isCurrentPopulationEvidence(item, currentYear));
+}
 function buildUniversalSearchQueries(value) {
   const original = cleanText(value, 220);
   const intent = detectSearchIntent(original);
@@ -42,6 +62,10 @@ function buildUniversalSearchQueries(value) {
   const historyIntent = require("./history-intent").normalizeHistoryIntent(original);
   if (historyIntent.isHistorical && historyIntent.queryBoost.length) suffix.push(historyIntent.queryBoost[0]);
   const queries = [original, [original, ...suffix].join(" ")];
+  const currentPopulation = isCurrentPopulationQuestion(original);
+  if (currentPopulation && /(?:hindiston|india)/iu.test(original)) {
+    queries.push("India population 2026 estimate United Nations UNFPA UNData 2025");
+  }
   if (intent.isJobSearch) queries.push(original + " official employer careers application requirements");
   else if (historyIntent.isHistorical && historyIntent.queryBoost.length) {
     queries.push(historyIntent.queryBoost[1]);
@@ -127,8 +151,10 @@ async function searchWeb(message, webSearch, options = {}) {
     Number(b.pageRead) - Number(a.pageRead) ||
     b.qualityScore - a.qualityScore
   );
+  const currentPopulation = isCurrentPopulationQuestion(message);
+  const eligible = currentPopulation ? filterCurrentPopulationEvidence(ranked) : ranked;
   const selected = [], hostCounts = new Map();
-  for (const item of ranked) {
+  for (const item of eligible) {
     const count = hostCounts.get(item.host) || 0;
     if (count >= 2) continue;
     selected.push(item); hostCounts.set(item.host, count + 1);
@@ -165,4 +191,4 @@ function formatEvidenceReply(results, reason = "") {
     : "Hozircha savolga ishonchli yakuniy javob tuzish uchun yetarli tasdiqlangan dalil topilmadi. Qidiruv parchalari fakt sifatida qabul qilinmadi.";
   return message + " Bilmagan ma’lumotimni taxmin qilib aytmayman.";
 }
-module.exports = { detectSearchIntent, buildUniversalSearchQuery, buildUniversalSearchQueries, searchWeb, cleanText, evidenceEntries, formatEvidenceReply, sourceRelevance };
+module.exports = { detectSearchIntent, isCurrentPopulationQuestion, isCurrentPopulationEvidence, filterCurrentPopulationEvidence, buildUniversalSearchQuery, buildUniversalSearchQueries, searchWeb, cleanText, evidenceEntries, formatEvidenceReply, sourceRelevance };
