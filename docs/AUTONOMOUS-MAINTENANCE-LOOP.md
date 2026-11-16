@@ -27,7 +27,7 @@ This first stage performs recurring source discovery and evidence collection. It
 
 ## Scheduling
 
-- Daily schedule: 03:17 UTC (08:17 Uzbekistan time).
+- Scheduled every 6 hours at minute 17 (Uzbekistan time: 05:17, 11:17, 17:17 and 23:17).
 - Manual execution: GitHub Actions → ULUGBEK AI Autonomous Maintenance → Run workflow.
 - The workflow uses standard GitHub-hosted runners for this public repository.
 
