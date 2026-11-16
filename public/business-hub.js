@@ -45,7 +45,7 @@
   function open(tab){active=tab;menu.hidden=true;modal.hidden=false;render();}
   const settingsButton=$("settings-open");
   if(settingsButton){settingsButton.setAttribute("aria-label","Biznes va qo‘shimcha menyu");settingsButton.title="Biznes va qo‘shimcha menyu";settingsButton.onclick=()=>{menu.hidden=!menu.hidden;};}
-  menu.addEventListener("click",e=>{const b=e.target.closest("[data-open]");if(!b)return;if(b.dataset.open==="settings"){menu.hidden=true;const old=$("settings-modal");if(old)old.hidden=false;}else if(b.dataset.open==="social"){menu.hidden=true;window.location.href="social.html";}else open(b.dataset.open);});
+  menu.addEventListener("click",e=>{const b=e.target.closest("[data-open]");if(!b)return;if(b.dataset.open==="settings"){menu.hidden=true;const old=$("settings-modal");if(old)old.hidden=false;}else if(b.dataset.open==="social"){menu.hidden=true;window.location.href="social.html";}else if(b.dataset.open==="courses"){menu.hidden=true;window.location.href="courses.html";}else open(b.dataset.open);});
   modal.querySelector(".business-close").onclick=()=>modal.hidden=true;
   modal.addEventListener("click",e=>{if(e.target===modal)modal.hidden=true;});
   modal.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{active=b.dataset.tab;render();});
