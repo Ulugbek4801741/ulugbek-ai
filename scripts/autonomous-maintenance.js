@@ -67,6 +67,15 @@ async function inspectRepository(entry, allowedLicenses) {
     result.license = metadata.license && metadata.license.spdx_id || null;
     result.licenseDecision = licenseDecision(result.license, allowedLicenses);
 
+    // Do not retain README or release-note excerpts when the repository's
+    // declared license is missing or outside the explicit allowlist.
+    if (!allowedLicenses.includes(result.license)) {
+      result.latestRelease = { status: "skipped-license-review-required" };
+      result.readmeExcerpt = "";
+      result.status = "license-review-required";
+      return result;
+    }
+
     try {
       const release = await requestJson(base + "/releases/latest");
       result.latestRelease = {
