@@ -1,6 +1,8 @@
 name: ULUGBEK AI Autonomous Maintenance
 
 on:
+  pull_request:
+    branches: [main]
   schedule:
     - cron: "17 3 * * *"
   workflow_dispatch:
@@ -48,6 +50,7 @@ jobs:
         run: node scripts/autonomous-maintenance.js
 
       - name: Check deployed Render health endpoint
+        if: github.event_name != 'pull_request'
         id: live
         continue-on-error: true
         run: |
@@ -77,16 +80,21 @@ jobs:
           AUDIT_RESULT: ${{ steps.audit.outcome }}
           RESEARCH_RESULT: ${{ steps.research.outcome }}
           LIVE_RESULT: ${{ steps.live.outcome }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           printf 'Tests: %s\nSecurity audit: %s\nOpen-source review: %s\nRender health: %s\n' \
             "$TEST_RESULT" "$AUDIT_RESULT" "$RESEARCH_RESULT" "$LIVE_RESULT" \
             | tee -a "$GITHUB_STEP_SUMMARY"
-          for result in "$TEST_RESULT" "$AUDIT_RESULT" "$RESEARCH_RESULT" "$LIVE_RESULT"; do
+          for result in "$TEST_RESULT" "$AUDIT_RESULT" "$RESEARCH_RESULT"; do
             if [ "$result" != "success" ]; then
               echo "At least one autonomous maintenance check failed."
               exit 1
             fi
           done
+          if [ "$EVENT_NAME" != "pull_request" ] && [ "$LIVE_RESULT" != "success" ]; then
+            echo "Render health check failed."
+            exit 1
+          fi
 
       - name: Create or update maintenance issue on failure
         if: failure()
