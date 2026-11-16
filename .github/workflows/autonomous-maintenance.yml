@@ -119,8 +119,10 @@ jobs:
           name: ulugbek-ai-autonomous-report
           path: |
             reports/autonomous-upstream-review.json
+            reports/persistent-research-memory.json
             reports/render-health.json
             reports/chat-smoke.json
+            reports/learning-health.json
           if-no-files-found: ignore
           retention-days: 30
 
@@ -132,20 +134,23 @@ jobs:
           RESEARCH_RESULT: ${{ steps.research.outcome }}
           MEMORY_RESULT: ${{ steps.memory.outcome }}
           LEARNING_RESULT: ${{ steps.learning.outcome }}
-          EVENT_NAME: ${{ github.event_name }}
           LIVE_RESULT: ${{ steps.live.outcome }}
           CHAT_RESULT: ${{ steps.chat.outcome }}
           EVENT_NAME: ${{ github.event_name }}
         run: |
-          printf 'Tests: %s\nSecurity audit: %s\nOpen-source review: %s\nRender health: %s\nChat topic smoke: %s\n' \
-            "$TEST_RESULT" "$AUDIT_RESULT" "$RESEARCH_RESULT" "$LIVE_RESULT" "$CHAT_RESULT" \
+          printf 'Tests: %s\nSecurity audit: %s\nOpen-source review: %s\nPersistent research memory: %s\nLanguage corpus: %s\nRender health: %s\nChat smoke: %s\n' \
+            "$TEST_RESULT" "$AUDIT_RESULT" "$RESEARCH_RESULT" "$MEMORY_RESULT" "$LEARNING_RESULT" "$LIVE_RESULT" "$CHAT_RESULT" \
             | tee -a "$GITHUB_STEP_SUMMARY"
-          for result in "$TEST_RESULT" "$AUDIT_RESULT" "$RESEARCH_RESULT"; do
+          for result in "$TEST_RESULT" "$AUDIT_RESULT" "$RESEARCH_RESULT" "$MEMORY_RESULT"; do
             if [ "$result" != "success" ]; then
               echo "At least one autonomous maintenance check failed."
               exit 1
             fi
           done
+          if { [ "$EVENT_NAME" = "schedule" ] || [ "$EVENT_NAME" = "workflow_dispatch" ]; } && [ "$LEARNING_RESULT" != "success" ]; then
+            echo "Research notes were not incorporated into the local language-pattern corpus."
+            exit 1
+          fi
           if [ "$EVENT_NAME" != "push" ] && [ "$EVENT_NAME" != "pull_request" ] && { [ "$LIVE_RESULT" != "success" ] || [ "$CHAT_RESULT" != "success" ]; }; then
             echo "A live Render API or chat topic check failed."
             exit 1
