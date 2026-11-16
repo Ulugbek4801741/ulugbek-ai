@@ -211,7 +211,7 @@ function extractJobDetails(item, message) {
     activeEvidence
   };
 }
-function formatJobResults(results, message = "") {
+function formatJobResults(results, message = "", criteria = extractJobCriteria(message)) {
   if (!results.length) {
     const role = extractJobRole(message);
     const place = /kogon/iu.test(message) ? "Kogon" : /buxoro/iu.test(message) ? "Buxoro" : "";
@@ -224,19 +224,19 @@ function formatJobResults(results, message = "") {
       (index + 1) + ". " + item.title,
       "Ish beruvchi: " + (item.employer || "Sahifada aniq ko‘rsatilmagan"),
       "Hudud: " + (item.location || "Sahifada aniq ko‘rsatilmagan"),
-      "Maosh: " + (item.salary || "Sahifada ko‘rsatilmagan"),
+      "Maosh: " + (item.minimumHourlyUsd !== null && item.minimumHourlyUsd !== undefined ? "$" + item.minimumHourlyUsd + " USD/soat (e’londa ko‘rsatilgan eng kam stavka)" : (item.salary || "Sahifada ko‘rsatilmagan")),
       "Talablar: " + (item.requirements || "Sahifada batafsil ko‘rsatilmagan"),
       "Ish vaqti: " + (item.schedule || "Sahifada ko‘rsatilmagan"),
       "Tajriba: " + (item.experience || "Sahifada ko‘rsatilmagan"),
       "Telefon: " + (item.phones.length ? item.phones.join(", ") : "Sahifada topilmadi"),
       "Email: " + (item.emails.length ? item.emails.join(", ") : "Sahifada topilmadi"),
       "Vakansiya sahifasi: " + item.url,
-      "E’lon holati: " + (item.activeStatus === "closed-or-expired-indicator-found" ? "Yopilgan yoki muddati o‘tgan bo‘lishi mumkin" : "Sahifa o‘qildi, lekin ish beruvchi hali ham qabul qilayotganini tasdiqlash kerak"),
+      "E’lon holati: " + (item.activeStatus === "closed-or-expired-indicator-found" ? "Yopilgan yoki muddati o‘tgan bo‘lishi mumkin" : "Sahifada ariza topshirish belgisi topildi; ish beruvchining yakuniy qabul holatini ariza sahifasida yana tekshiring"),
       "Tekshiruv: " + (item.contactAvailable ? "Aloqa usuli sahifada topildi" : "Aloqa ma’lumoti ochiq sahifada topilmadi")
     ];
     return details.join("\n");
   }).join("\n\n");
-  return "ULUGBEK AI " + results.length + " ta alohida vakansiya sahifasini ochib tekshirdi. Quyida faqat sahifasi o‘qilgan e’lonlar berilgan. Topilmagan telefon, maosh yoki ish beruvchi ma’lumoti taxmin qilinmadi.\n\n" + lines;
+  const requested = Number(criteria.requestedCount) || results.length;\n  const countNote = results.length < requested ? "\\n\\nSo‘ralgan " + requested + " ta ishning " + results.length + " tasi qat’iy tekshiruvdan o‘tdi. Yetishmagan natijalar o‘ylab topilmadi." : "";\n  return "ULUGBEK AI " + results.length + " ta alohida vakansiya sahifasini ochib tekshirdi. Quyida faqat sahifasi o‘qilgan va ariza topshirish belgisi topilgan e’lonlar berilgan. Topilmagan telefon, maosh yoki ish beruvchi ma’lumoti taxmin qilinmadi." + countNote + "\\n\\n" + lines;
 }
 
 async function searchJobs(message, webSearch, options = {}) {
@@ -303,7 +303,7 @@ async function searchJobs(message, webSearch, options = {}) {
     results: usable,
     searchedPages: candidates.length,
     openedPages: pages.filter(Boolean).length,
-    reply: formatJobResults(usable, message)
+    reply: formatJobResults(usable, message, criteria)
   };
 }
 
