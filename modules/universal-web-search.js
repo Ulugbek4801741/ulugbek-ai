@@ -59,7 +59,7 @@ function hostOf(value) {
 function sourceQuality(item) {
   const host = hostOf(item.url);
   if (/\.gov(?:\.|$)|\.gov\.[a-z]{2,}$|\.go\.[a-z]{2,}$/.test(host)) return 5;
-  if (/\.edu(?:\.|$)|\.ac\.[a-z]{2,}$/.test(host)) return 4;
+  if (/\.edu(?:\.|$)|\.ac\.[a-z]{2,}$|^tsuos\.uz$|^alishernavoicorpus\.uz$|^navoiyshunoslik\.uz$/.test(host)) return 4;
   if (/who\.int$|un\.org$|europa\.eu$|worldbank\.org$|oecd\.org$/.test(host)) return 4;
   if (/wikipedia\.org$/.test(host)) return 2;
   return item.pageRead ? 2 : 1;
