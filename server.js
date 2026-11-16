@@ -1252,6 +1252,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   // Greetings, thanks and plain arithmetic remain local to avoid unnecessary network calls.
   const universalSearch = require("./modules/universal-web-search");
   const searchIntent = universalSearch.detectSearchIntent(conversationMessage);
+  const currentPopulationQuestion = universalSearch.isCurrentPopulationQuestion(conversationMessage);
   const nativeBrain = require("./lab-learning-worker");
   let localKnowledge = [];
   let cachedKnowledge = [];
@@ -1271,7 +1272,8 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   const relevantLocalKnowledge = sourceRelevance.filterRelevantSources(conversationMessage, localKnowledge);
   const relevantCachedKnowledge = sourceRelevance.filterRelevantSources(conversationMessage, cachedKnowledge);
   const relevantStoredKnowledge = sourceRelevance.filterRelevantSources(conversationMessage, storedKnowledge);
-  const localCandidate = nativeBrain.buildLocalReply(
+  // Current-information questions must not fall back to old local or cached facts.
+  const localCandidate = searchIntent.currentInfo ? null : nativeBrain.buildLocalReply(
     conversationMessage,
     [...relevantLocalKnowledge, ...relevantCachedKnowledge,
       ...relevantStoredKnowledge.map(item => ({ ...item, status: "approved-local-knowledge", sourceQuality: 4 }))],
@@ -1364,15 +1366,17 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     conversationMemory.rememberSources(sessionId, conversationMessage, found.results);
     const evidence = [
       ...universalSearch.evidenceEntries(found.results),
-      ...cachedKnowledge,
-      ...storedKnowledge.map(item => ({
-        title: item.title, content: item.content, source: item.source,
-        status: "approved-local-knowledge", sourceQuality: 4
-      })),
-      ...relevantLocalKnowledge.map(item => ({
-        title: item.title, content: item.content, source: item.source,
-        status: "approved-local-knowledge", sourceQuality: 3
-      }))
+      ...(searchIntent.currentInfo ? [] : [
+        ...relevantCachedKnowledge,
+        ...relevantStoredKnowledge.map(item => ({
+          title: item.title, content: item.content, source: item.source,
+          status: "approved-local-knowledge", sourceQuality: 4
+        })),
+        ...relevantLocalKnowledge.map(item => ({
+          title: item.title, content: item.content, source: item.source,
+          status: "approved-local-knowledge", sourceQuality: 3
+        }))
+      ])
     ].slice(0, 12);
     let result = null;
     try {
@@ -1389,7 +1393,13 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
 
     // If web evidence is weak or model synthesis fails, keep a valid local answer
     // instead of discarding it and returning a generic "not enough evidence" reply.
-    result = answerSelection.selectAnswer(result, localCandidate, conversationMessage);
+    result = answerSelection.selectAnswer(
+      result,
+      searchIntent.currentInfo ? null : localCandidate,
+      conversationMessage,
+      evidence,
+      { requireEvidenceBackedNumber: currentPopulationQuestion }
+    );
 
     // Keep evidence URLs available to users so historical and factual answers are auditable.
 
@@ -1399,9 +1409,11 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       reply = result.reply;
       reasoning = result.reasoning;
     } else {
-      reply = "Topilgan ma’lumotlar savolingiz mavzusiga mosligi tekshiruvidan o‘tmadi. Noto‘g‘ri yoki boshqa mavzudagi matnni javob sifatida bermayman. Savolga bevosita mos ishonchli dalil topilmadi; keyinroq qayta urinib ko‘ring.";
+      reply = currentPopulationQuestion
+        ? "Hozirgi aholi sonini tasdiqlaydigan yangilangan, raqamli manba topilmadi. Eski bashoratni hozirgi fakt sifatida aytmayman."
+        : "Topilgan ma’lumotlar savolingiz mavzusiga mosligi tekshiruvidan o‘tmadi. Noto‘g‘ri yoki boshqa mavzudagi matnni javob sifatida bermayman. Savolga bevosita mos ishonchli dalil topilmadi; keyinroq qayta urinib ko‘ring.";
       reasoning = result?.reasoning || {
-        method: found.ok ? "public-web-research-no-language-model-synthesis" : "local-fallback-search-unavailable",
+        method: currentPopulationQuestion ? "current-population-evidence-insufficient" : found.ok ? "public-web-research-no-language-model-synthesis" : "local-fallback-search-unavailable",
         answerable: false,
         facts: []
       };
@@ -1415,7 +1427,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       agents: ["ULUGBEK Universal Agent"],
       reasoning: reasoning ? { method: reasoning.method, answerable: reasoning.answerable, inference: reasoning.inference, outputPolicy: "single-professional-answer" } : null,
       webSearchUsed: found.ok,
-      webSearchSucceeded: found.ok,
+      webSearchSucceeded: found.ok && found.results.length > 0,
       jobSearchUsed: searchIntent.isJobSearch,
       platformSearch: searchIntent.platforms,
       synthesisModelConfigured: singleAgent.status().configured,
