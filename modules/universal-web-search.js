@@ -84,7 +84,20 @@ async function searchWeb(message, webSearch, options = {}) {
     seenUrls.add(item.url);
     candidates.push(item);
   }
-  if (!candidates.length) return {
+  // Add scholarly APIs independently from general web search. A provider outage
+  // must not prevent other repositories or the ordinary web from returning results.
+  const openResearch = require("./open-research-connectors");
+  let scholarly = { results: [], providers: [], failedProviders: [] };
+  let institutions = { results: [], providers: [], failedProviders: [] };
+  if (options.includeScholarly === true) {
+    try {
+      scholarly = await openResearch.searchOpenResearch(message, { limit, perSource: 4 });
+    } catch (_) {}
+    if (openResearch.isUniversityQuery(message)) {
+      try { institutions = await openResearch.searchUniversities(message, { limit: 6 }); } catch (_) {}
+    }
+  }
+  if (!candidates.length && !scholarly.results.length && !institutions.results.length) return {
     ok: true, searchFailed: failedQueries === queries.length, results: [], queries,
     error: failedQueries === queries.length ? "all-search-providers-failed" : undefined,
     reply: failedQueries === queries.length
@@ -105,7 +118,10 @@ async function searchWeb(message, webSearch, options = {}) {
     result.qualityScore = sourceQuality(result);
     return result;
   }));
-  const ranked = pages.filter(item => item.title && item.url).sort((a, b) =>
+  const academicPages = [...scholarly.results, ...institutions.results].map(item => ({
+    ...item, host: hostOf(item.url), qualityScore: item.qualityScore || 3
+  }));
+  const ranked = [...pages, ...academicPages].filter(item => item.title && item.url).sort((a, b) =>
     Number(b.pageRead) - Number(a.pageRead) || b.qualityScore - a.qualityScore || b.snippet.length - a.snippet.length
   );
   const selected = [], hostCounts = new Map();
@@ -119,13 +135,23 @@ async function searchWeb(message, webSearch, options = {}) {
     ok: true, results: selected, queries,
     reply: "ULUGBEK AI " + queries.length + " xil qidiruv orqali " + selected.length +
       " ta turli ochiq manbani topdi; " + selected.filter(x => x.pageRead).length +
-      " ta sahifaning matnini o'qidi. Manbalar hali mustaqil fakt sifatida tasdiqlanmagan."
+      " ta sahifa yoki ilmiy katalog yozuvini o'qidi. " +
+      "Ilmiy API manbalari: " + scholarly.providers.join(", ") + ". " +
+      "Universitet katalogi: " + institutions.providers.join(", ") + ". " +
+      "Ochiq nusxa mavjudligi har bir material bo'yicha alohida tekshiriladi."
   };
 }
 function evidenceEntries(results) {
   return (Array.isArray(results) ? results : []).map(item => ({
     title: item.title, content: item.snippet, source: item.url,
-    status: item.pageRead ? "unverified-public-page-content" : "unverified-search-snippet",
+    status: item.recordRead ? "unverified-scholarly-api-record" :
+      item.pageRead ? "unverified-public-page-content" : "unverified-search-snippet",
+    sourceType: item.sourceType || "public-web-page",
+    provider: item.provider || "",
+    doi: item.doi || "",
+    year: item.year || null,
+    openAccess: item.openAccess === true,
+    openAccessUrl: item.openAccessUrl || "",
     sourceQuality: item.qualityScore || 1
   }));
 }
