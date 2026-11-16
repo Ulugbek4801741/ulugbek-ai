@@ -358,6 +358,7 @@ async function researchGitHubMemory() {
     const generatedAt = String(report.generatedAt || "");
     if (!generatedAt) throw new Error("GitHub research memory sanasi mavjud emas.");
     state.lastGithubResearchAt = new Date().toISOString();
+    state.lastGithubResearchError = null;
     state.lastGithubResearchGeneratedAt = generatedAt;
     if (generatedAt === lastGithubResearchGeneratedAt) return 0;
 
