@@ -16,7 +16,7 @@ function createMarketplaceRouter() {
   let schemaReady;
   const cookieName = "ulugbek_session";
   const sessionSecret = process.env.AUTH_SESSION_SECRET || process.env.ADMIN_SESSION_SECRET || "";
-  const otpSecret = process.env.AUTH_OTP_SECRET || sessionSecret;
+  const otpSecret = process.env.AUTH_OTP_SECRET || "";
   const schema = [
     "CREATE TABLE IF NOT EXISTS marketplace_users (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), phone TEXT NOT NULL UNIQUE, email TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, phone_verified_at TIMESTAMPTZ, email_verified_at TIMESTAMPTZ, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())",
     "CREATE TABLE IF NOT EXISTS marketplace_verification_codes (id BIGSERIAL PRIMARY KEY, user_id UUID NOT NULL REFERENCES marketplace_users(id) ON DELETE CASCADE, channel TEXT NOT NULL CHECK (channel IN ('email','phone')), code_hash TEXT NOT NULL, expires_at TIMESTAMPTZ NOT NULL, attempts INTEGER NOT NULL DEFAULT 0, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), UNIQUE(user_id, channel))",
@@ -42,7 +42,8 @@ function createMarketplaceRouter() {
   function cleanEmail(value) { return String(value || "").trim().toLowerCase(); }
   function cleanPhone(value) { return String(value || "").replace(/[^\d+]/g, ""); }
   function hash(value, secret = sessionSecret) {
-    return crypto.createHmac("sha256", secret || "ulugbek-auth-not-configured").update(String(value)).digest("hex");
+    if (!secret || String(secret).length < 32) { const e = new Error("AUTH_SESSION_SECRET va AUTH_OTP_SECRET (kamida 32 belgidan) sozlanishi kerak."); e.statusCode = 503; throw e; }
+    return crypto.createHmac("sha256", secret).update(String(value)).digest("hex");
   }
   function passwordHash(password) {
     const salt = crypto.randomBytes(16).toString("hex");
@@ -75,6 +76,7 @@ function createMarketplaceRouter() {
     next();
   }
   async function currentUser(req) {
+    if (!sessionSecret || sessionSecret.length < 32) { const e = new Error("AUTH_SESSION_SECRET sozlanmagan."); e.statusCode = 503; throw e; }
     const token = readCookie(req);
     if (!token) return null;
     const result = await (await db()).query("SELECT u.id,u.phone,u.email,u.phone_verified_at,u.email_verified_at FROM marketplace_sessions s JOIN marketplace_users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>NOW()", [hash(token)]);
@@ -118,6 +120,7 @@ function createMarketplaceRouter() {
   });
   router.post("/auth/register",requireOrigin,async(req,res)=>{
     try{
+      if (!sessionSecret || sessionSecret.length < 32 || !otpSecret || otpSecret.length < 32) return res.status(503).json({ok:false,error:"Render’da AUTH_SESSION_SECRET va AUTH_OTP_SECRET (har biri kamida 32 belgi) sozlanishi kerak.",setupRequired:true});
       const email=cleanEmail(req.body?.email),phone=cleanPhone(req.body?.phone),password=String(req.body?.password||"");
       if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ok:false,error:"Email manzilini to‘g‘ri kiriting."});
       if(!/^\+[1-9]\d{7,14}$/.test(phone)) return res.status(400).json({ok:false,error:"Telefonni xalqaro formatda kiriting. Masalan: +998901234567."});
@@ -136,6 +139,7 @@ function createMarketplaceRouter() {
   });
   router.post("/auth/verify",requireOrigin,async(req,res)=>{
     try{
+      if (!sessionSecret || sessionSecret.length < 32 || !otpSecret || otpSecret.length < 32) return res.status(503).json({ok:false,error:"Tasdiqlash maxfiy kalitlari Render’da sozlanmagan.",setupRequired:true});
       const email=cleanEmail(req.body?.email),phone=cleanPhone(req.body?.phone),client=await db();
       const found=await client.query("SELECT id FROM marketplace_users WHERE email=$1 AND phone=$2",[email,phone]);
       if(!found.rowCount) return res.status(404).json({ok:false,error:"Ro‘yxatdan o‘tish ma’lumoti topilmadi."});
@@ -156,6 +160,7 @@ function createMarketplaceRouter() {
   });
   router.post("/auth/login",requireOrigin,async(req,res)=>{
     try{
+      if (!sessionSecret || sessionSecret.length < 32) return res.status(503).json({ok:false,error:"AUTH_SESSION_SECRET Render’da sozlanmagan.",setupRequired:true});
       const identifier=String(req.body?.identifier||"").trim().toLowerCase(),password=String(req.body?.password||""),client=await db();
       const result=await client.query("SELECT * FROM marketplace_users WHERE email=$1 OR phone=$1",[identifier]),user=result.rows[0];
       if(!user||!passwordMatches(password,user.password_hash)) return res.status(401).json({ok:false,error:"Email/telefon yoki parol noto‘g‘ri."});
@@ -168,7 +173,7 @@ function createMarketplaceRouter() {
   });
   router.get("/auth/me",requireUser,(req,res)=>{res.set("Cache-Control","no-store");res.json({ok:true,user:{id:req.user.id,email:req.user.email,phone:req.user.phone}});});
   router.post("/auth/logout",requireOrigin,async(req,res)=>{
-    try{const token=readCookie(req);if(token) await (await db()).query("DELETE FROM marketplace_sessions WHERE token_hash=$1",[hash(token)]);clearSessionCookie(res);return res.json({ok:true});}
+    try{const token=readCookie(req);if(token && sessionSecret && sessionSecret.length >= 32) await (await db()).query("DELETE FROM marketplace_sessions WHERE token_hash=$1",[hash(token)]);clearSessionCookie(res);return res.json({ok:true});}
     catch(e){return fail(res,e,"Chiqishda xatolik yuz berdi.");}
   });
   router.get("/courses",async(req,res)=>{
