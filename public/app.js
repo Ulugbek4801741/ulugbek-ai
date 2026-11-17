@@ -58,7 +58,7 @@ document.querySelectorAll("[data-attach]").forEach(b=>b.addEventListener("click"
 thinkButton.onclick=()=>{thinkHarder=!thinkHarder;thinkButton.classList.toggle("think-active",thinkHarder);thinkButton.setAttribute("aria-pressed",String(thinkHarder));attachMenu.hidden=true;note(thinkHarder?"Chuqur tahlil rejimi yoqildi.":"Chuqur tahlil rejimi o‘chirildi.")};
 const originalSubmit=submit;
 submit=async function(text){const prompt=thinkHarder?"Iltimos, ushbu vazifani chuqurroq tahlil qil, muqobil yechimlarni solishtir, taxminlarni va xavflarni ko‘rsat, javobni bosqichma-bosqich asosla. Vazifa: "+text:text;return originalSubmit(prompt)};
-$("side-builder").onclick=()=>{sidebar.hidden=true;builderModal.hidden=false};
+
 $("side-plugins").onclick=()=>{sidebar.hidden=true;openPlugins()};
 $("builder-close").onclick=()=>builderModal.hidden=true;
 builderModal.addEventListener("click",e=>{if(e.target===builderModal)builderModal.hidden=true});
