@@ -10,8 +10,19 @@ This branch adds a PostgreSQL-backed API foundation for a single account shared 
 - RESEND_API_KEY and optionally AUTH_EMAIL_FROM: email verification delivery.
 - TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER: SMS verification delivery.
 - FRONTEND_ORIGIN: comma-separated allowed browser origins.
+- BANK_NAME: bank name shown to buyers.
+- BANK_CARD_HOLDER: verified cardholder name.
+- BANK_CARD_NUMBER: receiving card number (publicly displayed in the course checkout; use a dedicated business card).
 
-Payme and Click keys are not sufficient on their own. Their merchant callback handlers and sandbox certification must be implemented and tested before enabling real payments. The current API deliberately returns HTTP 501 rather than pretending a payment was accepted.
+## Manual card transfer (human approval)
+
+- Buyer signs in, opens a paid course, transfers the exact amount to the configured card in their own bank app, and submits the bank receipt/transaction reference.
+- The purchase remains `pending`; paid course content stays locked.
+- The course owner checks the incoming transfer in their bank app and explicitly confirms it in the teacher dashboard. Only then is the purchase marked `paid` and the course unlocked.
+- Never request or store a card PIN, CVV, SMS/OTP code, or banking password. A screenshot/reference alone is not proof of funds.
+- Configure BANK_NAME, BANK_CARD_HOLDER, and BANK_CARD_NUMBER before accepting manual transfers. Use a dedicated business card and publish its details only with the cardholder's authorization.
+
+Payme/Click automatic callbacks are still disabled. Their merchant callback handlers, signature checks, idempotency, refunds, and sandbox certification must be implemented and tested before enabling them.
 
 ## API
 
@@ -25,7 +36,10 @@ Payme and Click keys are not sufficient on their own. Their merchant callback ha
 - POST/PATCH/DELETE /api/marketplace/courses
 - GET /api/marketplace/teacher/courses
 - GET /api/marketplace/student/courses
-- POST /api/marketplace/payments/intent
+- POST /api/marketplace/payments/manual-intent
+- GET /api/marketplace/teacher/payments
+- POST /api/marketplace/teacher/payments/:id/confirm
+- GET /api/marketplace/payments/intent (legacy automatic flow is disabled)
 
 ## Security notes
 
