@@ -6,7 +6,7 @@ const { createMarketplaceRouter } = require("../modules/marketplace-api");
 
 async function withApp(run) {
   const saved = {};
-  for (const key of ["DATABASE_URL", "AUTH_SESSION_SECRET", "AUTH_OTP_SECRET", "ADMIN_SESSION_SECRET", "RESEND_API_KEY", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_FROM_NUMBER"]) {
+  for (const key of ["DATABASE_URL", "AUTH_SESSION_SECRET", "AUTH_OTP_SECRET", "ADMIN_SESSION_SECRET", "RESEND_API_KEY", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_FROM_NUMBER", "BANK_NAME", "BANK_CARD_HOLDER", "BANK_CARD_NUMBER"]) {
     saved[key] = process.env[key];
     delete process.env[key];
   }
@@ -30,8 +30,11 @@ async function withApp(run) {
   }
 }
 
-test("marketplace status reports unavailable integrations without exposing secrets", async () => {
+test("public marketplace status never exposes bank transfer details", async () => {
   await withApp(async base => {
+    process.env.BANK_NAME = "Test Bank";
+    process.env.BANK_CARD_HOLDER = "Test Holder";
+    process.env.BANK_CARD_NUMBER = "8600000000000000";
     const response = await fetch(base + "/api/marketplace/status");
     const data = await response.json();
     assert.equal(response.status, 200);
@@ -42,6 +45,10 @@ test("marketplace status reports unavailable integrations without exposing secre
     assert.equal(data.smsDeliveryReady, false);
     assert.equal(data.payments.paymeReady, false);
     assert.equal(data.payments.clickReady, false);
+    assert.equal(data.payments.manualTransferReady, true);
+    assert.equal(Object.hasOwn(data, "manualTransfer"), false);
+    assert.equal(JSON.stringify(data).includes("8600000000000000"), false);
+    assert.equal(JSON.stringify(data).includes("Test Holder"), false);
     assert.equal(JSON.stringify(data).includes("SECRET"), false);
   });
 });
