@@ -1562,8 +1562,8 @@ app.use((err, _req, res, _next) => {
 void publicKnowledgeArchive.cycle().finally(() => {
   publicKnowledgeArchive.start();
   learningWorker.start();
+  languageLearningWorker.start();
 });
-languageLearningWorker.start();
 agentRuntime.startWorker().then(() => {
   const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`ULUGBEK AI serveri ${PORT}-portda ishga tushdi.`);
