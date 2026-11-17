@@ -26,7 +26,8 @@ Payme/Click automatic callbacks are still disabled. Their merchant callback hand
 
 ## API
 
-- GET /api/marketplace/status
+- GET /api/marketplace/status (integration readiness only; never returns bank/card details)
+- GET /api/marketplace/payments/manual-details?courseId=<uuid> (authenticated buyer, specific published paid course only)
 - POST /api/marketplace/auth/register
 - POST /api/marketplace/auth/verify
 - POST /api/marketplace/auth/login
