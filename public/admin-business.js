@@ -27,8 +27,8 @@
   async function load() {
     $("business-message").textContent = "Biznes ma’lumotlari yangilanmoqda…";
     const base = "/api/marketplace/admin";
-    const [overview, sellers, products, orders, requests] = await Promise.all([
-      api(base + "/overview"), api(base + "/sellers"), api(base + "/products"), api(base + "/orders"), api(base + "/requests")
+    const [overview, sellers, products, orders, requests, system] = await Promise.all([
+      api(base + "/overview"), api(base + "/sellers"), api(base + "/products"), api(base + "/orders"), api(base + "/requests"), api("/api/marketplace/status")
     ]);
     const c = overview.counts || {};
     $("business-metrics").replaceChildren(
@@ -37,7 +37,9 @@
       metric("Buyurtmalar", c.orders || 0), metric("Sotuvchi kutilyapti", c.waitingSeller || 0),
       metric("Tasdiqlangan buyurtmalar", c.confirmedOrders || 0), metric("Yakunlangan buyurtmalar", c.completedOrders || 0),
       metric("Xaridor so‘rovlari", c.requests || 0), metric("Ochiq so‘rovlar", c.openRequests || 0),
-      metric("Buyurtmalar qiymati", Number(overview.orderValue || 0).toLocaleString("uz-UZ") + " so‘m")
+      metric("Buyurtmalar qiymati", Number(overview.orderValue || 0).toLocaleString("uz-UZ") + " so‘m"),
+      metric("Ma’lumotlar ombori", system.databaseConfigured ? "PostgreSQL ulangan" : "JSON — vaqtinchalik"),
+      metric("Xaridorga email", system.emailDelivery === "configured" ? "Ulangan" : "Ulanmagan")
     );
     const sellerBox = $("business-sellers"); sellerBox.replaceChildren();
     if (!sellers.sellers.length) sellerBox.textContent = "Hozircha sotuvchi yo‘q.";
@@ -64,7 +66,7 @@
     for (const item of requests.requests) card(requestBox, item.title + " · " + item.customerName,
       item.region + " / " + item.district + " · Byudjet: " + Number(item.budget || 0).toLocaleString("uz-UZ") + " so‘m · Holat: " + item.status + " · Tel: " + item.phone,
       ["in_progress","closed","rejected"].map(status => ({ label: ({in_progress:"Ishga olindi",closed:"Yopish",rejected:"Rad etish"})[status], run: () => change(base + "/requests/" + encodeURIComponent(item.id) + "/status", { status }) })));
-    $("business-message").textContent = overview.paymentNote || "Biznes ma’lumotlari yangilandi.";
+    $("business-message").textContent = (system.databaseConfigured ? "" : "MUHIM: PostgreSQL ulanmagan. JSON fayllar Render qayta joylanganda yo‘qolishi mumkin. ") + (overview.paymentNote || "Biznes ma’lumotlari yangilandi.");
   }
   $("business-refresh").addEventListener("click", () => load().catch(e => $("business-message").textContent = e.message));
   window.addEventListener("load", () => {
