@@ -163,7 +163,6 @@ async function cycle() {
 }
 function start() {
   if (timer) return status();
-  void cycle();
   timer = setInterval(cycle, INTERVAL_MS);
   timer.unref?.();
   return status();
