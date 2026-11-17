@@ -117,6 +117,7 @@ async function orderAccess(orderId, req) {
 }
 
 router.setAssistant = setAssistant;
+router.setAdminGuard = setAdminGuard;
 router.get("/status", (_req, res) => {
   res.set("Cache-Control", "no-store");
   res.json({
