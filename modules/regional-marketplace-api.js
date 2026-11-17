@@ -16,6 +16,12 @@ const files = {
 };
 let writeQueue = Promise.resolve();
 let assistant = null;
+let adminGuard = null;
+function setAdminGuard(fn) { adminGuard = typeof fn === "function" ? fn : null; }
+function adminOnly(req, res, next) {
+  if (!adminGuard) return fail(res, 503, "Administrator himoyasi hali ulanmagan.");
+  return adminGuard(req, res, next);
+}
 
 async function readList(file) {
   try {
@@ -336,6 +342,116 @@ router.post("/orders/:id/messages", async (req, res) => {
     }
     return res.status(201).json({ ok: true, message: entry, assistant: null, assistantAvailable: Boolean(assistant) });
   } catch (_) { return fail(res, 503, "Xabar suhbatga saqlanmadi."); }
+});
+
+
+// Administrator biznes boshqaruvi. Maxfiy seller/buyer tokenlari hech qachon qaytarilmaydi.
+router.get("/admin/overview", adminOnly, async (_req, res) => {
+  try {
+    const [products, sellers, orders, requests] = await Promise.all([
+      readList(files.products), readList(files.sellers), readList(files.orders), readList(files.requests)
+    ]);
+    const confirmed = orders.filter(item => item.status === "confirmed" || item.status === "completed");
+    res.set("Cache-Control", "no-store").json({
+      ok: true,
+      counts: {
+        products: products.length, activeProducts: products.filter(item => item.status === "active").length,
+        sellers: sellers.length, verifiedSellers: sellers.filter(item => item.verified === true).length,
+        orders: orders.length, waitingSeller: orders.filter(item => item.status === "awaiting_seller").length,
+        confirmedOrders: confirmed.length, completedOrders: orders.filter(item => item.status === "completed").length,
+        requests: requests.length, openRequests: requests.filter(item => item.status === "open").length
+      },
+      orderValue: confirmed.reduce((sum, item) => sum + (Number(item.total) || 0), 0),
+      moneyStatus: "unverified-cash-or-card-on-delivery",
+      paymentNote: "Bu buyurtma qiymati; bankka pul tushgani yoki platforma daromadi emas. To‘lov provayderi ulangan emas."
+    });
+  } catch (_) { fail(res, 503, "Biznes ko‘rsatkichlarini o‘qib bo‘lmadi."); }
+});
+router.get("/admin/sellers", adminOnly, async (_req, res) => {
+  try {
+    const sellers = await readList(files.sellers);
+    res.set("Cache-Control", "no-store").json({ ok: true, sellers: sellers.map(({ tokenHash, ...seller }) => seller) });
+  } catch (_) { fail(res, 503, "Sotuvchilar ro‘yxati o‘qilmadi."); }
+});
+router.get("/admin/products", adminOnly, async (_req, res) => {
+  try {
+    const products = await readList(files.products);
+    res.set("Cache-Control", "no-store").json({ ok: true, products: products.map(({ imageData, ...product }) => product) });
+  } catch (_) { fail(res, 503, "Mahsulotlar ro‘yxati o‘qilmadi."); }
+});
+router.get("/admin/orders", adminOnly, async (_req, res) => {
+  try {
+    const orders = await readList(files.orders);
+    res.set("Cache-Control", "no-store").json({ ok: true, orders: orders.map(({ buyerTokenHash, ...order }) => order) });
+  } catch (_) { fail(res, 503, "Buyurtmalar ro‘yxati o‘qilmadi."); }
+});
+router.get("/admin/requests", adminOnly, async (_req, res) => {
+  try {
+    res.set("Cache-Control", "no-store").json({ ok: true, requests: await readList(files.requests) });
+  } catch (_) { fail(res, 503, "Xaridor so‘rovlari o‘qilmadi."); }
+});
+router.post("/admin/sellers/:id/verification", adminOnly, async (req, res) => {
+  if (typeof req.body?.verified !== "boolean") return fail(res, 400, "verified qiymati true yoki false bo‘lishi kerak.");
+  try {
+    const result = await mutateList(files.sellers, list => {
+      const seller = list.find(item => item.id === req.params.id);
+      if (!seller) return null;
+      seller.verified = req.body.verified;
+      seller.adminReviewedAt = new Date().toISOString();
+      return { id: seller.id, verified: seller.verified };
+    });
+    if (!result) return fail(res, 404, "Sotuvchi topilmadi.");
+    res.set("Cache-Control", "no-store").json({ ok: true, seller: result });
+  } catch (_) { fail(res, 503, "Sotuvchi tasdiqlash holati saqlanmadi."); }
+});
+router.post("/admin/products/:id/status", adminOnly, async (req, res) => {
+  const status = clean(req.body?.status, 20);
+  if (!["active", "paused", "rejected"].includes(status)) return fail(res, 400, "Mahsulot holati active, paused yoki rejected bo‘lishi kerak.");
+  try {
+    const result = await mutateList(files.products, list => {
+      const product = list.find(item => item.id === req.params.id);
+      if (!product) return null;
+      product.status = status;
+      product.adminReviewedAt = new Date().toISOString();
+      return { id: product.id, status: product.status };
+    });
+    if (!result) return fail(res, 404, "Mahsulot topilmadi.");
+    res.set("Cache-Control", "no-store").json({ ok: true, product: result });
+  } catch (_) { fail(res, 503, "Mahsulot holati saqlanmadi."); }
+});
+router.post("/admin/orders/:id/status", adminOnly, async (req, res) => {
+  const status = clean(req.body?.status, 20);
+  if (!["completed", "cancelled"].includes(status)) return fail(res, 400, "Buyurtma holati completed yoki cancelled bo‘lishi kerak.");
+  try {
+    const result = await mutateList(files.orders, list => {
+      const order = list.find(item => item.id === req.params.id);
+      if (!order) return { error: "not-found" };
+      if (["completed", "cancelled", "rejected"].includes(order.status)) return { error: "final" };
+      if (status === "completed" && order.status !== "confirmed") return { error: "not-confirmed" };
+      order.status = status;
+      order.adminUpdatedAt = new Date().toISOString();
+      return { id: order.id, status: order.status };
+    });
+    if (result?.error === "not-found") return fail(res, 404, "Buyurtma topilmadi.");
+    if (result?.error === "final") return fail(res, 409, "Yakunlangan buyurtma holatini qayta o‘zgartirib bo‘lmaydi.");
+    if (result?.error === "not-confirmed") return fail(res, 409, "Buyurtma avval sotuvchi tomonidan tasdiqlanishi kerak.");
+    res.set("Cache-Control", "no-store").json({ ok: true, order: result });
+  } catch (_) { fail(res, 503, "Buyurtma holati saqlanmadi."); }
+});
+router.post("/admin/requests/:id/status", adminOnly, async (req, res) => {
+  const status = clean(req.body?.status, 20);
+  if (!["open", "in_progress", "closed", "rejected"].includes(status)) return fail(res, 400, "So‘rov holati noto‘g‘ri.");
+  try {
+    const result = await mutateList(files.requests, list => {
+      const item = list.find(value => value.id === req.params.id);
+      if (!item) return null;
+      item.status = status;
+      item.adminReviewedAt = new Date().toISOString();
+      return { id: item.id, status: item.status };
+    });
+    if (!result) return fail(res, 404, "Xaridor so‘rovi topilmadi.");
+    res.set("Cache-Control", "no-store").json({ ok: true, request: result });
+  } catch (_) { fail(res, 503, "Xaridor so‘rovi holati saqlanmadi."); }
 });
 
 module.exports = router;
