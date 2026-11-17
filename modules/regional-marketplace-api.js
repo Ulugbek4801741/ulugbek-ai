@@ -4,6 +4,7 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const rateLimit = require("express-rate-limit");
+const { Pool } = require("pg");
 
 const router = express.Router();
 const root = path.resolve(process.env.ULUGBEK_DATA_DIR || path.join(__dirname, "..", "data"), "regional-marketplace");
@@ -17,13 +18,32 @@ const files = {
 let writeQueue = Promise.resolve();
 let assistant = null;
 let adminGuard = null;
+const pool = process.env.DATABASE_URL ? new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_SSL === "require" ? { rejectUnauthorized: false } : false,
+  max: Math.max(1, Math.min(10, Number(process.env.REGIONAL_DB_POOL_MAX) || 3)),
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000
+}) : null;
+let schemaReady = null;
 function setAdminGuard(fn) { adminGuard = typeof fn === "function" ? fn : null; }
 function adminOnly(req, res, next) {
   if (!adminGuard) return fail(res, 503, "Administrator himoyasi hali ulanmagan.");
   return adminGuard(req, res, next);
 }
-
-async function readList(file) {
+function collectionName(file) { return path.basename(file, ".json"); }
+async function ensureSchema() {
+  if (!pool) return;
+  if (!schemaReady) {
+    schemaReady = pool.query([
+      "CREATE TABLE IF NOT EXISTS regional_marketplace_records (collection TEXT NOT NULL, record_id TEXT NOT NULL, position BIGINT NOT NULL DEFAULT 0, payload JSONB NOT NULL, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY (collection, record_id))",
+      "CREATE INDEX IF NOT EXISTS regional_marketplace_records_order_idx ON regional_marketplace_records(collection, position)",
+      "CREATE TABLE IF NOT EXISTS regional_marketplace_migrations (collection TEXT PRIMARY KEY, migrated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())"
+    ].join(";")).catch(error => { schemaReady = null; throw error; });
+  }
+  await schemaReady;
+}
+async function readDiskList(file) {
   try {
     const value = JSON.parse(await fs.readFile(file, "utf8"));
     return Array.isArray(value) ? value : [];
@@ -32,15 +52,85 @@ async function readList(file) {
     throw error;
   }
 }
+async function ensureLegacyImported(file) {
+  if (!pool) return;
+  const collection = collectionName(file);
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [collection]);
+    const marker = await client.query("SELECT 1 FROM regional_marketplace_migrations WHERE collection = $1", [collection]);
+    if (!marker.rowCount) {
+      const legacy = await readDiskList(file);
+      for (let index = 0; index < legacy.length; index++) {
+        const item = legacy[index];
+        if (!item.id) item.id = crypto.randomUUID();
+        await client.query(
+          "INSERT INTO regional_marketplace_records(collection, record_id, position, payload) VALUES($1, $2, $3, $4::jsonb) ON CONFLICT(collection, record_id) DO NOTHING",
+          [collection, String(item.id), index, JSON.stringify(item)]
+        );
+      }
+      await client.query("INSERT INTO regional_marketplace_migrations(collection) VALUES($1) ON CONFLICT DO NOTHING", [collection]);
+    }
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+async function readList(file) {
+  if (!pool) return readDiskList(file);
+  await ensureSchema();
+  await ensureLegacyImported(file);
+  const result = await pool.query(
+    "SELECT payload FROM regional_marketplace_records WHERE collection = $1 ORDER BY position ASC, record_id ASC",
+    [collectionName(file)]
+  );
+  return result.rows.map(row => row.payload);
+}
 function mutateList(file, mutate) {
   const operation = writeQueue.then(async () => {
-    await fs.mkdir(root, { recursive: true });
-    const list = await readList(file);
-    const result = await mutate(list);
-    const temporary = file + "." + crypto.randomUUID() + ".tmp";
-    await fs.writeFile(temporary, JSON.stringify(list), { encoding: "utf8", mode: 0o600 });
-    await fs.rename(temporary, file);
-    return result;
+    if (!pool) {
+      await fs.mkdir(root, { recursive: true });
+      const list = await readDiskList(file);
+      const result = await mutate(list);
+      const temporary = file + "." + crypto.randomUUID() + ".tmp";
+      await fs.writeFile(temporary, JSON.stringify(list), { encoding: "utf8", mode: 0o600 });
+      await fs.rename(temporary, file);
+      return result;
+    }
+    await ensureSchema();
+    await ensureLegacyImported(file);
+    const collection = collectionName(file);
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [collection]);
+      const rows = await client.query(
+        "SELECT payload FROM regional_marketplace_records WHERE collection = $1 ORDER BY position ASC, record_id ASC",
+        [collection]
+      );
+      const list = rows.rows.map(row => row.payload);
+      const result = await mutate(list);
+      await client.query("DELETE FROM regional_marketplace_records WHERE collection = $1", [collection]);
+      for (let index = 0; index < list.length; index++) {
+        const item = list[index];
+        if (!item.id) item.id = crypto.randomUUID();
+        await client.query(
+          "INSERT INTO regional_marketplace_records(collection, record_id, position, payload, updated_at) VALUES($1, $2, $3, $4::jsonb, NOW())",
+          [collection, String(item.id), index, JSON.stringify(item)]
+        );
+      }
+      await client.query("COMMIT");
+      return result;
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => {});
+      throw error;
+    } finally {
+      client.release();
+    }
   });
   writeQueue = operation.catch(() => {});
   return operation;
@@ -122,8 +212,9 @@ router.get("/status", (_req, res) => {
   res.set("Cache-Control", "no-store");
   res.json({
     ok: true, service: "regional-marketplace", version: "0.2.0",
-    storage: "server-json",
-    persistence: process.env.ULUGBEK_DATA_DIR ? "configured-data-directory" : "local-filesystem-may-reset-on-redeploy",
+    storage: pool ? "postgresql-jsonb" : "server-json",
+    databaseConfigured: Boolean(pool),
+    persistence: pool ? "postgresql" : "local-filesystem-may-reset-on-redeploy",
     payments: "cash-or-card-on-delivery-agreement-only",
     sellerAuthentication: "private-seller-access-token",
     sellerIdentityVerification: "not-yet-enabled",
