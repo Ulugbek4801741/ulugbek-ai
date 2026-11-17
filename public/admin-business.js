@@ -38,7 +38,7 @@
       metric("Tasdiqlangan buyurtmalar", c.confirmedOrders || 0), metric("Yakunlangan buyurtmalar", c.completedOrders || 0),
       metric("Xaridor so‘rovlari", c.requests || 0), metric("Ochiq so‘rovlar", c.openRequests || 0),
       metric("Buyurtmalar qiymati", Number(overview.orderValue || 0).toLocaleString("uz-UZ") + " so‘m"),
-      metric("Ma’lumotlar ombori", system.databaseConfigured ? "PostgreSQL ulangan" : "JSON — vaqtinchalik"),
+      metric("Ma’lumotlar ombori", system.databaseConnected ? "PostgreSQL ishlayapti" : (system.databaseConfigured ? "PostgreSQL ulanish xatosi" : "JSON — vaqtinchalik")),
       metric("Xaridorga email", system.emailDelivery === "configured" ? "Ulangan" : "Ulanmagan")
     );
     const sellerBox = $("business-sellers"); sellerBox.replaceChildren();
@@ -66,7 +66,7 @@
     for (const item of requests.requests) card(requestBox, item.title + " · " + item.customerName,
       item.region + " / " + item.district + " · Byudjet: " + Number(item.budget || 0).toLocaleString("uz-UZ") + " so‘m · Holat: " + item.status + " · Tel: " + item.phone,
       ["in_progress","closed","rejected"].map(status => ({ label: ({in_progress:"Ishga olindi",closed:"Yopish",rejected:"Rad etish"})[status], run: () => change(base + "/requests/" + encodeURIComponent(item.id) + "/status", { status }) })));
-    $("business-message").textContent = (system.databaseConfigured ? "" : "MUHIM: PostgreSQL ulanmagan. JSON fayllar Render qayta joylanganda yo‘qolishi mumkin. ") + (overview.paymentNote || "Biznes ma’lumotlari yangilandi.");
+    $("business-message").textContent = (system.databaseConnected ? "" : "MUHIM: PostgreSQL ishlamayapti yoki sozlanmagan. JSON fayllar Render qayta joylanganda yo‘qolishi mumkin. ") + (overview.paymentNote || "Biznes ma’lumotlari yangilandi.");
   }
   $("business-refresh").addEventListener("click", () => load().catch(e => $("business-message").textContent = e.message));
   window.addEventListener("load", () => {
