@@ -80,8 +80,8 @@
           const courseId=button.dataset.buy,slot=view.querySelector('[data-payment-for="'+courseId+'"]');
           button.disabled=true;
           try{
-            const status=await request("/status"),transfer=status.manualTransfer||{};
-            if(!transfer.enabled)throw new Error("Sotuvchi karta ma’lumotlarini hali sozlamagan. Hozircha to‘lov qabul qilinmaydi.");
+            const details=await request("/payments/manual-details?courseId="+encodeURIComponent(courseId)),transfer=details.manualTransfer||{};
+            if(!transfer.enabled)throw new Error("To‘lov ma’lumotlari hali sozlanmagan.");
             slot.innerHTML='<p><b>'+esc(transfer.bankName||"Bank kartasi")+'</b><br>Qabul qiluvchi: '+esc(transfer.cardHolder)+'<br>Karta: <b>'+esc(transfer.cardNumber)+'</b><br>Summani kurs narxida bank ilovasidan o‘tkazing. So‘ng chek yoki tranzaksiya raqamini kiriting.</p><form class="marketplace-transfer-form"><label>Bank cheki / tranzaksiya raqami<input name="transferReference" required minlength="4" maxlength="100"></label><button class="marketplace-primary" type="submit">Tekshiruvga yuborish</button></form><p class="marketplace-error" role="alert"></p>';
             slot.querySelector("form").addEventListener("submit",async event=>{
               event.preventDefault();const submit=event.currentTarget.querySelector("button");submit.disabled=true;
