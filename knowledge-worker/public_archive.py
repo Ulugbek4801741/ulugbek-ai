@@ -31,7 +31,7 @@ MAX_TEXT = 12000
 MAX_COMPRESSED = 20 * 1024 * 1024
 EMAIL = re.compile(r"(?i)\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b")
 PHONE = re.compile(r"(?<!\w)(?:\+?\d[\d ()-]{7,}\d)(?!\w)")
-SECRET = re.compile(r"(?i)(api[_ -]?key|access[_ -]?token|password|passwd|secret)\\s*[:=]")
+SECRET = re.compile(r"(?i)(api[_ -]?key|access[_ -]?token|password|passwd|secret)\s*[:=]")
 
 class ArchiveError(ValueError):
     pass
