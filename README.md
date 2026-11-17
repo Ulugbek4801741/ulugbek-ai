@@ -199,3 +199,7 @@ Endpoints:
 - `GET /api/cognition/status` — includes the independent language-learning module.
 
 The background learner does not need a paid API key. Internet collection remains subject to the existing source allowlist, robots.txt, rate limits and server uptime. Only language patterns are learned from pending candidates; factual answers still require approved knowledge or separately verified research.
+
+## Public knowledge archive
+
+See [PUBLIC_KNOWLEDGE_ARCHIVE.md](PUBLIC_KNOWLEDGE_ARCHIVE.md) for archive policy and Render configuration.

@@ -31,6 +31,7 @@ const multiSourceResearch = require("./modules/multi-source-research");
 const developerAgent = require("./developer-agent");
 const agentPermissions = require("./agent-permissions");
 const learningWorkerForAdmin = require("./lab-learning-worker");
+const publicKnowledgeArchive = require("./modules/public-knowledge-archive");
 const independentModel = require("./modules/independent-model").createIndependentModel({ knowledge: learningWorkerForAdmin });
 const { createAdminAutopilot } = require("./admin-autopilot");
 const adminAutopilot = createAdminAutopilot({ developerAgent, learningWorker: learningWorkerForAdmin, agentRuntime });
@@ -1557,8 +1558,12 @@ app.use((err, _req, res, _next) => {
   console.error("Server xatosi:", err.message);
   return res.status(500).json({ error: "Ichki server xatosi." });
 });
-learningWorker.start();
-languageLearningWorker.start();
+// Restore the verified public-only knowledge archive before the learning worker resumes.
+void publicKnowledgeArchive.cycle().finally(() => {
+  publicKnowledgeArchive.start();
+  learningWorker.start();
+  languageLearningWorker.start();
+});
 agentRuntime.startWorker().then(() => {
   const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`ULUGBEK AI serveri ${PORT}-portda ishga tushdi.`);
