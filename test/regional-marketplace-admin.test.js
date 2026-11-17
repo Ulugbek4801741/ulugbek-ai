@@ -42,6 +42,13 @@ test("business admin APIs require the existing administrator guard and hide acce
   const app = await startServer();
   t.after(() => app.close());
 
+  const status = await fetch(app.base + "/api/marketplace/status");
+  const statusData = await status.json();
+  assert.equal(status.status, 200);
+  assert.equal(statusData.databaseConfigured, false);
+  assert.equal(statusData.databaseConnected, false);
+  assert.equal(statusData.storage, "server-json");
+
   const denied = await fetch(app.base + "/api/marketplace/admin/orders");
   assert.equal(denied.status, 401);
 
