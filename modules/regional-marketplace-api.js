@@ -208,12 +208,17 @@ async function orderAccess(orderId, req) {
 
 router.setAssistant = setAssistant;
 router.setAdminGuard = setAdminGuard;
-router.get("/status", (_req, res) => {
+router.get("/status", async (_req, res) => {
   res.set("Cache-Control", "no-store");
+  let databaseConnected = false;
+  if (pool) {
+    try { await pool.query("SELECT 1"); databaseConnected = true; } catch (_) {}
+  }
   res.json({
-    ok: true, service: "regional-marketplace", version: "0.2.0",
+    ok: true, service: "regional-marketplace", version: "0.3.0",
     storage: pool ? "postgresql-jsonb" : "server-json",
     databaseConfigured: Boolean(pool),
+    databaseConnected,
     persistence: pool ? "postgresql" : "local-filesystem-may-reset-on-redeploy",
     payments: "cash-or-card-on-delivery-agreement-only",
     sellerAuthentication: "private-seller-access-token",
