@@ -118,7 +118,22 @@ function createMarketplaceRouter() {
 
   router.get("/status",(_req,res)=>{
     res.set("Cache-Control","no-store");
-    res.json({ok:true,databaseConfigured:Boolean(pool),authReady:Boolean(pool&&sessionSecret&&sessionSecret.length>=32&&otpSecret&&otpSecret.length>=32),emailDeliveryReady:Boolean(process.env.RESEND_API_KEY),smsDeliveryReady:Boolean(process.env.TWILIO_ACCOUNT_SID&&process.env.TWILIO_AUTH_TOKEN&&process.env.TWILIO_FROM_NUMBER),payments:{paymeReady:Boolean(process.env.PAYME_MERCHANT_ID&&process.env.PAYME_SECRET_KEY),clickReady:Boolean(process.env.CLICK_SERVICE_ID&&process.env.CLICK_MERCHANT_ID&&process.env.CLICK_SECRET_KEY),manualTransferReady:Boolean(process.env.BANK_CARD_NUMBER&&process.env.BANK_CARD_HOLDER),liveCallbacksImplemented:false},manualTransfer:{enabled:Boolean(process.env.BANK_CARD_NUMBER&&process.env.BANK_CARD_HOLDER),bankName:process.env.BANK_NAME||"",cardHolder:process.env.BANK_CARD_HOLDER||"",cardNumber:process.env.BANK_CARD_NUMBER||""},storage:"postgresql"});
+    res.json({ok:true,databaseConfigured:Boolean(pool),authReady:Boolean(pool&&sessionSecret&&sessionSecret.length>=32&&otpSecret&&otpSecret.length>=32),emailDeliveryReady:Boolean(process.env.RESEND_API_KEY),smsDeliveryReady:Boolean(process.env.TWILIO_ACCOUNT_SID&&process.env.TWILIO_AUTH_TOKEN&&process.env.TWILIO_FROM_NUMBER),payments:{paymeReady:Boolean(process.env.PAYME_MERCHANT_ID&&process.env.PAYME_SECRET_KEY),clickReady:Boolean(process.env.CLICK_SERVICE_ID&&process.env.CLICK_MERCHANT_ID&&process.env.CLICK_SECRET_KEY),manualTransferReady:Boolean(process.env.BANK_CARD_NUMBER&&process.env.BANK_CARD_HOLDER),liveCallbacksImplemented:false},storage:"postgresql"});
+  });
+  // Bank details are never included in the public status response. Only an authenticated
+  // buyer may retrieve them for a specific published paid course.
+  router.get("/payments/manual-details",requireOrigin,requireUser,async(req,res)=>{
+    try{
+      const courseId=String(req.query.courseId||"");
+      if(!/^[0-9a-f-]{36}$/i.test(courseId))return res.status(400).json({ok:false,error:"Kurs raqami noto‘g‘ri."});
+      const result=await(await db()).query("SELECT owner_id,price_uzs FROM marketplace_courses WHERE id=$1 AND status='published'",[courseId]);
+      if(!result.rowCount)return res.status(404).json({ok:false,error:"Kurs topilmadi."});
+      if(result.rows[0].owner_id===req.user.id)return res.status(403).json({ok:false,error:"O‘z kursingiz uchun to‘lov ma’lumotini ko‘ra olmaysiz."});
+      if(Number(result.rows[0].price_uzs)<=0)return res.status(400).json({ok:false,error:"Bu kurs bepul."});
+      if(!process.env.BANK_CARD_NUMBER||!process.env.BANK_CARD_HOLDER)return res.status(503).json({ok:false,error:"To‘lov ma’lumotlari hali sozlanmagan.",setupRequired:true});
+      res.set("Cache-Control","no-store");
+      return res.json({ok:true,manualTransfer:{enabled:true,bankName:process.env.BANK_NAME||"",cardHolder:process.env.BANK_CARD_HOLDER,cardNumber:process.env.BANK_CARD_NUMBER}});
+    }catch(e){return fail(res,e,"To‘lov ma’lumotlarini yuklab bo‘lmadi.");}
   });
   router.post("/auth/register",requireOrigin,async(req,res)=>{
     try{
