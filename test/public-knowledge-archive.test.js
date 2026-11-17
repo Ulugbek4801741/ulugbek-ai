@@ -1,7 +1,7 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const archive = require("./public-knowledge-archive");
+const archive = require("../modules/public-knowledge-archive");
 
 function item(overrides = {}) {
   return { agent: "AutonomousResearchAgent", title: "Ochiq matematika",
