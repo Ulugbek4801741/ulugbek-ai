@@ -26,7 +26,9 @@ function createMarketplaceRouter() {
     "CREATE INDEX IF NOT EXISTS marketplace_courses_public_idx ON marketplace_courses(status, created_at DESC)",
     "CREATE INDEX IF NOT EXISTS marketplace_courses_owner_idx ON marketplace_courses(owner_id, created_at DESC)",
     "CREATE TABLE IF NOT EXISTS marketplace_purchases (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), course_id UUID NOT NULL REFERENCES marketplace_courses(id) ON DELETE RESTRICT, buyer_id UUID NOT NULL REFERENCES marketplace_users(id) ON DELETE RESTRICT, amount_uzs BIGINT NOT NULL CHECK (amount_uzs >= 0), status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','paid','failed','refunded')), provider TEXT NOT NULL CHECK (provider IN ('payme','click')), provider_transaction_id TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), paid_at TIMESTAMPTZ, UNIQUE(course_id, buyer_id))",
-    "CREATE TABLE IF NOT EXISTS marketplace_payment_events (id BIGSERIAL PRIMARY KEY, provider TEXT NOT NULL, event_key TEXT NOT NULL, payload JSONB NOT NULL DEFAULT '{}'::jsonb, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), UNIQUE(provider, event_key))"
+    "CREATE TABLE IF NOT EXISTS marketplace_payment_events (id BIGSERIAL PRIMARY KEY, provider TEXT NOT NULL, event_key TEXT NOT NULL, payload JSONB NOT NULL DEFAULT '{}'::jsonb, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), UNIQUE(provider, event_key))",
+    "ALTER TABLE marketplace_purchases DROP CONSTRAINT IF EXISTS marketplace_purchases_provider_check",
+    "ALTER TABLE marketplace_purchases ADD CONSTRAINT marketplace_purchases_provider_check CHECK (provider IN ('payme','click','manual'))"
   ].join(";");
 
   async function db() {
@@ -116,7 +118,7 @@ function createMarketplaceRouter() {
 
   router.get("/status",(_req,res)=>{
     res.set("Cache-Control","no-store");
-    res.json({ok:true,databaseConfigured:Boolean(pool),authReady:Boolean(pool&&sessionSecret&&sessionSecret.length>=32&&otpSecret&&otpSecret.length>=32),emailDeliveryReady:Boolean(process.env.RESEND_API_KEY),smsDeliveryReady:Boolean(process.env.TWILIO_ACCOUNT_SID&&process.env.TWILIO_AUTH_TOKEN&&process.env.TWILIO_FROM_NUMBER),payments:{paymeReady:Boolean(process.env.PAYME_MERCHANT_ID&&process.env.PAYME_SECRET_KEY),clickReady:Boolean(process.env.CLICK_SERVICE_ID&&process.env.CLICK_MERCHANT_ID&&process.env.CLICK_SECRET_KEY),liveCallbacksImplemented:false},storage:"postgresql"});
+    res.json({ok:true,databaseConfigured:Boolean(pool),authReady:Boolean(pool&&sessionSecret&&sessionSecret.length>=32&&otpSecret&&otpSecret.length>=32),emailDeliveryReady:Boolean(process.env.RESEND_API_KEY),smsDeliveryReady:Boolean(process.env.TWILIO_ACCOUNT_SID&&process.env.TWILIO_AUTH_TOKEN&&process.env.TWILIO_FROM_NUMBER),payments:{paymeReady:Boolean(process.env.PAYME_MERCHANT_ID&&process.env.PAYME_SECRET_KEY),clickReady:Boolean(process.env.CLICK_SERVICE_ID&&process.env.CLICK_MERCHANT_ID&&process.env.CLICK_SECRET_KEY),manualTransferReady:Boolean(process.env.BANK_CARD_NUMBER&&process.env.BANK_CARD_HOLDER),liveCallbacksImplemented:false},manualTransfer:{enabled:Boolean(process.env.BANK_CARD_NUMBER&&process.env.BANK_CARD_HOLDER),bankName:process.env.BANK_NAME||"",cardHolder:process.env.BANK_CARD_HOLDER||"",cardNumber:process.env.BANK_CARD_NUMBER||""},storage:"postgresql"});
   });
   router.post("/auth/register",requireOrigin,async(req,res)=>{
     try{
@@ -216,18 +218,36 @@ function createMarketplaceRouter() {
     try{const result=await(await db()).query("SELECT c.id,c.title,c.instructor,c.description,c.price_uzs,c.youtube_url,p.status AS purchase_status,p.paid_at FROM marketplace_purchases p JOIN marketplace_courses c ON c.id=p.course_id WHERE p.buyer_id=$1 AND p.status='paid' ORDER BY p.paid_at DESC",[req.user.id]);return res.json({ok:true,courses:result.rows});}
     catch(e){return fail(res,e,"Xaridor kabinetini yuklab bo‘lmadi.");}
   });
-  router.post("/payments/intent",requireOrigin,requireUser,async(req,res)=>{
+  router.post("/payments/manual-intent",requireOrigin,requireUser,async(req,res)=>{
     try{
-      const provider=String(req.body?.provider||"").toLowerCase();
-      if(!["payme","click"].includes(provider))return res.status(400).json({ok:false,error:"Payme yoki Click tanlang."});
-      const course=await(await db()).query("SELECT id,owner_id,price_uzs FROM marketplace_courses WHERE id=$1 AND status='published'",[String(req.body?.courseId||"")]);
+      const courseId=String(req.body?.courseId||""),reference=String(req.body?.transferReference||"").trim().slice(0,100);
+      if(!/^[0-9a-f-]{36}$/i.test(courseId)||reference.length<4)return res.status(400).json({ok:false,error:"Kurs yoki bank o‘tkazmasi izoh/chek raqami noto‘g‘ri."});
+      if(!process.env.BANK_CARD_NUMBER||!process.env.BANK_CARD_HOLDER)return res.status(503).json({ok:false,error:"Sotuvchining karta ma’lumotlari hali sozlanmagan.",setupRequired:true});
+      const client=await db(),course=await client.query("SELECT id,owner_id,price_uzs FROM marketplace_courses WHERE id=$1 AND status='published'",[courseId]);
       if(!course.rowCount)return res.status(404).json({ok:false,error:"Kurs topilmadi."});
       if(course.rows[0].owner_id===req.user.id)return res.status(400).json({ok:false,error:"O‘z kursingizni sotib ololmaysiz."});
-      if(Number(course.rows[0].price_uzs)<=0)return res.status(400).json({ok:false,error:"Bu kurs bepul."});
-      const ready=provider==="payme"?Boolean(process.env.PAYME_MERCHANT_ID&&process.env.PAYME_SECRET_KEY):Boolean(process.env.CLICK_SERVICE_ID&&process.env.CLICK_MERCHANT_ID&&process.env.CLICK_SECRET_KEY);
-      if(!ready)return res.status(503).json({ok:false,error:provider==="payme"?"Payme merchant sozlamalari hali ulanmagan.":"Click merchant sozlamalari hali ulanmagan.",setupRequired:true});
-      return res.status(501).json({ok:false,error:"Payme/Click merchant callback protokoli production’dan oldin sandbox’da alohida ishlab chiqilib tekshirilishi kerak.",provider,integrationConfigured:true});
-    }catch(e){return fail(res,e,"To‘lov so‘rovini yaratib bo‘lmadi.");}
+      const amount=Number(course.rows[0].price_uzs);
+      if(amount<=0)return res.status(400).json({ok:false,error:"Bu kurs bepul."});
+      const saved=await client.query("INSERT INTO marketplace_purchases(course_id,buyer_id,amount_uzs,status,provider,provider_transaction_id) VALUES($1,$2,$3,'pending','manual',$4) ON CONFLICT(course_id,buyer_id) DO UPDATE SET amount_uzs=EXCLUDED.amount_uzs,status='pending',provider='manual',provider_transaction_id=EXCLUDED.provider_transaction_id,paid_at=NULL RETURNING id,status,amount_uzs,created_at",[courseId,req.user.id,amount,reference]);
+      return res.status(201).json({ok:true,purchase:saved.rows[0],message:"To‘lov ma’lumoti yuborildi. Sotuvchi bankdan tekshirib tasdiqlaguncha kurs yopiq qoladi."});
+    }catch(e){return fail(res,e,"Qo‘lda to‘lov so‘rovini yaratib bo‘lmadi.");}
+  });
+  router.get("/teacher/payments",requireUser,async(req,res)=>{
+    try{
+      const result=await(await db()).query("SELECT p.id,p.amount_uzs,p.status,p.provider_transaction_id,p.created_at,c.title,u.email AS buyer_email,u.phone AS buyer_phone FROM marketplace_purchases p JOIN marketplace_courses c ON c.id=p.course_id JOIN marketplace_users u ON u.id=p.buyer_id WHERE c.owner_id=$1 AND p.provider='manual' AND p.status='pending' ORDER BY p.created_at ASC",[req.user.id]);
+      return res.json({ok:true,payments:result.rows});
+    }catch(e){return fail(res,e,"Kutilayotgan to‘lovlarni yuklab bo‘lmadi.");}
+  });
+  router.post("/teacher/payments/:id/confirm",requireOrigin,requireUser,async(req,res)=>{
+    try{
+      if(!/^[0-9a-f-]{36}$/i.test(req.params.id))return res.status(400).json({ok:false,error:"To‘lov raqami noto‘g‘ri."});
+      const result=await(await db()).query("UPDATE marketplace_purchases p SET status='paid',paid_at=NOW() FROM marketplace_courses c WHERE p.id=$1 AND p.course_id=c.id AND c.owner_id=$2 AND p.provider='manual' AND p.status='pending' RETURNING p.id,p.amount_uzs,p.paid_at",[req.params.id,req.user.id]);
+      if(!result.rowCount)return res.status(404).json({ok:false,error:"Kutilayotgan to‘lov topilmadi yoki sizga tegishli emas."});
+      return res.json({ok:true,purchase:result.rows[0],message:"To‘lov sotuvchi tomonidan tasdiqlandi."});
+    }catch(e){return fail(res,e,"To‘lovni tasdiqlab bo‘lmadi.");}
+  });
+  router.post("/payments/intent",requireOrigin,requireUser,async(_req,res)=>{
+    return res.status(410).json({ok:false,error:"Payme/Click avtomatik to‘lovlari hozircha o‘chiq. Qo‘lda karta o‘tkazmasidan foydalaning."});
   });
   return router;
 }
