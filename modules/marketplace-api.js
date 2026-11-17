@@ -228,7 +228,8 @@ function createMarketplaceRouter() {
       if(course.rows[0].owner_id===req.user.id)return res.status(400).json({ok:false,error:"O‘z kursingizni sotib ololmaysiz."});
       const amount=Number(course.rows[0].price_uzs);
       if(amount<=0)return res.status(400).json({ok:false,error:"Bu kurs bepul."});
-      const saved=await client.query("INSERT INTO marketplace_purchases(course_id,buyer_id,amount_uzs,status,provider,provider_transaction_id) VALUES($1,$2,$3,'pending','manual',$4) ON CONFLICT(course_id,buyer_id) DO UPDATE SET amount_uzs=EXCLUDED.amount_uzs,status='pending',provider='manual',provider_transaction_id=EXCLUDED.provider_transaction_id,paid_at=NULL RETURNING id,status,amount_uzs,created_at",[courseId,req.user.id,amount,reference]);
+      const saved=await client.query("INSERT INTO marketplace_purchases(course_id,buyer_id,amount_uzs,status,provider,provider_transaction_id) VALUES($1,$2,$3,'pending','manual',$4) ON CONFLICT(course_id,buyer_id) DO UPDATE SET amount_uzs=EXCLUDED.amount_uzs,status='pending',provider='manual',provider_transaction_id=EXCLUDED.provider_transaction_id,paid_at=NULL WHERE marketplace_purchases.status<>'paid' RETURNING id,status,amount_uzs,created_at",[courseId,req.user.id,amount,reference]);
+      if(!saved.rowCount)return res.status(409).json({ok:false,error:"Bu kurs uchun to‘lov avval tasdiqlangan."});
       return res.status(201).json({ok:true,purchase:saved.rows[0],message:"To‘lov ma’lumoti yuborildi. Sotuvchi bankdan tekshirib tasdiqlaguncha kurs yopiq qoladi."});
     }catch(e){return fail(res,e,"Qo‘lda to‘lov so‘rovini yaratib bo‘lmadi.");}
   });
