@@ -251,6 +251,7 @@ async function checkSession() {
     }
     if (status.authenticated) {
       showDashboard(true);
+      document.dispatchEvent(new Event("admin-session-ready"));
       await Promise.all([loadOverview(), loadTasks(), loadSafety(), loadAgentPermissions(), loadDeveloperAgent(), loadAutopilot()]);
     } else {
       showDashboard(false);

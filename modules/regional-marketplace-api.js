@@ -4,6 +4,7 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const rateLimit = require("express-rate-limit");
+const { Pool } = require("pg");
 
 const router = express.Router();
 const root = path.resolve(process.env.ULUGBEK_DATA_DIR || path.join(__dirname, "..", "data"), "regional-marketplace");
@@ -16,8 +17,33 @@ const files = {
 };
 let writeQueue = Promise.resolve();
 let assistant = null;
-
-async function readList(file) {
+let adminGuard = null;
+const pool = process.env.DATABASE_URL ? new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_SSL === "require" ? { rejectUnauthorized: false } : false,
+  max: Math.max(1, Math.min(10, Number(process.env.REGIONAL_DB_POOL_MAX) || 3)),
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000
+}) : null;
+let schemaReady = null;
+function setAdminGuard(fn) { adminGuard = typeof fn === "function" ? fn : null; }
+function adminOnly(req, res, next) {
+  if (!adminGuard) return fail(res, 503, "Administrator himoyasi hali ulanmagan.");
+  return adminGuard(req, res, next);
+}
+function collectionName(file) { return path.basename(file, ".json"); }
+async function ensureSchema() {
+  if (!pool) return;
+  if (!schemaReady) {
+    schemaReady = pool.query([
+      "CREATE TABLE IF NOT EXISTS regional_marketplace_records (collection TEXT NOT NULL, record_id TEXT NOT NULL, position BIGINT NOT NULL DEFAULT 0, payload JSONB NOT NULL, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY (collection, record_id))",
+      "CREATE INDEX IF NOT EXISTS regional_marketplace_records_order_idx ON regional_marketplace_records(collection, position)",
+      "CREATE TABLE IF NOT EXISTS regional_marketplace_migrations (collection TEXT PRIMARY KEY, migrated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())"
+    ].join(";")).catch(error => { schemaReady = null; throw error; });
+  }
+  await schemaReady;
+}
+async function readDiskList(file) {
   try {
     const value = JSON.parse(await fs.readFile(file, "utf8"));
     return Array.isArray(value) ? value : [];
@@ -26,15 +52,85 @@ async function readList(file) {
     throw error;
   }
 }
+async function ensureLegacyImported(file) {
+  if (!pool) return;
+  const collection = collectionName(file);
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [collection]);
+    const marker = await client.query("SELECT 1 FROM regional_marketplace_migrations WHERE collection = $1", [collection]);
+    if (!marker.rowCount) {
+      const legacy = await readDiskList(file);
+      for (let index = 0; index < legacy.length; index++) {
+        const item = legacy[index];
+        if (!item.id) item.id = crypto.randomUUID();
+        await client.query(
+          "INSERT INTO regional_marketplace_records(collection, record_id, position, payload) VALUES($1, $2, $3, $4::jsonb) ON CONFLICT(collection, record_id) DO NOTHING",
+          [collection, String(item.id), index, JSON.stringify(item)]
+        );
+      }
+      await client.query("INSERT INTO regional_marketplace_migrations(collection) VALUES($1) ON CONFLICT DO NOTHING", [collection]);
+    }
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+async function readList(file) {
+  if (!pool) return readDiskList(file);
+  await ensureSchema();
+  await ensureLegacyImported(file);
+  const result = await pool.query(
+    "SELECT payload FROM regional_marketplace_records WHERE collection = $1 ORDER BY position ASC, record_id ASC",
+    [collectionName(file)]
+  );
+  return result.rows.map(row => row.payload);
+}
 function mutateList(file, mutate) {
   const operation = writeQueue.then(async () => {
-    await fs.mkdir(root, { recursive: true });
-    const list = await readList(file);
-    const result = await mutate(list);
-    const temporary = file + "." + crypto.randomUUID() + ".tmp";
-    await fs.writeFile(temporary, JSON.stringify(list), { encoding: "utf8", mode: 0o600 });
-    await fs.rename(temporary, file);
-    return result;
+    if (!pool) {
+      await fs.mkdir(root, { recursive: true });
+      const list = await readDiskList(file);
+      const result = await mutate(list);
+      const temporary = file + "." + crypto.randomUUID() + ".tmp";
+      await fs.writeFile(temporary, JSON.stringify(list), { encoding: "utf8", mode: 0o600 });
+      await fs.rename(temporary, file);
+      return result;
+    }
+    await ensureSchema();
+    await ensureLegacyImported(file);
+    const collection = collectionName(file);
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [collection]);
+      const rows = await client.query(
+        "SELECT payload FROM regional_marketplace_records WHERE collection = $1 ORDER BY position ASC, record_id ASC",
+        [collection]
+      );
+      const list = rows.rows.map(row => row.payload);
+      const result = await mutate(list);
+      await client.query("DELETE FROM regional_marketplace_records WHERE collection = $1", [collection]);
+      for (let index = 0; index < list.length; index++) {
+        const item = list[index];
+        if (!item.id) item.id = crypto.randomUUID();
+        await client.query(
+          "INSERT INTO regional_marketplace_records(collection, record_id, position, payload, updated_at) VALUES($1, $2, $3, $4::jsonb, NOW())",
+          [collection, String(item.id), index, JSON.stringify(item)]
+        );
+      }
+      await client.query("COMMIT");
+      return result;
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => {});
+      throw error;
+    } finally {
+      client.release();
+    }
   });
   writeQueue = operation.catch(() => {});
   return operation;
@@ -111,12 +207,19 @@ async function orderAccess(orderId, req) {
 }
 
 router.setAssistant = setAssistant;
-router.get("/status", (_req, res) => {
+router.setAdminGuard = setAdminGuard;
+router.get("/status", async (_req, res) => {
   res.set("Cache-Control", "no-store");
+  let databaseConnected = false;
+  if (pool) {
+    try { await pool.query("SELECT 1"); databaseConnected = true; } catch (_) {}
+  }
   res.json({
-    ok: true, service: "regional-marketplace", version: "0.2.0",
-    storage: "server-json",
-    persistence: process.env.ULUGBEK_DATA_DIR ? "configured-data-directory" : "local-filesystem-may-reset-on-redeploy",
+    ok: true, service: "regional-marketplace", version: "0.3.0",
+    storage: pool ? "postgresql-jsonb" : "server-json",
+    databaseConfigured: Boolean(pool),
+    databaseConnected,
+    persistence: pool ? "postgresql" : "local-filesystem-may-reset-on-redeploy",
     payments: "cash-or-card-on-delivery-agreement-only",
     sellerAuthentication: "private-seller-access-token",
     sellerIdentityVerification: "not-yet-enabled",
@@ -336,6 +439,116 @@ router.post("/orders/:id/messages", async (req, res) => {
     }
     return res.status(201).json({ ok: true, message: entry, assistant: null, assistantAvailable: Boolean(assistant) });
   } catch (_) { return fail(res, 503, "Xabar suhbatga saqlanmadi."); }
+});
+
+
+// Administrator biznes boshqaruvi. Maxfiy seller/buyer tokenlari hech qachon qaytarilmaydi.
+router.get("/admin/overview", adminOnly, async (_req, res) => {
+  try {
+    const [products, sellers, orders, requests] = await Promise.all([
+      readList(files.products), readList(files.sellers), readList(files.orders), readList(files.requests)
+    ]);
+    const confirmed = orders.filter(item => item.status === "confirmed" || item.status === "completed");
+    res.set("Cache-Control", "no-store").json({
+      ok: true,
+      counts: {
+        products: products.length, activeProducts: products.filter(item => item.status === "active").length,
+        sellers: sellers.length, verifiedSellers: sellers.filter(item => item.verified === true).length,
+        orders: orders.length, waitingSeller: orders.filter(item => item.status === "awaiting_seller").length,
+        confirmedOrders: confirmed.length, completedOrders: orders.filter(item => item.status === "completed").length,
+        requests: requests.length, openRequests: requests.filter(item => item.status === "open").length
+      },
+      orderValue: confirmed.reduce((sum, item) => sum + (Number(item.total) || 0), 0),
+      moneyStatus: "unverified-cash-or-card-on-delivery",
+      paymentNote: "Bu buyurtma qiymati; bankka pul tushgani yoki platforma daromadi emas. To‘lov provayderi ulangan emas."
+    });
+  } catch (_) { fail(res, 503, "Biznes ko‘rsatkichlarini o‘qib bo‘lmadi."); }
+});
+router.get("/admin/sellers", adminOnly, async (_req, res) => {
+  try {
+    const sellers = await readList(files.sellers);
+    res.set("Cache-Control", "no-store").json({ ok: true, sellers: sellers.map(({ tokenHash, ...seller }) => seller) });
+  } catch (_) { fail(res, 503, "Sotuvchilar ro‘yxati o‘qilmadi."); }
+});
+router.get("/admin/products", adminOnly, async (_req, res) => {
+  try {
+    const products = await readList(files.products);
+    res.set("Cache-Control", "no-store").json({ ok: true, products: products.map(({ imageData, ...product }) => product) });
+  } catch (_) { fail(res, 503, "Mahsulotlar ro‘yxati o‘qilmadi."); }
+});
+router.get("/admin/orders", adminOnly, async (_req, res) => {
+  try {
+    const orders = await readList(files.orders);
+    res.set("Cache-Control", "no-store").json({ ok: true, orders: orders.map(({ buyerTokenHash, ...order }) => order) });
+  } catch (_) { fail(res, 503, "Buyurtmalar ro‘yxati o‘qilmadi."); }
+});
+router.get("/admin/requests", adminOnly, async (_req, res) => {
+  try {
+    res.set("Cache-Control", "no-store").json({ ok: true, requests: await readList(files.requests) });
+  } catch (_) { fail(res, 503, "Xaridor so‘rovlari o‘qilmadi."); }
+});
+router.post("/admin/sellers/:id/verification", adminOnly, async (req, res) => {
+  if (typeof req.body?.verified !== "boolean") return fail(res, 400, "verified qiymati true yoki false bo‘lishi kerak.");
+  try {
+    const result = await mutateList(files.sellers, list => {
+      const seller = list.find(item => item.id === req.params.id);
+      if (!seller) return null;
+      seller.verified = req.body.verified;
+      seller.adminReviewedAt = new Date().toISOString();
+      return { id: seller.id, verified: seller.verified };
+    });
+    if (!result) return fail(res, 404, "Sotuvchi topilmadi.");
+    res.set("Cache-Control", "no-store").json({ ok: true, seller: result });
+  } catch (_) { fail(res, 503, "Sotuvchi tasdiqlash holati saqlanmadi."); }
+});
+router.post("/admin/products/:id/status", adminOnly, async (req, res) => {
+  const status = clean(req.body?.status, 20);
+  if (!["active", "paused", "rejected"].includes(status)) return fail(res, 400, "Mahsulot holati active, paused yoki rejected bo‘lishi kerak.");
+  try {
+    const result = await mutateList(files.products, list => {
+      const product = list.find(item => item.id === req.params.id);
+      if (!product) return null;
+      product.status = status;
+      product.adminReviewedAt = new Date().toISOString();
+      return { id: product.id, status: product.status };
+    });
+    if (!result) return fail(res, 404, "Mahsulot topilmadi.");
+    res.set("Cache-Control", "no-store").json({ ok: true, product: result });
+  } catch (_) { fail(res, 503, "Mahsulot holati saqlanmadi."); }
+});
+router.post("/admin/orders/:id/status", adminOnly, async (req, res) => {
+  const status = clean(req.body?.status, 20);
+  if (!["completed", "cancelled"].includes(status)) return fail(res, 400, "Buyurtma holati completed yoki cancelled bo‘lishi kerak.");
+  try {
+    const result = await mutateList(files.orders, list => {
+      const order = list.find(item => item.id === req.params.id);
+      if (!order) return { error: "not-found" };
+      if (["completed", "cancelled", "rejected"].includes(order.status)) return { error: "final" };
+      if (status === "completed" && order.status !== "confirmed") return { error: "not-confirmed" };
+      order.status = status;
+      order.adminUpdatedAt = new Date().toISOString();
+      return { id: order.id, status: order.status };
+    });
+    if (result?.error === "not-found") return fail(res, 404, "Buyurtma topilmadi.");
+    if (result?.error === "final") return fail(res, 409, "Yakunlangan buyurtma holatini qayta o‘zgartirib bo‘lmaydi.");
+    if (result?.error === "not-confirmed") return fail(res, 409, "Buyurtma avval sotuvchi tomonidan tasdiqlanishi kerak.");
+    res.set("Cache-Control", "no-store").json({ ok: true, order: result });
+  } catch (_) { fail(res, 503, "Buyurtma holati saqlanmadi."); }
+});
+router.post("/admin/requests/:id/status", adminOnly, async (req, res) => {
+  const status = clean(req.body?.status, 20);
+  if (!["open", "in_progress", "closed", "rejected"].includes(status)) return fail(res, 400, "So‘rov holati noto‘g‘ri.");
+  try {
+    const result = await mutateList(files.requests, list => {
+      const item = list.find(value => value.id === req.params.id);
+      if (!item) return null;
+      item.status = status;
+      item.adminReviewedAt = new Date().toISOString();
+      return { id: item.id, status: item.status };
+    });
+    if (!result) return fail(res, 404, "Xaridor so‘rovi topilmadi.");
+    res.set("Cache-Control", "no-store").json({ ok: true, request: result });
+  } catch (_) { fail(res, 503, "Xaridor so‘rovi holati saqlanmadi."); }
 });
 
 module.exports = router;
