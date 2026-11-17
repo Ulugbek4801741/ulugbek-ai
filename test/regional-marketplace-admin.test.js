@@ -8,6 +8,7 @@ const express = require("express");
 
 const dataDir = require("node:fs").mkdtempSync(path.join(os.tmpdir(), "ulugbek-marketplace-admin-"));
 process.env.ULUGBEK_DATA_DIR = dataDir;
+delete process.env.DATABASE_URL;
 const router = require("../modules/regional-marketplace-api");
 router.setAdminGuard((req, res, next) => {
   if (req.get("x-test-admin") === "yes") return next();
