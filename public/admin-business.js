@@ -33,7 +33,7 @@
     const c = overview.counts || {};
     $("business-metrics").replaceChildren(
       metric("Mahsulotlar", c.products || 0), metric("Faol mahsulotlar", c.activeProducts || 0),
-      metric("Sotuvchilar", c.sellers || 0), metric("Tasdiqlangan sotuvchilar", c.verifiedSellers || 0),
+      metric("Sotuvchilar", c.sellers || 0), metric("Admin ko‘rigidan o‘tgan sotuvchilar", c.verifiedSellers || 0),
       metric("Buyurtmalar", c.orders || 0), metric("Sotuvchi kutilyapti", c.waitingSeller || 0),
       metric("Tasdiqlangan buyurtmalar", c.confirmedOrders || 0), metric("Yakunlangan buyurtmalar", c.completedOrders || 0),
       metric("Xaridor so‘rovlari", c.requests || 0), metric("Ochiq so‘rovlar", c.openRequests || 0),
@@ -42,8 +42,8 @@
     const sellerBox = $("business-sellers"); sellerBox.replaceChildren();
     if (!sellers.sellers.length) sellerBox.textContent = "Hozircha sotuvchi yo‘q.";
     for (const seller of sellers.sellers) card(sellerBox, seller.name + " · " + seller.phone,
-      (seller.verified ? "Tasdiqlangan" : "Tasdiqlanmagan") + " · Ro‘yxatdan o‘tgan: " + (seller.createdAt || "—"),
-      [{ label: seller.verified ? "Tasdiqni bekor qilish" : "Sotuvchini tasdiqlash", run: () => change(base + "/sellers/" + encodeURIComponent(seller.id) + "/verification", { verified: !seller.verified }) }]);
+      (seller.verified ? "Admin ko‘rigidan o‘tgan" : "Admin ko‘rigidan o‘tmagan") + " · Ro‘yxatdan o‘tgan: " + (seller.createdAt || "—"),
+      [{ label: seller.verified ? "Admin tasdig‘ini bekor qilish" : "Admin ko‘rigidan o‘tkazish", run: () => change(base + "/sellers/" + encodeURIComponent(seller.id) + "/verification", { verified: !seller.verified }) }]);
     const productBox = $("business-products"); productBox.replaceChildren();
     if (!products.products.length) productBox.textContent = "Hozircha mahsulot yo‘q.";
     for (const product of products.products) card(productBox, product.name + " · " + Number(product.price || 0).toLocaleString("uz-UZ") + " so‘m",
@@ -57,7 +57,7 @@
       if (order.status === "confirmed") actions.push({ label: "Yakunlangan deb belgilash", run: () => change(base + "/orders/" + encodeURIComponent(order.id) + "/status", { status: "completed" }) });
       if (!["completed","cancelled","rejected"].includes(order.status)) actions.push({ label: "Bekor qilish", run: () => change(base + "/orders/" + encodeURIComponent(order.id) + "/status", { status: "cancelled" }) });
       card(orderBox, order.productName + " · " + Number(order.total || 0).toLocaleString("uz-UZ") + " so‘m",
-        "Buyurtma: " + order.id + " · Xaridor: " + order.buyerName + " · Sotuvchi: " + order.sellerPhone + " · Holat: " + order.status + " · Email: " + (order.emailStatus || "—"), actions);
+        "Buyurtma: " + order.id + " · Xaridor: " + order.buyerName + " · Xaridor tel.: " + (order.buyerPhone || "—") + " · Email: " + (order.buyerEmail || "—") + " · Manzil: " + (order.address || "—") + " · Sotuvchi: " + order.sellerPhone + " · Holat: " + order.status + " · Xat: " + (order.emailStatus || "—"), actions);
     }
     const requestBox = $("business-requests"); requestBox.replaceChildren();
     if (!requests.requests.length) requestBox.textContent = "Hozircha xaridor so‘rovi yo‘q.";
