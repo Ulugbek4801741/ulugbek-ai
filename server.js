@@ -211,6 +211,15 @@ app.use("/api/", rateLimit({
   standardHeaders: "draft-8",
   legacyHeaders: false
 }));
+const marketplaceRouter = require("./modules/regional-marketplace-api");
+marketplaceRouter.setAssistant(async ({ message, senderRole, order, recentMessages }) => {
+  const transcript = recentMessages.map(item => item.sender + ": " + item.message).join("\n");
+  const prompt = "Siz ULUGBEK AI savdo vositachisisiz. Xaridor va sotuvchi o‘rtasida odobli, aniq va xolis muloqotga yordam bering. Faqat berilgan buyurtma ma’lumotlari va suhbatdan foydalaning; sotuvchi yoki xaridor nomidan qaror, narx, chegirma, mavjudlik, yetkazish va’dasi yoki to‘lov tasdig‘ini uydirmang. Noma’lum bo‘lsa, tegishli tomondan so‘rang. Buyurtma holatini o‘zgartirmang va to‘lovni bajarmang. Javobingiz AI yordamchi javobi ekanini yashirmang.\nBuyurtma: " + JSON.stringify(order) + "\nSuhbat:\n" + transcript + "\nOxirgi xabar yuboruvchi: " + senderRole + "\nOxirgi xabar: " + message + "\nJavob bering:";
+  const context = conversationOrchestrator.analyze(prompt);
+  const result = await singleAgent.answer(prompt, [], context);
+  return result && result.reply ? result.reply : null;
+});
+app.use("/api/marketplace", marketplaceRouter);
 const chatRateLimit = rateLimit({
   windowMs: 60 * 1000, limit: 8, standardHeaders: "draft-8", legacyHeaders: false,
   message: { error: "Chat so‘rovlari vaqtinchalik chegaraga yetdi. Bir daqiqadan keyin qayta urinib ko‘ring." }
