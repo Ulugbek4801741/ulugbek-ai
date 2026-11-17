@@ -266,6 +266,7 @@ function requireAdmin(req, res, next) {
   }
   next();
 }
+marketplaceRouter.setAdminGuard(requireAdmin);
 
 function requireAsilbekIntegration(req, res, next) {
   const expected = process.env.ASILBEK_INTEGRATION_TOKEN || "";
