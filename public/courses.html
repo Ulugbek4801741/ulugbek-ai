@@ -56,7 +56,22 @@
   <section id="parentDashboard" class="panel" hidden>
     <div class="panel-heading"><div><span class="eyebrow">VIZOR · OTA-ONA KABINETI</span><h2>Farzand monitoringi</h2><p>Ulangan o‘quvchilarning davomati va natijalari</p></div><button type="button" class="logout-btn" id="parentRefresh">Yangilash</button></div>
     <form id="parentLinkForm" class="course-form"><label class="wide">O‘quvchining ota-ona kodi<input name="parentCode" maxlength="16" required placeholder="O‘quvchi kabinetidagi kod"></label><button class="primary wide">Farzandni ulash</button></form>
-    <div id="parentChildren" class="catalog-grid"><p class="loading-card">Ma’lumotlar yuklanmoqda…</p></div>
+    <div id="parentChildren" class="catalog-grid"><p class="loading-card">Ma’lumotlar yuklanmoqda…</p></div><button type="button" id="parentLogout" class="logout-btn">Chiqish</button>
+  </section>
+
+  <section id="studentDashboard" class="panel" hidden>
+    <div class="panel-heading"><div><span class="eyebrow">VIZOR · O‘QUVCHI KABINETI</span><h2>Mening ta’limim</h2><p>Kurslar, darslar va natijalar</p></div><button type="button" id="studentRefresh" class="logout-btn">Yangilash</button></div>
+    <p>Ota-ona ulash kodi: <b id="studentParentCode">—</b></p>
+    <h3>Yozilgan kurslar</h3><div id="studentCourses" class="catalog-grid"></div>
+    <h3>Bildirishnomalar</h3><div id="studentNotifications"></div>
+    <button type="button" id="studentLogout" class="logout-btn">Chiqish</button>
+  </section>
+
+  <section id="teacherDashboard" class="panel" hidden>
+    <div class="panel-heading"><div><span class="eyebrow">VIZOR · O‘QITUVCHI KABINETI</span><h2>Mening kurslarim</h2><p>O‘quvchilar va darslar holati</p></div><button type="button" id="teacherRefresh" class="logout-btn">Yangilash</button></div>
+    <div id="teacherCourses" class="catalog-grid"></div>
+    <button type="button" id="teacherCreate" class="primary wide">Yangi kurs joylash</button>
+    <button type="button" id="teacherLogout" class="logout-btn">Chiqish</button>
   </section>
 
   <section id="create" class="panel" hidden><div class="panel-heading"><div><span class="eyebrow">BILIM ULASHING</span><h2>O‘z kursingizni joylang</h2><p>Kursingiz umumiy katalogda barcha foydalanuvchilarga ko‘rinadi.</p></div><div class="panel-actions"><button type="button" id="logout" class="logout-btn">Chiqish</button><button type="button" class="close-btn" data-close="create">×</button></div></div><form id="courseForm" class="course-form"><label>Kurs nomi<input name="title" maxlength="100" required placeholder="Masalan: Python dasturlash"></label><label>Yo‘nalish<input name="category" list="categoryOptions" maxlength="80" required placeholder="Masalan: Dasturlash"><datalist id="categoryOptions"></datalist></label><label>O‘qituvchi<input name="instructor" maxlength="80" placeholder="Ismingiz"></label><label>Narxi (so‘m)<input name="price" type="number" min="0" max="1000000000" step="1000" value="0" required></label><label class="wide">Kurs tavsifi<textarea name="description" minlength="10" maxlength="1500" rows="3" required></textarea></label><label class="wide">YouTube dars havolasi<input name="videoUrl" type="url" placeholder="https://youtu.be/..." required></label><label class="wide" id="salesField" hidden>Pullik kurs uchun to‘lov/xarid havolasi<input name="salesUrl" type="url" placeholder="https://..."></label><button class="primary wide">Kursni ommaga joylash</button></form><p class="note">0 so‘m — bepul. Pullik kurs uchun HTTPS to‘lov sahifasi kerak. To‘lov hozircha tashqi havola orqali amalga oshiriladi.</p></section>
