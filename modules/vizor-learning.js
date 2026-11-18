@@ -332,6 +332,19 @@ function createVizorLearning(options = {}) {
     });
   });
 
+  router.get("/admin/courses/pending", ...ready, auth, async (req, res) => {
+    if (req.user.role !== "admin") return res.status(403).json({ error: "Pullik kurslarni faqat administrator tasdiqlaydi." });
+    const result = await pool.query("SELECT c.id,c.title,c.description,c.category,c.price,c.sales_url AS salesUrl,c.created_at,u.display_name AS author,u.email AS authorEmail FROM vizor_courses c JOIN vizor_users u ON u.id=c.instructor_id WHERE c.approval_status='pending' ORDER BY c.created_at ASC LIMIT 100");
+    res.json({ ok: true, courses: result.rows });
+  });
+
+  router.post("/courses/:id/approve", ...ready, auth, async (req, res) => {
+    if (req.user.role !== "admin") return res.status(403).json({ error: "Tasdiqlash uchun administrator huquqi kerak." });
+    const result = await pool.query("UPDATE vizor_courses SET approval_status='approved' WHERE id=$1 AND price>0 AND approval_status='pending' RETURNING id,title,price", [req.params.id]);
+    if (!result.rowCount) return res.status(404).json({ error: "Tasdiqlashni kutayotgan pullik kurs topilmadi." });
+    res.json({ ok: true, course: result.rows[0], approvedBy: req.user.id });
+  });
+
   router.get("/courses", ...ready, async (req, res) => {
     const q = clean(req.query.q, 100);
     const category = clean(req.query.category, 80);
