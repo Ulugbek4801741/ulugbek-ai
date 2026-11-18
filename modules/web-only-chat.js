@@ -68,7 +68,9 @@ async function answer(question, context, options = {}) {
     }
   }
 
-  const evidence = universalSearch.evidenceEntries(found.results || []);
+  // Search snippets alone are not treated as evidence. Only successfully opened public pages may support an answer.
+  const verifiedResults = (found.results || []).filter(item => item && item.pageRead === true);
+  const evidence = universalSearch.evidenceEntries(verifiedResults);
   if (!found.ok || !evidence.length) {
     return {
       reply: "Savolingiz bo‘yicha internetdan hozircha bevosita mos va o‘qilgan ishonchli manba topilmadi. Tasdiqlanmagan ma’lumotni taxmin qilib bermayman.",
@@ -85,7 +87,7 @@ async function answer(question, context, options = {}) {
     return {
       reply: "Internet manbalari topildi, ammo ularning matnidan savolingizga bevosita javob bo‘ladigan dalil ajratilmadi. Noto‘g‘ri xulosa bermaslik uchun javobni tasdiqlangan deb ko‘rsatmayman.",
       answerable: false, webSearchUsed: true, method: "web-evidence-not-sufficient",
-      sourceCount: found.results.length,
+      sourceCount: verifiedResults.length,
       legal: legalMetadata
     };
   }
@@ -95,10 +97,10 @@ async function answer(question, context, options = {}) {
     answerable: true,
     webSearchUsed: true,
     method: "single-web-evidence-answer-no-model",
-    sourceCount: found.results.length,
-    readPageCount: found.results.filter(item => item.pageRead).length,
-    sources: found.results.filter(item => item.pageRead).slice(0, 5).map(item => ({ title: item.title, url: item.url })),
-    sourceRecords: found.results,
+    sourceCount: verifiedResults.length,
+    readPageCount: verifiedResults.length,
+    sources: verifiedResults.slice(0, 5).map(item => ({ title: item.title, url: item.url })),
+    sourceRecords: verifiedResults,
     legal: legalMetadata
   };
 }
