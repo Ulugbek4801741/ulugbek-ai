@@ -1602,8 +1602,14 @@ app.get("/admin", (_req, res) => res.redirect(302, "/admin.html"));
 app.get("/admin/", (_req, res) => res.redirect(302, "/admin.html"));
 
 app.use(express.static(path.join(__dirname, "public"), {
+  maxAge: 0,
   etag: true,
-  maxAge: process.env.NODE_ENV === "production" ? "1h" : 0
+  lastModified: true,
+  setHeaders(res, filePath) {
+    if (/\\.(?:html|js|css|webmanifest)$/i.test(filePath)) {
+      res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    }
+  }
 }));
 app.use((err, _req, res, _next) => {
   const status = Number(err.status || err.statusCode) || 500;
