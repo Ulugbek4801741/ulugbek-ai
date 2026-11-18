@@ -3,7 +3,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const express = require("express");
-const { mountMcpBridge } = require("../modules/mcp-bridge");
+const { mountMcpBridge, createMcpAccessToken } = require("../modules/mcp-bridge");
 
 async function readRpcResponse(response) {
   const raw = await response.text();
@@ -28,14 +28,23 @@ test("MCP bridge exposes real chat and health tools only", async t => {
   const httpServer = app.listen(0);
   await new Promise(resolve => httpServer.once("listening", resolve));
   const port = httpServer.address().port;
-  mountMcpBridge(app, { port });
+  const accessToken = createMcpAccessToken("a".repeat(48));
+  mountMcpBridge(app, { port, accessToken });
   t.after(() => new Promise(resolve => httpServer.close(resolve)));
 
   const endpoint = `http://127.0.0.1:${port}/mcp`;
   const headers = {
     "Content-Type": "application/json",
-    "Accept": "application/json, text/event-stream"
+    "Accept": "application/json, text/event-stream",
+    "Authorization": `Bearer ${accessToken}`
   };
+
+  const unauthorized = await fetch(endpoint, {
+    method: "POST",
+    headers: { ...headers, Authorization: "" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 0, method: "initialize", params: {} })
+  });
+  assert.equal(unauthorized.status, 401);
 
   const initialized = await fetch(endpoint, {
     method: "POST",
