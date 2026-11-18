@@ -212,6 +212,14 @@ function createVizorLearning(options = {}) {
       res.status(401).json({ error: "Foydalanuvchi sessiyasi tekshirilmadi." });
     }
   }
+  router.verifyToken = async token => {
+    await initPromise;
+    if (!pool || initError) return null;
+    const payload = decodeToken(token);
+    if (!payload) return null;
+    const result = await pool.query("SELECT * FROM vizor_users WHERE id=$1 AND status='active'", [payload.sub]);
+    return result.rowCount ? safeUser(result.rows[0]) : null;
+  };
   const ready = [requireDatabase];
 
   router.get("/status", async (_req, res) => {
