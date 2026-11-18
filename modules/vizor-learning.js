@@ -246,7 +246,7 @@ function createVizorLearning(options = {}) {
   });
 
   const loginLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: "draft-8", legacyHeaders: false });
-  const registerLimit = rateLimit({ windowMs: 60 * 60 * 1000, limit: 5, standardHeaders: "draft-8", legacyHeaders: false });
+  const registerLimit = rateLimit({ windowMs: 60 * 60 * 1000, limit: 20, standardHeaders: "draft-8", legacyHeaders: false });
 
   router.post("/register", registerLimit, ...ready, async (req, res) => {
     if (!secret || secret.length < 32) return res.status(503).json({ error: "Sessiya xavfsizlik kaliti sozlanmagan." });
@@ -685,6 +685,19 @@ function createVizorLearning(options = {}) {
     }
   }
   router.runSmokeTest = runSmokeTest;
+
+  async function cleanupQaAccounts() {
+    await initPromise;
+    if (!pool || initError) return { ok: false, error: "VIZOR PostgreSQL tayyor emas." };
+    const usernames = ["ulugbek_qa_student","ulugbek_qa_teacher","ulugbek_qa_parent"];
+    await pool.query(
+      "DELETE FROM vizor_courses WHERE instructor_id IN (SELECT id FROM vizor_users WHERE username = ANY($1::text[]))",
+      [usernames]
+    );
+    const result = await pool.query("DELETE FROM vizor_users WHERE username = ANY($1::text[]) RETURNING id", [usernames]);
+    return { ok: true, removedTestAccounts: result.rowCount };
+  }
+  router.cleanupQaAccounts = cleanupQaAccounts;
 
   return router;
 }
