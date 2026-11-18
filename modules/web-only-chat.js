@@ -53,7 +53,7 @@ async function answer(question, context, options = {}) {
     const legal = await legalResearch.research(query, options.countryCode || "", options.webSearch || webSearch, { limit: 6 });
     legalMetadata = { jurisdiction: legal.jurisdiction, officialSourcesFound: legal.results.length, officialPagesRead: legal.results.filter(item => item.pageRead).length };
     if (!legal.results.length || !legal.results.some(item => item.pageRead)) {
-      return { reply: legalResearch.noEvidenceReply(legal.jurisdiction), answerable: false, webSearchUsed: true, method: "legal-official-source-not-confirmed", legal: legalMetadata, sources: legal.results || [] };
+      return { reply: legalResearch.noEvidenceReply(legal.jurisdiction), answerable: false, webSearchUsed: true, method: "legal-official-source-not-confirmed", legal: legalMetadata, sources: legal.results || [], sourceRecords: legal.results || [] };
     }
     found = { ok: true, results: legal.results };
   } else {
@@ -101,6 +101,7 @@ async function answer(question, context, options = {}) {
     sourceCount: found.results.length,
     readPageCount: found.results.filter(item => item.pageRead).length,
     sources: found.results.filter(item => item.pageRead).slice(0, 5).map(item => ({ title: item.title, url: item.url })),
+    sourceRecords: found.results,
     legal: legalMetadata
   };
 }
