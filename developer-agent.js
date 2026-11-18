@@ -50,7 +50,7 @@ async function save() {
   return chain;
 }
 function githubHeaders() {
-  const token = String(process.env.GITHUB_TOKEN || process.env.DEVELOPER_AGENT_GITHUB_TOKEN || "").trim();
+  const token = String(process.env.GITHUB_TOKEN || process.env.DEVELOPER_AGENT_GITHUB_TOKEN || process.env.GITHUB_ARCHIVE_TOKEN || "").trim();
   return {
     "Accept": "application/vnd.github+json",
     "User-Agent": "ULUGBEK-AI-Developer-Agent/1.0",
