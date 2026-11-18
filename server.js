@@ -1241,6 +1241,7 @@ app.post("/api/admin/knowledge/search", requireAdmin, async (req, res) => {
 });
 
 app.use("/api/chat", async (req, res, next) => {
+  if (process.env.ULUGBEK_REQUIRE_ACCOUNT !== "true") return next();
   try {
     const header = String(req.get("Authorization") || "");
     const match = header.match(/^Bearer\s+(.+)$/i);
