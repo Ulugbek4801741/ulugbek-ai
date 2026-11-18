@@ -214,6 +214,8 @@ app.use("/api/", rateLimit({
 }));
 const socialNetwork = require("./modules/social-network").createSocialNetwork();
 app.use("/api/social", socialNetwork);
+const vizorLearning = require("./modules/vizor-learning").createVizorLearning();
+app.use("/api/vizor", vizorLearning);
 const marketplaceRouter = require("./modules/regional-marketplace-api");
 marketplaceRouter.setAssistant(async ({ message, senderRole, order, recentMessages }) => {
   const transcript = recentMessages.map(item => item.sender + ": " + item.message).join("\n");
