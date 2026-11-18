@@ -15,7 +15,7 @@ async function readRpcResponse(response) {
   return raw ? JSON.parse(raw) : null;
 }
 
-test("MCP bridge exposes real chat and health tools only", async t => {
+test("MCP bridge exposes chat, health, and safe VIZOR tools", async t => {
   const app = express();
   app.use(express.json());
   app.post("/api/chat", (req, res) => {
