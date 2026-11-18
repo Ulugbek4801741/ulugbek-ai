@@ -2,7 +2,8 @@
 
 const { app, BrowserWindow, shell } = require("electron");
 
-const DEFAULT_WEB_URL = "https://ulugbek4801741.github.io/ulugbek-ai-web/";
+// Use the live Render-hosted ULUGBEK AI app by default; override only with an HTTPS URL.
+const DEFAULT_WEB_URL = "https://ulugbek-ai1.onrender.com/";
 const APP_URL = process.env.ULUGBEK_WEB_URL || DEFAULT_WEB_URL;
 
 if (!/^https:\/\//i.test(APP_URL)) {
