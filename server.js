@@ -292,6 +292,21 @@ app.post("/api/internal/vizor-diagnostic", (req, res, next) => {
     return res.status(503).json({ ok: false, error: "VIZOR diagnostikasi bajarilmadi." });
   }
 });
+
+app.post("/api/internal/vizor-qa-cleanup", (req, res, next) => {
+  const expected = createMcpAccessToken(ADMIN_SESSION_SECRET);
+  if (!isValidMcpBearerToken(expected, req.get("Authorization"))) {
+    return res.status(401).json({ error: "MCP QA tozalash ruxsati yo‘q." });
+  }
+  next();
+}, async (_req, res) => {
+  try {
+    const result = await vizorLearning.cleanupQaAccounts();
+    return res.status(result.ok ? 200 : 503).json(result);
+  } catch (_error) {
+    return res.status(503).json({ ok: false, error: "VIZOR QA ma’lumotlarini tozalash bajarilmadi." });
+  }
+});
 marketplaceRouter.setAdminGuard(requireAdmin);
 
 function requireAsilbekIntegration(req, res, next) {
