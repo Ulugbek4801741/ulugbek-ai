@@ -21,14 +21,17 @@ async function withServer(port, extraEnv, fn) {
       AGENT_MEMORY_PATH: path.join(os.tmpdir(), `ulugbek-provider-memory-${port}.json`),
       ...extraEnv
     },
-    stdio: "ignore"
+    stdio: ["ignore", "pipe", "pipe"]
   });
+  let startupOutput = "";
+  child.stdout.on("data", chunk => { startupOutput += chunk.toString(); });
+  child.stderr.on("data", chunk => { startupOutput += chunk.toString(); });
   const baseUrl = `http://127.0.0.1:${port}`;
   try {
     const deadline = Date.now() + 8000;
     let ready = false;
     while (Date.now() < deadline) {
-      if (child.exitCode !== null) throw new Error("ULUGBEK AI server exited early.");
+      if (child.exitCode !== null) throw new Error("ULUGBEK AI server exited early: " + startupOutput.slice(-4000));
       try { const response = await fetch(baseUrl + "/api/health"); if (response.ok) { ready = true; break; } } catch {}
       await new Promise(resolve => setTimeout(resolve, 120));
     }
