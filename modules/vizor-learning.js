@@ -245,6 +245,9 @@ function createVizorLearning(options = {}) {
     });
   });
 
+  const loginLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: "draft-8", legacyHeaders: false });
+  const registerLimit = rateLimit({ windowMs: 60 * 60 * 1000, limit: 5, standardHeaders: "draft-8", legacyHeaders: false });
+
   router.post("/register", registerLimit, ...ready, async (req, res) => {
     if (!secret || secret.length < 32) return res.status(503).json({ error: "Sessiya xavfsizlik kaliti sozlanmagan." });
     const displayName = clean(req.body.displayName, 80);
@@ -287,8 +290,6 @@ function createVizorLearning(options = {}) {
     }
   });
 
-  const loginLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: "draft-8", legacyHeaders: false });
-  const registerLimit = rateLimit({ windowMs: 60 * 60 * 1000, limit: 5, standardHeaders: "draft-8", legacyHeaders: false });
   router.post("/login", loginLimit, ...ready, async (req, res) => {
     const identifier = clean(req.body.identifier || req.body.username, 254);
     const password = String(req.body.password || "");
