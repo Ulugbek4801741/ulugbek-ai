@@ -20,8 +20,10 @@
   };
   function continueToRequestedPage() {
     const next = new URLSearchParams(window.location.search).get("next") || "";
-    if (!next.startsWith("/") || next.startsWith("//")) return false;
-    window.location.replace(next);
+    if (!next.startsWith("/")) return false;
+    const target = new URL(next, window.location.origin);
+    if (target.origin !== window.location.origin) return false;
+    window.location.replace(target.pathname + target.search + target.hash);
     return true;
   }
   const overlay = $("div", { className: "ulugbek-auth-screen", id: "ulugbek-auth-screen" });
