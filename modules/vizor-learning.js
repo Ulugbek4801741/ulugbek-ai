@@ -164,7 +164,7 @@ function createVizorLearning(options = {}) {
     for (const statement of schema) await pool.query(statement);
   })().catch(error => {
     initError = error;
-    console.error("VIZOR database initialization failed:", error.message);
+    console.error("ULUGBEK AI ta’lim bazasini ishga tushirish xatosi:", error.message);
   });
 
   const id = () => crypto.randomUUID();
@@ -191,7 +191,7 @@ function createVizorLearning(options = {}) {
     await initPromise;
     if (!pool || initError) return res.status(503).json({
       ok: false,
-      error: "VIZOR PostgreSQL bazasi tayyor emas. Render DATABASE_URL sozlamasini tekshiring."
+      error: "ULUGBEK AI ta’lim bazasi tayyor emas. Render DATABASE_URL sozlamasini tekshiring."
     });
     next();
   }
@@ -285,7 +285,7 @@ function createVizorLearning(options = {}) {
       });
     } catch (error) {
       if (error.code === "23505") return res.status(409).json({ error: "Bu login, email yoki telefon raqami avval ro‘yxatdan o‘tgan." });
-      console.error("VIZOR registration:", error.message);
+      console.error("ULUGBEK AI ro‘yxatdan o‘tkazish:", error.message);
       return res.status(500).json({ error: "Akkaunt yaratilmadi." });
     }
   });
@@ -625,7 +625,7 @@ function createVizorLearning(options = {}) {
 
   async function runSmokeTest() {
     await initPromise;
-    if (!pool || initError) return { ok: false, storage: "postgresql", error: "VIZOR PostgreSQL tayyor emas." };
+    if (!pool || initError) return { ok: false, storage: "postgresql", error: "ULUGBEK AI ta’lim bazasi tayyor emas." };
     const client = await pool.connect();
     const checks = {};
     try {
@@ -688,7 +688,7 @@ function createVizorLearning(options = {}) {
 
   async function cleanupQaAccounts() {
     await initPromise;
-    if (!pool || initError) return { ok: false, error: "VIZOR PostgreSQL tayyor emas." };
+    if (!pool || initError) return { ok: false, error: "ULUGBEK AI ta’lim bazasi tayyor emas." };
     const usernames = ["ulugbek_qa_student","ulugbek_qa_teacher","ulugbek_qa_parent"];
     await pool.query(
       "DELETE FROM vizor_courses WHERE instructor_id IN (SELECT id FROM vizor_users WHERE username = ANY($1::text[]))",
