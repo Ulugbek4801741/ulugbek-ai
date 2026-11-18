@@ -79,7 +79,7 @@ test("MCP bridge exposes chat, health, and safe VIZOR tools", async t => {
   assert.equal(listed.status, 200);
   const listResult = await readRpcResponse(listed);
   const toolNames = listResult.result?.tools?.map(tool => tool.name) || [];
-  assert.deepEqual(toolNames.sort(), ["ulugbek_chat", "ulugbek_health", "ulugbek_vizor_courses", "ulugbek_vizor_diagnostic", "ulugbek_vizor_status"]);
+  assert.deepEqual(toolNames.sort(), ["ulugbek_chat", "ulugbek_health", "ulugbek_vizor_courses", "ulugbek_vizor_diagnostic", "ulugbek_vizor_status", "ulugbek_vizor_user_simulation"]);
 
   const chat = await fetch(endpoint, {
     method: "POST",
