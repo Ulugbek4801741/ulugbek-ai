@@ -2,7 +2,14 @@
 
 const express = require("express");
 const crypto = require("node:crypto");
+const rateLimit = require("express-rate-limit");
 const { Pool } = require("pg");
+
+const DEFAULT_CATEGORIES = [
+  "Ingliz tili","Rus tili","Nemis tili","Fransuz tili","Turk tili","Arab tili","Ispan tili","Koreys tili","Xitoy tili","Yapon tili",
+  "Matematika","Fizika","Kimyo","Biologiya","Tarix","Geografiya","Ona tili","Adabiyot","Informatika",
+  "Word","Excel","PowerPoint","Python","Git/GitHub","SQL/PostgreSQL","Django","AWS","Sun’iy intellekt"
+];
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_RE = /^\+?[1-9]\d{7,14}$/;
@@ -228,7 +235,7 @@ function createVizorLearning(options = {}) {
     });
   });
 
-  router.post("/register", ...ready, async (req, res) => {
+  router.post("/register", registerLimit, ...ready, async (req, res) => {
     if (!secret || secret.length < 32) return res.status(503).json({ error: "Sessiya xavfsizlik kaliti sozlanmagan." });
     const displayName = clean(req.body.displayName, 80);
     const email = validateEmail(req.body.email);
@@ -270,7 +277,9 @@ function createVizorLearning(options = {}) {
     }
   });
 
-  router.post("/login", ...ready, async (req, res) => {
+  const loginLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: "draft-8", legacyHeaders: false });
+  const registerLimit = rateLimit({ windowMs: 60 * 60 * 1000, limit: 5, standardHeaders: "draft-8", legacyHeaders: false });
+  router.post("/login", loginLimit, ...ready, async (req, res) => {
     const identifier = clean(req.body.identifier || req.body.username, 254);
     const password = String(req.body.password || "");
     if (!identifier || !password) return res.status(400).json({ error: "Email, telefon yoki login va parol kiriting." });
@@ -346,11 +355,11 @@ function createVizorLearning(options = {}) {
 
   router.get("/categories", ...ready, async (_req, res) => {
     const result = await pool.query("SELECT DISTINCT category FROM vizor_courses WHERE status='published' ORDER BY category");
-    res.json({ ok: true, categories: result.rows.map(row => row.category) });
+    res.json({ ok: true, categories: [...new Set([...DEFAULT_CATEGORIES, ...result.rows.map(row => row.category)])].sort((a,b)=>a.localeCompare(b,"uz")) });
   });
   router.get("/courses/categories", ...ready, async (_req, res) => {
     const result = await pool.query("SELECT DISTINCT category FROM vizor_courses WHERE status='published' ORDER BY category");
-    res.json({ ok: true, categories: result.rows.map(row => row.category) });
+    res.json({ ok: true, categories: [...new Set([...DEFAULT_CATEGORIES, ...result.rows.map(row => row.category)])].sort((a,b)=>a.localeCompare(b,"uz")) });
   });
 
   router.post("/courses", ...ready, auth, async (req, res) => {
@@ -495,6 +504,8 @@ function createVizorLearning(options = {}) {
   });
 
   router.get("/courses/:id/tests", ...ready, auth, async (req, res) => {
+    const enrolled = await pool.query("SELECT 1 FROM vizor_enrollments WHERE course_id=$1 AND student_id=$2", [req.params.id,req.user.id]);
+    if (!enrolled.rowCount && req.user.role !== "admin") return res.status(403).json({ error: "Testlarni ko‘rish uchun avval kursga yoziling." });
     const result = await pool.query("SELECT id,title,questions,created_at FROM vizor_tests WHERE course_id=$1 ORDER BY created_at", [req.params.id]);
     res.json({ ok: true, tests: result.rows.map(t=>({id:t.id,title:t.title,questions:t.questions.map(q=>({prompt:q.prompt,options:q.options})),createdAt:t.created_at})) });
   });
