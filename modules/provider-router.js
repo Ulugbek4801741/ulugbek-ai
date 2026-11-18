@@ -11,6 +11,7 @@ function providerFor(env) {
   const explicit = String(env.ULUGBEK_AI_PROVIDER || "").trim().toLowerCase();
   if (explicit) return explicit;
   if (String(env.ULUGBEK_LOCAL_MODEL_URL || "").trim() && String(env.ULUGBEK_LOCAL_MODEL_NAME || "").trim()) return "openai-compatible";
+  if (String(env.GROQ_API_KEY || "").trim()) return "groq";
   if (String(env.GEMINI_API_KEY || "").trim()) return "gemini";
   if (String(env.OPENAI_API_KEY || "").trim() && String(env.OPENAI_BASE_URL || "").trim() && String(env.OPENAI_MODEL || "").trim()) return "openai-compatible";
   if (String(env.ANTHROPIC_API_KEY || "").trim()) return "anthropic";
@@ -19,6 +20,7 @@ function providerFor(env) {
 
 function modelFor(provider, env) {
   if (env.ULUGBEK_AI_MODEL) return String(env.ULUGBEK_AI_MODEL).trim();
+  if (provider === "groq") return String(env.GROQ_MODEL || "openai/gpt-oss-120b").trim();
   if (provider === "openai-compatible") return String(env.ULUGBEK_LOCAL_MODEL_NAME || env.OPENAI_MODEL || "").trim();
   if (provider === "gemini") return String(env.GEMINI_MODEL || "").trim();
   if (provider === "anthropic") return String(env.ANTHROPIC_MODEL || "").trim();
@@ -29,6 +31,7 @@ function tokenFor(provider, env) {
   if (env.ULUGBEK_AI_TOKEN || env.ULUGBEK_LOCAL_MODEL_TOKEN) {
     return String(env.ULUGBEK_AI_TOKEN || env.ULUGBEK_LOCAL_MODEL_TOKEN).trim();
   }
+  if (provider === "groq") return String(env.GROQ_API_KEY || "").trim();
   if (provider === "gemini") return String(env.GEMINI_API_KEY || "").trim();
   if (provider === "openai-compatible") return String(env.OPENAI_API_KEY || "").trim();
   if (provider === "anthropic") return String(env.ANTHROPIC_API_KEY || "").trim();
@@ -42,6 +45,7 @@ function endpointFor(provider, env) {
     const base = String(env.OPENAI_BASE_URL || "").trim().replace(/\/+$/, "");
     return base ? base + "/chat/completions" : "";
   }
+  if (provider === "groq") return String(env.GROQ_BASE_URL || "https://api.groq.com/openai/v1/chat/completions").trim();
   if (provider === "anthropic") return String(env.ULUGBEK_AI_BASE_URL || "https://api.anthropic.com/v1/messages").trim();
   return "";
 }
@@ -52,6 +56,11 @@ function configuration(env = process.env) {
   const token = tokenFor(provider, env);
   if (provider === "none" || !provider) return { configured: false, provider: "not-configured", apiKeyRequired: false };
   if (!model) return { configured: false, provider, reason: "model-name-missing", apiKeyRequired: provider !== "openai-compatible" };
+  if (provider === "groq") {
+    const url = validHttpUrl(endpointFor(provider, env));
+    if (!url || url.hostname !== "api.groq.com" || url.protocol !== "https:") return { configured: false, provider, reason: "endpoint-invalid", apiKeyRequired: true };
+    return { configured: Boolean(token), provider, model, endpoint: url.toString(), apiKeyRequired: true, tokenConfigured: Boolean(token) };
+  }
   if (provider === "openai-compatible") {
     const url = validHttpUrl(endpointFor(provider, env));
     if (!url) return { configured: false, provider, reason: "endpoint-invalid", apiKeyRequired: false };
@@ -67,7 +76,7 @@ function request(prompt, systemPrompt, env = process.env) {
   if (!config.configured) throw new Error("AI provider sozlanmagan yoki konfiguratsiya to‘liq emas.");
   const userText = String(prompt || "");
   const token = tokenFor(config.provider, env);
-  if (config.provider === "openai-compatible") {
+  if (config.provider === "openai-compatible" || config.provider === "groq") {
     const headers = { "Content-Type": "application/json", Accept: "application/json" };
     if (token) headers.Authorization = "Bearer " + token;
     return {
@@ -110,7 +119,7 @@ function request(prompt, systemPrompt, env = process.env) {
 }
 
 function extract(payload, provider) {
-  if (provider === "openai-compatible") {
+  if (provider === "openai-compatible" || provider === "groq") {
     const value = payload?.choices?.[0]?.message?.content;
     return typeof value === "string" ? value.trim() : "";
   }
