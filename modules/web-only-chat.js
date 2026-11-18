@@ -43,16 +43,30 @@ async function answer(question, context, options = {}) {
       return { reply: jobSearch.locationClarification(), answerable: false, webSearchUsed: false, method: "job-search-needs-location" };
     }
     const jobs = await jobSearch.searchJobs(query, options.webSearch || webSearch);
-    return { reply: jobs.reply, answerable: Boolean(jobs.results?.length), webSearchUsed: Boolean(jobs.ok), method: "public-job-feeds", details: { count: jobs.results?.length || 0 } };
+    return { reply: jobs.reply, answerable: Boolean(jobs.results?.length), webSearchUsed: Boolean(jobs.ok), method: "public-job-feeds", details: { count: jobs.results?.length || 0 }, jobResults: jobs.results || [] };
   }
 
   let found;
-  try {
-    found = await (options.searchWeb || universalSearch.searchWeb)(
-      query,
-      options.webSearch || webSearch,
-      { limit: 8, includeScholarly: true }
-    );
+  let legalMetadata = null;
+  if (options.legalResearch === true) {
+    const legalResearch = require("./legal-research");
+    const legal = await legalResearch.research(query, options.countryCode || "", options.webSearch || webSearch, { limit: 6 });
+    legalMetadata = { jurisdiction: legal.jurisdiction, officialSourcesFound: legal.results.length, officialPagesRead: legal.results.filter(item => item.pageRead).length };
+    if (!legal.results.length || !legal.results.some(item => item.pageRead)) {
+      return { reply: legalResearch.noEvidenceReply(legal.jurisdiction), answerable: false, webSearchUsed: true, method: "legal-official-source-not-confirmed", legal: legalMetadata, sources: legal.results || [] };
+    }
+    found = { ok: true, results: legal.results };
+  } else {
+    try {
+      found = await (options.searchWeb || universalSearch.searchWeb)(
+        query,
+        options.webSearch || webSearch,
+        { limit: 8, includeScholarly: true }
+      );
+    } catch (_) {
+      return { reply: "Internet qidiruvi hozircha ishlamadi. Birozdan keyin qayta urinib ko‘ring.", answerable: false, webSearchUsed: false, method: "web-search-error" };
+    }
+  }
   } catch (_) {
     return { reply: "Internet qidiruvi hozircha ishlamadi. Birozdan keyin qayta urinib ko‘ring.", answerable: false, webSearchUsed: false, method: "web-search-error" };
   }
@@ -62,7 +76,8 @@ async function answer(question, context, options = {}) {
     return {
       reply: "Savolingiz bo‘yicha internetdan hozircha bevosita mos va o‘qilgan ishonchli manba topilmadi. Tasdiqlanmagan ma’lumotni taxmin qilib bermayman.",
       answerable: false, webSearchUsed: Boolean(found.ok), method: "web-evidence-unavailable",
-      sourceCount: 0
+      sourceCount: 0,
+      legal: legalMetadata
     };
   }
 
@@ -73,7 +88,8 @@ async function answer(question, context, options = {}) {
     return {
       reply: "Internet manbalari topildi, ammo ularning matnidan savolingizga bevosita javob bo‘ladigan dalil ajratilmadi. Noto‘g‘ri xulosa bermaslik uchun javobni tasdiqlangan deb ko‘rsatmayman.",
       answerable: false, webSearchUsed: true, method: "web-evidence-not-sufficient",
-      sourceCount: found.results.length
+      sourceCount: found.results.length,
+      legal: legalMetadata
     };
   }
 
@@ -84,7 +100,8 @@ async function answer(question, context, options = {}) {
     method: "single-web-evidence-answer-no-model",
     sourceCount: found.results.length,
     readPageCount: found.results.filter(item => item.pageRead).length,
-    sources: found.results.filter(item => item.pageRead).slice(0, 5).map(item => ({ title: item.title, url: item.url }))
+    sources: found.results.filter(item => item.pageRead).slice(0, 5).map(item => ({ title: item.title, url: item.url })),
+    legal: legalMetadata
   };
 }
 
