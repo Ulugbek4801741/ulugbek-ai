@@ -13,7 +13,7 @@ function createMcpAccessToken(sessionSecret) {
 function isValidMcpBearerToken(expected, authorization) {
   if (typeof expected !== "string" || !expected ||
       typeof authorization !== "string") return false;
-  const match = authorization.match(/^Bearer\\s+([A-Za-z0-9._~-]+)$/i);
+  const match = authorization.match(/^Bearer\s+([A-Za-z0-9._~-]+)$/i);
   if (!match) return false;
   const supplied = Buffer.from(match[1]);
   const actual = Buffer.from(expected);
