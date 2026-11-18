@@ -212,10 +212,12 @@ app.use("/api/", rateLimit({
   standardHeaders: "draft-8",
   legacyHeaders: false
 }));
-const socialNetwork = require("./modules/social-network").createSocialNetwork();
-app.use("/api/social", socialNetwork);
 const vizorLearning = require("./modules/vizor-learning").createVizorLearning();
 app.use("/api/learning", vizorLearning);
+const socialNetwork = require("./modules/social-network").createSocialNetwork({
+  verifyAccountToken: token => vizorLearning.verifyToken(token)
+});
+app.use("/api/social", socialNetwork);
 app.use("/api/vizor", vizorLearning);
 const marketplaceRouter = require("./modules/regional-marketplace-api");
 marketplaceRouter.setAssistant(async ({ message, senderRole, order, recentMessages }) => {
