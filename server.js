@@ -203,7 +203,7 @@ app.use(helmet({
     directives: { microphone: ["self"], camera: [], geolocation: [] }
   }
 }));
-app.use(express.json({ limit: "1.2mb", strict: true, type: "application/json" }));
+app.use(express.json({ limit: "12mb", strict: true, type: "application/json" }));
 // Capture only failure metadata automatically; raw chat text is not stored without explicit feedback.
 app.use("/api/chat", errorLearning.middleware(), conversationMemory.middleware());
 app.use("/api/", rateLimit({
@@ -212,6 +212,8 @@ app.use("/api/", rateLimit({
   standardHeaders: "draft-8",
   legacyHeaders: false
 }));
+const socialNetwork = require("./modules/social-network").createSocialNetwork();
+app.use("/api/social", socialNetwork);
 const marketplaceRouter = require("./modules/regional-marketplace-api");
 marketplaceRouter.setAssistant(async ({ message, senderRole, order, recentMessages }) => {
   const transcript = recentMessages.map(item => item.sender + ": " + item.message).join("\n");
