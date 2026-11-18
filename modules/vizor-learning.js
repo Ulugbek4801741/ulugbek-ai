@@ -320,8 +320,8 @@ function createVizorLearning(options = {}) {
     if (type === "free") where.push("c.price=0");
     if (type === "paid") where.push("c.price>0");
     if (q) {
-      params.push("%" + q.replace(/[%_]/g, "\\$&") + "%");
-      where.push("(c.title ILIKE $" + params.length + " ESCAPE '\\\\' OR c.description ILIKE $" + params.length + " ESCAPE '\\\\' OR c.category ILIKE $" + params.length + " ESCAPE '\\\\')");
+      params.push("%" + q + "%");
+      where.push("(c.title ILIKE $" + params.length + " OR c.description ILIKE $" + params.length + " OR c.category ILIKE $" + params.length + ")");
     }
     const result = await pool.query(
       `SELECT c.id,c.title,c.description,c.category,c.price::integer AS price,c.sales_url AS "salesUrl",c.created_at,
