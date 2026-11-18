@@ -615,6 +615,69 @@ function createVizorLearning(options = {}) {
     res.json({ ok: true });
   });
 
+  async function runSmokeTest() {
+    await initPromise;
+    if (!pool || initError) return { ok: false, storage: "postgresql", error: "VIZOR PostgreSQL tayyor emas." };
+    const client = await pool.connect();
+    const checks = {};
+    try {
+      await client.query("BEGIN");
+      const studentId=id(), teacherId=id(), parentId=id(), courseId=id(), lessonId=id(), testId=id();
+      const studentCode=crypto.randomBytes(5).toString("hex").toUpperCase();
+      const salt="vizor-smoke-test-salt-2026";
+      const passwordHash=hashPassword("smoke-test-password",salt);
+      for (const [uid,username,email,phone,role,parentCode] of [
+        [studentId,"vizor_smoke_student_"+studentId.slice(0,6),"vizor-student-"+studentId+"@example.invalid","+999"+studentId.replace(/-/g,"").slice(0,9),"student",studentCode],
+        [teacherId,"vizor_smoke_teacher_"+teacherId.slice(0,6),"vizor-teacher-"+teacherId+"@example.invalid","+998"+teacherId.replace(/-/g,"").slice(0,9),"teacher","T"+teacherId.replace(/-/g,"").slice(0,8)],
+        [parentId,"vizor_smoke_parent_"+parentId.slice(0,6),"vizor-parent-"+parentId+"@example.invalid","+997"+parentId.replace(/-/g,"").slice(0,9),"parent","P"+parentId.replace(/-/g,"").slice(0,8)]
+      ]) {
+        await client.query(
+          "INSERT INTO vizor_users(id,username,display_name,email,phone,password_hash,password_salt,role,parent_code) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)",
+          [uid,username,"VIZOR smoke test",email,phone,passwordHash,salt,role,parentCode]
+        );
+      }
+      checks.accounts = true;
+      await client.query(
+        "INSERT INTO vizor_courses(id,title,description,category,price,instructor_id) VALUES($1,'[TEST] VIZOR course','Temporary smoke-test course description','VIZOR QA',0,$2)",
+        [courseId,teacherId]
+      );
+      await client.query(
+        "INSERT INTO vizor_lessons(id,course_id,title,video_url,duration_minutes) VALUES($1,$2,'[TEST] Lesson','https://youtu.be/aqz-KE-bpKQ',60)",
+        [lessonId,courseId]
+      );
+      checks.teacherCourseAndLesson = true;
+      await client.query("INSERT INTO vizor_enrollments(id,course_id,student_id) VALUES($1,$2,$3)",[id(),courseId,studentId]);
+      await client.query("INSERT INTO vizor_progress(id,lesson_id,student_id,completed,seconds_watched) VALUES($1,$2,$3,true,120)",[id(),lessonId,studentId]);
+      checks.studentEnrollmentAndProgress = true;
+      await client.query(
+        "INSERT INTO vizor_tests(id,course_id,title,questions,created_by) VALUES($1,$2,'[TEST] Quiz',$3,$4)",
+        [testId,courseId,JSON.stringify([{prompt:"2+2?",options:["3","4"],correctIndex:1}]),teacherId]
+      );
+      await client.query(
+        "INSERT INTO vizor_test_attempts(id,test_id,student_id,score,total,answers) VALUES($1,$2,$3,1,1,'[1]'::jsonb)",
+        [id(),testId,studentId]
+      );
+      checks.testAndScoring = true;
+      await client.query("INSERT INTO vizor_attendance(id,lesson_id,student_id) VALUES($1,$2,$3)",[id(),lessonId,studentId]);
+      await client.query("INSERT INTO vizor_parent_links(id,parent_id,student_id) VALUES($1,$2,$3)",[id(),parentId,studentId]);
+      await client.query("INSERT INTO vizor_notifications(id,user_id,kind,message) VALUES($1,$2,'test_result','Smoke test notification')",[id(),parentId]);
+      checks.attendanceParentMonitoringAndNotifications = true;
+      const summary = await client.query(
+        "SELECT (SELECT COUNT(*)::int FROM vizor_enrollments WHERE course_id=$1) AS enrollments,(SELECT COUNT(*)::int FROM vizor_progress WHERE lesson_id=$2 AND completed) AS completed_lessons,(SELECT COUNT(*)::int FROM vizor_test_attempts WHERE test_id=$3) AS attempts,(SELECT COUNT(*)::int FROM vizor_parent_links WHERE student_id=$4) AS parent_links",
+        [courseId,lessonId,testId,studentId]
+      );
+      checks.databaseRelations = summary.rows[0].enrollments===1 && summary.rows[0].completed_lessons===1 && summary.rows[0].attempts===1 && summary.rows[0].parent_links===1;
+      await client.query("ROLLBACK");
+      return { ok: Object.values(checks).every(Boolean), storage: "postgresql", checks, testDataPersisted: false, cleanup: "transaction_rolled_back" };
+    } catch (error) {
+      try { await client.query("ROLLBACK"); } catch (_) {}
+      return { ok: false, storage: "postgresql", checks, error: "VIZOR test jarayonida ma’lumotlar bazasi xatosi.", detail: error.message, testDataPersisted: false, cleanup: "transaction_rolled_back" };
+    } finally {
+      client.release();
+    }
+  }
+  router.runSmokeTest = runSmokeTest;
+
   return router;
 }
 
