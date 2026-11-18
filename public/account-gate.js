@@ -18,6 +18,12 @@
     localStorage.setItem(TOKEN_KEY, value);
     localStorage.setItem(LEGACY_KEY, value);
   };
+  function continueToRequestedPage() {
+    const next = new URLSearchParams(window.location.search).get("next") || "";
+    if (!next.startsWith("/") || next.startsWith("//")) return false;
+    window.location.replace(next);
+    return true;
+  }
   const overlay = $("div", { className: "ulugbek-auth-screen", id: "ulugbek-auth-screen" });
   overlay.innerHTML = `
     <div class="ua-top"><a href="/" class="ua-brand">← ULUGBEK AI</a><span>ULUGBEK HAMJAMIYATI</span></div>
@@ -89,6 +95,7 @@
       localStorage.setItem("ulugbek-session", String(result.user.id).replace(/-/g, ""));
       window.ULUGBEK_ACCOUNT = result.user;
       overlay.remove();
+      if (continueToRequestedPage()) return;
       document.dispatchEvent(new CustomEvent("ulugbek:authenticated", { detail: result.user }));
     } catch (failure) {
       error.textContent = failure.message || "Ulanish xatosi. Qayta urinib ko‘ring.";
@@ -109,6 +116,7 @@
         localStorage.setItem("ulugbek-session", String(result.user.id).replace(/-/g, ""));
         window.ULUGBEK_ACCOUNT = result.user;
         overlay.remove();
+        if (continueToRequestedPage()) return;
         return;
       } catch (_) {
         localStorage.removeItem(TOKEN_KEY);
