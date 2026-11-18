@@ -28,6 +28,16 @@ function hashPassword(password, salt) {
   return crypto.scryptSync(String(password), salt, 64).toString("hex");
 }
 
+function isYoutubeUrl(value) {
+  try {
+    const url = new URL(String(value || ""));
+    const host = url.hostname.toLowerCase();
+    if (host === "youtu.be") return url.pathname.split("/").filter(Boolean).length > 0;
+    if (!["youtube.com","www.youtube.com","m.youtube.com","youtube-nocookie.com","www.youtube-nocookie.com"].includes(host)) return false;
+    return Boolean(url.searchParams.get("v") || url.pathname.match(/\\/(?:embed|shorts|live)\\/[\\w-]{6,}/));
+  } catch (_) { return false; }
+}
+
 function safeUser(row) {
   return {
     id: row.id,
@@ -426,7 +436,7 @@ function createVizorLearning(options = {}) {
     if (title.length < 2 || (!videoUrl && !liveUrl) || !Number.isInteger(duration) || duration < 1 || duration > 240) {
       return res.status(400).json({ error: "Dars nomi, video yoki jonli efir manzili va 1–240 daqiqa davomiylik kerak." });
     }
-    if (videoUrl && !/^https:\/\//i.test(videoUrl)) return res.status(400).json({ error: "Video manzili HTTPS bo‘lishi kerak." });
+    if (videoUrl && !isYoutubeUrl(videoUrl)) return res.status(400).json({ error: "Video uchun YouTube yoki youtu.be havolasini kiriting." });
     if (liveUrl && !/^https:\/\//i.test(liveUrl)) return res.status(400).json({ error: "Jonli efir manzili HTTPS bo‘lishi kerak." });
     const scheduledAt = req.body.scheduledAt ? new Date(req.body.scheduledAt) : null;
     if (scheduledAt && Number.isNaN(scheduledAt.getTime())) return res.status(400).json({ error: "Dars sanasi noto‘g‘ri." });
@@ -608,4 +618,4 @@ function createVizorLearning(options = {}) {
   return router;
 }
 
-module.exports = { createVizorLearning, normalizePhone, validateEmail, hashPassword };
+module.exports = { createVizorLearning, normalizePhone, validateEmail, hashPassword, isYoutubeUrl };
