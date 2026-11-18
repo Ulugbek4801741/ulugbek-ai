@@ -315,7 +315,7 @@ function createVizorLearning(options = {}) {
       where.push("(c.title ILIKE $" + params.length + " ESCAPE '\\\\' OR c.description ILIKE $" + params.length + " ESCAPE '\\\\' OR c.category ILIKE $" + params.length + " ESCAPE '\\\\')");
     }
     const result = await pool.query(
-      `SELECT c.id,c.title,c.description,c.category,c.price,c.sales_url,c.created_at,
+      `SELECT c.id,c.title,c.description,c.category,c.price::integer AS price,c.sales_url AS "salesUrl",c.created_at,
               c.instructor_id AS "authorId",
               (SELECT l.video_url FROM vizor_lessons l WHERE l.course_id=c.id ORDER BY l.sort_order,l.created_at LIMIT 1) AS "videoUrl",
               u.display_name AS instructor,u.username AS instructor_username
@@ -326,6 +326,22 @@ function createVizorLearning(options = {}) {
     );
     res.set("Cache-Control", "no-store");
     res.json({ ok: true, total: result.rowCount, courses: result.rows });
+  });
+
+  router.get("/my/courses", ...ready, auth, async (req, res) => {
+    const result = await pool.query(
+      `SELECT c.id,c.title,c.description,c.category,c.price::integer AS price,
+        c.sales_url AS "salesUrl",c.instructor_id AS "authorId",u.display_name AS instructor,
+        (SELECT l.id FROM vizor_lessons l WHERE l.course_id=c.id ORDER BY l.sort_order,l.created_at LIMIT 1) AS "lessonId",
+        (SELECT l.video_url FROM vizor_lessons l WHERE l.course_id=c.id ORDER BY l.sort_order,l.created_at LIMIT 1) AS "videoUrl",
+        (SELECT COUNT(*)::int FROM vizor_progress p JOIN vizor_lessons l ON l.id=p.lesson_id WHERE l.course_id=c.id AND p.student_id=$1 AND p.completed) AS "completedLessons",
+        (SELECT COUNT(*)::int FROM vizor_lessons l WHERE l.course_id=c.id) AS "totalLessons"
+       FROM vizor_enrollments e JOIN vizor_courses c ON c.id=e.course_id
+       JOIN vizor_users u ON u.id=c.instructor_id
+       WHERE e.student_id=$1 ORDER BY e.created_at DESC`,
+      [req.user.id]
+    );
+    res.json({ ok: true, courses: result.rows });
   });
 
   router.get("/categories", ...ready, async (_req, res) => {
