@@ -1,4 +1,4 @@
-const CACHE_NAME = "ulugbek-ai-shell-v5";
+const CACHE_NAME = "ulugbek-ai-shell-v6";
 const base = new URL("./", self.registration.scope);
 const APP_SHELL = ["", "index.html", "styles.css", "app.js", "manifest.webmanifest", "icon.svg"].map((path) => new URL(path, base).toString());
 
