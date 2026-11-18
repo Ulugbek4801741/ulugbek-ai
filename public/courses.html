@@ -4,16 +4,16 @@
 <script src="config.js"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#f5f7fb">
+<meta name="theme-color" content="#121824">
 <meta name="description" content="ULUGBEK AI — server bilan ishlaydigan ommaviy o‘quv kurslari.">
 <title>ULUGBEK AI — O‘quv kurslari</title>
-<link rel="stylesheet" href="courses.css">
+<link rel="stylesheet" href="courses.css"><link rel="stylesheet" href="account-gate.css">
 </head>
 <body>
 <header class="topbar">
   <a class="brand" href="/" aria-label="ULUGBEK AI bosh sahifa"><span class="brand-logo">U</span><span>ULUGBEK AI <small>O‘QUV KURSLARI</small></span></a>
   <div class="top-profile"><span class="profile-avatar">👤</span><span class="profile-copy"><b id="profileName">Mehmon</b><small id="profileMeta">Onlayn kurslar</small></span></div>
-  <div class="top-actions"><span class="server-pill" id="serverState"><i></i> Server tekshirilmoqda</span><button id="account" class="account-btn">Kirish</button></div>
+  <div class="top-actions"><button id="globalCreateCourse" class="account-btn">Kurs yaratish</button><span class="server-pill" id="serverState"><i></i> Server tekshirilmoqda</span><button id="account" class="account-btn">Kirish</button></div>
 </header>
 <main>
   <section class="premium-banner">
@@ -53,6 +53,8 @@
 
   <section id="auth" class="panel" hidden><div class="panel-heading"><div><span class="eyebrow">ULUGBEK AI HISOBI</span><h2 id="authTitle">Akkauntga kirish</h2></div><button type="button" class="close-btn" data-close="auth">×</button></div><div class="switch"><button data-mode="login" class="selected">Kirish</button><button data-mode="register">Ro‘yxatdan o‘tish</button></div><form id="authForm"><label>Login<input name="username" minlength="3" maxlength="32" autocomplete="username" required></label><label id="displayField" hidden>F.I.Sh.<input name="displayName" maxlength="80" autocomplete="name"></label><label id="emailField" hidden>Email<input name="email" type="email" maxlength="254" autocomplete="email"></label><label id="phoneField" hidden>Telefon raqami<input name="phone" type="tel" maxlength="20" placeholder="+998901234567" autocomplete="tel"></label><label id="roleField" hidden>Foydalanuvchi turi<select name="role"><option value="student">O‘quvchi</option><option value="parent">Ota-ona</option><option value="teacher">O‘qituvchi</option></select></label><label>Parol<input name="password" type="password" minlength="10" autocomplete="current-password" required></label><button class="primary wide">Davom etish</button></form><small class="form-note">Parol kamida 10 belgidan iborat bo‘lishi kerak.</small></section>
 
+  <section id="adminApprovalDashboard" class="panel" hidden><div class="panel-heading"><div><span class="eyebrow">ULUGBEK AI · INSON TASDIG‘I</span><h2>Pullik kurslarni tasdiqlash</h2><p>AI emas, administrator tasdiqlaydi.</p></div><button id="adminApprovalRefresh" class="logout-btn">Yangilash</button></div><div id="pendingPaidCourses" class="catalog-grid"></div></section>
+
   <section id="parentDashboard" class="panel" hidden>
     <div class="panel-heading"><div><span class="eyebrow">ULUGBEK AI · OTA-ONA KABINETI</span><h2>Farzand monitoringi</h2><p>Ulangan o‘quvchilarning davomati va natijalari</p></div><button type="button" class="logout-btn" id="parentRefresh">Yangilash</button></div>
     <form id="parentLinkForm" class="course-form"><label class="wide">O‘quvchining ota-ona kodi<input name="parentCode" maxlength="16" required placeholder="O‘quvchi kabinetidagi kod"></label><button class="primary wide">Farzandni ulash</button></form>
@@ -81,6 +83,6 @@
 <nav class="bottom-nav" aria-label="Asosiy navigatsiya"><a class="active" href="/"><span>⌂</span><small>Asosiy</small></a><button id="miniAppsNav"><span>▦</span><small>Mini Apps</small></button><a href="social.html"><span>▤</span><small>Lenta</small></a><button id="marketNav"><span>🛍</span><small>Market</small></button><button id="profileNav"><span>♙</span><small>Sahifam</small></button></nav>
 <div id="videoModal" class="video-modal" hidden><button id="videoClose" aria-label="Videoni yopish">×</button><div id="videoFrame"></div><div class="course-meta"><button id="lessonJoin" class="search-btn" hidden>Jonli darsga kirish</button><button id="lessonComplete" class="search-btn" hidden>Dars tugadi</button></div></div>
 <div id="toast" role="status" aria-live="polite"></div>
-<script src="courses.js" defer></script>
+<script src="courses.js" defer></script><script src="account-gate.js" defer></script>
 </body>
 </html>

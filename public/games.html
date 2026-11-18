@@ -8,6 +8,7 @@
 <style>
 *{box-sizing:border-box}body{margin:0;min-height:100vh;background:#0b1020;color:#f3f4f6;font:16px system-ui;padding:24px}main{max-width:720px;margin:5vh auto;padding:24px;border:1px solid #334155;border-radius:20px;background:#111827}h1{font-size:clamp(28px,6vw,42px)}p{color:#cbd5e1;line-height:1.6}.game{margin-top:20px;padding:20px;border:1px solid #475569;border-radius:16px}button{padding:12px 16px;border:0;border-radius:10px;background:#a78bfa;color:#111827;font-weight:700;margin:4px;cursor:pointer}button:disabled{opacity:.5;cursor:not-allowed}.stats{font-size:20px;font-weight:700}
 </style>
+<link rel="stylesheet" href="account-gate.css">
 </head>
 <body><main>
 <p>ULUGBEK AI · O‘YIN LABORATORIYASI</p>
@@ -29,4 +30,5 @@ let time=10,score=0,timer=null;
 start.addEventListener("click",()=>{clearInterval(timer);time=10;score=0;timeNode.textContent=time;scoreNode.textContent=score;result.textContent="";tap.disabled=false;start.disabled=true;timer=setInterval(()=>{time--;timeNode.textContent=time;if(time<=0){clearInterval(timer);tap.disabled=true;start.disabled=false;result.textContent="O‘yin tugadi! Natijangiz: "+score+" ball."}},1000)});
 tap.addEventListener("click",()=>{if(time>0){score++;scoreNode.textContent=score}});
 </script>
+<script src="account-gate.js"></script>
 </body></html>

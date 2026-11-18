@@ -153,6 +153,9 @@ function createVizorLearning(options = {}) {
       read_at TIMESTAMPTZ,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )`,
+    "ALTER TABLE vizor_courses ADD COLUMN IF NOT EXISTS approval_status VARCHAR(20) NOT NULL DEFAULT 'pending'",
+    "UPDATE vizor_courses SET approval_status='approved' WHERE price=0 AND approval_status='pending'",
+    "CREATE INDEX IF NOT EXISTS vizor_courses_approval_idx ON vizor_courses(approval_status, created_at DESC)",
     "CREATE INDEX IF NOT EXISTS vizor_courses_category_idx ON vizor_courses(category)",
     "CREATE INDEX IF NOT EXISTS vizor_attempts_student_date_idx ON vizor_test_attempts(student_id, created_at DESC)",
     "CREATE INDEX IF NOT EXISTS vizor_attendance_student_date_idx ON vizor_attendance(student_id, joined_at DESC)",
@@ -212,6 +215,14 @@ function createVizorLearning(options = {}) {
       res.status(401).json({ error: "Foydalanuvchi sessiyasi tekshirilmadi." });
     }
   }
+  router.verifyToken = async token => {
+    await initPromise;
+    if (!pool || initError) return null;
+    const payload = decodeToken(token);
+    if (!payload) return null;
+    const result = await pool.query("SELECT * FROM vizor_users WHERE id=$1 AND status='active'", [payload.sub]);
+    return result.rowCount ? safeUser(result.rows[0]) : null;
+  };
   const ready = [requireDatabase];
 
   router.get("/status", async (_req, res) => {
@@ -321,12 +332,25 @@ function createVizorLearning(options = {}) {
     });
   });
 
+  router.get("/admin/courses/pending", ...ready, auth, async (req, res) => {
+    if (req.user.role !== "admin") return res.status(403).json({ error: "Pullik kurslarni faqat administrator tasdiqlaydi." });
+    const result = await pool.query("SELECT c.id,c.title,c.description,c.category,c.price,c.sales_url AS salesUrl,c.created_at,u.display_name AS author,u.email AS authorEmail FROM vizor_courses c JOIN vizor_users u ON u.id=c.instructor_id WHERE c.approval_status='pending' ORDER BY c.created_at ASC LIMIT 100");
+    res.json({ ok: true, courses: result.rows });
+  });
+
+  router.post("/courses/:id/approve", ...ready, auth, async (req, res) => {
+    if (req.user.role !== "admin") return res.status(403).json({ error: "Tasdiqlash uchun administrator huquqi kerak." });
+    const result = await pool.query("UPDATE vizor_courses SET approval_status='approved' WHERE id=$1 AND price>0 AND approval_status='pending' RETURNING id,title,price", [req.params.id]);
+    if (!result.rowCount) return res.status(404).json({ error: "Tasdiqlashni kutayotgan pullik kurs topilmadi." });
+    res.json({ ok: true, course: result.rows[0], approvedBy: req.user.id });
+  });
+
   router.get("/courses", ...ready, async (req, res) => {
     const q = clean(req.query.q, 100);
     const category = clean(req.query.category, 80);
     const type = clean(req.query.type, 12);
     const params = [];
-    const where = ["c.status='published'"];
+    const where = ["c.status='published'", "c.approval_status='approved'"];
     if (category) { params.push(category); where.push("c.category=$" + params.length); }
     if (type === "free") where.push("c.price=0");
     if (type === "paid") where.push("c.price>0");
@@ -374,7 +398,7 @@ function createVizorLearning(options = {}) {
   });
 
   router.post("/courses", ...ready, auth, async (req, res) => {
-    if (!["student", "teacher", "admin"].includes(req.user.role)) return res.status(403).json({ error: "Bu rol kurs joylay olmaydi." });
+
     const title = clean(req.body.title, 120);
     const description = clean(req.body.description, 3000);
     const category = clean(req.body.category, 80);
@@ -389,13 +413,12 @@ function createVizorLearning(options = {}) {
     }
     const courseId = id();
     const result = await pool.query(
-      `INSERT INTO vizor_courses(id,title,description,category,price,sales_url,instructor_id)
-       VALUES($1,$2,$3,$4,$5,$6,$7)
-       RETURNING id,title,description,category,price,sales_url,created_at`,
-      [courseId,title,description,category,price,salesUrl,req.user.id]
+      `INSERT INTO vizor_courses(id,title,description,category,price,sales_url,instructor_id,approval_status)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8)
+       RETURNING id,title,description,category,price,sales_url,approval_status,created_at`,
+      [courseId,title,description,category,price,salesUrl,req.user.id,price > 0 ? "pending" : "approved"]
     );
-    if (req.user.role === "student") await pool.query("UPDATE vizor_users SET role='teacher' WHERE id=$1", [req.user.id]);
-    res.status(201).json({ ok: true, course: result.rows[0] });
+    res.status(201).json({ ok: true, course: result.rows[0], approvalRequired: price > 0 });
   });
 
   router.delete("/courses/:id", ...ready, auth, async (req, res) => {
@@ -406,7 +429,7 @@ function createVizorLearning(options = {}) {
 
   router.post("/courses/:id/enroll", ...ready, auth, async (req, res) => {
     if (!["student", "parent"].includes(req.user.role)) return res.status(403).json({ error: "Faqat o‘quvchi akkaunti kursga yozilishi mumkin." });
-    const course = await pool.query("SELECT id,price,sales_url FROM vizor_courses WHERE id=$1 AND status='published'", [req.params.id]);
+    const course = await pool.query("SELECT id,price,sales_url FROM vizor_courses WHERE id=$1 AND status='published' AND approval_status='approved'", [req.params.id]);
     if (!course.rowCount) return res.sendStatus(404);
     if (Number(course.rows[0].price) > 0) {
       return res.status(402).json({ error: "Pullik kurs to‘lovi tashqi sahifada bajariladi; server to‘lovni hali tasdiqlamaydi.", salesUrl: course.rows[0].sales_url });
@@ -419,7 +442,7 @@ function createVizorLearning(options = {}) {
   });
 
   router.get("/courses/:id/lessons", ...ready, auth, async (req, res) => {
-    const course = await pool.query("SELECT instructor_id FROM vizor_courses WHERE id=$1 AND status='published'", [req.params.id]);
+    const course = await pool.query("SELECT instructor_id FROM vizor_courses WHERE id=$1 AND status='published' AND approval_status='approved'", [req.params.id]);
     if (!course.rowCount) return res.sendStatus(404);
     const isOwner = course.rows[0].instructor_id === req.user.id;
     const enrolled = await pool.query("SELECT 1 FROM vizor_enrollments WHERE course_id=$1 AND student_id=$2", [req.params.id,req.user.id]);
@@ -581,7 +604,6 @@ function createVizorLearning(options = {}) {
   });
 
   router.get("/teacher/courses", ...ready, auth, async (req, res) => {
-    if (!["teacher","admin"].includes(req.user.role)) return res.status(403).json({ error: "O‘qituvchi kabineti faqat teacher roliga ochiq." });
     const result = await pool.query(
       `SELECT c.id,c.title,c.category,c.price,c.created_at,
         (SELECT COUNT(*)::int FROM vizor_enrollments e WHERE e.course_id=c.id) AS students,
