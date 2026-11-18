@@ -19,7 +19,7 @@ function pointId(value) {
   return hex.slice(0,8)+"-"+hex.slice(8,12)+"-5"+hex.slice(13,16)+"-a"+hex.slice(17,20)+"-"+hex.slice(20,32);
 }
 async function request(url, options = {}) {
-  const response = await fetch(url, { ...options, signal: AbortSignal.timeout(20000) });
+  const response = await fetch(url, { ...options, redirect: "error", signal: AbortSignal.timeout(20000) });
   const body = await response.text();
   if (!response.ok) throw new Error("Vector service HTTP " + response.status + ": " + body.slice(0, 240));
   return body ? JSON.parse(body) : {};
