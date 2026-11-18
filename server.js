@@ -664,7 +664,7 @@ app.post("/api/cognition/analyze", (req, res) => {
 
 app.get("/api/version", (_req, res) => {
   res.set("Cache-Control", "no-store");
-  res.json({ ok: true, app: "ULUGBEK AI", version: "0.3.2", commit: BUILD_COMMIT, branch: BUILD_BRANCH, startedAt: SERVER_STARTED_AT, node: process.version, endpoints: { health: "/api/health", research: "/api/research/status", learning: "/api/lab/learning/status", ai: "/api/ai/status" } });
+  res.json({ ok: true, app: "ULUGBEK AI", version: "0.3.2", commit: BUILD_COMMIT, branch: BUILD_BRANCH, startedAt: SERVER_STARTED_AT, node: process.version, endpoints: { health: "/api/health", research: "/api/research/status", learning: "/api/lab/learning/status", ai: "/api/ai/status", vizor: "/api/vizor/status" } });
 });
 
 app.get("/api/independent/status", (_req, res) => {
@@ -723,6 +723,7 @@ app.get("/api/health", (_req, res) => {
     mode: !singleAgent.status().configured ? "native-single-agent-fallback-no-model" :
       singleAgent.status().provider === "openai-compatible" ? "openai-compatible-model" : "external-ai-provider",
     storageMode: "local-json",
+    vizorDatabaseConfigured: Boolean(process.env.DATABASE_URL),
     workerConcurrency: 1,
     multiInstanceSafe: false,
     automaticFailoverReady: false
