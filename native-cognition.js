@@ -2,6 +2,7 @@
 
 const conversationOrchestrator = require("./modules/conversation-orchestrator");
 const languageCognition = require("./modules/language-cognition");
+const languageModule = require("./modules/language-module");
 
 // Native symbolic cognition: no hosted AI, no model weights, no API key.
 const STOP = new Set(("the and for with that this from into about which when where what who whom whose are was were been being have has had will would could should can may might not but or nor dan yoki uchun bilan bu shu bir uning ular qanday nima qachon qayerda kim haqida orqali ham esa edi bor yo‘q qaysi qayerda qayerga qayerdan").split(/\s+/));
@@ -85,6 +86,26 @@ function quickReply(query) {
     return "Hisoblash: " + math.expression + " = " + answer + "\\nJavob: " + answer + ".";
   }
   const q = normalizeInput(query);
+  const detectedLanguage = languageModule.detectLanguage(query);
+  if (detectedLanguage.explicit) {
+    const acknowledgements = {
+      en: "Understood. I will reply in English. How can I help you?",
+      ru: "Понял. Буду отвечать на русском языке. Чем могу помочь?",
+      tr: "Anladım. Türkçe yanıt vereceğim. Size nasıl yardımcı olabilirim?",
+      kk: "Түсіндім. Қазақ тілінде жауап беремін. Қалай көмектесе аламын?",
+      uz: "Tushundim. O‘zbek tilida javob beraman. Qanday yordam kerak?"
+    };
+    return acknowledgements[detectedLanguage.code] || null;
+  }
+  if (/^(hello|hi|hey|good morning|good afternoon|good evening)[!. ]*$/.test(q)) {
+    return "Hello! I'm ULUGBEK AI. What can I help you with today?";
+  }
+  if (/^(salom|assalomu alaykum|assalom alaykum|salom alaykum)[!. ]*$/.test(q)) {
+    return "Va alaykum assalom! Men ULUGBEK AI’man. Sizga qanday yordam bera olaman?";
+  }
+  if (/^(привет|здравствуйте|доброе утро|добрый день|добрый вечер)[!. ]*$/u.test(q)) {
+    return "Здравствуйте! Я ULUGBEK AI. Чем могу вам помочь?";
+  }
   if (/(?:sun'iy intellekt|sun’iy intellekt|suniy intellekt|artificial intelligence|\bai\b).{0,35}(?:nima|degani|tushuntir)|(?:nima|degani).{0,35}(?:sun'iy intellekt|sun’iy intellekt|suniy intellekt|artificial intelligence)/iu.test(q)) {
     return "Sun’iy intellekt — kompyuterga odam bajaradigan ayrim aqliy ishlarni bajarishni o‘rgatadigan texnologiya. Masalan, u savollarga javob beradi, matnni tarjima qiladi yoki rasmdagi narsalarni taniydi. Lekin u odam kabi ongli emas: o‘rgatilgan ma’lumotlar va dasturlar asosida javob yaratadi.";
   }
