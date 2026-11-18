@@ -14,6 +14,11 @@ const DEFAULT_CATEGORIES = [
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_RE = /^\+?[1-9]\d{7,14}$/;
 const ROLES = new Set(["student", "parent", "teacher"]);
+const PASSWORD_RE = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*_)[A-Za-z\d_]{8,16}$/;
+
+function validatePassword(value) {
+  return PASSWORD_RE.test(String(value || ""));
+}
 
 function normalizePhone(value) {
   return String(value || "").replace(/[\s()-]/g, "");
@@ -270,8 +275,8 @@ function createVizorLearning(options = {}) {
     let username = clean(req.body.username, 32).toLowerCase();
     if (!username && email) username = email.split("@")[0].replace(/[^a-z0-9_]/g, "").slice(0, 22) + "_" + crypto.randomBytes(2).toString("hex");
     if (!/^[a-z0-9_]{3,32}$/.test(username)) return res.status(400).json({ error: "Login 3–32 belgi: lotin harfi, raqam yoki _." });
-    if (displayName.length < 2 || !email || !PHONE_RE.test(phone) || password.length < 10 || password.length > 200) {
-      return res.status(400).json({ error: "F.I.Sh., to‘g‘ri email, xalqaro telefon raqami va kamida 10 belgili parol kiriting." });
+    if (displayName.length < 2 || !email || !PHONE_RE.test(phone) || !validatePassword(password)) {
+      return res.status(400).json({ error: "Parol 8–16 belgidan iborat bo‘lsin va katta harf, kichik harf, raqam hamda _ belgisini o‘z ichiga olsin. Ism, email va telefonni ham tekshiring." });
     }
     const salt = crypto.randomBytes(16).toString("hex");
     const passwordHash = hashPassword(password, salt);
@@ -724,4 +729,4 @@ function createVizorLearning(options = {}) {
   return router;
 }
 
-module.exports = { createVizorLearning, normalizePhone, validateEmail, hashPassword, isYoutubeUrl };
+module.exports = { createVizorLearning, normalizePhone, validateEmail, validatePassword, hashPassword, isYoutubeUrl };
