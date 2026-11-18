@@ -30,8 +30,6 @@ test("uses the repository-scoped archive token as a read-only fallback", () => {
     else process.env.GITHUB_TOKEN = previousPrimary;
     if (previousAlternate === undefined) delete process.env.DEVELOPER_AGENT_GITHUB_TOKEN;
     else process.env.DEVELOPER_AGENT_GITHUB_TOKEN = previousAlternate;
-    if (previousArchive === undefined) delete process.env.GITHUB_ARCHIVE_TOKEN;
-    else process.env.GITHUB_ARCHIVE_TOKEN = previousArchive;
   }
 });
 
@@ -49,6 +47,8 @@ test("does not send an Authorization header without a token", () => {
     else process.env.GITHUB_TOKEN = previous;
     if (previousAlternate === undefined) delete process.env.DEVELOPER_AGENT_GITHUB_TOKEN;
     else process.env.DEVELOPER_AGENT_GITHUB_TOKEN = previousAlternate;
+    if (previousArchive === undefined) delete process.env.GITHUB_ARCHIVE_TOKEN;
+    else process.env.GITHUB_ARCHIVE_TOKEN = previousArchive;
   }
 });
 
