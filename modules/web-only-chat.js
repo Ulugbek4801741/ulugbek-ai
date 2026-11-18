@@ -67,9 +67,6 @@ async function answer(question, context, options = {}) {
       return { reply: "Internet qidiruvi hozircha ishlamadi. Birozdan keyin qayta urinib ko‘ring.", answerable: false, webSearchUsed: false, method: "web-search-error" };
     }
   }
-  } catch (_) {
-    return { reply: "Internet qidiruvi hozircha ishlamadi. Birozdan keyin qayta urinib ko‘ring.", answerable: false, webSearchUsed: false, method: "web-search-error" };
-  }
 
   const evidence = universalSearch.evidenceEntries(found.results || []);
   if (!found.ok || !evidence.length) {
