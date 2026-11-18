@@ -1,13 +1,55 @@
 "use strict";
 const express=require("express"),crypto=require("node:crypto"),fs=require("node:fs/promises"),path=require("node:path");
-function createSocialNetwork(){
+function createSocialNetwork(options={}){
+ const verifyAccountToken=typeof options.verifyAccountToken==="function"?options.verifyAccountToken:null;
  const r=express.Router(),dir=path.resolve(process.env.ULUGBEK_DATA_DIR||path.join(process.cwd(),"data")),media=path.join(dir,"social-media"),file=path.join(dir,"social-network.json"),secret=process.env.SOCIAL_SESSION_SECRET||process.env.ADMIN_SESSION_SECRET||"",max=8*1024*1024;
  let db={users:[],posts:[],comments:[],likes:[],messages:[],groups:[],courses:[]},queue=Promise.resolve();
  const id=()=>crypto.randomUUID(),clean=(v,n=500)=>String(v||"").trim().slice(0,n),safe=u=>({id:u.id,username:u.username,displayName:u.displayName,createdAt:u.createdAt});
  async function save(){queue=queue.then(async()=>{await fs.mkdir(dir,{recursive:true});const tmp=file+".tmp";await fs.writeFile(tmp,JSON.stringify(db),{mode:0o600});await fs.rename(tmp,file)});return queue}
  async function init(){await fs.mkdir(media,{recursive:true});try{const d=JSON.parse(await fs.readFile(file,"utf8"));for(const k of Object.keys(db))if(Array.isArray(d[k]))db[k]=d[k]}catch(e){if(e.code!=="ENOENT")console.error("Social DB:",e.message)}}
  const sign=p=>{const a=Buffer.from(JSON.stringify(p)).toString("base64url");return a+"."+crypto.createHmac("sha256",secret).update(a).digest("base64url")};
- function auth(req,res,next){try{const t=(req.get("Authorization")||"").replace(/^Bearer\s+/i,"").split("."),m=crypto.createHmac("sha256",secret).update(t[0]).digest(),got=Buffer.from(t[1],"base64url");if(!secret||t.length!==2||m.length!==got.length||!crypto.timingSafeEqual(m,got))throw Error();const p=JSON.parse(Buffer.from(t[0],"base64url"));const u=db.users.find(x=>x.id===p.sub&&p.exp>Date.now()&&x.status==="active");if(!u)throw Error();req.user=u;next()}catch(_){res.status(401).json({error:"Kirish muddati tugagan. Qayta kiring."})}}
+ async function auth(req,res,next){
+  try{
+   await storageReady;
+   const header=String(req.get("Authorization")||"").replace(/^Bearer\\s+/i,"");
+   const parts=header.split(".");
+   let user=null;
+   if(secret&&parts.length===2){
+    try{
+     const expected=crypto.createHmac("sha256",secret).update(parts[0]).digest();
+     const supplied=Buffer.from(parts[1],"base64url");
+     if(expected.length===supplied.length&&crypto.timingSafeEqual(expected,supplied)){
+      const payload=JSON.parse(Buffer.from(parts[0],"base64url"));
+      user=db.users.find(item=>item.id===payload.sub&&payload.exp>Date.now()&&item.status==="active")||null;
+     }
+    }catch(_){}
+   }
+   if(!user&&verifyAccountToken&&header){
+    const account=await verifyAccountToken(header);
+    if(account&&account.id){
+     const accountId=String(account.id);
+     user=db.users.find(item=>item.id===accountId)||null;
+     if(!user){
+      const base=clean(account.username,24).toLowerCase().replace(/[^a-z0-9_]/g,"")||"user";
+      let username=base;
+      if(db.users.some(item=>item.username===username&&item.id!==accountId)){
+       username=(base.slice(0,17)+"_"+accountId.replace(/-/g,"").slice(0,6)).slice(0,24);
+      }
+      user={id:accountId,username,displayName:clean(account.displayName,60)||username,createdAt:account.createdAt||new Date().toISOString(),status:"active",linkedAccount:true};
+      db.users.push(user);
+      await save();
+     }else{
+      user.displayName=clean(account.displayName,60)||user.displayName;
+      user.status="active";
+      await save();
+     }
+    }
+   }
+   if(!user)throw Error("Sessiya yaroqsiz");
+   req.user=user;
+   next();
+  }catch(_){res.status(401).json({error:"ULUGBEK AI akkauntingizga qayta kiring."})}
+ }
  const hash=(p,s)=>crypto.scryptSync(p,s,64).toString("hex");
  r.get("/status",(_q,s)=>s.json({ok:true,apiReady:true,features:{accounts:!!secret,posts:true,comments:true,likes:true,directMessages:true,groups:true,mediaUpload:true,videoCalls:false,groupVideoCalls:false},storage:{mode:"server-local",durableOnRenderFree:false,maxUploadBytes:max,warning:"Render Free xotirasi doimiy emas. Cloud storage kalitlari hali ulanmagan."}}));
  r.post("/register",async(q,s)=>{if(!secret)return s.status(503).json({error:"SOCIAL_SESSION_SECRET serverda sozlanmagan."});const username=clean(q.body.username,24).toLowerCase(),password=String(q.body.password||"");if(!/^[a-z0-9_]{3,24}$/.test(username))return s.status(400).json({error:"Login 3–24 belgi: lotin harfi, raqam yoki _."});if(password.length<10||password.length>200)return s.status(400).json({error:"Parol kamida 10 belgi bo‘lsin."});if(db.users.some(u=>u.username===username))return s.status(409).json({error:"Login band."});const salt=crypto.randomBytes(16).toString("hex"),u={id:id(),username,displayName:clean(q.body.displayName,60)||username,salt,passwordHash:hash(password,salt),createdAt:new Date().toISOString(),status:"active"};db.users.push(u);await save();s.status(201).json({ok:true,token:sign({sub:u.id,exp:Date.now()+30*86400000}),user:safe(u)})});
@@ -32,6 +74,6 @@ function createSocialNetwork(){
  r.get("/groups",(_q,s)=>s.json({ok:true,groups:db.groups.map(g=>({...g,members:g.members.length}))}));
  r.post("/groups",auth,async(q,s)=>{const name=clean(q.body.name,80);if(name.length<3)return s.status(400).json({error:"Guruh nomi kamida 3 belgi."});const g={id:id(),name,description:clean(q.body.description,300),ownerId:q.user.id,members:[q.user.id],createdAt:new Date().toISOString()};db.groups.push(g);await save();s.status(201).json({ok:true,group:{...g,members:1}})});
  r.post("/groups/:id/join",auth,async(q,s)=>{const g=db.groups.find(x=>x.id===q.params.id);if(!g)return s.sendStatus(404);if(!g.members.includes(q.user.id))g.members.push(q.user.id);await save();s.json({ok:true,members:g.members.length})});
- init().catch(e=>console.error("Social storage init:",e.message));return r;
+ const storageReady=init();storageReady.catch(e=>console.error("Social storage init:",e.message));return r;
 }
 module.exports={createSocialNetwork};
