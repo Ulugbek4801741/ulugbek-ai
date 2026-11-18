@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: ulugbek-ai1
+    runtime: node
+    region: ohio
+    plan: free
+    branch: main
+    buildCommand: yarn install
+    startCommand: node server.js
+    autoDeployTrigger: commit
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ulugbek-ai-marketplace-db
+          property: connectionString
+
+databases:
+  - name: ulugbek-ai-marketplace-db
+    plan: free
+    region: ohio
+    databaseName: ulugbek_ai_marketplace_db
+    user: ulugbek_ai_marketplace_db_user
