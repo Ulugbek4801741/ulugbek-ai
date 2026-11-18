@@ -55,7 +55,7 @@ async function answer(question, context, options = {}) {
     if (!legal.results.length || !legal.results.some(item => item.pageRead)) {
       return { reply: legalResearch.noEvidenceReply(legal.jurisdiction), answerable: false, webSearchUsed: true, method: "legal-official-source-not-confirmed", legal: legalMetadata, sources: legal.results || [], sourceRecords: legal.results || [] };
     }
-    found = { ok: true, results: legal.results };
+    found = { ok: true, results: legal.results.map(item => ({ ...item, url: item.source, snippet: item.content })) };
   } else {
     try {
       found = await (options.searchWeb || universalSearch.searchWeb)(
