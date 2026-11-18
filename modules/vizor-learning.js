@@ -641,12 +641,12 @@ function createVizorLearning(options = {}) {
       ]) {
         await client.query(
           "INSERT INTO vizor_users(id,username,display_name,email,phone,password_hash,password_salt,role,parent_code) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)",
-          [uid,username,"VIZOR smoke test",email,phone,passwordHash,salt,role,parentCode]
+          [uid,username,"ULUGBEK AI ta’lim sinovi",email,phone,passwordHash,salt,role,parentCode]
         );
       }
       checks.accounts = true;
       await client.query(
-        "INSERT INTO vizor_courses(id,title,description,category,price,instructor_id) VALUES($1,'[TEST] VIZOR course','Temporary smoke-test course description','VIZOR QA',0,$2)",
+        "INSERT INTO vizor_courses(id,title,description,category,price,instructor_id) VALUES($1,'[TEST] ULUGBEK AI ta’lim kursi','Temporary smoke-test course description','ULUGBEK AI QA',0,$2)",
         [courseId,teacherId]
       );
       await client.query(
@@ -679,7 +679,7 @@ function createVizorLearning(options = {}) {
       return { ok: Object.values(checks).every(Boolean), storage: "postgresql", checks, testDataPersisted: false, cleanup: "transaction_rolled_back" };
     } catch (error) {
       try { await client.query("ROLLBACK"); } catch (_) {}
-      return { ok: false, storage: "postgresql", checks, error: "VIZOR test jarayonida ma’lumotlar bazasi xatosi.", detail: error.message, testDataPersisted: false, cleanup: "transaction_rolled_back" };
+      return { ok: false, storage: "postgresql", checks, error: "ULUGBEK AI ta’lim sinovida ma’lumotlar bazasi xatosi.", detail: error.message, testDataPersisted: false, cleanup: "transaction_rolled_back" };
     } finally {
       client.release();
     }
