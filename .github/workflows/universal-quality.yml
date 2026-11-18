@@ -22,8 +22,13 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Run Node test suite
         run: npm test
-      - name: Syntax-check server
-        run: node --check server.js
+      - name: Syntax-check server and browser scripts
+        run: |
+          node --check server.js
+          node --check modules/vizor-learning.js
+          node --check public/account-gate.js
+          node --check public/app.js
+          node --check public/courses.js
 
   knowledge-worker-tests:
     runs-on: ubuntu-latest
