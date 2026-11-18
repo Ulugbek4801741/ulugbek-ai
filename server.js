@@ -215,6 +215,7 @@ app.use("/api/", rateLimit({
 const socialNetwork = require("./modules/social-network").createSocialNetwork();
 app.use("/api/social", socialNetwork);
 const vizorLearning = require("./modules/vizor-learning").createVizorLearning();
+app.use("/api/learning", vizorLearning);
 app.use("/api/vizor", vizorLearning);
 const marketplaceRouter = require("./modules/regional-marketplace-api");
 marketplaceRouter.setAssistant(async ({ message, senderRole, order, recentMessages }) => {
@@ -1239,6 +1240,17 @@ app.post("/api/admin/knowledge/search", requireAdmin, async (req, res) => {
   catch (_) { return res.status(503).json({ error: "Bilim qidiruvi bajarilmadi." }); }
 });
 
+app.use("/api/chat", async (req, res, next) => {
+  try {
+    const header = String(req.get("Authorization") || "");
+    const match = header.match(/^Bearer\\s+(.+)$/i);
+    const user = match ? await vizorLearning.verifyToken(match[1]) : null;
+    if (!user) return res.status(401).json({ error: "Chatdan foydalanish uchun ULUGBEK AI akkauntiga kiring." });
+    req.ulugbekUser = user;
+    req.body = { ...(req.body || {}), sessionId: String(user.id).replace(/-/g, "") };
+    next();
+  } catch (_) { return res.status(503).json({ error: "Akkaunt sessiyasini tekshirib bo‘lmadi." }); }
+});
 app.post("/api/chat", chatRateLimit, async (req, res) => {
   const message = typeof req.body?.message === "string" ? req.body.message.trim() : "";
   const countryCode = legalResearch.normalizeCountryCode(req.body?.countryCode);
