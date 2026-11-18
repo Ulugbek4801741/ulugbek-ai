@@ -34,7 +34,7 @@
       <p class="ua-kicker">YAGONA AKKAUNT</p>
       <h1>Hamjamiyatga qo‘shiling</h1>
       <p class="ua-subtitle">Akkaunt oching yoki profilingizga kiring. Bitta akkaunt barcha ULUGBEK AI imkoniyatlari uchun ishlaydi.</p>
-      <div class="ua-tabs"><button type="button" data-mode="register" class="active">Ro‘yxatdan o‘tish</button><button type="button" data-mode="login">Kirish</button></div>
+      <div class="ua-tabs"><button type="button" data-mode="login" class="active">Kirish</button></div><p class="ua-subtitle" role="status">Yangi ro‘yxatdan o‘tish vaqtincha to‘xtatilgan. Avvaldan akkaunti bor foydalanuvchilar kirishi mumkin.</p>
       <form class="ua-form" id="ua-form" novalidate>
         <label id="ua-username-wrap">Login<input name="username" minlength="3" maxlength="32" autocomplete="username" placeholder="Masalan: ulugbek_01" required></label>
         <label id="ua-name-wrap">Ismingiz<input name="displayName" maxlength="80" autocomplete="name" placeholder="Ism va familiya" required></label>
@@ -48,11 +48,11 @@
     </main>`;
   document.body.append(overlay);
 
-  let mode = "register";
+  let mode = "login";
   const form = overlay.querySelector("#ua-form");
   const error = overlay.querySelector("#ua-error");
   function setMode(next) {
-    mode = next;
+    mode = "login";
     overlay.querySelectorAll("[data-mode]").forEach(button => button.classList.toggle("active", button.dataset.mode === mode));
     ["ua-username-wrap","ua-name-wrap","ua-email-wrap","ua-phone-wrap"].forEach(id => {
       const field = overlay.querySelector("#" + id);
@@ -84,10 +84,8 @@
     submit.textContent = "Tekshirilmoqda…";
     error.textContent = "";
     try {
-      const payload = mode === "login"
-        ? { identifier: data.username, password: data.password }
-        : { ...data, role: "student" };
-      const response = await fetch(API + (mode === "login" ? "/login" : "/register"), {
+      const payload = { identifier: data.username, password: data.password };
+      const response = await fetch(API + "/login", {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
       });
       const result = await response.json().catch(() => ({}));
@@ -111,10 +109,10 @@
     const existing = token();
     const knownAccount = Boolean(localStorage.getItem("ulugbek-session"));
     if (!existing) {
-      setMode(knownAccount ? "login" : "register");
-      if (knownAccount) {
-        error.textContent = "Sizda avval yaratilgan akkaunt bor. Ro‘yxatdan o‘tmay, Kirish bo‘limidan foydalaning.";
-      }
+      setMode("login");
+      error.textContent = knownAccount
+        ? "Avvalgi akkauntingiz bilan kiring. Ro‘yxatdan qayta o‘tish shart emas."
+        : "Yangi ro‘yxatdan o‘tish vaqtincha to‘xtatilgan. Mavjud akkauntingiz login va paroli bilan kiring.";
       return;
     }
 
