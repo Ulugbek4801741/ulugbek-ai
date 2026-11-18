@@ -16,12 +16,22 @@ test("adds a read-only GitHub bearer token when configured", () => {
 
 test("uses the repository-scoped archive token as a read-only fallback", () => {
   const previous = process.env.GITHUB_ARCHIVE_TOKEN;
+  const previousPrimary = process.env.GITHUB_TOKEN;
+  const previousAlternate = process.env.DEVELOPER_AGENT_GITHUB_TOKEN;
   try {
+    delete process.env.GITHUB_TOKEN;
+    delete process.env.DEVELOPER_AGENT_GITHUB_TOKEN;
     process.env.GITHUB_ARCHIVE_TOKEN = "archive-token";
     assert.equal(agent.githubHeaders().Authorization, "Bearer archive-token");
   } finally {
     if (previous === undefined) delete process.env.GITHUB_ARCHIVE_TOKEN;
     else process.env.GITHUB_ARCHIVE_TOKEN = previous;
+    if (previousPrimary === undefined) delete process.env.GITHUB_TOKEN;
+    else process.env.GITHUB_TOKEN = previousPrimary;
+    if (previousAlternate === undefined) delete process.env.DEVELOPER_AGENT_GITHUB_TOKEN;
+    else process.env.DEVELOPER_AGENT_GITHUB_TOKEN = previousAlternate;
+    if (previousArchive === undefined) delete process.env.GITHUB_ARCHIVE_TOKEN;
+    else process.env.GITHUB_ARCHIVE_TOKEN = previousArchive;
   }
 });
 
