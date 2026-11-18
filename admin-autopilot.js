@@ -162,11 +162,9 @@ function createAdminAutopilot({ developerAgent, learningWorker, agentRuntime, no
     state.lastError = null;
     event("recovery_attempt", "Cheklangan qayta tiklash urinish " + state.restartAttempts);
     try {
-      // Only these existing, read-only/background workers are restarted.
-      // Complete startup/audit before checking health, so stale errors from
-      // the quarantined run cannot immediately re-quarantine a recovered agent.
+      // The web-only chat architecture does not restart the background knowledge worker.
+      // Only the read-only repository auditor may be restarted after explicit recovery.
       await developerAgent.start();
-      learningWorker.start();
       started = true;
       stoppedByAdmin = false;
       state.enabled = true;

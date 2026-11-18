@@ -1328,247 +1328,44 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       safety: { intervention: true, category: conversationContext.ethics.category }
     });
   }
-  // Universal research-first flow: every substantive request is searched on the public web.
-  // Greetings, thanks and plain arithmetic remain local to avoid unnecessary network calls.
-  const universalSearch = require("./modules/universal-web-search");
-  const searchIntent = universalSearch.detectSearchIntent(conversationMessage);
-  const currentPopulationQuestion = universalSearch.isCurrentPopulationQuestion(conversationMessage);
-  const nativeBrain = require("./lab-learning-worker");
-  let localKnowledge = [];
-  let cachedKnowledge = [];
-  let storedKnowledge = [];
+  // One web-only pipeline: no model provider, knowledge store, or persistent research cache.
+  const webOnlyChat = require("./modules/web-only-chat");
+  let webOnlyResult;
   try {
-    [localKnowledge, cachedKnowledge, storedKnowledge] = await Promise.all([
-      nativeBrain.searchKnowledge(conversationMessage, 5),
-      researchCache.search(conversationMessage, 5),
-      knowledgeStore.search(conversationMessage, 6)
-    ]);
-  } catch (_) {}
-  // Search the public web when the local approved knowledge and persistent research cache
-  // cannot answer the user's question. Explicit/current searches always refresh evidence.
-  const sourceRelevance = require("./modules/source-relevance");
-  // Cached and locally learned notes are untrusted candidates too: filter them
-  // against this exact user question before either fallback generation or synthesis.
-  const relevantLocalKnowledge = sourceRelevance.filterRelevantSources(conversationMessage, localKnowledge);
-  const relevantCachedKnowledge = sourceRelevance.filterRelevantSources(conversationMessage, cachedKnowledge);
-  const relevantStoredKnowledge = sourceRelevance.filterRelevantSources(conversationMessage, storedKnowledge);
-  // Current-information questions must not fall back to old local or cached facts.
-  const localCandidate = searchIntent.currentInfo ? null : nativeBrain.buildLocalReply(
-    conversationMessage,
-    [...relevantLocalKnowledge, ...relevantCachedKnowledge,
-      ...relevantStoredKnowledge.map(item => ({ ...item, status: "approved-local-knowledge", sourceQuality: 4 }))],
-    conversationContext
-  );
-  const hasLocalAnswer = localCandidate?.reasoning?.answerable === true;
-  // Keep known native answers local, but do not bypass configured models for unrelated dialogue.
-  const simpleDefinitionRequest = /(?:sun['’‘ʻʼ]?iy intellekt|artificial intelligence|\bai\b).{0,45}(?:nima|degani|tushuntir)|(?:nima|degani).{0,45}(?:sun['’‘ʻ]?iy intellekt|artificial intelligence)/iu.test(conversationMessage);
-  const deterministicNativeRequest = /termux.{0,180}(?:agent|yordamchi|sun'iy endilik).{0,180}(?:kod|cod|code|yoz|yarat)|(?:nusxa|copy).{0,80}(?:kod|cod|code)|(?:temur\s*(?:lang|lank|lenk)|tamerlan|amir\s*temur)|^(?:menga\s+)?yordam\s+ber(?:\s+(?:olasanmi|olasizmi)|a\s+(?:olasanmi|olasizmi)|ing)?[!? .]*$|(?:agent|yordamchi).{0,120}(?:kod|cod|code|dastur).{0,45}(?:yoz|yarat)|(?:agent|yordamchi).{0,100}(?:yoz|yarat).{0,60}(?:kod|cod|code|dastur)/iu.test(conversationMessage);
-  if ((simpleDefinitionRequest || deterministicNativeRequest) && localCandidate?.reasoning?.method === "built-in-dialogue" && localCandidate.reply) {
-    return res.json({
-      reply: localCandidate.reply,
-      mode: "native-dialogue",
-      agents: ["ULUGBEK Universal Agent"],
+    webOnlyResult = await webOnlyChat.answer(conversationMessage, conversationContext, {
+      legalResearch: legalAssessment.isLegalQuestion === true,
+      countryCode
+    });
+  } catch (_) {
+    webOnlyResult = {
+      reply: "Internet orqali tekshiruv hozircha yakunlanmadi. Birozdan keyin qayta urinib ko‘ring.",
+      answerable: false,
       webSearchUsed: false,
-      synthesisModelConfigured: singleAgent.status().configured,
-      detectedLanguage: languageModule.detectLanguage(message),
-      cognition
-    });
-  }
-  // Only greetings, thanks and plain arithmetic stay local. Every other question or task triggers fresh public research.
-  const shouldResearch = searchIntent.shouldSearch;
-  if (shouldResearch) {
-    if (legalAssessment.isLegalQuestion) {
-      const webSearch = require("./modules/chat-web-research");
-      const legalEvidence = await legalResearch.research(conversationMessage, countryCode, webSearch, { limit: 6 });
-      if (!legalEvidence.results.length || !legalEvidence.results.some(item => item.pageRead)) {
-        return res.json({
-          reply: legalResearch.noEvidenceReply(legalEvidence.jurisdiction) + (legalEvidence.results.length ? "\n\nTopilgan rasmiy sahifalar hali to‘liq o‘qilmadi; ularni tasdiqlangan qonuniy dalil sifatida ishlatmadim." : ""),
-          mode: "legal-official-source-not-confirmed",
-          webSearchUsed: true,
-          legal: { checked: false, jurisdiction: legalEvidence.jurisdiction, officialSourcesFound: legalEvidence.results.length, officialPagesRead: 0 }
-        });
-      }
-      const legalContext = { ...conversationContext, legal: legalResearch.legalInstruction(legalEvidence) };
-      let legalAnswer = null;
-      try { legalAnswer = await singleAgent.answer(conversationMessage, legalEvidence.results, legalContext); } catch (_) {}
-      if (!legalAnswer?.reply) {
-        try {
-          const nativeLegal = nativeBrain.buildLocalReply(conversationMessage, legalEvidence.results, legalContext);
-          if (nativeLegal?.reasoning?.answerable && nativeLegal.reply) legalAnswer = nativeLegal;
-        } catch (_) {}
-      }
-      const reply = legalAnswer?.reply || legalResearch.noEvidenceReply(legalEvidence.jurisdiction);
-      conversationMemory.rememberSources(sessionId, conversationMessage, legalEvidence.results);
-      return res.json({
-        reply,
-        mode: "official-jurisdiction-legal-research",
-        agents: ["ULUGBEK Universal Agent"],
-        webSearchUsed: true,
-        legal: { checked: Boolean(legalAnswer?.reply), jurisdiction: legalEvidence.jurisdiction, officialSourcesFound: legalEvidence.results.length, officialPagesRead: legalEvidence.results.filter(item => item.pageRead).length, humanConfirmationRequired: legalAssessment.requiresHumanConfirmation },
-        cognition
-      });
-    }
-    if (searchIntent.isJobSearch) {
-      const jobSearch = require("./modules/job-search");
-      if (!jobSearch.hasLocationHint(conversationMessage)) {
-        return res.json({
-          reply: jobSearch.locationClarification(),
-          mode: "job-search-needs-location",
-          agents: ["ULUGBEK Universal Agent"],
-          jobSearchUsed: false,
-          cognition
-        });
-      }
-      const jobWebSearch = require("./modules/chat-web-research");
-      const jobs = await jobSearch.searchJobs(conversationMessage, jobWebSearch);
-      conversationMemory.rememberJobResults(sessionId, conversationMessage, jobs.results);
-      return res.json({
-        reply: jobs.reply,
-        mode: "verified-individual-vacancy-search",
-        agents: ["ULUGBEK Universal Agent"],
-        jobSearchUsed: true,
-        webSearchUsed: jobs.ok,
-        jobResultsCount: jobs.results.length,
-        searchedPages: jobs.searchedPages || 0,
-        openedVacancyPages: jobs.openedPages || 0,
-        feedVerifiedVacancies: jobs.feedVerifiedVacancies || 0,
-        verifiedListingsCount: jobs.verifiedListingsCount || jobs.results.length,
-        feedsChecked: jobs.feedsChecked || 0,
-        feedProviders: jobs.feedProviders || [],
-        fetchedFeedRecords: jobs.fetchedFeedRecords || 0,
-        feedFailures: jobs.feedFailures || [],
-        cognition
-      });
-    }
-    const webSearch = require("./modules/chat-web-research");
-    const nativeBrain = require("./lab-learning-worker");
-    let found = { ok: false, results: [], reply: "Internet qidiruvi hozircha ishlamadi." };
-    try {
-      found = await universalSearch.searchWeb(conversationMessage, webSearch, { limit: 8, includeScholarly: true });
-    } catch (_) {
-      // Search failure must not crash chat; try the local knowledge and configured local model.
-    }
-
-    try { await researchCache.save(found.results, conversationMessage); } catch (_) {}
-    conversationMemory.rememberSources(sessionId, conversationMessage, found.results);
-    const evidence = [
-      ...universalSearch.evidenceEntries(found.results),
-      ...(searchIntent.currentInfo ? [] : [
-        ...relevantCachedKnowledge,
-        ...relevantStoredKnowledge.map(item => ({
-          title: item.title, content: item.content, source: item.source,
-          status: "approved-local-knowledge", sourceQuality: 4
-        })),
-        ...relevantLocalKnowledge.map(item => ({
-          title: item.title, content: item.content, source: item.source,
-          status: "approved-local-knowledge", sourceQuality: 3
-        }))
-      ])
-    ].slice(0, 12);
-    let result = null;
-    try {
-      // Use short-lived specialist agents only when a real model provider is configured.
-      // They share the configured model, run with bounded concurrency, and are deleted after the task.
-      if (singleAgent.status().configured) {
-        const fleet = await agentFleet.runTask(conversationMessage, { evidence, context: conversationContext });
-        if (fleet.ok) result = {
-          reply: fleet.reply, modelUsed: fleet.modelUsed, provider: fleet.provider, externalProviderUsed: fleet.externalProviderUsed, reasoning: fleet.reasoning,
-          agentFleet: { requestedAgents: fleet.requestedAgents, completedAgents: fleet.completedAgents, roles: fleet.roles }
-        };
-      }
-    } catch (_) {}
-    if (!result) {
-      try { result = await singleAgent.answer(conversationMessage, evidence, conversationContext); } catch (_) {}
-    }
-
-    if (!result) {
-      try {
-        result = nativeBrain.buildLocalReply(conversationMessage, evidence.slice(0, 8), conversationContext);
-      } catch (_) {}
-    }
-
-    // If web evidence is weak or model synthesis fails, keep a valid local answer
-    // instead of discarding it and returning a generic "not enough evidence" reply.
-    result = answerSelection.selectAnswer(
-      result,
-      searchIntent.currentInfo ? null : localCandidate,
-      conversationMessage,
-      evidence,
-      { requireEvidenceBackedNumber: currentPopulationQuestion }
-    );
-
-    // Keep evidence URLs available to users so historical and factual answers are auditable.
-
-    let reply;
-    let reasoning;
-    if (result?.reasoning?.answerable && result.reply) {
-      reply = result.reply;
-      reasoning = result.reasoning;
-    } else {
-      reply = currentPopulationQuestion
-        ? "Hozirgi aholi sonini tasdiqlaydigan yangilangan, raqamli manba topilmadi. Eski bashoratni hozirgi fakt sifatida aytmayman."
-        : "Topilgan ma’lumotlar savolingiz mavzusiga mosligi tekshiruvidan o‘tmadi. Noto‘g‘ri yoki boshqa mavzudagi matnni javob sifatida bermayman. Savolga bevosita mos ishonchli dalil topilmadi; keyinroq qayta urinib ko‘ring.";
-      reasoning = result?.reasoning || {
-        method: currentPopulationQuestion ? "current-population-evidence-insufficient" : found.ok ? "public-web-research-no-language-model-synthesis" : "local-fallback-search-unavailable",
-        answerable: false,
-        facts: []
-      };
-    }
-
-    // Sources are retained for this chat session and shown only on explicit request.
-
-    return res.json({
-      reply,
-      mode: result?.modelUsed ? "self-hosted-universal-research-agent" : "native-universal-research-single-agent-no-external-ai",
-      agents: ["ULUGBEK Universal Agent"],
-      reasoning: reasoning ? { method: reasoning.method, answerable: reasoning.answerable, inference: reasoning.inference, outputPolicy: "single-professional-answer" } : null,
-      webSearchUsed: found.ok,
-      webSearchSucceeded: found.ok && found.results.length > 0,
-      jobSearchUsed: searchIntent.isJobSearch,
-      platformSearch: searchIntent.platforms,
-      synthesisModelConfigured: singleAgent.status().configured,
-      detectedLanguage: languageModule.detectLanguage(message),
-      researchIntent: searchIntent.reason,
-      cognition
-    });
-  }
-  // One-agent chat mode: use the configured model provider when available, otherwise native fallback.
-  try {
-    const nativeBrain = require("./lab-learning-worker");
-    const answerWithOneAgent = async entries => {
-      if (singleAgent.status().configured) {
-        try {
-          const fleet = await agentFleet.runTask(conversationMessage, { evidence: entries, context: conversationContext });
-          if (fleet.ok) return {
-            reply: fleet.reply, modelUsed: fleet.modelUsed, provider: fleet.provider, externalProviderUsed: fleet.externalProviderUsed, reasoning: fleet.reasoning,
-            agentFleet: { requestedAgents: fleet.requestedAgents, completedAgents: fleet.completedAgents, roles: fleet.roles }
-          };
-        } catch (_) {}
-      }
-      const modelAnswer = await singleAgent.answer(conversationMessage, entries, conversationContext);
-      return modelAnswer || nativeBrain.buildLocalReply(conversationMessage, entries, conversationContext);
+      method: "web-only-pipeline-error"
     };
-    let learned = [...localKnowledge, ...cachedKnowledge].slice(0, 8);
-    let result = await answerWithOneAgent(learned);
-    const webResearchUsed = false;
-    return res.json({
-      reply: result.reply,
-      mode: result.modelUsed ? (result.provider === "openai-compatible" ? "self-hosted-single-agent-no-external-ai" : "external-ai-single-agent") : webResearchUsed ? "native-public-research-single-agent-fallback-no-model" : "native-single-agent-fallback-no-external-ai",
-      agents: ["ULUGBEK Universal Agent"],
-      reasoning: result.reasoning,
-      knowledgeUsed: learned.length,
-      webResearchUsed,
-      learning: nativeBrain.status(),
-      cognition,
-      receivedCharacters: message.length
-    });
-  } catch (error) {
-    return res.status(503).json({
-      error: "Mahalliy mantiqiy mexanizm ishlamadi; tashqi AI xizmatiga avtomatik o‘tilmadi.",
-      mode: "native-only-error"
-    });
   }
-
+  if (Array.isArray(webOnlyResult.sourceRecords) && webOnlyResult.sourceRecords.length) {
+    conversationMemory.rememberSources(sessionId, conversationMessage, webOnlyResult.sourceRecords);
+  }
+  if (Array.isArray(webOnlyResult.jobResults)) {
+    conversationMemory.rememberJobResults(sessionId, conversationMessage, webOnlyResult.jobResults);
+  }
+  return res.json({
+    reply: webOnlyResult.reply,
+    mode: "web-only-single-answer-no-model",
+    agents: ["ULUGBEK Universal Agent"],
+    webSearchUsed: webOnlyResult.webSearchUsed === true,
+    answerable: webOnlyResult.answerable === true,
+    evidenceMethod: webOnlyResult.method,
+    sourceCount: webOnlyResult.sourceCount || webOnlyResult.details?.count || 0,
+    readPageCount: webOnlyResult.readPageCount || 0,
+    sources: webOnlyResult.sources || [],
+    legal: webOnlyResult.legal || null,
+    knowledgeBaseUsed: false,
+    synthesisModelUsed: false,
+    detectedLanguage: languageModule.detectLanguage(message),
+    cognition
+  });
 });
 
 app.use("/api/lab", require("./lab"));
@@ -1599,13 +1396,8 @@ app.use((err, _req, res, _next) => {
   console.error("Server xatosi:", err.message);
   return res.status(500).json({ error: "Ichki server xatosi." });
 });
-// Restore the verified public-only knowledge archive before the learning worker resumes.
-void publicKnowledgeArchive.cycle().finally(() => {
-  publicKnowledgeArchive.start();
-  // The supervised learning worker is started only after the persisted
-  // watchdog state has been loaded and quarantine has been checked.
-  languageLearningWorker.start();
-});
+// The chat path is intentionally web-only. Background knowledge ingestion and
+// language-learning workers are not started; no local knowledge corpus is built.
 agentRuntime.startWorker().then(() => {
   const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`ULUGBEK AI serveri ${PORT}-portda ishga tushdi.`);
@@ -1627,7 +1419,6 @@ agentRuntime.startWorker().then(() => {
         } catch (error) {
           console.error("Developer Agent ishga tushmadi:", error.message);
         }
-        learningWorker.start();
         await selfRecovery.start();
       })
       .catch(error => {
