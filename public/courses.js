@@ -1,6 +1,6 @@
 "use strict";
 (()=> {
- const $=s=>document.querySelector(s),api=(window.ULUGBEK_API_BASE_URL||window.location.origin).replace(/\/$/,"")+"/api/vizor",key="ulugbek-social-token";
+ const $=s=>document.querySelector(s),api=(window.ULUGBEK_API_BASE_URL||window.location.origin).replace(/\/$/,"")+"/api/vizor",key="ulugbek-vizor-token";
  let token=localStorage.getItem(key)||"",mode="login",currentUser=null,allCourses=[],promoIndex=0,currentLessonId=null,currentLiveUrl="";
  const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
  const toast=m=>{const n=$("#toast");n.textContent=m;n.classList.add("show");clearTimeout(n._timer);n._timer=setTimeout(()=>n.classList.remove("show"),3000)};
