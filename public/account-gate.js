@@ -109,23 +109,54 @@
 
   async function boot() {
     const existing = token();
-    if (existing) {
-      try {
-        const response = await fetch(API + "/me", { headers: { Authorization: "Bearer " + existing }, cache: "no-store" });
-        const result = await response.json();
-        if (!response.ok || !result.user?.id) throw new Error("Sessiya yaroqsiz");
-        saveToken(existing);
-        localStorage.setItem("ulugbek-session", String(result.user.id).replace(/-/g, ""));
-        window.ULUGBEK_ACCOUNT = result.user;
-        overlay.remove();
-        if (continueToRequestedPage()) return;
-        return;
-      } catch (_) {
+    const knownAccount = Boolean(localStorage.getItem("ulugbek-session"));
+    if (!existing) {
+      setMode(knownAccount ? "login" : "register");
+      if (knownAccount) {
+        error.textContent = "Sizda avval yaratilgan akkaunt bor. Ro‘yxatdan o‘tmay, Kirish bo‘limidan foydalaning.";
+      }
+      return;
+    }
+
+    setMode("login");
+    const submit = form.querySelector(".ua-submit");
+    submit.disabled = true;
+    submit.textContent = "Akkaunt tekshirilmoqda…";
+    try {
+      const response = await fetch(API + "/me", {
+        headers: { Authorization: "Bearer " + existing },
+        cache: "no-store"
+      });
+      const result = await response.json().catch(() => ({}));
+
+      if (response.status === 401 || response.status === 403) {
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(LEGACY_KEY);
+        setMode("login");
+        error.textContent = "Saqlangan sessiya muddati tugagan. Yangi akkaunt ochmang — mavjud login va parolingiz bilan kiring.";
+        return;
       }
+      if (!response.ok) {
+        throw new Error("Server vaqtincha javob bermayapti (" + response.status + ").");
+      }
+      if (!result.user?.id) {
+        throw new Error("Server akkaunt ma’lumotini qaytarmadi.");
+      }
+
+      saveToken(existing);
+      localStorage.setItem("ulugbek-session", String(result.user.id).replace(/-/g, ""));
+      window.ULUGBEK_ACCOUNT = result.user;
+      overlay.remove();
+      if (continueToRequestedPage()) return;
+    } catch (_) {
+      // Keep the token: a sleeping or temporarily unreachable server is not proof
+      // that the user's session is invalid.
+      setMode("login");
+      error.textContent = "Server vaqtincha uxlayapti yoki aloqa uzildi. Akkauntingiz o‘chirilmagan. Qayta urinib ko‘ring; ro‘yxatdan qayta o‘tmang.";
+    } finally {
+      submit.disabled = false;
+      submit.textContent = "Davom etish";
     }
-    setMode("register");
   }
   boot();
 })();
