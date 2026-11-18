@@ -1,7 +1,7 @@
 const express = require("express");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
-const { mountMcpBridge, createMcpAccessToken } = require("./modules/mcp-bridge");
+const { mountMcpBridge, createMcpAccessToken, isValidMcpBearerToken } = require("./modules/mcp-bridge");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const agentRuntime = require("./agent-runtime");
@@ -277,6 +277,20 @@ app.get("/api/admin/mcp-connection", requireAdmin, (_req, res) => {
   res.set("Pragma", "no-cache");
   if (!token) return res.status(503).json({ error: "MCP tokeni uchun ADMIN_SESSION_SECRET kamida 32 belgidan iborat bo‘lishi kerak." });
   return res.json({ ok: true, token });
+});
+app.post("/api/internal/vizor-diagnostic", (req, res, next) => {
+  const expected = createMcpAccessToken(ADMIN_SESSION_SECRET);
+  if (!isValidMcpBearerToken(expected, req.get("Authorization"))) {
+    return res.status(401).json({ error: "MCP diagnostika ruxsati yo‘q." });
+  }
+  next();
+}, async (_req, res) => {
+  try {
+    const result = await vizorLearning.runSmokeTest();
+    return res.status(result.ok ? 200 : 503).json(result);
+  } catch (error) {
+    return res.status(503).json({ ok: false, error: "VIZOR diagnostikasi bajarilmadi." });
+  }
 });
 marketplaceRouter.setAdminGuard(requireAdmin);
 
