@@ -83,6 +83,7 @@ function createSafeAutonomy({
       const nodeMajor = Number(process.versions.node.split(".")[0]);
       check("node_runtime", nodeMajor >= 20, "Node.js " + process.versions.node);
 
+      if (typeof agentPermissions.load === "function") await agentPermissions.load();
       const permissions = agentPermissions.snapshot().capabilities || {};
       const repositoryRead = permissions.repository_read?.enabled === true;
       check("repository_read_permission", repositoryRead, repositoryRead ? "Repo o‘qish ruxsati yoqilgan." : "Admin panelda repository_read ruxsatini yoqing.");
