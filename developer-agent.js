@@ -23,7 +23,7 @@ let running = false;
 let started = false;
 let chain = Promise.resolve();
 let state = {
-  enabled: true, running: false, startedAt: null, lastRunAt: null,
+  enabled: false, running: false, startedAt: null, lastRunAt: null,
   nextRunAt: null, lastSuccessAt: null, lastError: null, cycles: 0,
   scannedFiles: 0, scanCursor: 0, proposalsCreated: 0, proposals: []
 };
