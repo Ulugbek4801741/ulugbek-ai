@@ -36,6 +36,18 @@ test("web-only answer uses only supplied public web evidence and does not call a
   assert.match(result.reply, /o‘qilgan/);
 });
 
+test("search snippets are rejected unless the public page was actually opened", async () => {
+  const result = await answer("Ochiq internetdagi mavzu haqida ma'lumot", {}, {
+    searchWeb: async () => ({ ok: true, results: [
+      { title: "Qidiruv parchasi", url: "https://example.org/facts", pageRead: false, snippet: "Bu qidiruv parchasida mavzuga tegishli matn bor, ammo sahifa o‘qilmadi." }
+    ] }),
+    reason: () => { throw new Error("unread snippets must not be treated as evidence"); }
+  });
+  assert.equal(result.answerable, false);
+  assert.equal(result.sourceCount, 0);
+  assert.match(result.reply, /o‘qilgan ishonchli manba topilmadi/);
+});
+
 test("web-only answer does not invent an answer when search evidence is absent", async () => {
   const result = await answer("Ochiq internetdagi mavzu haqida ma'lumot", {}, {
     searchWeb: async () => ({ ok: true, results: [] }),
