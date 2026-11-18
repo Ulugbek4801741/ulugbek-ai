@@ -207,6 +207,7 @@ function createVizorLearning(options = {}) {
       error: initError ? "PostgreSQL ulanishi yoki jadval tayyorlashda xato." : (!pool ? "DATABASE_URL sozlanmagan." : null),
       roles: ["student", "parent", "teacher", "admin"],
       features: {
+        accounts: Boolean(pool && secret),
         registration: Boolean(pool && secret),
         publicCourseCatalog: true,
         teacherCoursePublishing: true,
@@ -315,6 +316,8 @@ function createVizorLearning(options = {}) {
     }
     const result = await pool.query(
       `SELECT c.id,c.title,c.description,c.category,c.price,c.sales_url,c.created_at,
+              c.instructor_id AS "authorId",
+              (SELECT l.video_url FROM vizor_lessons l WHERE l.course_id=c.id ORDER BY l.sort_order,l.created_at LIMIT 1) AS "videoUrl",
               u.display_name AS instructor,u.username AS instructor_username
          FROM vizor_courses c JOIN vizor_users u ON u.id=c.instructor_id
         WHERE ${where.join(" AND ")}
@@ -326,6 +329,10 @@ function createVizorLearning(options = {}) {
   });
 
   router.get("/categories", ...ready, async (_req, res) => {
+    const result = await pool.query("SELECT DISTINCT category FROM vizor_courses WHERE status='published' ORDER BY category");
+    res.json({ ok: true, categories: result.rows.map(row => row.category) });
+  });
+  router.get("/courses/categories", ...ready, async (_req, res) => {
     const result = await pool.query("SELECT DISTINCT category FROM vizor_courses WHERE status='published' ORDER BY category");
     res.json({ ok: true, categories: result.rows.map(row => row.category) });
   });
@@ -353,6 +360,12 @@ function createVizorLearning(options = {}) {
     );
     if (req.user.role === "student") await pool.query("UPDATE vizor_users SET role='teacher' WHERE id=$1", [req.user.id]);
     res.status(201).json({ ok: true, course: result.rows[0] });
+  });
+
+  router.delete("/courses/:id", ...ready, auth, async (req, res) => {
+    const result = await pool.query("DELETE FROM vizor_courses WHERE id=$1 AND instructor_id=$2 RETURNING id", [req.params.id,req.user.id]);
+    if (!result.rowCount) return res.status(404).json({ error: "Kurs topilmadi yoki sizning kurs emas." });
+    res.json({ ok: true });
   });
 
   router.post("/courses/:id/enroll", ...ready, auth, async (req, res) => {
@@ -411,6 +424,13 @@ function createVizorLearning(options = {}) {
       "INSERT INTO vizor_attendance(id,lesson_id,student_id) VALUES($1,$2,$3) ON CONFLICT(lesson_id,student_id) DO UPDATE SET joined_at=NOW(),left_at=NULL",
       [id(),req.params.id,req.user.id]
     );
+    const parents = await pool.query("SELECT parent_id FROM vizor_parent_links WHERE student_id=$1", [req.user.id]);
+    for (const parent of parents.rows) {
+      await pool.query(
+        "INSERT INTO vizor_notifications(id,user_id,kind,message) VALUES($1,$2,'attendance',$3)",
+        [id(),parent.parent_id,req.user.display_name + ": jonli darsga kirdi."]
+      );
+    }
     res.json({ ok: true, attendance: "present", joinedAt: new Date().toISOString() });
   });
 
