@@ -267,6 +267,39 @@ function requireAdmin(req, res, next) {
   }
   next();
 }
+
+const adminChatService = require("./modules/admin-chat").createAdminChatService({
+  selfRecovery,
+  functionGuardian,
+  singleAgent,
+  conversationOrchestrator,
+  developerAgent,
+  adminAutopilot,
+  agentRuntime,
+  knowledgeStore,
+  researchCache,
+  learningWorker: learningWorkerForAdmin,
+  languageModule
+});
+const adminChatRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 12,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: { error: "Admin chat limiti tugadi. Bir daqiqadan keyin qayta urinib ko‘ring." }
+});
+app.post("/api/admin/chat", requireAdmin, adminChatRateLimit, async (req, res) => {
+  res.set("Cache-Control", "no-store");
+  try {
+    const result = await adminChatService.handle(req.body?.message);
+    return res.json({ ok: true, ...result });
+  } catch (error) {
+    return res.status(error.status || 503).json({
+      ok: false,
+      error: error.status ? error.message : "Admin chat buyrug‘ini bajarib bo‘lmadi."
+    });
+  }
+});
 app.get("/api/admin/mcp-connection", requireAdmin, (_req, res) => {
   const token = createMcpAccessToken(ADMIN_SESSION_SECRET);
   res.set("Cache-Control", "no-store");
