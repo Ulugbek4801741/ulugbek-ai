@@ -88,7 +88,7 @@ function createSafeAutonomy({
       const repositoryRead = permissions.repository_read?.enabled === true;
       check("repository_read_permission", repositoryRead, repositoryRead ? "Repo o‘qish ruxsati yoqilgan." : "Admin panelda repository_read ruxsatini yoqing.");
 
-      const token = String(env.GITHUB_TOKEN || env.DEVELOPER_AGENT_GITHUB_TOKEN || "").trim();
+      const token = String(env.GITHUB_TOKEN || env.DEVELOPER_AGENT_GITHUB_TOKEN || env.GITHUB_ARCHIVE_TOKEN || "").trim();
       check("github_token", Boolean(token), token ? "GitHub token mavjud; qiymati maxfiy saqlanadi." : "Render ulugbek-ai1 Environment bo‘limida GITHUB_TOKEN sozlanmagan.");
 
       let agent = safeAgentSummary(developerAgent.status());
