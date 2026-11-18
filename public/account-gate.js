@@ -32,7 +32,7 @@
         <label id="ua-name-wrap">Ismingiz<input name="displayName" maxlength="80" autocomplete="name" placeholder="Ism va familiya" required></label>
         <label id="ua-email-wrap">Email<input name="email" type="email" maxlength="254" autocomplete="email" placeholder="name@example.com" required></label>
         <label id="ua-phone-wrap">Telefon<input name="phone" type="tel" maxlength="20" autocomplete="tel" placeholder="+998901234567" required></label>
-        <label>Parol<input name="password" type="password" minlength="10" maxlength="200" autocomplete="new-password" placeholder="Kamida 10 belgi" required></label>
+        <label>Parol<input name="password" type="password" minlength="8" maxlength="16" autocomplete="new-password" placeholder="8–16 belgi" required><small class="ua-password-help" id="ua-password-help">8–16 belgi. Katta va kichik harf, raqam hamda _ belgisi bo‘lsin. Masalan: A1_ulugbek</small></label>
         <button class="ua-submit" type="submit">Davom etish</button>
         <p class="ua-error" id="ua-error" role="alert"></p>
       </form>
@@ -53,13 +53,24 @@
       input.required = !field.hidden;
     });
     const password = form.elements.password;
+    const passwordHelp = overlay.querySelector("#ua-password-help");
     password.autocomplete = mode === "login" ? "current-password" : "new-password";
+    password.minLength = mode === "login" ? 1 : 8;
+    password.maxLength = mode === "login" ? 200 : 16;
+    password.placeholder = mode === "login" ? "Parolingizni kiriting" : "8–16 belgi";
+    passwordHelp.textContent = mode === "login"
+      ? "Akkauntingizda avval o‘rnatgan parolni kiriting."
+      : "8–16 belgi. Katta va kichik harf, raqam hamda _ belgisi bo‘lsin. Masalan: A1_ulugbek";
     error.textContent = "";
   }
   overlay.querySelectorAll("[data-mode]").forEach(button => button.addEventListener("click", () => setMode(button.dataset.mode)));
   form.addEventListener("submit", async event => {
     event.preventDefault();
     const data = Object.fromEntries(new FormData(form));
+    if (mode === "register" && !/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*_)[A-Za-z\d_]{8,16}$/.test(String(data.password || ""))) {
+      error.textContent = "Parol 8–16 belgidan iborat bo‘lsin va katta harf, kichik harf, raqam hamda _ belgisini o‘z ichiga olsin. Masalan: A1_ulugbek";
+      return;
+    }
     const submit = form.querySelector(".ua-submit");
     submit.disabled = true;
     submit.textContent = "Tekshirilmoqda…";
