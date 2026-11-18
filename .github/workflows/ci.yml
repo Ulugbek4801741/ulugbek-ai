@@ -57,6 +57,8 @@ jobs:
           node --check public/admin.js
           node --check public/admin-business.js
           node --check public/admin-chat-access.js
+          node --check public/admin-console-chat.js
+          node --check test/admin-chat-access.test.js
           node --check modules/regional-marketplace-api.js
           node --check public/voice.js
           node --check public/lab.js
