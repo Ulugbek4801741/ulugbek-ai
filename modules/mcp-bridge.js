@@ -1,6 +1,24 @@
 "use strict";
 
+const crypto = require("node:crypto");
 const rateLimit = require("express-rate-limit");
+
+function createMcpAccessToken(sessionSecret) {
+  if (typeof sessionSecret !== "string" || sessionSecret.length < 32) return "";
+  return crypto.createHmac("sha256", sessionSecret)
+    .update("ULUGBEK_AI_MCP_ACCESS_V1")
+    .digest("hex");
+}
+
+function isValidMcpBearerToken(expected, authorization) {
+  if (typeof expected !== "string" || !expected ||
+      typeof authorization !== "string") return false;
+  const match = authorization.match(/^Bearer\\s+([A-Za-z0-9._~-]+)$/i);
+  if (!match) return false;
+  const supplied = Buffer.from(match[1]);
+  const actual = Buffer.from(expected);
+  return supplied.length === actual.length && crypto.timingSafeEqual(supplied, actual);
+}
 
 let sdkPromise;
 
@@ -108,6 +126,17 @@ async function createUlugbekMcpServer(port) {
 
 function mountMcpBridge(app, options = {}) {
   const port = Number(options.port || process.env.PORT) || 3000;
+  const accessToken = typeof options.accessToken === "string" ? options.accessToken : "";
+  const requireMcpBearer = (req, res, next) => {
+    if (!accessToken) {
+      return res.status(503).json({ error: "MCP autentifikatsiyasi serverda sozlanmagan." });
+    }
+    if (!isValidMcpBearerToken(accessToken, req.get("Authorization"))) {
+      res.set("WWW-Authenticate", 'Bearer realm="ULUGBEK AI MCP"');
+      return res.status(401).json({ error: "MCP ulanish tokeni noto‘g‘ri yoki yo‘q." });
+    }
+    next();
+  };
   const mcpRateLimit = rateLimit({
     windowMs: 60 * 1000,
     limit: 20,
@@ -116,7 +145,7 @@ function mountMcpBridge(app, options = {}) {
     message: { error: "MCP sinov so‘rovlari limiti tugadi. Bir daqiqadan keyin qayta urinib ko‘ring." }
   });
 
-  app.post("/mcp", mcpRateLimit, async (req, res) => {
+  app.post("/mcp", requireMcpBearer, mcpRateLimit, async (req, res) => {
     let server;
     let transport;
     try {
@@ -151,4 +180,4 @@ function mountMcpBridge(app, options = {}) {
   app.delete("/mcp", (_req, res) => jsonRpcMethodNotAllowed(res));
 }
 
-module.exports = { mountMcpBridge };
+module.exports = { mountMcpBridge, createMcpAccessToken, isValidMcpBearerToken };
