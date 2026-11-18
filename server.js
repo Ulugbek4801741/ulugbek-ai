@@ -1243,7 +1243,7 @@ app.post("/api/admin/knowledge/search", requireAdmin, async (req, res) => {
 app.use("/api/chat", async (req, res, next) => {
   try {
     const header = String(req.get("Authorization") || "");
-    const match = header.match(/^Bearer\\s+(.+)$/i);
+    const match = header.match(/^Bearer\s+(.+)$/i);
     const user = match ? await vizorLearning.verifyToken(match[1]) : null;
     if (!user) return res.status(401).json({ error: "Chatdan foydalanish uchun ULUGBEK AI akkauntiga kiring." });
     req.ulugbekUser = user;
