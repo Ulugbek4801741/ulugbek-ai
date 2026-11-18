@@ -1396,13 +1396,8 @@ app.use((err, _req, res, _next) => {
   console.error("Server xatosi:", err.message);
   return res.status(500).json({ error: "Ichki server xatosi." });
 });
-// Restore the verified public-only knowledge archive before the learning worker resumes.
-void publicKnowledgeArchive.cycle().finally(() => {
-  publicKnowledgeArchive.start();
-  // The supervised learning worker is started only after the persisted
-  // watchdog state has been loaded and quarantine has been checked.
-  languageLearningWorker.start();
-});
+// The chat path is intentionally web-only. Background knowledge ingestion and
+// language-learning workers are not started; no local knowledge corpus is built.
 agentRuntime.startWorker().then(() => {
   const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`ULUGBEK AI serveri ${PORT}-portda ishga tushdi.`);
@@ -1424,7 +1419,6 @@ agentRuntime.startWorker().then(() => {
         } catch (error) {
           console.error("Developer Agent ishga tushmadi:", error.message);
         }
-        learningWorker.start();
         await selfRecovery.start();
       })
       .catch(error => {
