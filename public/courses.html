@@ -6,18 +6,18 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#f5f7fb">
 <meta name="description" content="ULUGBEK AI — server bilan ishlaydigan ommaviy o‘quv kurslari.">
-<title>VIZOR — ULUGBEK AI ta’lim platformasi</title>
+<title>ULUGBEK AI — O‘quv kurslari</title>
 <link rel="stylesheet" href="courses.css">
 </head>
 <body>
 <header class="topbar">
-  <a class="brand" href="/" aria-label="ULUGBEK AI bosh sahifa"><span class="brand-logo">V</span><span>VIZOR <small>ULUGBEK AI TA’LIM</small></span></a>
+  <a class="brand" href="/" aria-label="ULUGBEK AI bosh sahifa"><span class="brand-logo">U</span><span>ULUGBEK AI <small>O‘QUV KURSLARI</small></span></a>
   <div class="top-profile"><span class="profile-avatar">👤</span><span class="profile-copy"><b id="profileName">Mehmon</b><small id="profileMeta">Onlayn kurslar</small></span></div>
   <div class="top-actions"><span class="server-pill" id="serverState"><i></i> Server tekshirilmoqda</span><button id="account" class="account-btn">Kirish</button></div>
 </header>
 <main>
   <section class="premium-banner">
-    <div class="premium-copy"><span class="eyebrow">BILIMGA SARMOYA</span><h1>VIZOR ta’lim platformasi</h1><p>Tillar, fanlar va texnologiyalarni o‘rganing. Darslar, testlar va natijalar bir joyda.</p><button id="premiumBtn" class="premium-cta">Kurslarni ko‘rish <span>›</span></button></div>
+    <div class="premium-copy"><span class="eyebrow">BILIMGA SARMOYA</span><h1>ULUGBEK AI ta’lim platformasi</h1><p>Tillar, fanlar va texnologiyalarni o‘rganing. Darslar, testlar va natijalar bir joyda.</p><button id="premiumBtn" class="premium-cta">Kurslarni ko‘rish <span>›</span></button></div>
     <div class="crown-art" aria-hidden="true">👑<span>✦</span></div>
   </section>
 
@@ -54,13 +54,13 @@
   <section id="auth" class="panel" hidden><div class="panel-heading"><div><span class="eyebrow">ULUGBEK AI HISOBI</span><h2 id="authTitle">Akkauntga kirish</h2></div><button type="button" class="close-btn" data-close="auth">×</button></div><div class="switch"><button data-mode="login" class="selected">Kirish</button><button data-mode="register">Ro‘yxatdan o‘tish</button></div><form id="authForm"><label>Login<input name="username" minlength="3" maxlength="32" autocomplete="username" required></label><label id="displayField" hidden>F.I.Sh.<input name="displayName" maxlength="80" autocomplete="name"></label><label id="emailField" hidden>Email<input name="email" type="email" maxlength="254" autocomplete="email"></label><label id="phoneField" hidden>Telefon raqami<input name="phone" type="tel" maxlength="20" placeholder="+998901234567" autocomplete="tel"></label><label id="roleField" hidden>Foydalanuvchi turi<select name="role"><option value="student">O‘quvchi</option><option value="parent">Ota-ona</option><option value="teacher">O‘qituvchi</option></select></label><label>Parol<input name="password" type="password" minlength="10" autocomplete="current-password" required></label><button class="primary wide">Davom etish</button></form><small class="form-note">Parol kamida 10 belgidan iborat bo‘lishi kerak.</small></section>
 
   <section id="parentDashboard" class="panel" hidden>
-    <div class="panel-heading"><div><span class="eyebrow">VIZOR · OTA-ONA KABINETI</span><h2>Farzand monitoringi</h2><p>Ulangan o‘quvchilarning davomati va natijalari</p></div><button type="button" class="logout-btn" id="parentRefresh">Yangilash</button></div>
+    <div class="panel-heading"><div><span class="eyebrow">ULUGBEK AI · OTA-ONA KABINETI</span><h2>Farzand monitoringi</h2><p>Ulangan o‘quvchilarning davomati va natijalari</p></div><button type="button" class="logout-btn" id="parentRefresh">Yangilash</button></div>
     <form id="parentLinkForm" class="course-form"><label class="wide">O‘quvchining ota-ona kodi<input name="parentCode" maxlength="16" required placeholder="O‘quvchi kabinetidagi kod"></label><button class="primary wide">Farzandni ulash</button></form>
     <div id="parentChildren" class="catalog-grid"><p class="loading-card">Ma’lumotlar yuklanmoqda…</p></div><button type="button" id="parentLogout" class="logout-btn">Chiqish</button>
   </section>
 
   <section id="studentDashboard" class="panel" hidden>
-    <div class="panel-heading"><div><span class="eyebrow">VIZOR · O‘QUVCHI KABINETI</span><h2>Mening ta’limim</h2><p>Kurslar, darslar va natijalar</p></div><button type="button" id="studentRefresh" class="logout-btn">Yangilash</button></div>
+    <div class="panel-heading"><div><span class="eyebrow">ULUGBEK AI · O‘QUVCHI KABINETI</span><h2>Mening ta’limim</h2><p>Kurslar, darslar va natijalar</p></div><button type="button" id="studentRefresh" class="logout-btn">Yangilash</button></div>
     <p>Ota-ona ulash kodi: <b id="studentParentCode">—</b></p>
     <h3>Yozilgan kurslar</h3><button type="button" id="studentCreate" class="primary wide">O‘zim ham kurs joylayman</button><div id="studentCourses" class="catalog-grid"></div><h3>Testlar</h3><div id="studentTests" class="catalog-grid"></div><h3>Reyting</h3><div id="studentRankings" class="catalog-grid"></div>
     <h3>Bildirishnomalar</h3><div id="studentNotifications"></div>
@@ -68,7 +68,7 @@
   </section>
 
   <section id="teacherDashboard" class="panel" hidden>
-    <div class="panel-heading"><div><span class="eyebrow">VIZOR · O‘QITUVCHI KABINETI</span><h2>Mening kurslarim</h2><p>O‘quvchilar va darslar holati</p></div><button type="button" id="teacherRefresh" class="logout-btn">Yangilash</button></div>
+    <div class="panel-heading"><div><span class="eyebrow">ULUGBEK AI · O‘QITUVCHI KABINETI</span><h2>Mening kurslarim</h2><p>O‘quvchilar va darslar holati</p></div><button type="button" id="teacherRefresh" class="logout-btn">Yangilash</button></div>
     <div id="teacherCourses" class="catalog-grid"></div>
     <form id="teacherLessonForm" class="course-form" hidden><h3>Yangi dars qo‘shish</h3><input type="hidden" name="courseId"><label>Dars nomi<input name="title" required maxlength="160"></label><label>Video havolasi<input name="videoUrl" type="url" placeholder="https://youtu.be/..."></label><label>Jonli efir havolasi<input name="liveUrl" type="url" placeholder="https://..."></label><label>Dars vaqti<input name="scheduledAt" type="datetime-local"></label><label>Davomiyligi (daqiqa)<input name="durationMinutes" type="number" min="1" max="240" value="60"></label><button class="primary wide">Darsni saqlash</button></form>
     <form id="teacherTestForm" class="course-form" hidden><h3>Yangi test yaratish</h3><input type="hidden" name="courseId"><label>Test nomi<input name="title" required maxlength="160"></label><label>Savol<textarea name="prompt" required maxlength="500"></textarea></label><label>A javob<input name="option0" required maxlength="200"></label><label>B javob<input name="option1" required maxlength="200"></label><label>C javob<input name="option2" required maxlength="200"></label><label>D javob<input name="option3" required maxlength="200"></label><label>To‘g‘ri javob<select name="correctIndex"><option value="0">A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option></select></label><button class="primary wide">Testni saqlash</button></form>
