@@ -54,7 +54,7 @@ async function fetchLocalJson(url, options = {}) {
   return { response, data };
 }
 
-async function createUlugbekMcpServer(port) {
+async function createUlugbekMcpServer(port, accessToken) {
   const { McpServer, z } = await loadMcpSdk();
   const server = new McpServer(
     { name: "ulugbek-ai-chat", version: "1.0.0" },
@@ -121,6 +121,49 @@ async function createUlugbekMcpServer(port) {
     }
   );
 
+  server.registerTool(
+    "ulugbek_vizor_status",
+    { description: "VIZOR ta’lim platformasining PostgreSQL ulanishi va funksiyalar tayyorligini tekshiradi." },
+    async () => {
+      try {
+        const { response, data } = await fetchLocalJson(`${baseUrl}/api/vizor/status`, { headers: { "Accept": "application/json" } });
+        return { content: [{ type: "text", text: JSON.stringify({ httpStatus: response.status, ...data }) }], isError: !response.ok };
+      } catch (error) {
+        return { content: [{ type: "text", text: `VIZOR holatini tekshirish xatosi: ${error.message}` }], isError: true };
+      }
+    }
+  );
+
+  server.registerTool(
+    "ulugbek_vizor_courses",
+    { description: "VIZOR kurslar katalogini oddiy foydalanuvchi ko‘radigan ochiq ma’lumotlar bilan o‘qiydi." },
+    async () => {
+      try {
+        const { response, data } = await fetchLocalJson(`${baseUrl}/api/vizor/courses`, { headers: { "Accept": "application/json" } });
+        return { content: [{ type: "text", text: JSON.stringify({ httpStatus: response.status, ...data }) }], isError: !response.ok };
+      } catch (error) {
+        return { content: [{ type: "text", text: `VIZOR katalogini olish xatosi: ${error.message}` }], isError: true };
+      }
+    }
+  );
+
+  server.registerTool(
+    "ulugbek_vizor_diagnostic",
+    { description: "VIZOR PostgreSQL bazasida o‘quvchi, ota-ona, o‘qituvchi, kurs, dars, davomat, test, reyting va bildirishnoma oqimlarini vaqtinchalik tranzaksiyada sinaydi. Sinov ma’lumotlari ROLLBACK bilan bekor qilinadi." },
+    async () => {
+      try {
+        const { response, data } = await fetchLocalJson(`${baseUrl}/api/internal/vizor-diagnostic`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${accessToken}` },
+          body: "{}"
+        });
+        return { content: [{ type: "text", text: JSON.stringify({ httpStatus: response.status, ...data }) }], isError: !response.ok };
+      } catch (error) {
+        return { content: [{ type: "text", text: `VIZOR diagnostikasi xatosi: ${error.message}` }], isError: true };
+      }
+    }
+  );
+
   return server;
 }
 
@@ -150,7 +193,7 @@ function mountMcpBridge(app, options = {}) {
     let transport;
     try {
       const { StreamableHTTPServerTransport } = await loadMcpSdk();
-      server = await createUlugbekMcpServer(port);
+      server = await createUlugbekMcpServer(port, accessToken);
       transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
       await server.connect(transport);
       res.on("close", () => {
