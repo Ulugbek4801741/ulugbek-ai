@@ -55,6 +55,18 @@ async function resolvePublicHost(hostname) {
   return records[0];
 }
 
+function createPinnedLookup(address) {
+  if (!address || !net.isIP(address.address) || ![4, 6].includes(address.family)) {
+    throw new Error("DNS ommaviy IP manzilini qaytarmadi.");
+  }
+  return (_hostname, options, callback) => {
+    // Node.js 26 may request all=true; in that mode lookup must return
+    // an array of { address, family }, not the legacy address/family pair.
+    if (options && options.all) return callback(null, [address]);
+    return callback(null, address.address, address.family);
+  };
+}
+
 function requestPinned(url, address, pathName) {
   return new Promise((resolve, reject) => {
     const req = https.request({
@@ -64,7 +76,7 @@ function requestPinned(url, address, pathName) {
       port: 443,
       method: "GET",
       path: pathName || (url.pathname + url.search),
-      lookup: (_host, _options, callback) => callback(null, address.address, address.family),
+      lookup: createPinnedLookup(address),
       headers: {
         "User-Agent": "ULUGBEK-AI-OpenKnowledge/2.0 (public read-only research)",
         "Accept": "text/html,text/plain;q=0.9,*/*;q=0.1",
@@ -211,4 +223,4 @@ async function readPublicPage(inputUrl) {
   throw new Error("Sahifani ochib bo‘lmadi.");
 }
 
-module.exports = { normalizePublicUrl, isPublicAddress, robotsAllows, extractReadablePage, readPublicPage };
+module.exports = { normalizePublicUrl, isPublicAddress, robotsAllows, extractReadablePage, readPublicPage, createPinnedLookup };
