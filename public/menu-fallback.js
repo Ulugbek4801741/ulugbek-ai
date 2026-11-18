@@ -1,44 +1,5 @@
 "use strict";
-(() => {
-  const buttonId = "settings-open";
-  const modalId = "settings-modal";
-  const closeId = "settings-close";
-  const get = (id) => document.getElementById(id);
-
-  function setOpen(open) {
-    const button = get(buttonId);
-    const modal = get(modalId);
-    if (!button || !modal) return;
-    modal.hidden = !open;
-    button.setAttribute("aria-expanded", String(open));
-    if (open) {
-      const first = modal.querySelector("button, select, input, textarea");
-      if (first) first.focus({ preventScroll: true });
-    } else {
-      button.focus({ preventScroll: true });
-    }
-  }
-
-  document.addEventListener("pointerup", (event) => {
-    const button = event.target && event.target.closest && event.target.closest("#" + buttonId);
-    if (button && (event.pointerType === "touch" || event.pointerType === "pen")) {
-      event.preventDefault();
-      setOpen(true);
-    }
-  }, true);
-
-  document.addEventListener("click", (event) => {
-    const target = event.target;
-    if (!target || !target.closest) return;
-    if (target.closest("#" + buttonId)) {
-      event.preventDefault();
-      setOpen(true);
-      return;
-    }
-    if (target.closest("#" + closeId) || target === get(modalId)) setOpen(false);
-  }, true);
-
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && get(modalId) && !get(modalId).hidden) setOpen(false);
-  });
-})();
+// The three-dot button is owned by public/business-hub.js.
+// Do not intercept its pointer/click events here: the previous fallback
+// opened the settings modal in the capture phase and covered the business menu.
+// Keeping this file as a no-op preserves older HTML references safely.
