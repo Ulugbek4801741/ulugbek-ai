@@ -74,3 +74,47 @@ test("watchdog quarantines repeated agent failures and limits recovery attempts"
     await fs.rm(dir, { recursive: true, force: true });
   }
 });
+
+
+test("watchdog recovery waits for the developer audit before checking health", async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "ulugbek-watchdog-recovery-"));
+  const storePath = path.join(dir, "state.json");
+  let devError = "stale failure from the quarantined run";
+  const watchdog = createAdminAutopilot({
+    developerAgent: {
+      status: () => ({ enabled: true, running: false, lastError: devError }),
+      stop: () => {},
+      start: async () => {
+        await new Promise(resolve => setImmediate(resolve));
+        devError = null;
+        return { lastError: null };
+      }
+    },
+    learningWorker: {
+      status: () => ({ enabled: true, running: false, lastError: null }),
+      stop: () => {},
+      start: () => ({ enabled: true })
+    },
+    agentRuntime: { listTasks: () => [] },
+    storePath
+  });
+  try {
+    await fs.writeFile(storePath, JSON.stringify({
+      enabled: false,
+      quarantined: true,
+      quarantineReason: "previous failure",
+      restartAttempts: 0,
+      consecutiveErrors: 3,
+      events: []
+    }));
+    const before = await watchdog.start();
+    assert.equal(before.quarantined, true);
+    const after = await watchdog.recover();
+    assert.equal(after.quarantined, false);
+    assert.equal(after.consecutiveErrors, 0);
+    assert.equal(after.restartAttempts, 1);
+    await watchdog.stop();
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});

@@ -1561,7 +1561,8 @@ app.use((err, _req, res, _next) => {
 // Restore the verified public-only knowledge archive before the learning worker resumes.
 void publicKnowledgeArchive.cycle().finally(() => {
   publicKnowledgeArchive.start();
-  learningWorker.start();
+  // The supervised learning worker is started only after the persisted
+  // watchdog state has been loaded and quarantine has been checked.
   languageLearningWorker.start();
 });
 agentRuntime.startWorker().then(() => {
@@ -1571,17 +1572,25 @@ agentRuntime.startWorker().then(() => {
     // Start the repository auditor only after HTTP is accepting requests.
     // It is read-only: it may create local review proposals, but never edits,
     // merges, executes, or deploys source code.
-    developerAgent.start()
-      .catch(error => {
-        console.error("Developer Agent ishga tushmadi:", error.message);
+    // Load the persisted watchdog state before starting supervised workers.
+    // A previous quarantine must survive a Render restart and must not be
+    // bypassed by unconditional startup calls.
+    adminAutopilot.start()
+      .then(async watchdogStatus => {
+        if (watchdogStatus.quarantined) {
+          console.warn("Agentlar karantinda; administrator tiklashni tasdiqlamaguncha ishga tushirilmaydi.");
+          return;
+        }
+        try {
+          await developerAgent.start();
+        } catch (error) {
+          console.error("Developer Agent ishga tushmadi:", error.message);
+        }
+        learningWorker.start();
+        await selfRecovery.start();
       })
-      .finally(() => {
-        // The watchdog supervises only the existing bounded background workers.
-        adminAutopilot.start()
-          .then(() => selfRecovery.start())
-          .catch(error => {
-            console.error("Self-Recovery diagnostikasi ishga tushmadi:", error.message);
-          });
+      .catch(error => {
+        console.error("Watchdog yoki Self-Recovery diagnostikasi ishga tushmadi:", error.message);
       });
   });
   server.on("error", error => console.error("HTTP server xatosi:", error.message));

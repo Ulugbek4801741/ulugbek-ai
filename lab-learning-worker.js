@@ -46,7 +46,7 @@ const ALLOWED_WIKIPEDIA_HOSTS = new Set([
 ]);
 
 let state = {
-  enabled: true, running: false, startedAt: null, lastCycleAt: null,
+  enabled: false, running: false, startedAt: null, lastCycleAt: null,
   lastSuccessAt: null, cycles: 0, saved: 0, lastError: null,
   lastTopic: null, lastLanguage: null, openWebSaved: 0,
   lastOpenWebAt: null, lastOpenWebError: null,
