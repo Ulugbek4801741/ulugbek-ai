@@ -15,7 +15,7 @@ async function readRpcResponse(response) {
   return raw ? JSON.parse(raw) : null;
 }
 
-test("MCP bridge exposes real chat and health tools only", async t => {
+test("MCP bridge exposes chat, health, and safe VIZOR tools", async t => {
   const app = express();
   app.use(express.json());
   app.post("/api/chat", (req, res) => {
@@ -79,7 +79,7 @@ test("MCP bridge exposes real chat and health tools only", async t => {
   assert.equal(listed.status, 200);
   const listResult = await readRpcResponse(listed);
   const toolNames = listResult.result?.tools?.map(tool => tool.name) || [];
-  assert.deepEqual(toolNames.sort(), ["ulugbek_chat", "ulugbek_health"]);
+  assert.deepEqual(toolNames.sort(), ["ulugbek_chat", "ulugbek_health", "ulugbek_vizor_courses", "ulugbek_vizor_diagnostic", "ulugbek_vizor_status", "ulugbek_vizor_user_simulation"]);
 
   const chat = await fetch(endpoint, {
     method: "POST",

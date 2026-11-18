@@ -302,9 +302,9 @@ test("API smoke tests", async (t) => {
     await t.test("GitHub Pages config selects the Render backend, not its static origin", async () => {
       const fs = require("node:fs");
       const config = fs.readFileSync(require("node:path").join(__dirname, "..", "public", "config.js"), "utf8");
-      assert.ok(config.includes("https://ulugbek-ai2.onrender.com"));
+      assert.ok(config.includes("https://ulugbek-ai1.onrender.com"));
       assert.match(config, /isNativeLocalhost/);
-      assert.doesNotMatch(config, /ulugbek-ai1\.onrender\.com/);
+      assert.doesNotMatch(config, /ulugbek-ai2\.onrender\.com/);
     });
 
     await t.test("configured GitHub Pages origin can call backend and CSP permits it", async () => {

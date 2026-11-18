@@ -54,7 +54,7 @@ async function fetchLocalJson(url, options = {}) {
   return { response, data };
 }
 
-async function createUlugbekMcpServer(port) {
+async function createUlugbekMcpServer(port, accessToken) {
   const { McpServer, z } = await loadMcpSdk();
   const server = new McpServer(
     { name: "ulugbek-ai-chat", version: "1.0.0" },
@@ -121,6 +121,174 @@ async function createUlugbekMcpServer(port) {
     }
   );
 
+  server.registerTool(
+    "ulugbek_vizor_status",
+    { description: "VIZOR ta’lim platformasining PostgreSQL ulanishi va funksiyalar tayyorligini tekshiradi." },
+    async () => {
+      try {
+        const { response, data } = await fetchLocalJson(`${baseUrl}/api/vizor/status`, { headers: { "Accept": "application/json" } });
+        return { content: [{ type: "text", text: JSON.stringify({ httpStatus: response.status, ...data }) }], isError: !response.ok };
+      } catch (error) {
+        return { content: [{ type: "text", text: `VIZOR holatini tekshirish xatosi: ${error.message}` }], isError: true };
+      }
+    }
+  );
+
+  server.registerTool(
+    "ulugbek_vizor_courses",
+    { description: "VIZOR kurslar katalogini oddiy foydalanuvchi ko‘radigan ochiq ma’lumotlar bilan o‘qiydi." },
+    async () => {
+      try {
+        const { response, data } = await fetchLocalJson(`${baseUrl}/api/vizor/courses`, { headers: { "Accept": "application/json" } });
+        return { content: [{ type: "text", text: JSON.stringify({ httpStatus: response.status, ...data }) }], isError: !response.ok };
+      } catch (error) {
+        return { content: [{ type: "text", text: `VIZOR katalogini olish xatosi: ${error.message}` }], isError: true };
+      }
+    }
+  );
+
+  server.registerTool(
+    "ulugbek_vizor_diagnostic",
+    { description: "VIZOR PostgreSQL bazasida o‘quvchi, ota-ona, o‘qituvchi, kurs, dars, davomat, test, reyting va bildirishnoma oqimlarini vaqtinchalik tranzaksiyada sinaydi. Sinov ma’lumotlari ROLLBACK bilan bekor qilinadi." },
+    async () => {
+      try {
+        const { response, data } = await fetchLocalJson(`${baseUrl}/api/internal/vizor-diagnostic`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${accessToken}` },
+          body: "{}"
+        });
+        return { content: [{ type: "text", text: JSON.stringify({ httpStatus: response.status, ...data }) }], isError: !response.ok };
+      } catch (error) {
+        return { content: [{ type: "text", text: `VIZOR diagnostikasi xatosi: ${error.message}` }], isError: true };
+      }
+    }
+  );
+
+
+  server.registerTool(
+    "ulugbek_vizor_user_simulation",
+    { description: "VIZOR ilovasida oddiy foydalanuvchi kabi sinov o‘tkazadi: vaqtinchalik o‘quvchi, ota-ona va o‘qituvchi akkauntlari bilan kurs yaratish, kursga yozilish, dars, davomat, progress, test, reyting va ota-ona bildirishnomalarini haqiqiy HTTP API orqali tekshiradi. Sinov tugagach QA akkauntlari va kurs ma’lumotlarini o‘chiradi; haqiqiy foydalanuvchilarga xabar yubormaydi va to‘lov qilmaydi." },
+    async () => {
+      const callApi = async (path, options = {}) => {
+        const headers = { "Accept": "application/json" };
+        if (options.token) headers.Authorization = "Bearer " + options.token;
+        if (options.body !== undefined) headers["Content-Type"] = "application/json";
+        const { response, data } = await fetchLocalJson(baseUrl + path, {
+          method: options.method || "GET",
+          headers,
+          body: options.body === undefined ? undefined : JSON.stringify(options.body)
+        });
+        if (!response.ok) {
+          const error = new Error(data.error || ("HTTP " + response.status));
+          error.status = response.status;
+          error.data = data;
+          throw error;
+        }
+        return data;
+      };
+      const ensureUser = async (username, displayName, email, phone, role) => {
+        const password = crypto.createHmac("sha256", accessToken).update("VIZOR_QA:" + username).digest("hex");
+        try {
+          const registered = await callApi("/api/vizor/register", {
+            method: "POST",
+            body: { username, displayName, email, phone, password, role }
+          });
+          return { token: registered.token, user: registered.user };
+        } catch (error) {
+          if (error.status !== 409) throw error;
+          const loggedIn = await callApi("/api/vizor/login", {
+            method: "POST",
+            body: { identifier: username, password }
+          });
+          return { token: loggedIn.token, user: loggedIn.user };
+        }
+      };
+
+      let student, teacher, parent, courseId = "";
+      let result = { ok: false, checks: {} };
+      let failure = "";
+      let cleanup = { courseDeleted: false, qaAccountsDeleted: false };
+      try {
+        student = await ensureUser("ulugbek_qa_student","ULUGBEK QA O‘quvchi","ulugbek-qa-student@ulugbek-ai.invalid","+999000000001","student");
+        teacher = await ensureUser("ulugbek_qa_teacher","ULUGBEK QA O‘qituvchi","ulugbek-qa-teacher@ulugbek-ai.invalid","+999000000002","teacher");
+        parent = await ensureUser("ulugbek_qa_parent","ULUGBEK QA Ota-ona","ulugbek-qa-parent@ulugbek-ai.invalid","+999000000003","parent");
+        result.checks.syntheticAccounts = Boolean(student.token && teacher.token && parent.token);
+
+        const course = await callApi("/api/vizor/courses", {
+          method: "POST", token: teacher.token,
+          body: { title: "[QA] VIZOR foydalanuvchi sinovi", description: "Vaqtinchalik avtomatik sinov kursi. Sinov tugagach o‘chiriladi.", category: "VIZOR QA", price: 0 }
+        });
+        courseId = course.course.id;
+        result.checks.teacherCourseCreation = Boolean(courseId);
+
+        const lesson = await callApi("/api/vizor/courses/" + encodeURIComponent(courseId) + "/lessons", {
+          method: "POST", token: teacher.token,
+          body: { title: "[QA] Birinchi dars", videoUrl: "https://youtu.be/aqz-KE-bpKQ", durationMinutes: 60 }
+        });
+        result.checks.lessonCreation = Boolean(lesson.lesson?.id);
+
+        await callApi("/api/vizor/courses/" + encodeURIComponent(courseId) + "/enroll", { method: "POST", token: student.token, body: {} });
+        result.checks.studentEnrollment = true;
+
+        await callApi("/api/vizor/parent/link", { method: "POST", token: parent.token, body: { parentCode: student.user.parentCode } });
+        result.checks.parentLink = true;
+
+        await callApi("/api/vizor/lessons/" + encodeURIComponent(lesson.lesson.id) + "/attendance", { method: "POST", token: student.token, body: {} });
+        result.checks.attendance = true;
+
+        await callApi("/api/vizor/lessons/" + encodeURIComponent(lesson.lesson.id) + "/progress", { method: "POST", token: student.token, body: { completed: true, secondsWatched: 120 } });
+        result.checks.lessonProgress = true;
+
+        const createdTest = await callApi("/api/vizor/courses/" + encodeURIComponent(courseId) + "/tests", {
+          method: "POST", token: teacher.token,
+          body: { title: "[QA] 2+2 testi", questions: [{ prompt: "2 + 2 nechaga teng?", options: ["3","4"], correctIndex: 1 }] }
+        });
+        const visibleTests = await callApi("/api/vizor/courses/" + encodeURIComponent(courseId) + "/tests", { token: student.token });
+        const attempt = await callApi("/api/vizor/tests/" + encodeURIComponent(createdTest.test.id) + "/attempts", {
+          method: "POST", token: student.token, body: { answers: [1] }
+        });
+        result.checks.quizAndScoring = attempt.percentage === 100 && visibleTests.tests.length === 1;
+
+        const children = await callApi("/api/vizor/parent/children", { token: parent.token });
+        const notices = await callApi("/api/vizor/notifications", { token: parent.token });
+        result.checks.parentMonitoring = children.children.some(child => child.id === student.user.id);
+        result.checks.parentNotifications = notices.notifications.length >= 2;
+
+        const rankings = await callApi("/api/vizor/rankings?period=week");
+        result.checks.weeklyRanking = rankings.rankings.some(item => item.id === student.user.id);
+
+        const teacherCourses = await callApi("/api/vizor/teacher/courses", { token: teacher.token });
+        const catalog = await callApi("/api/vizor/courses");
+        result.checks.teacherDashboard = teacherCourses.courses.some(item => item.id === courseId);
+        result.checks.publicCatalog = catalog.courses.some(item => item.id === courseId);
+        result.ok = Object.values(result.checks).every(Boolean);
+      } catch (error) {
+        failure = error.message;
+      } finally {
+        if (courseId && teacher?.token) {
+          try {
+            await callApi("/api/vizor/courses/" + encodeURIComponent(courseId), { method: "DELETE", token: teacher.token });
+            cleanup.courseDeleted = true;
+          } catch (_) {}
+        }
+        try {
+          const { response, data } = await fetchLocalJson(baseUrl + "/api/internal/vizor-qa-cleanup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + accessToken },
+            body: "{}"
+          });
+          cleanup.qaAccountsDeleted = response.ok && data.ok === true;
+        } catch (_) {}
+      }
+      result.cleanup = cleanup;
+      if (failure) result.error = failure;
+      return {
+        content: [{ type: "text", text: JSON.stringify(result) }],
+        isError: !result.ok || !cleanup.qaAccountsDeleted
+      };
+    }
+  );
+
   return server;
 }
 
@@ -150,7 +318,7 @@ function mountMcpBridge(app, options = {}) {
     let transport;
     try {
       const { StreamableHTTPServerTransport } = await loadMcpSdk();
-      server = await createUlugbekMcpServer(port);
+      server = await createUlugbekMcpServer(port, accessToken);
       transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
       await server.connect(transport);
       res.on("close", () => {

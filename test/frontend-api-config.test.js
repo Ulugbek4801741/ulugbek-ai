@@ -11,12 +11,12 @@ test("GitHub Pages and Capacitor localhost use the active Render API", () => {
   for (const hostname of ["ulugbek4801741.github.io", "localhost", "127.0.0.1"]) {
     const window = { location: { hostname, origin: "https://" + hostname } };
     vm.runInNewContext(source, { window });
-    assert.equal(window.ULUGBEK_API_BASE_URL, "https://ulugbek-ai2.onrender.com");
+    assert.equal(window.ULUGBEK_API_BASE_URL, "https://ulugbek-ai1.onrender.com");
   }
 });
 
 test("Render-hosted frontend keeps its same-origin API", () => {
-  const window = { location: { hostname: "ulugbek-ai2.onrender.com", origin: "https://ulugbek-ai2.onrender.com" } };
+  const window = { location: { hostname: "ulugbek-ai2.onrender.com", origin: "https://ulugbek-ai1.onrender.com" } };
   vm.runInNewContext(source, { window });
   assert.equal(window.ULUGBEK_API_BASE_URL, window.location.origin);
 });

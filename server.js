@@ -1,7 +1,7 @@
 const express = require("express");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
-const { mountMcpBridge, createMcpAccessToken } = require("./modules/mcp-bridge");
+const { mountMcpBridge, createMcpAccessToken, isValidMcpBearerToken } = require("./modules/mcp-bridge");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const agentRuntime = require("./agent-runtime");
@@ -203,7 +203,7 @@ app.use(helmet({
     directives: { microphone: ["self"], camera: [], geolocation: [] }
   }
 }));
-app.use(express.json({ limit: "1.2mb", strict: true, type: "application/json" }));
+app.use(express.json({ limit: "12mb", strict: true, type: "application/json" }));
 // Capture only failure metadata automatically; raw chat text is not stored without explicit feedback.
 app.use("/api/chat", errorLearning.middleware(), conversationMemory.middleware());
 app.use("/api/", rateLimit({
@@ -212,6 +212,10 @@ app.use("/api/", rateLimit({
   standardHeaders: "draft-8",
   legacyHeaders: false
 }));
+const socialNetwork = require("./modules/social-network").createSocialNetwork();
+app.use("/api/social", socialNetwork);
+const vizorLearning = require("./modules/vizor-learning").createVizorLearning();
+app.use("/api/vizor", vizorLearning);
 const marketplaceRouter = require("./modules/regional-marketplace-api");
 marketplaceRouter.setAssistant(async ({ message, senderRole, order, recentMessages }) => {
   const transcript = recentMessages.map(item => item.sender + ": " + item.message).join("\n");
@@ -273,6 +277,35 @@ app.get("/api/admin/mcp-connection", requireAdmin, (_req, res) => {
   res.set("Pragma", "no-cache");
   if (!token) return res.status(503).json({ error: "MCP tokeni uchun ADMIN_SESSION_SECRET kamida 32 belgidan iborat bo‘lishi kerak." });
   return res.json({ ok: true, token });
+});
+app.post("/api/internal/vizor-diagnostic", (req, res, next) => {
+  const expected = createMcpAccessToken(ADMIN_SESSION_SECRET);
+  if (!isValidMcpBearerToken(expected, req.get("Authorization"))) {
+    return res.status(401).json({ error: "MCP diagnostika ruxsati yo‘q." });
+  }
+  next();
+}, async (_req, res) => {
+  try {
+    const result = await vizorLearning.runSmokeTest();
+    return res.status(result.ok ? 200 : 503).json(result);
+  } catch (error) {
+    return res.status(503).json({ ok: false, error: "VIZOR diagnostikasi bajarilmadi." });
+  }
+});
+
+app.post("/api/internal/vizor-qa-cleanup", (req, res, next) => {
+  const expected = createMcpAccessToken(ADMIN_SESSION_SECRET);
+  if (!isValidMcpBearerToken(expected, req.get("Authorization"))) {
+    return res.status(401).json({ error: "MCP QA tozalash ruxsati yo‘q." });
+  }
+  next();
+}, async (_req, res) => {
+  try {
+    const result = await vizorLearning.cleanupQaAccounts();
+    return res.status(result.ok ? 200 : 503).json(result);
+  } catch (_error) {
+    return res.status(503).json({ ok: false, error: "VIZOR QA ma’lumotlarini tozalash bajarilmadi." });
+  }
 });
 marketplaceRouter.setAdminGuard(requireAdmin);
 
@@ -646,7 +679,7 @@ app.post("/api/cognition/analyze", (req, res) => {
 
 app.get("/api/version", (_req, res) => {
   res.set("Cache-Control", "no-store");
-  res.json({ ok: true, app: "ULUGBEK AI", version: "0.3.2", commit: BUILD_COMMIT, branch: BUILD_BRANCH, startedAt: SERVER_STARTED_AT, node: process.version, endpoints: { health: "/api/health", research: "/api/research/status", learning: "/api/lab/learning/status", ai: "/api/ai/status" } });
+  res.json({ ok: true, app: "ULUGBEK AI", version: "0.3.2", commit: BUILD_COMMIT, branch: BUILD_BRANCH, startedAt: SERVER_STARTED_AT, node: process.version, endpoints: { health: "/api/health", research: "/api/research/status", learning: "/api/lab/learning/status", ai: "/api/ai/status", vizor: "/api/vizor/status" } });
 });
 
 app.get("/api/independent/status", (_req, res) => {
@@ -705,6 +738,7 @@ app.get("/api/health", (_req, res) => {
     mode: !singleAgent.status().configured ? "native-single-agent-fallback-no-model" :
       singleAgent.status().provider === "openai-compatible" ? "openai-compatible-model" : "external-ai-provider",
     storageMode: "local-json",
+    vizorDatabaseConfigured: Boolean(process.env.DATABASE_URL),
     workerConcurrency: 1,
     multiInstanceSafe: false,
     automaticFailoverReady: false
