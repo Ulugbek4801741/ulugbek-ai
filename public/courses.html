@@ -13,7 +13,7 @@
 <header class="topbar">
   <a class="brand" href="/" aria-label="ULUGBEK AI bosh sahifa"><span class="brand-logo">U</span><span>ULUGBEK AI <small>O‘QUV KURSLARI</small></span></a>
   <div class="top-profile"><span class="profile-avatar">👤</span><span class="profile-copy"><b id="profileName">Mehmon</b><small id="profileMeta">Onlayn kurslar</small></span></div>
-  <div class="top-actions"><span class="server-pill" id="serverState"><i></i> Server tekshirilmoqda</span><button id="account" class="account-btn">Kirish</button></div>
+  <div class="top-actions"><button id="globalCreateCourse" class="account-btn">Kurs yaratish</button><span class="server-pill" id="serverState"><i></i> Server tekshirilmoqda</span><button id="account" class="account-btn">Kirish</button></div>
 </header>
 <main>
   <section class="premium-banner">
@@ -52,6 +52,8 @@
   <section id="allCourses" class="catalog-section"><div class="section-heading catalog-heading"><div><span class="section-icon">📚</span><div><h2>Barcha onlayn kurslar</h2><p id="catalogSubtitle">Ommaviy katalog — serverdan yangilanadi</p></div></div><span id="count" class="count-pill">Yuklanmoqda…</span></div><div id="courses" class="catalog-grid"></div></section>
 
   <section id="auth" class="panel" hidden><div class="panel-heading"><div><span class="eyebrow">ULUGBEK AI HISOBI</span><h2 id="authTitle">Akkauntga kirish</h2></div><button type="button" class="close-btn" data-close="auth">×</button></div><div class="switch"><button data-mode="login" class="selected">Kirish</button><button data-mode="register">Ro‘yxatdan o‘tish</button></div><form id="authForm"><label>Login<input name="username" minlength="3" maxlength="32" autocomplete="username" required></label><label id="displayField" hidden>F.I.Sh.<input name="displayName" maxlength="80" autocomplete="name"></label><label id="emailField" hidden>Email<input name="email" type="email" maxlength="254" autocomplete="email"></label><label id="phoneField" hidden>Telefon raqami<input name="phone" type="tel" maxlength="20" placeholder="+998901234567" autocomplete="tel"></label><label id="roleField" hidden>Foydalanuvchi turi<select name="role"><option value="student">O‘quvchi</option><option value="parent">Ota-ona</option><option value="teacher">O‘qituvchi</option></select></label><label>Parol<input name="password" type="password" minlength="10" autocomplete="current-password" required></label><button class="primary wide">Davom etish</button></form><small class="form-note">Parol kamida 10 belgidan iborat bo‘lishi kerak.</small></section>
+
+  <section id="adminApprovalDashboard" class="panel" hidden><div class="panel-heading"><div><span class="eyebrow">ULUGBEK AI · INSON TASDIG‘I</span><h2>Pullik kurslarni tasdiqlash</h2><p>AI emas, administrator tasdiqlaydi.</p></div><button id="adminApprovalRefresh" class="logout-btn">Yangilash</button></div><div id="pendingPaidCourses" class="catalog-grid"></div></section>
 
   <section id="parentDashboard" class="panel" hidden>
     <div class="panel-heading"><div><span class="eyebrow">ULUGBEK AI · OTA-ONA KABINETI</span><h2>Farzand monitoringi</h2><p>Ulangan o‘quvchilarning davomati va natijalari</p></div><button type="button" class="logout-btn" id="parentRefresh">Yangilash</button></div>
