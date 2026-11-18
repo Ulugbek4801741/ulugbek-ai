@@ -163,7 +163,9 @@ function createAdminAutopilot({ developerAgent, learningWorker, agentRuntime, no
     event("recovery_attempt", "Cheklangan qayta tiklash urinish " + state.restartAttempts);
     try {
       // Only these existing, read-only/background workers are restarted.
-      developerAgent.start().catch(error => { state.lastError = String(error.message || "Developer Agent restart failed"); });
+      // Complete startup/audit before checking health, so stale errors from
+      // the quarantined run cannot immediately re-quarantine a recovered agent.
+      await developerAgent.start();
       learningWorker.start();
       started = true;
       stoppedByAdmin = false;
