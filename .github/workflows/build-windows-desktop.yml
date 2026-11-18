@@ -11,6 +11,11 @@ on:
       - "package.json"
       - "public/**"
       - ".github/workflows/build-windows-desktop.yml"
+      - "server.js"
+      - "agent-runtime.js"
+      - "developer-agent.js"
+      - "lab-learning-worker.js"
+      - "modules/**"
 
 permissions:
   contents: read
