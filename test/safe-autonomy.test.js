@@ -30,6 +30,25 @@ test("safe autonomy audits only when token and repository read permission exist"
   }
 });
 
+test("safe autonomy recognizes the repository-scoped archive token fallback", async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "ulugbek-safe-autonomy-archive-token-"));
+  let auditCalls = 0;
+  const agent = {
+    status: () => ({ enabled: false, running: false }),
+    auditOnce: async () => { auditCalls += 1; return { enabled: true, cycles: 1, scannedFiles: 1, pendingApprovals: 0 }; }
+  };
+  const permissions = { snapshot: () => ({ capabilities: { repository_read: { enabled: true } } }) };
+  const runner = createSafeAutonomy({ developerAgent: agent, agentPermissions: permissions, storePath: path.join(dir, "state.json"), env: { GITHUB_ARCHIVE_TOKEN: "archive-secret" } });
+  try {
+    const result = await runner.runOnce();
+    assert.equal(auditCalls, 1);
+    assert.equal(result.checks.find(item => item.id === "github_token").ok, true);
+    assert.equal(JSON.stringify(result).includes("archive-secret"), false);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
 test("safe autonomy does not call GitHub without a token", async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "ulugbek-safe-autonomy-no-token-"));
   let auditCalls = 0;
