@@ -417,7 +417,14 @@ function createVizorLearning(options = {}) {
     res.status(201).json({ ok: true, enrolled: true });
   });
 
-  router.get("/courses/:id/lessons", ...ready, async (req, res) => {
+  router.get("/courses/:id/lessons", ...ready, auth, async (req, res) => {
+    const course = await pool.query("SELECT instructor_id FROM vizor_courses WHERE id=$1 AND status='published'", [req.params.id]);
+    if (!course.rowCount) return res.sendStatus(404);
+    const isOwner = course.rows[0].instructor_id === req.user.id;
+    const enrolled = await pool.query("SELECT 1 FROM vizor_enrollments WHERE course_id=$1 AND student_id=$2", [req.params.id,req.user.id]);
+    if (!isOwner && !enrolled.rowCount && req.user.role !== "admin") {
+      return res.status(403).json({ error: "Darslarni ko‘rish uchun avval kursga yoziling." });
+    }
     const result = await pool.query(
       "SELECT id,course_id,title,video_url,live_url,scheduled_at,duration_minutes,sort_order FROM vizor_lessons WHERE course_id=$1 ORDER BY sort_order,created_at",
       [req.params.id]
