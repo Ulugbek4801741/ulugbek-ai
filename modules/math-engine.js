@@ -2,7 +2,7 @@
 
 // Safe arithmetic parser. It never uses eval(), Function(), or shell execution.
 function tokenize(source) {
-  const input = String(source || "").replace(/[×]/g, "*").replace(/[÷]/g, "/").replace(/,/g, ".");
+  const input = String(source || "").replace(/[×]/g, "*").replace(/[÷:]/g, "/").replace(/,/g, ".");
   if (!input.trim() || input.length > 120) throw new Error("Hisob ifodasi bo‘sh yoki juda uzun.");
   const tokens = [];
   let index = 0;
@@ -82,14 +82,18 @@ function calculateExpression(source) {
 function findExpression(query) {
   const text = String(query || "").slice(0, 500);
   const beforeEquals = text.split("=")[0];
-  const candidates = [beforeEquals, ...(text.match(/[\d.(),+\-*/×÷%^\s]{3,}/g) || [])];
+  const candidates = [beforeEquals, ...(text.match(/[\d.(),+\-*/×÷:%^\s]{3,}/g) || [])];
   for (const candidate of candidates) {
     const value = candidate.trim().replace(/[?؟]+$/g, "").trim();
-    if (!/[+*/×÷%^()-]/.test(value) || !/\d/.test(value)) continue;
+    if (!/[+*/×÷:%^()-]/.test(value) || !/\d/.test(value)) continue;
     try {
       const result = calculateExpression(value);
       return { expression: value, result };
-    } catch (_) {}
+    } catch (error) {
+      if (/^\s*[\d\s.,()+\-*/×÷:%^]+$/.test(value) && /\d/.test(value)) {
+        return { expression: value, error: error.message || "Matematik ifoda noto‘g‘ri." };
+      }
+    }
   }
   return null;
 }
