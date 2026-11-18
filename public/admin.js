@@ -360,3 +360,34 @@ setInterval(() => {
     loadTasks().catch(() => {}); loadOverview().catch(() => {}); loadDeveloperAgent().catch(() => {}); loadAutopilot().catch(() => {});
   }
 }, 10000);
+
+
+function setupChatGptConnection() {
+  const endpoint = $("mcp-endpoint");
+  const copy = $("mcp-copy");
+  const check = $("mcp-check");
+  const status = $("mcp-status");
+  if (!endpoint || !copy || !check || !status) return;
+  endpoint.value = window.location.origin + "/mcp";
+  copy.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(endpoint.value);
+      status.textContent = "MCP manzili nusxalandi.";
+    } catch (_) {
+      endpoint.focus(); endpoint.select();
+      status.textContent = "Manzilni belgilang va nusxalang.";
+    }
+  });
+  check.addEventListener("click", async () => {
+    check.disabled = true; status.textContent = "Server tekshirilmoqda…";
+    try {
+      const response = await fetch("/api/health", { cache: "no-store" });
+      const data = await response.json();
+      if (!response.ok || data.ok !== true) throw new Error("Server sog‘lom javob bermadi.");
+      status.textContent = "Server ishlayapti · " + (data.version || data.app || "ULUGBEK AI") + " · MCP manzili: " + endpoint.value;
+    } catch (error) {
+      status.textContent = "Tekshiruv xatosi: " + error.message;
+    } finally { check.disabled = false; }
+  });
+}
+setupChatGptConnection();
