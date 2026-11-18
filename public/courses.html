@@ -62,7 +62,7 @@
   <section id="studentDashboard" class="panel" hidden>
     <div class="panel-heading"><div><span class="eyebrow">VIZOR · O‘QUVCHI KABINETI</span><h2>Mening ta’limim</h2><p>Kurslar, darslar va natijalar</p></div><button type="button" id="studentRefresh" class="logout-btn">Yangilash</button></div>
     <p>Ota-ona ulash kodi: <b id="studentParentCode">—</b></p>
-    <h3>Yozilgan kurslar</h3><div id="studentCourses" class="catalog-grid"></div>
+    <h3>Yozilgan kurslar</h3><div id="studentCourses" class="catalog-grid"></div><h3>Testlar</h3><div id="studentTests" class="catalog-grid"></div><h3>Reyting</h3><div id="studentRankings" class="catalog-grid"></div>
     <h3>Bildirishnomalar</h3><div id="studentNotifications"></div>
     <button type="button" id="studentLogout" class="logout-btn">Chiqish</button>
   </section>
@@ -70,6 +70,8 @@
   <section id="teacherDashboard" class="panel" hidden>
     <div class="panel-heading"><div><span class="eyebrow">VIZOR · O‘QITUVCHI KABINETI</span><h2>Mening kurslarim</h2><p>O‘quvchilar va darslar holati</p></div><button type="button" id="teacherRefresh" class="logout-btn">Yangilash</button></div>
     <div id="teacherCourses" class="catalog-grid"></div>
+    <form id="teacherLessonForm" class="course-form" hidden><h3>Yangi dars qo‘shish</h3><input type="hidden" name="courseId"><label>Dars nomi<input name="title" required maxlength="160"></label><label>Video havolasi<input name="videoUrl" type="url" placeholder="https://youtu.be/..."></label><label>Jonli efir havolasi<input name="liveUrl" type="url" placeholder="https://..."></label><label>Dars vaqti<input name="scheduledAt" type="datetime-local"></label><label>Davomiyligi (daqiqa)<input name="durationMinutes" type="number" min="1" max="240" value="60"></label><button class="primary wide">Darsni saqlash</button></form>
+    <form id="teacherTestForm" class="course-form" hidden><h3>Yangi test yaratish</h3><input type="hidden" name="courseId"><label>Test nomi<input name="title" required maxlength="160"></label><label>Savol<textarea name="prompt" required maxlength="500"></textarea></label><label>A javob<input name="option0" required maxlength="200"></label><label>B javob<input name="option1" required maxlength="200"></label><label>C javob<input name="option2" maxlength="200"></label><label>D javob<input name="option3" maxlength="200"></label><label>To‘g‘ri javob<select name="correctIndex"><option value="0">A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option></select></label><button class="primary wide">Testni saqlash</button></form>
     <button type="button" id="teacherCreate" class="primary wide">Yangi kurs joylash</button>
     <button type="button" id="teacherLogout" class="logout-btn">Chiqish</button>
   </section>
