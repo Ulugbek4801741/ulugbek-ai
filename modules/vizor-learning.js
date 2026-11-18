@@ -34,7 +34,7 @@ function isYoutubeUrl(value) {
     const host = url.hostname.toLowerCase();
     if (host === "youtu.be") return url.pathname.split("/").filter(Boolean).length > 0;
     if (!["youtube.com","www.youtube.com","m.youtube.com","youtube-nocookie.com","www.youtube-nocookie.com"].includes(host)) return false;
-    return Boolean(url.searchParams.get("v") || url.pathname.match(/\\/(?:embed|shorts|live)\\/[\\w-]{6,}/));
+    return Boolean(url.searchParams.get("v") || url.pathname.match(/\/(?:embed|shorts|live)\/[\w-]{6,}/));
   } catch (_) { return false; }
 }
 
