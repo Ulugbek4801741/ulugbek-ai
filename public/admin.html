@@ -91,11 +91,14 @@
 <section class="panel" id="chatgpt-connection">
 <p class="eyebrow">TASHQI CHATGPT INTEGRATSIYASI</p><h2>ChatGPT bilan ulanish</h2>
 <p class="muted">Ushbu manzil ChatGPT uchun ULUGBEK AI MCP server manzilidir. Hozirgi integratsiya faqat ULUGBEK AI chatiga savol yuborish va server holatini tekshirishni ochadi. Administrator paneli, maxfiy kodlar yoki server sozlamalariga kirish bermaydi.</p>
+<label for="mcp-token">ChatGPT maxfiy tokeni</label>
+<div class="task-actions"><input id="mcp-token" type="password" readonly autocomplete="off" placeholder="Admin orqali xavfsiz olinadi"><button id="mcp-token-show" class="secondary" type="button">Tokenni ko‘rsatish</button><button id="mcp-token-copy" type="button">Tokenni nusxalash</button></div>
+<p class="muted">Token faqat himoyalangan admin sessiyasi orqali olinadi. Uni boshqa odamga yubormang va ommaviy joyga qo‘ymang.</p>
 <label for="mcp-endpoint">MCP ulanish manzili</label>
 <div class="task-actions"><input id="mcp-endpoint" type="url" readonly value="https://ulugbek-ai1.onrender.com/mcp"><button id="mcp-copy" type="button">Manzilni nusxalash</button></div>
 <div class="task-actions"><button id="mcp-check" class="secondary" type="button">Serverni tekshirish</button><span id="mcp-status" class="muted" aria-live="polite">Hali tekshirilmagan</span></div>
-<div class="notice"><b>Ulash tartibi</b><p>ChatGPT’ni brauzerda oching → Settings / Apps yoki Plugins bo‘limi → Add custom MCP server → yuqoridagi HTTPS manzilni kiriting → ruxsatlarni ko‘rib tasdiqlang. Bu imkoniyat hisob turi va workspace ruxsatlariga bog‘liq; mobil ilovada ulash qo‘llanmasligi mumkin.</p></div>
-<p class="error">Xavfsizlik: serverning amaldagi MCP endpointi hozir autentifikatsiyasiz chat va health vositalarini taqdim etishi mumkin. Unga maxfiy yoki shaxsiy ma’lumot yubormang. Admin boshqaruv amallari bu ulanishga kiritilmagan.</p>
+<div class="notice"><b>Ulash tartibi</b><p>ChatGPT’ni brauzerda oching → Settings / Apps yoki Plugins bo‘limi → Add custom MCP server → HTTPS manzilni kiriting → autentifikatsiya sifatida Bearer tokenni tanlang va yuqoridagi tokenni kiriting → ruxsatlarni tasdiqlang. Bu imkoniyat hisob turi va workspace ruxsatlariga bog‘liq; mobil ilovada ulash qo‘llanmasligi mumkin.</p></div>
+<p class="error">Xavfsizlik: serverning amaldagi MCP endpointi faqat to‘g‘ri Bearer token bilan chat va health vositalarini taqdim etadi. Unga maxfiy yoki shaxsiy ma’lumot yubormang. Admin boshqaruv amallari bu ulanishga kiritilmagan.</p>
 </section>
 <section class="panel"><div class="panel-heading"><h2>Texnik tafsilotlar</h2><button id="refresh" class="secondary">Yangilash</button></div><pre id="details">Ma’lumot yuklanmoqda…</pre></section>
 <div class="notice"><b>Xavfsizlik eslatmasi</b><p>AI kaliti hech qachon bu sahifada ko‘rsatilmaydi. Hosting, to‘lovlar, foydalanuvchi ma’lumotlari va deploy amallari alohida ruxsat hamda sinovlarni talab qiladi.</p></div>
