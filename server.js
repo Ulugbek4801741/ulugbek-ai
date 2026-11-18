@@ -1,7 +1,7 @@
 const express = require("express");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
-const { mountMcpBridge } = require("./modules/mcp-bridge");
+const { mountMcpBridge, createMcpAccessToken } = require("./modules/mcp-bridge");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const agentRuntime = require("./agent-runtime");
@@ -267,6 +267,13 @@ function requireAdmin(req, res, next) {
   }
   next();
 }
+app.get("/api/admin/mcp-connection", requireAdmin, (_req, res) => {
+  const token = createMcpAccessToken(ADMIN_SESSION_SECRET);
+  res.set("Cache-Control", "no-store");
+  res.set("Pragma", "no-cache");
+  if (!token) return res.status(503).json({ error: "MCP tokeni uchun ADMIN_SESSION_SECRET kamida 32 belgidan iborat bo‘lishi kerak." });
+  return res.json({ ok: true, token });
+});
 marketplaceRouter.setAdminGuard(requireAdmin);
 
 function requireAsilbekIntegration(req, res, next) {
@@ -1539,7 +1546,7 @@ app.get("/api/lab/learning/status", (_req, res) => {
 
 // Expose only the public chat and health tools through the MCP bridge.
 // Administrative APIs remain unavailable through this integration.
-mountMcpBridge(app, { port: PORT });
+mountMcpBridge(app, { port: PORT, accessToken: createMcpAccessToken(ADMIN_SESSION_SECRET) });
 
 // Keep the administration UI on the API origin so its HttpOnly, SameSite=Strict
 // session cookie and every privileged request use the same trusted server.
