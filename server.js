@@ -1589,7 +1589,6 @@ void publicKnowledgeArchive.cycle().finally(() => {
 agentRuntime.startWorker().then(() => {
   const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`ULUGBEK AI serveri ${PORT}-portda ishga tushdi.`);
-    safeAutonomy.resume().catch(error => console.error("Safe Autonomy qayta tiklanmadi:", error.message));
 
     // Start the repository auditor only after HTTP is accepting requests.
     // It is read-only: it may create local review proposals, but never edits,
@@ -1610,6 +1609,7 @@ agentRuntime.startWorker().then(() => {
         }
         learningWorker.start();
         await selfRecovery.start();
+        await safeAutonomy.resume();
       })
       .catch(error => {
         console.error("Watchdog yoki Self-Recovery diagnostikasi ishga tushmadi:", error.message);
