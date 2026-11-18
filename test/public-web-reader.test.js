@@ -40,3 +40,22 @@ test("extracts page title and readable text while dropping scripts and navigatio
   assert.match(page.content, /Ochiq bilimlar sahifasi/);
   assert.doesNotMatch(page.content, /secret|Menu/);
 });
+
+
+test("pinned DNS lookup supports Node all=true callback contract", () => {
+  const lookup = reader.createPinnedLookup({ address: "8.8.8.8", family: 4 });
+  lookup("example.org", { all: true }, (error, records) => {
+    assert.ifError(error);
+    assert.deepEqual(records, [{ address: "8.8.8.8", family: 4 }]);
+  });
+  lookup("example.org", { all: false }, (error, address, family) => {
+    assert.ifError(error);
+    assert.equal(address, "8.8.8.8");
+    assert.equal(family, 4);
+  });
+});
+
+test("pinned DNS lookup rejects missing or invalid addresses", () => {
+  assert.throws(() => reader.createPinnedLookup(undefined), /DNS ommaviy IP/);
+  assert.throws(() => reader.createPinnedLookup({ address: undefined, family: 4 }), /DNS ommaviy IP/);
+});
