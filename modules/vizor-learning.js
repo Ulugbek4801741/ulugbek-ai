@@ -164,7 +164,7 @@ function createVizorLearning(options = {}) {
     for (const statement of schema) await pool.query(statement);
   })().catch(error => {
     initError = error;
-    console.error("VIZOR database initialization failed:", error.message);
+    console.error("ULUGBEK AI ta’lim bazasini ishga tushirish xatosi:", error.message);
   });
 
   const id = () => crypto.randomUUID();
@@ -191,7 +191,7 @@ function createVizorLearning(options = {}) {
     await initPromise;
     if (!pool || initError) return res.status(503).json({
       ok: false,
-      error: "VIZOR PostgreSQL bazasi tayyor emas. Render DATABASE_URL sozlamasini tekshiring."
+      error: "ULUGBEK AI ta’lim bazasi tayyor emas. Render DATABASE_URL sozlamasini tekshiring."
     });
     next();
   }
@@ -285,7 +285,7 @@ function createVizorLearning(options = {}) {
       });
     } catch (error) {
       if (error.code === "23505") return res.status(409).json({ error: "Bu login, email yoki telefon raqami avval ro‘yxatdan o‘tgan." });
-      console.error("VIZOR registration:", error.message);
+      console.error("ULUGBEK AI ro‘yxatdan o‘tkazish:", error.message);
       return res.status(500).json({ error: "Akkaunt yaratilmadi." });
     }
   });
@@ -625,7 +625,7 @@ function createVizorLearning(options = {}) {
 
   async function runSmokeTest() {
     await initPromise;
-    if (!pool || initError) return { ok: false, storage: "postgresql", error: "VIZOR PostgreSQL tayyor emas." };
+    if (!pool || initError) return { ok: false, storage: "postgresql", error: "ULUGBEK AI ta’lim bazasi tayyor emas." };
     const client = await pool.connect();
     const checks = {};
     try {
@@ -641,12 +641,12 @@ function createVizorLearning(options = {}) {
       ]) {
         await client.query(
           "INSERT INTO vizor_users(id,username,display_name,email,phone,password_hash,password_salt,role,parent_code) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)",
-          [uid,username,"VIZOR smoke test",email,phone,passwordHash,salt,role,parentCode]
+          [uid,username,"ULUGBEK AI ta’lim sinovi",email,phone,passwordHash,salt,role,parentCode]
         );
       }
       checks.accounts = true;
       await client.query(
-        "INSERT INTO vizor_courses(id,title,description,category,price,instructor_id) VALUES($1,'[TEST] VIZOR course','Temporary smoke-test course description','VIZOR QA',0,$2)",
+        "INSERT INTO vizor_courses(id,title,description,category,price,instructor_id) VALUES($1,'[TEST] ULUGBEK AI ta’lim kursi','Temporary smoke-test course description','ULUGBEK AI QA',0,$2)",
         [courseId,teacherId]
       );
       await client.query(
@@ -679,7 +679,7 @@ function createVizorLearning(options = {}) {
       return { ok: Object.values(checks).every(Boolean), storage: "postgresql", checks, testDataPersisted: false, cleanup: "transaction_rolled_back" };
     } catch (error) {
       try { await client.query("ROLLBACK"); } catch (_) {}
-      return { ok: false, storage: "postgresql", checks, error: "VIZOR test jarayonida ma’lumotlar bazasi xatosi.", detail: error.message, testDataPersisted: false, cleanup: "transaction_rolled_back" };
+      return { ok: false, storage: "postgresql", checks, error: "ULUGBEK AI ta’lim sinovida ma’lumotlar bazasi xatosi.", detail: error.message, testDataPersisted: false, cleanup: "transaction_rolled_back" };
     } finally {
       client.release();
     }
@@ -688,7 +688,7 @@ function createVizorLearning(options = {}) {
 
   async function cleanupQaAccounts() {
     await initPromise;
-    if (!pool || initError) return { ok: false, error: "VIZOR PostgreSQL tayyor emas." };
+    if (!pool || initError) return { ok: false, error: "ULUGBEK AI ta’lim bazasi tayyor emas." };
     const usernames = ["ulugbek_qa_student","ulugbek_qa_teacher","ulugbek_qa_parent"];
     await pool.query(
       "DELETE FROM vizor_courses WHERE instructor_id IN (SELECT id FROM vizor_users WHERE username = ANY($1::text[]))",

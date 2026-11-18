@@ -289,7 +289,7 @@ app.post("/api/internal/vizor-diagnostic", (req, res, next) => {
     const result = await vizorLearning.runSmokeTest();
     return res.status(result.ok ? 200 : 503).json(result);
   } catch (error) {
-    return res.status(503).json({ ok: false, error: "VIZOR diagnostikasi bajarilmadi." });
+    return res.status(503).json({ ok: false, error: "ULUGBEK AI ta’lim diagnostikasi bajarilmadi." });
   }
 });
 
@@ -304,7 +304,7 @@ app.post("/api/internal/vizor-qa-cleanup", (req, res, next) => {
     const result = await vizorLearning.cleanupQaAccounts();
     return res.status(result.ok ? 200 : 503).json(result);
   } catch (_error) {
-    return res.status(503).json({ ok: false, error: "VIZOR QA ma’lumotlarini tozalash bajarilmadi." });
+    return res.status(503).json({ ok: false, error: "ULUGBEK AI ta’lim sinov ma’lumotlarini tozalash bajarilmadi." });
   }
 });
 marketplaceRouter.setAdminGuard(requireAdmin);
