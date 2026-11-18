@@ -35,7 +35,7 @@
  $("#lessonComplete").onclick=async()=>{if(!currentLessonId)return;try{await req("/lessons/"+encodeURIComponent(currentLessonId)+"/progress",{method:"POST",body:JSON.stringify({completed:true,secondsWatched:0})});toast("Dars tugallangan deb belgilandi.");await loadStudentData()}catch(x){toast(x.message)}};
  $("#videoClose").onclick=()=>{$("#videoModal").hidden=true;$("#videoFrame").replaceChildren()};$("#videoModal").onclick=e=>{if(e.target===$("#videoModal"))$("#videoClose").click()};
  document.querySelectorAll("[data-scroll]").forEach(b=>b.onclick=()=>$("#"+b.dataset.scroll).scrollIntoView({behavior:"smooth"}));
- $("#premiumBtn").onclick=()=>toast("Premium obuna va to‘lov tizimi hali serverga ulanmagan.");
+ $("#premiumBtn").onclick=()=>$("#allCourses").scrollIntoView({behavior:"smooth"});
  $("#jobsCard").onclick=()=>toast("Vakansiyalar bo‘limini alohida ochish hali tayyorlanmoqda.");
  $("#portfolioCard").onclick=()=>toast("Portfolio bo‘limi alohida sahifa sifatida hali ulanmagan.");
  $("#miniAppsNav").onclick=()=>toast("Mini Apps bosh sahifadagi menyuda mavjud.");
