@@ -133,6 +133,17 @@ function createAgentFleet(options = {}) {
         ...usable.map(item => "\n[" + item.role + " agent tahlili]\n" + item.reply)
       ].join("\n");
       try { final = await answer(synthesisPrompt, evidence, context); } catch (_) {}
+      // If the hosted synthesis model is unavailable, retain the first successful
+      // specialist result rather than dropping the whole fleet response.
+      if (!final || !final.reply) {
+        final = {
+          reply: usable[0].reply,
+          modelUsed: usable[0].modelUsed,
+          provider: usable[0].provider,
+          externalProviderUsed: usable[0].externalProviderUsed,
+          reasoning: { method: "native-specialist-fallback", answerable: true, facts: [] }
+        };
+      }
     }
 
     const completedAt = now();
