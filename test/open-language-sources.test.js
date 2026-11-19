@@ -5,6 +5,7 @@ const fs = require("node:fs/promises");
 const os = require("node:os");
 const path = require("node:path");
 const sources = require("../modules/open-language-sources");
+const { createLanguageCognition } = require("../modules/language-cognition");
 
 test("open language sources declare Uzbek, English and Russian public corpora", () => {
   const status = sources.status();
@@ -49,6 +50,32 @@ test("sync imports bounded open sentences for all three languages as review-pend
     assert.deepEqual(rows.map(x => x.language).sort(), ["en", "ru", "uz"]);
     assert.ok(rows.every(x => x.status === "pending-review" && x.factualUseAllowed === false));
     assert.equal(result.lastAdded, 3);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+
+test("short open corpus sentences enter the language-pattern model, not factual knowledge", async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "ulugbek-cognition-"));
+  try {
+    const engine = createLanguageCognition({ dataDir: dir });
+    await engine.initialize();
+    const result = await engine.trainFromEntries([{
+      source: "https://tatoeba.org/en/sentences/show/90909",
+      title: "Tatoeba Uzbek sentence",
+      content: "Salom, bugun havo juda yaxshi.",
+      language: "uz",
+      agent: "AutonomousLanguageCorpusAgent",
+      status: "pending-review",
+      quality: "open-language-corpus-sentence-unverified",
+      license: "CC BY 2.0 FR"
+    }]);
+    assert.equal(result.addedSources, 1);
+    assert.equal(result.neuralWeightsTrained, false);
+    const status = engine.status();
+    assert.equal(status.factualAutoApproval, false);
+    assert.equal(status.corpusSources, 1);
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }
