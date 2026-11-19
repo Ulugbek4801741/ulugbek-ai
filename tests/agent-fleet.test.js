@@ -46,3 +46,23 @@ test("idle agents are removed by TTL cleanup", () => {
   clock += 5000;
   assert.equal(fleet.cleanup(), 0);
 });
+
+test("hosted specialist team runs a separate critic and exposes quality status",async()=>{
+ let calls=0;
+ const fleet=createAgentFleet({answer:async prompt=>{
+  calls++;
+  if(prompt.includes("mustaqil QA"))return {reply:JSON.stringify({verdict:"pass",confidence:0.91,issues:[],checks:["task coverage","consistency"],summary:"Tekshirildi"}),modelUsed:"test-model",provider:"ollama"};
+  return {reply:"Mutaxassis tahlili: aniq va cheklangan natija.",modelUsed:"test-model",provider:"ollama"};
+ }});
+ const result=await fleet.runTask("Biznes strategiyasini tahlil qil",{roles:["business","verifier"]});
+ assert.equal(result.ok,true);assert.equal(calls,4);assert.equal(result.qualityGate.reviewPassed,true);assert.equal(result.qualityGate.publishable,true);
+});
+test("generated code is withheld until execution verification is configured",async()=>{
+ const fleet=createAgentFleet({answer:async prompt=>{
+  if(prompt.includes("mustaqil QA"))return {reply:JSON.stringify({verdict:"pass",confidence:0.95,issues:[],checks:["reviewed"],summary:"Reviewed"}),modelUsed:"test-model"};
+  return {reply:"```python\nprint('hello')\n```",modelUsed:"test-model"};
+ }});
+ const result=await fleet.runTask("Python kodini yozib ber",{roles:["engineer","verifier"]});
+ assert.equal(result.ok,true);assert.equal(result.qualityGate.codeDeliveryTask,true);assert.equal(result.qualityGate.publishable,false);
+ assert.match(result.reply,/sinovdan o‘tmagan kodni tayyor yechim sifatida yubormayman/);
+});
