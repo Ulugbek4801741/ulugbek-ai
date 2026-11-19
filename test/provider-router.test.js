@@ -67,3 +67,14 @@ test("explicit provider selection takes precedence over legacy Render credential
   assert.equal(provider.configuration(env).provider, "anthropic");
   assert.equal(provider.request("Hi", "System", env).options.headers["x-api-key"], "explicit-secret");
 });
+
+test("supports native Ollama chat API without an API key",()=>{
+ const env={ULUGBEK_OLLAMA_URL:"http://127.0.0.1:11434",ULUGBEK_OLLAMA_MODEL:"qwen2.5:7b"};
+ const config=provider.configuration(env);
+ assert.equal(config.configured,true);assert.equal(config.provider,"ollama");assert.equal(config.local,true);
+ const request=provider.request("Savol","Tizim",env);
+ assert.equal(request.url,"http://127.0.0.1:11434/api/chat");
+ const body=JSON.parse(request.options.body);
+ assert.equal(body.model,"qwen2.5:7b");assert.equal(body.stream,false);
+ assert.equal(provider.extract({message:{content:"Javob"}},"ollama"),"Javob");
+});
