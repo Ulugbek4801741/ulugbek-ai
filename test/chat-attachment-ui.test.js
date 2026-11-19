@@ -17,7 +17,7 @@ test("chat composer and server accept the same 12,000-character message limit", 
 
 test("text file attachments are read and included in the chat prompt", () => {
   assert.match(app, /selectedAttachments/);
-  assert.match(app, /await file\\.text\\(\\)/);
+  assert.match(app, /await file\.text\(\)/);
   assert.match(app, /Fayl mazmuni:/);
   assert.doesNotMatch(app, /Hozirgi server API faylni AI chatga yuklamaydi; fayl yuborilmadi/);
 });
