@@ -85,3 +85,12 @@ test("matches English history sources to an Uzbek India history question", () =>
   });
   assert.equal(score.relevant, true);
 });
+
+test("treats Uzbek maʼlumot as a request word, not part of the subject", () => {
+  assert.deepEqual(relevance.terms("Buxoro haqida maʼlumot ber"), ["buxoro"]);
+  const score = relevance.scoreSource("Buxoro haqida maʼlumot ber", {
+    title: "Bukhara — history, culture and city information",
+    snippet: "Bukhara is a historic city in Uzbekistan, known for its old town and monuments."
+  });
+  assert.equal(score.relevant, true);
+});
