@@ -18,3 +18,8 @@ test("recognizes Uzbek inflected remote job-search requests", () => {
 test("does not classify unrelated work discussion as job search", () => {
   assert.equal(detectSearchIntent("Ish jarayonini qanday yaxshilash mumkin?").isJobSearch, false);
 });
+
+test("does not route a general Buxoro information question into job search", () => {
+  const intent = detectSearchIntent("Buxoro haqida maʼlumot ber");
+  assert.equal(intent.isJobSearch, false);
+});
