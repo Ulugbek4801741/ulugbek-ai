@@ -10,7 +10,7 @@ const PLATFORM_HINTS = [
   { pattern: /\b(tiktok|тик-ток)\b|tiktok\.com/i, domain: "site:tiktok.com" },
   { pattern: /\b(google|гугл)\b|google\.com/i, domain: "site:google.com" }
 ];
-const JOB_INTENT = /(?:\bish\w*\b.{0,90}\b(?:top(?:ib)?(?:\s*ber)?|qidir(?:ib)?|izla(?:y)?|kerak)|\bish\s*o['’ʻ]rin(?:i|lari|larini|laridan)?\b|\bvakans(?:iya|iyalar)(?:ni|ini|lar|lari)?\b|\bjob\s*(?:search|opening|vacanc(?:y|ies))\b|\bjobs?\b|\bfind\s+(?:me\s+)?a?\s*jobs?\b|\bemployment\s+(?:opportunit|jobs?)|\bработ(?:а|у)\s*(?:найти|ищу|нужна)|\bваканси)/iu;
+const JOB_INTENT = /(?:\bish\w*\b.{0,90}\b(?:to[pb]ib(?:\s*ber)?|top(?:ib)?(?:\s*ber)?|qidir(?:ib)?|izla(?:y)?|kerak)|\bish\s*o['’ʻ]rin(?:i|lari|larini|laridan)?\b|\bvakans(?:iya|iyalar)(?:ni|ini|lar|lari)?\b|\bjob\s*(?:search|opening|vacanc(?:y|ies))\b|\bjobs?\b|\bfind\s+(?:me\s+)?a?\s*jobs?\b|\bemployment\s+(?:opportunit|jobs?)|\bработ(?:а|у)\s*(?:найти|ищу|нужна)|\bваканси)/iu;
 const LINK_INTENT = /(?:\blink\w*|\bssilka\w*|\bhavola\w*|\bmanzil\w*|\bwebsite\w*|\bweb.?sayt\w*|\bsayt\w*|\bkanal\w*|\bakkaunt\w*|\bprofil\w*|\bvideo\w*|\btop(?:ib)?(?:\s*ber)?|\bqidir(?:ib)?(?:\s*ber)?|\bfind\b|\bsearch\b|\bwhere\s+can\s+i\b)/iu;
 const LOCAL_ONLY = /^(?:salom|assalomu alaykum|assalom alaykum|salom alaykum|hello|hi|hayrli tong|hayrli kun|hayrli kech|rahmat|katta rahmat|tashakkur|xayr|hayr|ko'rishguncha|ko'rishamiz|sen kimsan|siz kimsiz|isming nima|o'zing kimsan|nima qila olasan|nimalar qila olasan)[!.?\s]*$/iu;
 const MATH_ONLY = /^\s*[\d\s.,()+*/×÷%^-]+\s*(?:=|\?)*\s*$/u;
