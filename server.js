@@ -1473,8 +1473,8 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   const taskRoles = shouldResearch
     ? [...new Set([...taskRouting.roles, "researcher", "verifier"])].slice(0, 4)
     : taskRouting.roles;
-  // A configured model is shared by all specialists. In hosted-model mode one
-  // selected specialist prompt performs the single model call; no duplicate calls.
+  // A configured model is shared by the selected specialist, coordinator synthesis,
+  // and independent critic. Keep the specialist count bounded in hosted-model mode.
   const effectiveTaskRoles = singleAgent.status().configured
     ? [taskRoles[0] || "generalist"]
     : taskRoles;
@@ -1592,9 +1592,8 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     ].slice(0, 12);
     let result = null;
     try {
-      // Route substantive chat requests through the same specialist fleet even without
-      // a hosted model. In no-key mode each specialist uses the native knowledge engine;
-      // when a model is configured, the specialists share that model and are short-lived.
+      // Route substantive chat requests through the specialist fleet. Specialists share
+      // the configured model but have isolated role prompts; synthesis and critic are separate calls.
       const fleet = await agentFleet.runTask(conversationMessage, { roles: effectiveTaskRoles, evidence, context: conversationContext });
       if (fleet.ok) result = {
         reply: fleet.reply, modelUsed: fleet.modelUsed, provider: fleet.provider, externalProviderUsed: fleet.externalProviderUsed, reasoning: fleet.reasoning,
