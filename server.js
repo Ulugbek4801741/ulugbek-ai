@@ -1454,10 +1454,33 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       const jobWebSearch = require("./modules/chat-web-research");
       const jobs = await jobSearch.searchJobs(conversationMessage, jobWebSearch);
       conversationMemory.rememberJobResults(sessionId, conversationMessage, jobs.results);
+      let vacancyFleet = null;
+      if (jobs.results.length) {
+        const vacancyEvidence = jobs.results.slice(0, 8).map(item => ({
+          title: item.title || "Vakansiya",
+          content: [item.description, item.salary, item.location, item.employer].filter(Boolean).join("\\n"),
+          source: item.url || item.source || "",
+          status: "verified-individual-vacancy"
+        }));
+        try {
+          vacancyFleet = await agentFleet.runTask(conversationMessage, {
+            roles: ["researcher", "analyst", "verifier"],
+            evidence: vacancyEvidence,
+            context: conversationContext
+          });
+        } catch (_) {}
+      }
       return res.json({
         reply: jobs.reply,
         mode: "verified-individual-vacancy-search",
-        agents: ["ULUGBEK Universal Agent"],
+        agents: ["ULUGBEK Universal Agent", "Vakansiya tadqiqotchisi", "Tahlilchi", "Natija tekshiruvchisi"],
+        agentFleet: vacancyFleet ? {
+          requestedAgents: vacancyFleet.requestedAgents,
+          completedAgents: vacancyFleet.completedAgents,
+          failedAgents: vacancyFleet.failedAgents,
+          roles: vacancyFleet.roles,
+          durationMs: vacancyFleet.durationMs
+        } : null,
         jobSearchUsed: true,
         webSearchUsed: jobs.ok,
         jobResultsCount: jobs.results.length,
