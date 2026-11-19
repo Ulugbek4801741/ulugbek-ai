@@ -3,7 +3,7 @@
 const currencyConverter = require("./currency-converter");
 const publicJobFeeds = require("./public-job-feeds");
 
-const JOB_INTENT = /(?:\bish\s*(?:top(?:ib)?\s*ber|qidir(?:ib)?\s*ber|kerak|o\s*rin(?:lar)?|vakans(?:iya|iyalar)?|izlay(?:apman|man)?|qidir)|\bvakans(?:iya|iyalar)\b|\bjob\s*(?:search|opening|vacanc(?:y|ies))\b|\bfind\s+(?:me\s+)?a?\s*jobs?\b|\bemployment\s+(?:opportunit|jobs?)|\bработ(?:а|у)\s*(?:найти|ищу|нужна)|\bваканси)/iu;
+const JOB_INTENT = /(?:\bish\s*(?:to[pb]ib\s*ber|top(?:ib)?\s*ber|qidir(?:ib)?\s*ber|kerak|o\s*rin(?:lar)?|vakans(?:iya|iyalar)?|izlay(?:apman|man)?|qidir)|\bvakans(?:iya|iyalar)\b|\bjob\s*(?:search|opening|vacanc(?:y|ies))\b|\bfind\s+(?:me\s+)?a?\s*jobs?\b|\bemployment\s+(?:opportunit|jobs?)|\bработ(?:а|у)\s*(?:найти|ищу|нужна)|\bваканси)/iu;
 
 function isJobSearchRequest(value) {
   return JOB_INTENT.test(String(value || "").trim());
@@ -78,14 +78,18 @@ function buildJobSearchQueries(value) {
   const original = String(value || "").replace(/\s+/g, " ").trim().slice(0, 240);
   const role = extractJobRole(original);
   const criteria = extractJobCriteria(original);
+  // Keep discovery focused: fewer distinct queries reduce provider throttling and latency.
   const suffixes = [
     "vakansiya ish o'rni ish beruvchi lavozim telefon maosh talablar",
-    "bo'sh ish o'rinlari ishga qabul qilinadi aloqa raqami",
     "jobs vacancies hiring employer contact phone salary",
     "site:hh.uz OR site:ishkop.uz OR site:olx.uz OR site:ish.uz"
   ];
-  const querySuffixes = criteria.worldwide ? suffixes.slice(0, 3) : suffixes;
-  const queries = [original, ...querySuffixes.map(suffix => original + " " + suffix)];
+  const queries = [original];
+  if (role) {
+    queries.push(original + " " + role.terms + " vacancy jobs hiring");
+    queries.push(original + " " + role.terms + " site:hh.uz OR site:linkedin.com/jobs OR site:ishkop.uz OR site:olx.uz");
+  }
+  queries.push(...suffixes.map(suffix => original + " " + suffix));
   if (criteria.worldwide || criteria.minHourlyUsd !== null) {
     const pay = criteria.minHourlyUsd === null ? "" : ' "$' + criteria.minHourlyUsd + ' per hour" OR "' + criteria.minHourlyUsd + ' USD/hour"';
     queries.push("worldwide remote jobs" + pay + " hiring now apply");
@@ -102,7 +106,7 @@ function buildJobSearchQueries(value) {
     queries.push(original + " " + role.terms + " vacancy jobs hiring");
     queries.push(original + " " + role.terms + " site:hh.uz OR site:linkedin.com/jobs OR site:ishkop.uz OR site:olx.uz");
   }
-  return [...new Set(queries)].filter(Boolean).slice(0, 12);
+  return [...new Set(queries)].filter(Boolean).slice(0, criteria.worldwide || criteria.minHourlyUsd !== null ? 12 : 6);
 }
 function buildJobSearchQuery(value) {
   return buildJobSearchQueries(value).slice(0, 2).join(" ");
@@ -346,8 +350,8 @@ async function searchJobs(message, webSearch, options = {}) {
     }
   }
   const searchFailed = batches.every(batch => batch === null);
-  const pageCandidates = candidates.slice(0, Math.min(24, Math.max(12, limit * 2)));
-  const pages = await mapWithConcurrency(pageCandidates, 5, async item => {
+  const pageCandidates = candidates.slice(0, Math.min(16, Math.max(8, limit)));
+  const pages = await mapWithConcurrency(pageCandidates, 4, async item => {
     if (typeof webSearch.fetchPage !== "function" && typeof webSearch.fetchOfficialJob !== "function") return null;
     try {
       let page = null;

@@ -1,0 +1,10 @@
+"use strict";
+const test=require("node:test");
+const assert=require("node:assert/strict");
+const {route}=require("../modules/task-intent-router");
+test("coding tasks route to software builder, QA and backend specialist",()=>{const r=route("Python API backend kodini yozib ber");assert.equal(r.category,"coding");assert.ok(r.roles.includes("software-builder-agent"));assert.ok(r.roles.includes("backend-agent"));assert.ok(r.roles.includes("qa-agent"));});
+test("frontend and deploy requests select dedicated agents",()=>{const a=route("Frontend HTML CSS interfeysini tuz"),b=route("Render serverga deploy qilish");assert.ok(a.roles.includes("frontend-agent"));assert.ok(b.roles.includes("devops-agent"));});
+test("translation and documents select their specialists",()=>{const t=route("Ushbu matnni inglizchaga tarjima qil"),d=route("Menga rezyume va PDF hisobot tayyorlab ber");assert.ok(t.roles.includes("translator"));assert.ok(d.roles.includes("documenter"));});
+test("research and legal tasks use source and safety specialists",()=>{const r=route("Rasmiy manbalarni qidirib topib ber"),l=route("Mehnat qonuni bo'yicha huquqiy maslahat");assert.ok(r.roles.includes("research-agent"));assert.ok(l.roles.includes("security-agent"));});
+test("business, education, creative and math select specialists",()=>{assert.ok(route("Biznes marketing rejasini tuz").roles.includes("product-growth-agent"));assert.ok(route("Ingliz tili darsini tushuntir").roles.includes("educator"));assert.ok(route("Reklama post yozib ber").roles.includes("creative"));assert.ok(route("Hisobla 24*7").roles.includes("dataAnalyst"));});
+test("greetings remain local",()=>{const r=route("Salom");assert.equal(r.category,"conversation");assert.equal(r.needsWebResearch,false);});

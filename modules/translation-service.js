@@ -64,6 +64,11 @@ function isPrivateModelEndpoint(config) {
   return false;
 }
 
+function isTranslationProviderAllowed(config) {
+  if (config?.provider === "gemini" || config?.provider === "anthropic") return true;
+  return config?.provider === "openai-compatible" && isPrivateModelEndpoint(config);
+}
+
 function createTranslationService(options = {}) {
   const env = options.env || process.env;
   const fetchImpl = options.fetchImpl || globalThis.fetch;
@@ -79,7 +84,7 @@ function createTranslationService(options = {}) {
     }
     if (sourceLanguage === targetLanguage) return { text: input, sourceLanguage, targetLanguage, translated: false };
     const config = providerRouter.configuration(env);
-    if (!config.configured || !isPrivateModelEndpoint(config) || typeof fetchImpl !== "function") {
+    if (!config.configured || !isTranslationProviderAllowed(config) || typeof fetchImpl !== "function") {
       const error = new Error("Tarjima uchun AI model provayderi sozlanmagan.");
       error.code = "translation-provider-not-configured"; error.statusCode = 503; throw error;
     }
@@ -118,12 +123,12 @@ function createTranslationService(options = {}) {
     const config = providerRouter.configuration(env);
     return {
       ready: true, module: "ulugbek-translation-v1", coreLanguage: "uz",
-      mode: "private-local-model-translation-no-separate-language-training",
-      available: config.configured && isPrivateModelEndpoint(config), provider: config.provider,
-      requiresConfiguredModel: true, requiresConfiguredPrivateModel: true,
+      mode: "configured-provider-or-private-compatible-model",
+      available: config.configured && isTranslationProviderAllowed(config), provider: config.provider,
+      requiresConfiguredModel: true, requiresConfiguredPrivateModel: config.provider === "openai-compatible",
       supportedByModel: "provider-dependent", maximumCharacters: MAX_TEXT_LENGTH
     };
   }
   return { translate, status };
 }
-module.exports = { createTranslationService, protectTokens, parseResult, isPrivateModelEndpoint };
+module.exports = { createTranslationService, protectTokens, parseResult, isPrivateModelEndpoint, isTranslationProviderAllowed };

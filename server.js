@@ -6,10 +6,12 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 const agentRuntime = require("./agent-runtime");
 const universalAgentCore = require("./modules/universal-agent-core");
+const taskIntentRouter = require("./modules/task-intent-router");
 const universalToolHub = require("./modules/universal-tool-hub");
 const singleAgent = require("./modules/single-agent").createSingleAgent();
 const { createAgentFleet } = require("./modules/agent-fleet");
-const agentFleet = createAgentFleet({ answer: (...args) => singleAgent.answer(...args), maxAgents: 100, concurrency: 3 });
+const chatAgentAnswer = require("./modules/chat-agent-answer").createChatAgentAnswer({ singleAgent });
+const agentFleet = createAgentFleet({ answer: chatAgentAnswer, maxAgents: 100, concurrency: 3 });
 const answerSelection = require("./modules/answer-selection");
 const languageModule = require("./modules/language-module");
 const codingLanguageEngine = require("./modules/coding-language-engine");
@@ -724,7 +726,7 @@ app.post("/api/independent/answer", independentAnswerRateLimit, async (req, res)
 
 app.get("/api/ai/status", (_req, res) => {
   res.set("Cache-Control", "no-store");
-  res.json({ ok: true, agentCount: 1, agentName: "ULUGBEK Universal Agent", model: singleAgent.status(), language: languageModule.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status(), conversationPipeline: conversationOrchestrator.status(), independentLanguage: languageLearningWorker.status(), mathEngine: "native-safe-arithmetic", research: "public-read-only-with-source-checks" });
+  res.json({ ok: true, agentCount: 1, agentName: "ULUGBEK Universal Agent", coordinatorArchitecture: "single-coordinator-dynamic-specialists", specialistFleet: agentFleet.status(), model: singleAgent.status(), language: languageModule.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status(), conversationPipeline: conversationOrchestrator.status(), independentLanguage: languageLearningWorker.status(), mathEngine: "native-safe-arithmetic", research: "public-read-only-with-source-checks" });
 });
 
 app.get("/api/health", (_req, res) => {
@@ -778,11 +780,11 @@ app.get("/api/diagnostics", (_req, res) => {
     agentMemory: "single-agent memory per browser session; JSON file; durable hosting storage must be configured",
     voiceInput: "browser-dependent-and-user-permission-required",
     voiceOutput: "browser-dependent",
-    autonomousAgents: "one ULUGBEK Universal Agent; separate background knowledge-fetch worker only",
+    autonomousAgents: "one ULUGBEK Universal Agent coordinator with short-lived researcher, analyst, engineer, verifier, legal, translator, business and generalist specialists; separate background knowledge-fetch worker",
     developerAgent: developerAgent.status(),
     automaticFailover: "not-configured-requires-authorized-backup-host",
     productionDatabase: "not-configured-task-store-uses-local-json-file",
-    agentExecution: "one universal agent with optional self-hosted local model; no multi-agent delegation; source writes and deploy remain disabled",
+    agentExecution: "chat uses bounded short-lived specialist delegation; specialists share a configured model or fall back to the native evidence-gated reasoning engine; external writes and deploy remain disabled unless separately authorized",
     nativeReasoning: "ulugbek-native-rule-reasoner-v1; deterministic symbolic planning; not a trained neural language model",
     cognition: { language: languageModule.status(), languageLearning: languageLearningWorker.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status(), conversationPipeline: conversationOrchestrator.status() },
     externalAiApiEnabled: false,
@@ -871,7 +873,20 @@ app.get("/api/capabilities", async (_req, res) => {
   try {
     const [knowledge, tools] = await Promise.all([knowledgeStore.status(), Promise.resolve(universalToolHub.status())]);
     return res.json({
-      ok: true, agentCount: 1, architecture: "single-universal-agent",
+      ok: true, agentCount: 1, architecture: "single-universal-agent-with-dynamic-specialists", specialistFleet: agentFleet.status(),
+      chatSupport: {
+        domains: ["general-questions", "public-research", "coding", "translation", "documents", "business", "education", "creative-writing", "mathematics", "legal-information"],
+        research: { chatRouting: true, mode: "public-read-only", sourceChecking: true },
+        coding: { chatDrafting: true, languages: codingLanguageEngine.status().languageCount, sandboxExecution: tools.python.ready },
+        translation: translationService.status(),
+        documents: { chatDrafting: true, fileExport: tools.documents.ready, supportedExportFormats: tools.documents.supportedFormats, mode: "text-draft-unless-file-adapter-ready" },
+        business: { analysisAndPlanning: true, externalAutomation: false },
+        education: { explanationsAndLessons: true },
+        creative: { textDrafting: true },
+        mathematics: { safeArithmetic: true },
+        legal: { officialSourceResearch: true, jurisdictionCheck: true },
+        externalActions: { enabled: false, humanApprovalRequired: true }
+      },
       multiSourceResearch: { ready: true, mode: "cross-domain-open-page-reading", automaticFactVerification: false },
       youtube: youtubeTranscript.status(),
       coding: codingLanguageEngine.status(),
@@ -1363,6 +1378,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   // Greetings, thanks and plain arithmetic remain local to avoid unnecessary network calls.
   const universalSearch = require("./modules/universal-web-search");
   const searchIntent = universalSearch.detectSearchIntent(conversationMessage);
+  const taskRouting = taskIntentRouter.route(conversationMessage);
   const currentPopulationQuestion = universalSearch.isCurrentPopulationQuestion(conversationMessage);
   const nativeBrain = require("./lab-learning-worker");
   let localKnowledge = [];
@@ -1406,7 +1422,62 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     });
   }
   // Only greetings, thanks and plain arithmetic stay local. Every other question or task triggers fresh public research.
+  if (/^(?:menga\s+)?dasturlashda\s+yordam\s+ber[.!?\s]*$/iu.test(conversationMessage)) {
+    return res.json({
+      reply: "Albatta, dasturlash bo‘yicha yordam beraman. Python, JavaScript yoki Kotlin tillaridan qaysi birida ishlamoqchisiz va qanday dastur yaratmoqchisiz?",
+      mode: "programming-help-clarification",
+      agents: ["ULUGBEK Universal Agent", "Software Builder Engineer"],
+      webSearchUsed: false,
+      cognition
+    });
+  }
+  if (taskRouting.category === "translation") {
+    const targetLanguage = /(?:inglizchaga|ingliz tiliga|english)/iu.test(conversationMessage) ? "en"
+      : /(?:ruschaga|rus tiliga|russian)/iu.test(conversationMessage) ? "ru"
+      : /(?:turkchaga|turk tiliga|turkish)/iu.test(conversationMessage) ? "tr" : "uz";
+    const quoted = conversationMessage.match(/[“"]([\s\S]+?)[”"]/u);
+    const afterColon = conversationMessage.match(/(?:tarjima|translate)\s*[:：]\s*([\s\S]+)/iu);
+    let translationText = quoted?.[1] || afterColon?.[1] || conversationMessage
+      .replace(/(?:iltimos\s+)?(?:menga\s+)?/iu, "")
+      .replace(/\s+(?:ni\s+)?(?:inglizchaga|ingliz tiliga|ruschaga|rus tiliga|o.zbekchaga|o.zbek tiliga|turkchaga|turk tiliga)\s+tarjima(?:\s+qilib)?\s*(?:ber|qil)?[.!?]*$/iu, "")
+      .replace(/^(?:ushbu|shu|quyidagi)?\s*(?:matnni|matn)?\s*$/iu, "").trim();
+    if (!translationText || /^(?:tarjima(?:\s+qil(?:ib)?\s*(?:ber)?)?|matnni|ushbu matnni)$/iu.test(translationText)) {
+      return res.json({ reply: "Tarjima qilinadigan matnni yuboring. Qaysi tilga tarjima qilishni ham yozing.", mode: "translation-needs-text", agents: ["ULUGBEK Universal Agent", "Translator"] });
+    }
+    if (!translationService.status().available) {
+      return res.json({
+        reply: "Tarjima topshirig‘ini tushundim, ammo Render serverida hozir tarjima modeli ulanmagan. Shuning uchun matnni tarjima qildim deb noto‘g‘ri ko‘rsatmayman. Gemini yoki ruxsat etilgan mahalliy model sozlangach, shu chat orqali tarjima bajariladi.",
+        mode: "translation-provider-not-configured",
+        translation: { available: false, targetLanguage, provider: translationService.status().provider },
+        agents: ["ULUGBEK Universal Agent", "Translator"]
+      });
+    }
+    try {
+      const translated = await translationService.translate(translationText, { sourceLanguage: "auto", targetLanguage });
+      return res.json({
+        reply: translated.text,
+        mode: "verified-translation",
+        translation: { available: true, sourceLanguage: translated.sourceLanguage, targetLanguage: translated.targetLanguage },
+        agents: ["ULUGBEK Universal Agent", "Translator", "Quality Checker"]
+      });
+    } catch (error) {
+      return res.json({
+        reply: "Tarjima modeli hozir javob bermadi: " + String(error.message || "noma’lum xato"),
+        mode: "translation-provider-error",
+        translation: { available: true, failed: true },
+        agents: ["ULUGBEK Universal Agent", "Translator"]
+      });
+    }
+  }
   const shouldResearch = searchIntent.shouldSearch;
+  const taskRoles = shouldResearch
+    ? [...new Set([...taskRouting.roles, "researcher", "verifier"])].slice(0, 4)
+    : taskRouting.roles;
+  // A configured model is shared by all specialists. In hosted-model mode one
+  // selected specialist prompt performs the single model call; no duplicate calls.
+  const effectiveTaskRoles = singleAgent.status().configured
+    ? [taskRoles[0] || "generalist"]
+    : taskRoles;
   if (shouldResearch) {
     if (legalAssessment.isLegalQuestion) {
       const webSearch = require("./modules/chat-web-research");
@@ -1453,10 +1524,33 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       const jobWebSearch = require("./modules/chat-web-research");
       const jobs = await jobSearch.searchJobs(conversationMessage, jobWebSearch);
       conversationMemory.rememberJobResults(sessionId, conversationMessage, jobs.results);
+      let vacancyFleet = null;
+      if (jobs.results.length) {
+        const vacancyEvidence = jobs.results.slice(0, 8).map(item => ({
+          title: item.title || "Vakansiya",
+          content: [item.description, item.salary, item.location, item.employer].filter(Boolean).join("\\n"),
+          source: item.url || item.source || "",
+          status: "verified-individual-vacancy"
+        }));
+        try {
+          vacancyFleet = await agentFleet.runTask(conversationMessage, {
+            roles: singleAgent.status().configured ? ["researcher"] : ["researcher", "analyst", "verifier"],
+            evidence: vacancyEvidence,
+            context: conversationContext
+          });
+        } catch (_) {}
+      }
       return res.json({
         reply: jobs.reply,
         mode: "verified-individual-vacancy-search",
-        agents: ["ULUGBEK Universal Agent"],
+        agents: ["ULUGBEK Universal Agent", "Vakansiya tadqiqotchisi", "Tahlilchi", "Natija tekshiruvchisi"],
+        agentFleet: vacancyFleet ? {
+          requestedAgents: vacancyFleet.requestedAgents,
+          completedAgents: vacancyFleet.completedAgents,
+          failedAgents: vacancyFleet.failedAgents,
+          roles: vacancyFleet.roles,
+          durationMs: vacancyFleet.durationMs
+        } : null,
         jobSearchUsed: true,
         webSearchUsed: jobs.ok,
         jobResultsCount: jobs.results.length,
@@ -1498,15 +1592,14 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     ].slice(0, 12);
     let result = null;
     try {
-      // Use short-lived specialist agents only when a real model provider is configured.
-      // They share the configured model, run with bounded concurrency, and are deleted after the task.
-      if (singleAgent.status().configured) {
-        const fleet = await agentFleet.runTask(conversationMessage, { evidence, context: conversationContext });
-        if (fleet.ok) result = {
-          reply: fleet.reply, modelUsed: fleet.modelUsed, provider: fleet.provider, externalProviderUsed: fleet.externalProviderUsed, reasoning: fleet.reasoning,
-          agentFleet: { requestedAgents: fleet.requestedAgents, completedAgents: fleet.completedAgents, roles: fleet.roles }
-        };
-      }
+      // Route substantive chat requests through the same specialist fleet even without
+      // a hosted model. In no-key mode each specialist uses the native knowledge engine;
+      // when a model is configured, the specialists share that model and are short-lived.
+      const fleet = await agentFleet.runTask(conversationMessage, { roles: effectiveTaskRoles, evidence, context: conversationContext });
+      if (fleet.ok) result = {
+        reply: fleet.reply, modelUsed: fleet.modelUsed, provider: fleet.provider, externalProviderUsed: fleet.externalProviderUsed, reasoning: fleet.reasoning,
+        agentFleet: { requestedAgents: fleet.requestedAgents, completedAgents: fleet.completedAgents, failedAgents: fleet.failedAgents, roles: fleet.roles, durationMs: fleet.durationMs }
+      };
     } catch (_) {}
     if (!result) {
       try { result = await singleAgent.answer(conversationMessage, evidence, conversationContext); } catch (_) {}
@@ -1567,15 +1660,23 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   try {
     const nativeBrain = require("./lab-learning-worker");
     const answerWithOneAgent = async entries => {
-      if (singleAgent.status().configured) {
-        try {
-          const fleet = await agentFleet.runTask(conversationMessage, { evidence: entries, context: conversationContext });
-          if (fleet.ok) return {
-            reply: fleet.reply, modelUsed: fleet.modelUsed, provider: fleet.provider, externalProviderUsed: fleet.externalProviderUsed, reasoning: fleet.reasoning,
-            agentFleet: { requestedAgents: fleet.requestedAgents, completedAgents: fleet.completedAgents, roles: fleet.roles }
-          };
-        } catch (_) {}
+      let fleetResult = null;
+      try {
+        const fleet = await agentFleet.runTask(conversationMessage, { roles: effectiveTaskRoles, evidence: entries, context: conversationContext });
+        if (fleet.ok) fleetResult = {
+          reply: fleet.reply, modelUsed: fleet.modelUsed, provider: fleet.provider,
+          externalProviderUsed: fleet.externalProviderUsed, reasoning: fleet.reasoning,
+          agentFleet: { requestedAgents: fleet.requestedAgents, completedAgents: fleet.completedAgents, failedAgents: fleet.failedAgents, roles: fleet.roles, durationMs: fleet.durationMs }
+        };
+      } catch (_) {}
+      // Prefer a grounded built-in answer for simple learning/programming guidance;
+      // still run the relevant specialist fleet, but do not let a generic code scaffold
+      // replace a precise deterministic answer.
+      if (!singleAgent.status().configured && localCandidate?.reasoning?.answerable === true &&
+          localCandidate.reasoning.method === "built-in-dialogue" && localCandidate.reply) {
+        return { ...localCandidate, agentFleet: fleetResult?.agentFleet || null };
       }
+      if (fleetResult) return fleetResult;
       const modelAnswer = await singleAgent.answer(conversationMessage, entries, conversationContext);
       return modelAnswer || nativeBrain.buildLocalReply(conversationMessage, entries, conversationContext);
     };

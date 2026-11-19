@@ -3,6 +3,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { detectSearchIntent, buildUniversalSearchQuery, buildUniversalSearchQueries, searchWeb, evidenceEntries, formatEvidenceReply } = require("../modules/universal-web-search");
+const { parseBingRss } = require("../modules/chat-web-research");
 const { knowledgeContext, SYSTEM_PROMPT } = require("../modules/single-agent");
 const { isJobSearchRequest, hasLocationHint, locationClarification, searchJobs, cleanText, decodeHtmlEntities, buildJobSearchQueries, extractPhones, extractSalary, extractJobRole } = require("../modules/job-search");
 
@@ -194,4 +195,23 @@ test("explains that no Kogon programmer vacancy page was verified", async () => 
   });
   assert.match(result.reply, /Kogon hududida dasturchi/);
   assert.match(result.reply, /umumiy ish saytlari/i);
+});
+
+test("routes common Uzbek job-search typo to the vacancy search pipeline", () => {
+  for (const query of ["Buxorodan ish tobib ber", "Kogondan ish tobib ber", "Buxorodan ish topib ber"]) {
+    assert.equal(detectSearchIntent(query).isJobSearch, true, query);
+    assert.equal(isJobSearchRequest(query), true, query);
+    assert.equal(hasLocationHint(query), true, query);
+  }
+});
+
+test("parses Bing RSS fallback results without accepting unsafe URLs", () => {
+  const xml = `<rss><channel>
+    <item><title>Vakansiya &amp; ish</title><link>https://jobs.example.org/vacancy/1</link><description><![CDATA[Buxoroda ish o‘rni]]></description></item>
+    <item><title>Unsafe</title><link>http://127.0.0.1/admin</link><description>Internal</description></item>
+  </channel></rss>`;
+  const results = parseBingRss(xml);
+  assert.equal(results.length, 1);
+  assert.equal(results[0].title, "Vakansiya & ish");
+  assert.equal(results[0].url, "https://jobs.example.org/vacancy/1");
 });
