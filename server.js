@@ -150,6 +150,7 @@ app.get("/api/admin/function-guardian/report", requireAdmin, async (_req, res) =
 
 const PORT = Number(process.env.PORT) || 3000;
 const MAX_TASK_LENGTH = 4000;
+const MAX_CHAT_MESSAGE_LENGTH = 12000;
 const BUILD_COMMIT = process.env.RENDER_GIT_COMMIT || process.env.SOURCE_VERSION || process.env.GITHUB_SHA || "unknown";
 const BUILD_BRANCH = process.env.RENDER_GIT_BRANCH || process.env.GITHUB_REF_NAME || "unknown";
 const SERVER_STARTED_AT = new Date().toISOString();
@@ -1262,7 +1263,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   req.chatSessionId = sessionId;
   res.set("Cache-Control", "no-store");
   if (!message) return res.status(400).json({ error: "Xabar bo‘sh bo‘lmasligi kerak." });
-  if (message.length > MAX_TASK_LENGTH) return res.status(413).json({ error: "Xabar 4000 belgidan oshmasligi kerak." });
+  if (message.length > MAX_CHAT_MESSAGE_LENGTH) return res.status(413).json({ error: "Xabar 12000 belgidan oshmasligi kerak." });
   const preferenceUpdate = userPreferences.apply(sessionId, message);
   if (preferenceUpdate.changed) {
     const languageName = preferenceUpdate.preference?.name || "tanlangan";
