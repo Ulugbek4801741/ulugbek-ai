@@ -1409,7 +1409,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     });
   }
   // Only greetings, thanks and plain arithmetic stay local. Every other question or task triggers fresh public research.
-  if (/^(?:menga\\s+)?dasturlashda\\s+yordam\\s+ber[.!?\\s]*$/iu.test(conversationMessage)) {
+  if (/^(?:menga\s+)?dasturlashda\s+yordam\s+ber[.!?\s]*$/iu.test(conversationMessage)) {
     return res.json({
       reply: "Albatta, dasturlash bo‘yicha yordam beraman. Python, JavaScript yoki Kotlin tillaridan qaysi birida ishlamoqchisiz va qanday dastur yaratmoqchisiz?",
       mode: "programming-help-clarification",
@@ -1423,12 +1423,12 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       : /(?:ruschaga|rus tiliga|russian)/iu.test(conversationMessage) ? "ru"
       : /(?:turkchaga|turk tiliga|turkish)/iu.test(conversationMessage) ? "tr" : "uz";
     const quoted = conversationMessage.match(/[“"]([\s\S]+?)[”"]/u);
-    const afterColon = conversationMessage.match(/(?:tarjima|translate)\\s*[:：]\\s*([\s\S]+)/iu);
+    const afterColon = conversationMessage.match(/(?:tarjima|translate)\s*[:：]\s*([\s\S]+)/iu);
     let translationText = quoted?.[1] || afterColon?.[1] || conversationMessage
-      .replace(/(?:iltimos\\s+)?(?:menga\\s+)?/iu, "")
-      .replace(/\\s+(?:inglizchaga|ingliz tiliga|ruschaga|rus tiliga|o.zbekchaga|o.zbek tiliga|turkchaga|turk tiliga)\\s+tarjima(?:\\s+qilib)?\\s*(?:ber|qil)?[.!?]*$/iu, "")
-      .replace(/^(?:ushbu|shu|quyidagi)?\\s*(?:matnni|matn)?\\s*$/iu, "").trim();
-    if (!translationText || /^(?:tarjima(?:\\s+qil(?:ib)?\\s*(?:ber)?)?|matnni|ushbu matnni)$/iu.test(translationText)) {
+      .replace(/(?:iltimos\s+)?(?:menga\s+)?/iu, "")
+      .replace(/\s+(?:ni\s+)?(?:inglizchaga|ingliz tiliga|ruschaga|rus tiliga|o.zbekchaga|o.zbek tiliga|turkchaga|turk tiliga)\s+tarjima(?:\s+qilib)?\s*(?:ber|qil)?[.!?]*$/iu, "")
+      .replace(/^(?:ushbu|shu|quyidagi)?\s*(?:matnni|matn)?\s*$/iu, "").trim();
+    if (!translationText || /^(?:tarjima(?:\s+qil(?:ib)?\s*(?:ber)?)?|matnni|ushbu matnni)$/iu.test(translationText)) {
       return res.json({ reply: "Tarjima qilinadigan matnni yuboring. Qaysi tilga tarjima qilishni ham yozing.", mode: "translation-needs-text", agents: ["ULUGBEK Universal Agent", "Translator"] });
     }
     if (!translationService.status().available) {
