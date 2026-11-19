@@ -2,7 +2,7 @@
 
 function extractOriginalTask(prompt) {
   const value = String(prompt || "").trim();
-  const match = value.match(/Foydalanuvchi topshirig'i:\\s*([\\s\\S]*)$/i);
+  const match = value.match(/Foydalanuvchi topshirig'i:\s*([\s\S]*)$/i);
   return (match ? match[1] : value).trim().slice(0, 4000);
 }
 
