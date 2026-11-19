@@ -110,7 +110,8 @@ function createLanguageCognition(options={}){
     ["public-encyclopedia-summary-unverified","public-web-page-unverified","permissive-license-open-source-project-notes","open-language-corpus-sentence-unverified"].includes(entry.quality);
    if(!entry||(!reviewed&&!crawlerCandidate)||!trustedSource(entry.source)||known.has(entry.source))continue;
    const text=String(entry.content||"").replace(/\s+/g," ").trim().slice(0,4000);
-   if(text.length<160||/(?:<script|javascript:|\b(?:api[_ -]?key|password|secret token)\b)/iu.test(text))continue;
+   const minimumTextLength=entry.agent==="AutonomousLanguageCorpusAgent"?12:160;
+   if(text.length<minimumTextLength||/(?:<script|javascript:|\b(?:api[_ -]?key|password|secret token)\b)/iu.test(text))continue;
    const detected=detectLanguage(text,entry.language),language=LANGUAGES.has(detected.code)?detected.code:"unknown";if(language==="unknown")continue;
    additions.push({id:crypto.randomUUID(),source:entry.source,title:String(entry.title||"Nomsiz manba").slice(0,180),language,text,
     sourceReviewStatus:entry.status,trainingScope:reviewed?"reviewed-language-patterns-only":"unverified-language-patterns-only",
