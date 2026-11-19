@@ -86,3 +86,14 @@ test("single agent can use Claude through the provider adapter", async () => {
   assert.equal(result.externalProviderUsed, true);
   assert.equal(sentBody.model, "claude-test");
 });
+
+test("single agent uses native Ollama API and reports local inference",async()=>{
+ let sent;
+ const agent=createSingleAgent({
+  env:{ULUGBEK_OLLAMA_URL:"http://127.0.0.1:11434",ULUGBEK_OLLAMA_MODEL:"qwen2.5:7b"},
+  fetchImpl:async(url,options)=>{sent={url,body:JSON.parse(options.body)};return {ok:true,json:async()=>({message:{content:"Mahalliy model javobi"}})};}
+ });
+ const result=await agent.answer("Kotlin dasturidagi xatoni qanday tekshiraman?");
+ assert.equal(result.reply,"Mahalliy model javobi");assert.equal(result.provider,"ollama");assert.equal(result.externalProviderUsed,false);
+ assert.equal(sent.url,"http://127.0.0.1:11434/api/chat");assert.equal(sent.body.model,"qwen2.5:7b");
+});
