@@ -10,7 +10,7 @@ const server = fs.readFileSync(path.join(__dirname, "..", "server.js"), "utf8");
 test("chat reads a pasted public URL through the shared safe page reader", () => {
   assert.match(server, /conversationMessage\.match\(\/https\?:/);
   assert.match(server, /publicWebReader\.readPublicPage\(directUrl\)/);
-  assert.match(server, /direct-public-page-research/);
+  assert.match(server, /direct-public-page-(?:ai|native)-research/);
   assert.match(server, /pageRead: true/);
 });
 
