@@ -6,6 +6,7 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 const agentRuntime = require("./agent-runtime");
 const universalAgentCore = require("./modules/universal-agent-core");
+const taskIntentRouter = require("./modules/task-intent-router");
 const universalToolHub = require("./modules/universal-tool-hub");
 const singleAgent = require("./modules/single-agent").createSingleAgent();
 const { createAgentFleet } = require("./modules/agent-fleet");
@@ -1364,6 +1365,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   // Greetings, thanks and plain arithmetic remain local to avoid unnecessary network calls.
   const universalSearch = require("./modules/universal-web-search");
   const searchIntent = universalSearch.detectSearchIntent(conversationMessage);
+  const taskRouting = taskIntentRouter.route(conversationMessage);
   const currentPopulationQuestion = universalSearch.isCurrentPopulationQuestion(conversationMessage);
   const nativeBrain = require("./lab-learning-worker");
   let localKnowledge = [];
@@ -1407,7 +1409,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     });
   }
   // Only greetings, thanks and plain arithmetic stay local. Every other question or task triggers fresh public research.
-  const shouldResearch = searchIntent.shouldSearch;
+  const shouldResearch = searchIntent.shouldSearch && taskRouting.needsWebResearch;
   if (shouldResearch) {
     if (legalAssessment.isLegalQuestion) {
       const webSearch = require("./modules/chat-web-research");
@@ -1525,7 +1527,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       // Route substantive chat requests through the same specialist fleet even without
       // a hosted model. In no-key mode each specialist uses the native knowledge engine;
       // when a model is configured, the specialists share that model and are short-lived.
-      const fleet = await agentFleet.runTask(conversationMessage, { evidence, context: conversationContext });
+      const fleet = await agentFleet.runTask(conversationMessage, { roles: taskRouting.roles, evidence, context: conversationContext });
       if (fleet.ok) result = {
         reply: fleet.reply, modelUsed: fleet.modelUsed, provider: fleet.provider, externalProviderUsed: fleet.externalProviderUsed, reasoning: fleet.reasoning,
         agentFleet: { requestedAgents: fleet.requestedAgents, completedAgents: fleet.completedAgents, failedAgents: fleet.failedAgents, roles: fleet.roles, durationMs: fleet.durationMs }
@@ -1590,9 +1592,9 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   try {
     const nativeBrain = require("./lab-learning-worker");
     const answerWithOneAgent = async entries => {
-      if (singleAgent.status().configured) {
+      {
         try {
-          const fleet = await agentFleet.runTask(conversationMessage, { evidence: entries, context: conversationContext });
+          const fleet = await agentFleet.runTask(conversationMessage, { roles: taskRouting.roles, evidence: entries, context: conversationContext });
           if (fleet.ok) return {
             reply: fleet.reply, modelUsed: fleet.modelUsed, provider: fleet.provider, externalProviderUsed: fleet.externalProviderUsed, reasoning: fleet.reasoning,
             agentFleet: { requestedAgents: fleet.requestedAgents, completedAgents: fleet.completedAgents, roles: fleet.roles }

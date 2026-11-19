@@ -13,7 +13,11 @@ const ROLE_DEFINITIONS = Object.freeze({
   verifier: "Boshqa tahlillarni tanqidiy tekshiruvchi, xato va dalilsiz da'volarni aniqlovchi tekshiruvchi.",
   legal: "Qonuniylik, yurisdiksiya, rozilik va ruxsat doirasidagi xavflarni aniqlovchi nazoratchi.",
   translator: "Til, tarjima va terminologiyani tekshiruvchi mutaxassis.",
-  business: "Biznes, mijoz, bozor va operatsion reja bo'yicha tahlilchi."
+  business: "Biznes, mijoz, bozor va operatsion reja bo'yicha tahlilchi.",
+  documenter: "Hujjat, hisobot, rezyume va taqdimot tuzilmasini tayyorlovchi muharrir.",
+  educator: "Mavzuni bosqichma-bosqich sodda tushuntiruvchi o'qituvchi.",
+  creative: "Ijodiy matn, g'oya, ssenariy va dizayn topshirig'ini ishlab chiquvchi mutaxassis.",
+  dataAnalyst: "Raqamlar, jadval, formula va hisob-kitoblarni tahlil qiluvchi mutaxassis."
 });
 
 function clean(value, max = 4000) {
@@ -28,6 +32,10 @@ function chooseRoles(task) {
   if (/(kod|dastur|sayt|ilova|api|server|github|render|xato|debug|deploy|avtomatlashtir)/i.test(text)) roles.push("engineer");
   if (/(biznes|bozor|mijoz|savdo|daromad|marketing|kompaniya|loyiha)/i.test(text)) roles.push("business");
   if (/(tarjima|ingliz|rus til|o'zbek til|o‘zbek til|grammatika)/i.test(text)) roles.push("translator");
+  if (/(hujjat|pdf|docx|word|excel|xlsx|hisobot|rezyume|ariza|taqdimot|pptx)/i.test(text)) roles.push("documenter");
+  if (/(dars|kurs|tushuntir|mashq|lesson|teach|learn)/i.test(text)) roles.push("educator");
+  if (/(hikoya|ssenariy|post|reklama matni|ijodiy|creative)/i.test(text)) roles.push("creative");
+  if (/(hisobla|matematika|formula|tenglama|foiz|percentage|calculate)/i.test(text)) roles.push("dataAnalyst");
   if (/(tahlil|solishtir|reja|strategiya|murakkab|batafsil)/i.test(text)) roles.push("analyst");
   if (roles.length === 0) roles.push("generalist");
   if (roles.length > 1 || /(tekshir|isbot|manba|xavfsiz|ishonchli)/i.test(text)) roles.push("verifier");
