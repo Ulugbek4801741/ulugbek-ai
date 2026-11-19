@@ -874,6 +874,19 @@ app.get("/api/capabilities", async (_req, res) => {
     const [knowledge, tools] = await Promise.all([knowledgeStore.status(), Promise.resolve(universalToolHub.status())]);
     return res.json({
       ok: true, agentCount: 1, architecture: "single-universal-agent-with-dynamic-specialists", specialistFleet: agentFleet.status(),
+      chatSupport: {
+        domains: ["general-questions", "public-research", "coding", "translation", "documents", "business", "education", "creative-writing", "mathematics", "legal-information"],
+        research: { chatRouting: true, mode: "public-read-only", sourceChecking: true },
+        coding: { chatDrafting: true, languages: codingLanguageEngine.status().languageCount, sandboxExecution: tools.python.ready },
+        translation: translationService.status(),
+        documents: { chatDrafting: true, fileExport: tools.documents.ready, supportedExportFormats: tools.documents.supportedFormats, mode: "text-draft-unless-file-adapter-ready" },
+        business: { analysisAndPlanning: true, externalAutomation: false },
+        education: { explanationsAndLessons: true },
+        creative: { textDrafting: true },
+        mathematics: { safeArithmetic: true },
+        legal: { officialSourceResearch: true, jurisdictionCheck: true },
+        externalActions: { enabled: false, humanApprovalRequired: true }
+      },
       multiSourceResearch: { ready: true, mode: "cross-domain-open-page-reading", automaticFactVerification: false },
       youtube: youtubeTranscript.status(),
       coding: codingLanguageEngine.status(),
