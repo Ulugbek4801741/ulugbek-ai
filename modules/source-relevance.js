@@ -11,6 +11,7 @@ const STOP_WORDS = new Set((
 
 const TERM_ALIASES = Object.freeze({
   india: "hindiston",
+  bukhara: "buxoro",
   bharat: "hindiston",
   population: "ahol",
   inhabitants: "ahol",
