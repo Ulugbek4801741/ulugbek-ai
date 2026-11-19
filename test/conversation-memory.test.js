@@ -37,3 +37,12 @@ test("retains city and job intent when the user clarifies a profession in natura
   assert.match(expanded, /dasturchiman/i);
   assert.match(expanded, /Ish topib ber/i);
 });
+
+test("retains job-search context when the user replies with an inflected city name", () => {
+  memory.clear();
+  const session = "session-kogon-inflected";
+  memory.remember(session, "Ish topib ber");
+  assert.equal(memory.expand(session, "Kogondan"), "Ish topib ber Kogondan");
+  memory.remember(session, "Ish topib ber Kogondan");
+  assert.equal(memory.expand(session, "Buxorodan"), "Ish topib ber Kogondan Buxorodan");
+});
