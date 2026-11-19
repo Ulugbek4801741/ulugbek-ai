@@ -149,7 +149,7 @@ app.get("/api/admin/function-guardian/report", requireAdmin, async (_req, res) =
 });
 
 const PORT = Number(process.env.PORT) || 3000;
-const MAX_TASK_LENGTH = 4000;
+const MAX_TASK_LENGTH = 12000;
 const BUILD_COMMIT = process.env.RENDER_GIT_COMMIT || process.env.SOURCE_VERSION || process.env.GITHUB_SHA || "unknown";
 const BUILD_BRANCH = process.env.RENDER_GIT_BRANCH || process.env.GITHUB_REF_NAME || "unknown";
 const SERVER_STARTED_AT = new Date().toISOString();
