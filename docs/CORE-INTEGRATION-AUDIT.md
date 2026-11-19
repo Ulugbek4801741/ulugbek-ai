@@ -25,6 +25,18 @@ The current application is a Node.js / Express service (Node >= 20) with an exis
 
 The app's `package.json` uses Node.js >=20, Express 5, and `node --test`. The Dockerfile uses Node 22. Render health path is `/api/health`.
 
+## External ZIP candidate review (initial source-level pass)
+
+| Candidate | Repository license checked | Initial fit | Decision |
+|---|---|---|---|
+| LangGraph | MIT | Stateful workflow orchestration; Python implementation, with a separate JS/TS project available | Study design; do not add Python runtime to the current Node service yet |
+| Hugging Face smolagents | Apache-2.0 | Compact tool-using agent framework, Python | Useful reference; optional isolated worker only if later justified |
+| Crawl4AI | Apache-2.0 | Browser-backed crawling/extraction; resource-heavy compared with the existing bounded HTTPS reader | Defer; first improve/reuse existing reader and public-search pipeline |
+| Mem0 | Apache-2.0 | Memory layer overlaps with existing knowledge store and conversation memory | Compare design only; do not duplicate storage before measuring current gaps |
+| OpenHands | Not verified in this pass | Full coding-agent environment; requires a strong execution sandbox | Defer until a separate sandbox is available; never run with production secrets |
+
+This is an initial README/LICENSE inspection, not a full ZIP inventory, security audit, dependency review, or compatibility test. Exact archive commits, checksums, dependency licenses, advisories, and runtime footprint remain to be verified before adoption.
+
 ## Main engineering conclusion
 
 Do not introduce a second competing orchestrator or duplicate memory store. Extend the existing Core through small adapters and preserve the current single-agent / provider-free fallback. Keep optional frameworks behind adapters so the production app does not become dependent on a large Python stack or paid API.
@@ -57,18 +69,6 @@ Do not introduce a second competing orchestrator or duplicate memory store. Exte
    - Merge only after review and passing tests.
    - Deploy to Render only after a separate administrator approval and a verified rollback plan.
 
-## External open-source candidates to evaluate
-
-These are candidate components, not yet approved dependencies:
-
-- LangGraph — agent workflow/state orchestration.
-- Hugging Face smolagents — lightweight tool-using agents.
-- Crawl4AI — web crawling / extraction; must be configured for public, permitted sources.
-- Mem0 — agent memory patterns; compare against the existing knowledge and conversation stores before adopting.
-- OpenHands — coding-agent workflow; must run isolated and must not receive production secrets.
-
-For each candidate, verify the exact repository license, transitive dependency licenses, security advisories, maintenance status, resource footprint, and whether its architecture duplicates an existing ULUGBEK module. Do not import the entire project ZIP wholesale.
-
 ## Acceptance criteria
 
 - Existing `main` remains unchanged until administrator-approved merge.
@@ -82,4 +82,4 @@ For each candidate, verify the exact repository license, transitive dependency l
 
 ## Current status
 
-This commit records the repository audit and integration plan only. It does not claim that external ZIPs have been fully imported, that a neural foundation model has been trained, that autonomous code execution is enabled, or that production has changed.
+This commit records the repository audit and initial candidate review only. It does not claim that external ZIPs have been fully imported, that a neural foundation model has been trained, that autonomous code execution is enabled, or that production has changed.
