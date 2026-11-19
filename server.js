@@ -1345,7 +1345,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   }
   // A URL pasted into chat is read directly, then summarized by the same universal agent.
   // Page text is untrusted evidence; the model must never treat it as executable instructions.
-  const directUrlMatch = conversationMessage.match(/https?:\\/\\/[^\\s<>"'`]+/i);
+  const directUrlMatch = conversationMessage.match(/https?:\/\/[^\s<>"']+/i);
   if (directUrlMatch) {
     const directUrl = directUrlMatch[0].replace(/[),.;!?]+$/, "");
     try {
