@@ -2,7 +2,7 @@
 const RULES = [
  ["legal", /(?:qonun|qonuniy|huquq|shartnoma|sud|soliq|litsenziya|mehnat kodeksi|legal|law|contract)/iu],
  ["research", /(?:qidir(?:ib)?|izla(?:b)?|top(?:ib)? ber|manba|havola|ssilka|internet|tadqiq|yangilik|bugun|hozir|so.nggi|latest|current|find|search|research|vakans|ish top)/iu],
- ["coding", /(?:kod|dastur|program|debug|xato|bug|github|repo|android|apk|sayt|web.?app|api|server|render|deploy|python|javascript|kotlin)/iu],
+ ["coding", /(?:kod|dastur|program|debug|xato|bug|github|repo|android|apk|sayt|web.?app|api|server|render|deploy|python|javascript|kotlin|frontend|backend|interfeys|css|html)/iu],
  ["translation", /(?:tarjima|translate|translation|inglizchaga|ruschaga|o.zbekchaga|tilga o.gir)/iu],
  ["document", /(?:hujjat|pdf|docx|word|excel|xlsx|hisobot|rezyume|resume|ariza|taqdimot|pptx)/iu],
  ["business", /(?:biznes|savdo|bozor|mijoz|daromad|xarajat|marketing|kompaniya|startap|business|sales)/iu],

@@ -1460,6 +1460,11 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   const taskRoles = shouldResearch
     ? [...new Set([...taskRouting.roles, "researcher", "verifier"])].slice(0, 4)
     : taskRouting.roles;
+  // A configured model is shared by all specialists. In hosted-model mode one
+  // selected specialist prompt performs the single model call; no duplicate calls.
+  const effectiveTaskRoles = singleAgent.status().configured
+    ? [taskRoles[0] || "generalist"]
+    : taskRoles;
   if (shouldResearch) {
     if (legalAssessment.isLegalQuestion) {
       const webSearch = require("./modules/chat-web-research");
@@ -1516,7 +1521,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
         }));
         try {
           vacancyFleet = await agentFleet.runTask(conversationMessage, {
-            roles: ["researcher", "analyst", "verifier"],
+            roles: singleAgent.status().configured ? ["researcher"] : ["researcher", "analyst", "verifier"],
             evidence: vacancyEvidence,
             context: conversationContext
           });
@@ -1577,7 +1582,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       // Route substantive chat requests through the same specialist fleet even without
       // a hosted model. In no-key mode each specialist uses the native knowledge engine;
       // when a model is configured, the specialists share that model and are short-lived.
-      const fleet = await agentFleet.runTask(conversationMessage, { roles: taskRoles, evidence, context: conversationContext });
+      const fleet = await agentFleet.runTask(conversationMessage, { roles: effectiveTaskRoles, evidence, context: conversationContext });
       if (fleet.ok) result = {
         reply: fleet.reply, modelUsed: fleet.modelUsed, provider: fleet.provider, externalProviderUsed: fleet.externalProviderUsed, reasoning: fleet.reasoning,
         agentFleet: { requestedAgents: fleet.requestedAgents, completedAgents: fleet.completedAgents, failedAgents: fleet.failedAgents, roles: fleet.roles, durationMs: fleet.durationMs }
@@ -1644,7 +1649,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     const answerWithOneAgent = async entries => {
       let fleetResult = null;
       try {
-        const fleet = await agentFleet.runTask(conversationMessage, { roles: taskRoles, evidence: entries, context: conversationContext });
+        const fleet = await agentFleet.runTask(conversationMessage, { roles: effectiveTaskRoles, evidence: entries, context: conversationContext });
         if (fleet.ok) fleetResult = {
           reply: fleet.reply, modelUsed: fleet.modelUsed, provider: fleet.provider,
           externalProviderUsed: fleet.externalProviderUsed, reasoning: fleet.reasoning,
