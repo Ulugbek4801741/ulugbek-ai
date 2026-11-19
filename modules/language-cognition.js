@@ -106,8 +106,8 @@ function createLanguageCognition(options={}){
    // may also contribute statistical language patterns, but never factual retrieval.
    const reviewed=entry?.status==="approved";
    const crawlerCandidate=entry?.status==="pending-review"&&
-    ["AutonomousResearchAgent","AutonomousOpenWebResearchAgent","AutonomousGitHubResearchAgent"].includes(entry.agent)&&
-    ["public-encyclopedia-summary-unverified","public-web-page-unverified","permissive-license-open-source-project-notes"].includes(entry.quality);
+    ["AutonomousResearchAgent","AutonomousOpenWebResearchAgent","AutonomousGitHubResearchAgent","AutonomousLanguageCorpusAgent"].includes(entry.agent)&&
+    ["public-encyclopedia-summary-unverified","public-web-page-unverified","permissive-license-open-source-project-notes","open-language-corpus-sentence-unverified"].includes(entry.quality);
    if(!entry||(!reviewed&&!crawlerCandidate)||!trustedSource(entry.source)||known.has(entry.source))continue;
    const text=String(entry.content||"").replace(/\s+/g," ").trim().slice(0,4000);
    if(text.length<160||/(?:<script|javascript:|\b(?:api[_ -]?key|password|secret token)\b)/iu.test(text))continue;
