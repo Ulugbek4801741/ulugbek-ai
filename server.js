@@ -19,6 +19,7 @@ const ethicalReasoning = require("./modules/ethical-reasoning");
 const conversationOrchestrator = require("./modules/conversation-orchestrator");
 const languageCognition = require("./modules/language-cognition");
 const languageLearningWorker = require("./modules/language-learning-worker");
+const openLanguageSources = require("./modules/open-language-sources");
 const legalResearch = require("./modules/legal-research");
 const errorLearning = require("./modules/error-learning");
 const conversationMemory = require("./modules/conversation-memory");
@@ -651,6 +652,21 @@ app.post("/api/translation/translate", async (req, res) => {
 app.get("/api/language/status", (_req, res) => {
   res.set("Cache-Control", "no-store");
   res.json({ ok: true, language: languageModule.status(), languageLearning: languageLearningWorker.status() });
+});
+
+app.get("/api/language/sources", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  return res.json({ ok: true, sources: openLanguageSources.status() });
+});
+
+app.post("/api/admin/language/sources/sync", requireAdmin, async (_req, res) => {
+  try {
+    const sources = await openLanguageSources.sync({ force: true });
+    await languageLearningWorker.cycle();
+    return res.json({ ok: true, sources, learning: languageLearningWorker.status() });
+  } catch (error) {
+    return res.status(503).json({ ok: false, error: error.message || "Ochiq til manbalari sinxronlanmadi." });
+  }
 });
 
 app.get("/api/cognition/status", (_req, res) => {
