@@ -11,11 +11,14 @@ const RULES = [
  ["math", /(?:hisobla|matematika|formula|tenglama|foiz|percentage|calculate|\d\s*[+*\\/×÷-]\s*\d)/iu]
 ];
 const ROLE_MAP = Object.freeze({
- legal:["legal","researcher","verifier"], research:["researcher","analyst","verifier"],
- coding:["engineer","analyst","verifier"], translation:["translator","verifier"],
- document:["documenter","analyst","verifier"], business:["business","analyst","researcher"],
- education:["educator","generalist"], creative:["creative","generalist"],
- math:["dataAnalyst","verifier"], conversation:["generalist"], general:["generalist","analyst"]
+ legal:["legal","research-agent","security-agent","qa-agent"],
+ research:["researcher","research-agent","analyst","verifier"],
+ coding:["engineer","software-builder-agent","backend-agent","qa-agent"],
+ translation:["translator","qa-agent"], document:["documenter","qa-agent"],
+ business:["business","product-growth-agent","analyst","research-agent"],
+ education:["educator","core-architect"], creative:["creative","product-growth-agent"],
+ math:["dataAnalyst","qa-agent"], conversation:["generalist","chat-coordinator"],
+ general:["generalist","chat-coordinator","core-architect"]
 });
 function cleanTask(value){return String(value||"").replace(/\s+/g," ").trim().slice(0,4000);}
 function route(value){
@@ -29,6 +32,10 @@ function route(value){
   (category==="business"&&/(?:bozor|raqobatchi|narx|trend|mijozlar|market|competitor)/iu.test(text))||
   (category==="general"&&/[?？]/u.test(task)));
  let roles=[...(ROLE_MAP[category]||ROLE_MAP.general)];
+ if(category==="coding" && /(?:frontend|interfeys|dizayn|css|html)/iu.test(text)) roles=["engineer","software-builder-agent","frontend-agent","qa-agent"];
+ if(category==="coding" && /(?:backend|api|server|database|ma.lumotlar bazasi)/iu.test(text)) roles=["engineer","software-builder-agent","backend-agent","qa-agent"];
+ if(category==="coding" && /(?:deploy|render|hosting|serverga joyla)/iu.test(text)) roles=["engineer","backend-agent","devops-agent","qa-agent"];
+ if(/(?:xavfsiz|himoya|parol|maxfiy|security|hujum|ruxsat)/iu.test(text) && !roles.includes("security-agent")) roles.splice(Math.max(0,roles.length-1),0,"security-agent");
  if(needsWebResearch&&!roles.includes("researcher"))roles.unshift("researcher");
  if(needsWebResearch&&!roles.includes("verifier"))roles.push("verifier");
  roles=[...new Set(roles)].slice(0,4);

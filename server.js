@@ -1607,7 +1607,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       // Prefer a grounded built-in answer for simple learning/programming guidance;
       // still run the relevant specialist fleet, but do not let a generic code scaffold
       // replace a precise deterministic answer.
-      if (localCandidate?.reasoning?.answerable === true &&
+      if (!singleAgent.status().configured && localCandidate?.reasoning?.answerable === true &&
           localCandidate.reasoning.method === "built-in-dialogue" && localCandidate.reply) {
         return { ...localCandidate, agentFleet: fleetResult?.agentFleet || null };
       }
