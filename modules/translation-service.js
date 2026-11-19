@@ -123,9 +123,9 @@ function createTranslationService(options = {}) {
     const config = providerRouter.configuration(env);
     return {
       ready: true, module: "ulugbek-translation-v1", coreLanguage: "uz",
-      mode: "private-local-model-translation-no-separate-language-training",
-      available: config.configured && isPrivateModelEndpoint(config), provider: config.provider,
-      requiresConfiguredModel: true, requiresConfiguredPrivateModel: true,
+      mode: "configured-provider-or-private-compatible-model",
+      available: config.configured && isTranslationProviderAllowed(config), provider: config.provider,
+      requiresConfiguredModel: true, requiresConfiguredPrivateModel: config.provider === "openai-compatible",
       supportedByModel: "provider-dependent", maximumCharacters: MAX_TEXT_LENGTH
     };
   }
