@@ -2,6 +2,7 @@
 
 const crypto = require("node:crypto");
 const agentRegistry = require("../agents/registry");
+const qualityGate = require("./agent-quality-gate");
 
 const MAX_AGENTS = 100;
 const DEFAULT_CONCURRENCY = 3;
@@ -161,6 +162,39 @@ function createAgentFleet(options = {}) {
       }
     }
 
+    let review = null;
+    if (final && final.reply && usable.some(item => item.modelUsed)) {
+      const reviewPrompt = qualityGate.buildReviewPrompt(prompt, final.reply, usable);
+      try {
+        const reviewed = await answer(reviewPrompt, evidence, context);
+        review = qualityGate.evaluateReview(qualityGate.parseReview(reviewed && reviewed.reply));
+      } catch (_) {
+        review = qualityGate.evaluateReview(null);
+      }
+    } else {
+      review = { status: "native-review-unavailable", passed: false, reason: "Mahalliy qoida/knowledge rejimida alohida model tanqidi mavjud emas." };
+    }
+    const codeDeliveryTask = qualityGate.isCodeDeliveryTask(prompt);
+    const codeExecutionVerified = options.codeExecutionVerified === true;
+    const publishable = Boolean(final && final.reply && review.passed && (!codeDeliveryTask || codeExecutionVerified));
+    if (codeDeliveryTask && !codeExecutionVerified) {
+      final = {
+        reply: "Kod yozish topshirig‘i aniqlandi. Mutaxassislar tahlili tayyorlanishi mumkin, ammo ULUGBEK AI’da hozircha ushbu kodni xavfsiz sandboxda avtomatik ishga tushirib, test natijasini tasdiqlovchi ijro muhiti ulanmagan. Shu sababli sinovdan o‘tmagan kodni tayyor yechim sifatida yubormayman. Avval Python uchun izolyatsiyalangan sandbox yoki tegishli til test runnerini ulang.",
+        modelUsed: final && final.modelUsed || null,
+        provider: final && final.provider || null,
+        externalProviderUsed: final && final.externalProviderUsed === true,
+        reasoning: { method: "quality-gate-blocked-unexecuted-code", answerable: true, facts: [] }
+      };
+    }
+    const quality = {
+      status: codeDeliveryTask && !codeExecutionVerified ? "blocked-unexecuted-code" : publishable ? "review-passed" : review.status,
+      reviewPassed: review.passed === true,
+      codeDeliveryTask,
+      codeExecutionVerified,
+      publishable,
+      reviewer: review
+    };
+
     const completedAt = now();
     // Ephemeral agents are deleted as soon as the task completes; no idle fleet is left running.
     for (const agent of spawned) agents.delete(agent.id);
@@ -178,6 +212,7 @@ function createAgentFleet(options = {}) {
       provider: final && final.provider || null,
       externalProviderUsed: final && final.externalProviderUsed === true,
       reasoning: final && final.reasoning || null,
+      qualityGate: quality,
       agents: results.map(item => ({ role: item.role, ok: item.ok, error: item.error || null })),
       lifecycle: "ephemeral-agents-deleted-after-task",
       externalActions: "disabled"
@@ -201,6 +236,8 @@ function createAgentFleet(options = {}) {
       lifecycle: "create-on-demand-delete-after-task-or-idle-ttl",
       modelProvider: "shared-configured-provider",
       independentModelPerAgent: false,
+      independentCritic: true,
+      qualityGate: "structured-review-required; generated-code-execution-required",
       externalActions: "disabled-unless-separately-authorized-adapter-is-added"
     };
   }
