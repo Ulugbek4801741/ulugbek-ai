@@ -1409,7 +1409,10 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     });
   }
   // Only greetings, thanks and plain arithmetic stay local. Every other question or task triggers fresh public research.
-  const shouldResearch = searchIntent.shouldSearch && taskRouting.needsWebResearch;
+  const shouldResearch = searchIntent.shouldSearch;
+  const taskRoles = shouldResearch
+    ? [...new Set([...taskRouting.roles, "researcher", "verifier"])].slice(0, 4)
+    : taskRouting.roles;
   if (shouldResearch) {
     if (legalAssessment.isLegalQuestion) {
       const webSearch = require("./modules/chat-web-research");
@@ -1527,7 +1530,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       // Route substantive chat requests through the same specialist fleet even without
       // a hosted model. In no-key mode each specialist uses the native knowledge engine;
       // when a model is configured, the specialists share that model and are short-lived.
-      const fleet = await agentFleet.runTask(conversationMessage, { roles: taskRouting.roles, evidence, context: conversationContext });
+      const fleet = await agentFleet.runTask(conversationMessage, { roles: taskRoles, evidence, context: conversationContext });
       if (fleet.ok) result = {
         reply: fleet.reply, modelUsed: fleet.modelUsed, provider: fleet.provider, externalProviderUsed: fleet.externalProviderUsed, reasoning: fleet.reasoning,
         agentFleet: { requestedAgents: fleet.requestedAgents, completedAgents: fleet.completedAgents, failedAgents: fleet.failedAgents, roles: fleet.roles, durationMs: fleet.durationMs }
@@ -1592,15 +1595,23 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
   try {
     const nativeBrain = require("./lab-learning-worker");
     const answerWithOneAgent = async entries => {
-      {
-        try {
-          const fleet = await agentFleet.runTask(conversationMessage, { roles: taskRouting.roles, evidence: entries, context: conversationContext });
-          if (fleet.ok) return {
-            reply: fleet.reply, modelUsed: fleet.modelUsed, provider: fleet.provider, externalProviderUsed: fleet.externalProviderUsed, reasoning: fleet.reasoning,
-            agentFleet: { requestedAgents: fleet.requestedAgents, completedAgents: fleet.completedAgents, roles: fleet.roles }
-          };
-        } catch (_) {}
+      let fleetResult = null;
+      try {
+        const fleet = await agentFleet.runTask(conversationMessage, { roles: taskRoles, evidence: entries, context: conversationContext });
+        if (fleet.ok) fleetResult = {
+          reply: fleet.reply, modelUsed: fleet.modelUsed, provider: fleet.provider,
+          externalProviderUsed: fleet.externalProviderUsed, reasoning: fleet.reasoning,
+          agentFleet: { requestedAgents: fleet.requestedAgents, completedAgents: fleet.completedAgents, failedAgents: fleet.failedAgents, roles: fleet.roles, durationMs: fleet.durationMs }
+        };
+      } catch (_) {}
+      // Prefer a grounded built-in answer for simple learning/programming guidance;
+      // still run the relevant specialist fleet, but do not let a generic code scaffold
+      // replace a precise deterministic answer.
+      if (localCandidate?.reasoning?.answerable === true &&
+          localCandidate.reasoning.method === "built-in-dialogue" && localCandidate.reply) {
+        return { ...localCandidate, agentFleet: fleetResult?.agentFleet || null };
       }
+      if (fleetResult) return fleetResult;
       const modelAnswer = await singleAgent.answer(conversationMessage, entries, conversationContext);
       return modelAnswer || nativeBrain.buildLocalReply(conversationMessage, entries, conversationContext);
     };
