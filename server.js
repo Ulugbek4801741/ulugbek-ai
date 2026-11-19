@@ -9,7 +9,24 @@ const universalAgentCore = require("./modules/universal-agent-core");
 const universalToolHub = require("./modules/universal-tool-hub");
 const singleAgent = require("./modules/single-agent").createSingleAgent();
 const { createAgentFleet } = require("./modules/agent-fleet");
-const agentFleet = createAgentFleet({ answer: (...args) => singleAgent.answer(...args), maxAgents: 100, concurrency: 3 });
+const agentFleet = createAgentFleet({
+  answer: async (prompt, entries = [], context = null) => {
+    const hosted = await singleAgent.answer(prompt, entries, context);
+    if (hosted && hosted.reply) return hosted;
+    // When no hosted model is configured, use the existing native knowledge/reasoning
+    // engine instead of leaving every specialist agent disconnected from chat.
+    const taskMatch = String(prompt || "").match(/Foydalanuvchi topshirig'i:\\s*([\\s\\S]*)$/i);
+    const task = taskMatch ? taskMatch[1].trim() : String(prompt || "").trim();
+    if (!task) return null;
+    try {
+      const nativeBrain = require("./lab-learning-worker");
+      const local = nativeBrain.buildLocalReply(task, Array.isArray(entries) ? entries : [], context);
+      return local && local.reasoning && local.reasoning.answerable === true && local.reply ? local : null;
+    } catch (_) { return null; }
+  },
+  maxAgents: 100,
+  concurrency: 3
+});
 const answerSelection = require("./modules/answer-selection");
 const languageModule = require("./modules/language-module");
 const codingLanguageEngine = require("./modules/coding-language-engine");
@@ -1498,15 +1515,14 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     ].slice(0, 12);
     let result = null;
     try {
-      // Use short-lived specialist agents only when a real model provider is configured.
-      // They share the configured model, run with bounded concurrency, and are deleted after the task.
-      if (singleAgent.status().configured) {
-        const fleet = await agentFleet.runTask(conversationMessage, { evidence, context: conversationContext });
-        if (fleet.ok) result = {
-          reply: fleet.reply, modelUsed: fleet.modelUsed, provider: fleet.provider, externalProviderUsed: fleet.externalProviderUsed, reasoning: fleet.reasoning,
-          agentFleet: { requestedAgents: fleet.requestedAgents, completedAgents: fleet.completedAgents, roles: fleet.roles }
-        };
-      }
+      // Route substantive chat requests through the same specialist fleet even without
+      // a hosted model. In no-key mode each specialist uses the native knowledge engine;
+      // when a model is configured, the specialists share that model and are short-lived.
+      const fleet = await agentFleet.runTask(conversationMessage, { evidence, context: conversationContext });
+      if (fleet.ok) result = {
+        reply: fleet.reply, modelUsed: fleet.modelUsed, provider: fleet.provider, externalProviderUsed: fleet.externalProviderUsed, reasoning: fleet.reasoning,
+        agentFleet: { requestedAgents: fleet.requestedAgents, completedAgents: fleet.completedAgents, failedAgents: fleet.failedAgents, roles: fleet.roles, durationMs: fleet.durationMs }
+      };
     } catch (_) {}
     if (!result) {
       try { result = await singleAgent.answer(conversationMessage, evidence, conversationContext); } catch (_) {}
