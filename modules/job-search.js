@@ -106,7 +106,7 @@ function buildJobSearchQueries(value) {
     queries.push(original + " " + role.terms + " vacancy jobs hiring");
     queries.push(original + " " + role.terms + " site:hh.uz OR site:linkedin.com/jobs OR site:ishkop.uz OR site:olx.uz");
   }
-  return [...new Set(queries)].filter(Boolean).slice(0, 10);
+  return [...new Set(queries)].filter(Boolean).slice(0, criteria.worldwide || criteria.minHourlyUsd !== null ? 12 : 6);
 }
 function buildJobSearchQuery(value) {
   return buildJobSearchQueries(value).slice(0, 2).join(" ");
