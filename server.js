@@ -1409,6 +1409,53 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
     });
   }
   // Only greetings, thanks and plain arithmetic stay local. Every other question or task triggers fresh public research.
+  if (/^(?:menga\\s+)?dasturlashda\\s+yordam\\s+ber[.!?\\s]*$/iu.test(conversationMessage)) {
+    return res.json({
+      reply: "Albatta, dasturlash bo‘yicha yordam beraman. Python, JavaScript yoki Kotlin tillaridan qaysi birida ishlamoqchisiz va qanday dastur yaratmoqchisiz?",
+      mode: "programming-help-clarification",
+      agents: ["ULUGBEK Universal Agent", "Software Builder Engineer"],
+      webSearchUsed: false,
+      cognition
+    });
+  }
+  if (taskRouting.category === "translation") {
+    const targetLanguage = /(?:inglizchaga|ingliz tiliga|english)/iu.test(conversationMessage) ? "en"
+      : /(?:ruschaga|rus tiliga|russian)/iu.test(conversationMessage) ? "ru"
+      : /(?:turkchaga|turk tiliga|turkish)/iu.test(conversationMessage) ? "tr" : "uz";
+    const quoted = conversationMessage.match(/[“"]([\s\S]+?)[”"]/u);
+    const afterColon = conversationMessage.match(/(?:tarjima|translate)\\s*[:：]\\s*([\s\S]+)/iu);
+    let translationText = quoted?.[1] || afterColon?.[1] || conversationMessage
+      .replace(/(?:iltimos\\s+)?(?:menga\\s+)?/iu, "")
+      .replace(/\\s+(?:inglizchaga|ingliz tiliga|ruschaga|rus tiliga|o.zbekchaga|o.zbek tiliga|turkchaga|turk tiliga)\\s+tarjima(?:\\s+qilib)?\\s*(?:ber|qil)?[.!?]*$/iu, "")
+      .replace(/^(?:ushbu|shu|quyidagi)?\\s*(?:matnni|matn)?\\s*$/iu, "").trim();
+    if (!translationText || /^(?:tarjima(?:\\s+qil(?:ib)?\\s*(?:ber)?)?|matnni|ushbu matnni)$/iu.test(translationText)) {
+      return res.json({ reply: "Tarjima qilinadigan matnni yuboring. Qaysi tilga tarjima qilishni ham yozing.", mode: "translation-needs-text", agents: ["ULUGBEK Universal Agent", "Translator"] });
+    }
+    if (!translationService.status().available) {
+      return res.json({
+        reply: "Tarjima topshirig‘ini tushundim, ammo Render serverida hozir tarjima modeli ulanmagan. Shuning uchun matnni tarjima qildim deb noto‘g‘ri ko‘rsatmayman. Gemini yoki ruxsat etilgan mahalliy model sozlangach, shu chat orqali tarjima bajariladi.",
+        mode: "translation-provider-not-configured",
+        translation: { available: false, targetLanguage, provider: translationService.status().provider },
+        agents: ["ULUGBEK Universal Agent", "Translator"]
+      });
+    }
+    try {
+      const translated = await translationService.translate(translationText, { sourceLanguage: "auto", targetLanguage });
+      return res.json({
+        reply: translated.text,
+        mode: "verified-translation",
+        translation: { available: true, sourceLanguage: translated.sourceLanguage, targetLanguage: translated.targetLanguage },
+        agents: ["ULUGBEK Universal Agent", "Translator", "Quality Checker"]
+      });
+    } catch (error) {
+      return res.json({
+        reply: "Tarjima modeli hozir javob bermadi: " + String(error.message || "noma’lum xato"),
+        mode: "translation-provider-error",
+        translation: { available: true, failed: true },
+        agents: ["ULUGBEK Universal Agent", "Translator"]
+      });
+    }
+  }
   const shouldResearch = searchIntent.shouldSearch;
   const taskRoles = shouldResearch
     ? [...new Set([...taskRouting.roles, "researcher", "verifier"])].slice(0, 4)

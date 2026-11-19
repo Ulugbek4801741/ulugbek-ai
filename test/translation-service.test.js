@@ -49,3 +49,18 @@ test("protects URLs and inline code", () => {
   assert.equal(result.text.includes("https://example.com"), false);
   assert.equal(result.restore(result.text).includes("npm test"), true);
 });
+
+test("allows official Gemini and Anthropic translation providers but blocks public compatible endpoints", () => {
+  const { isTranslationProviderAllowed } = require("../modules/translation-service");
+  assert.equal(isTranslationProviderAllowed({ provider: "gemini" }), true);
+  assert.equal(isTranslationProviderAllowed({ provider: "anthropic" }), true);
+  assert.equal(isTranslationProviderAllowed({ provider: "openai-compatible", endpoint: "https://api.example.com/v1/chat/completions" }), false);
+});
+test("translation status reflects a configured official provider", () => {
+  const service = createTranslationService({
+    env: { GEMINI_API_KEY: "test-token", GEMINI_MODEL: "gemini-test" },
+    fetchImpl: async () => { throw new Error("status must not call provider"); }
+  });
+  assert.equal(service.status().available, true);
+  assert.equal(service.status().provider, "gemini");
+});
