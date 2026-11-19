@@ -2,7 +2,9 @@
 const agents = [
  require("./chat-coordinator"), require("./core-architect"), require("./research-agent"),
  require("./software-builder-agent"), require("./frontend-agent"), require("./backend-agent"),
- require("./qa-agent"), require("./security-agent"), require("./devops-agent"), require("./product-growth-agent")
+ require("./qa-agent"), require("./security-agent"), require("./devops-agent"), require("./product-growth-agent"),
+ require("./translator-agent"), require("./legal-agent"), require("./educator-agent"),
+ require("./document-agent"), require("./data-analyst-agent")
 ];
 const byId = new Map(agents.map(agent => [agent.id, agent]));
 function listAgents() { return agents.map(({id,name,specialty}) => ({id,name,specialty})); }
