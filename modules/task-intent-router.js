@@ -11,13 +11,16 @@ const RULES = [
  ["math", /(?:hisobla|matematika|formula|tenglama|foiz|percentage|calculate|\d\s*[+*\\/×÷-]\s*\d)/iu]
 ];
 const ROLE_MAP = Object.freeze({
- legal:["legal","research-agent","security-agent","qa-agent"],
- research:["researcher","research-agent","analyst","verifier"],
- coding:["engineer","software-builder-agent","backend-agent","qa-agent"],
- translation:["translator","qa-agent"], document:["documenter","qa-agent"],
- business:["business","product-growth-agent","analyst","research-agent"],
- education:["educator","core-architect"], creative:["creative","product-growth-agent"],
- math:["dataAnalyst","qa-agent"], conversation:["generalist","chat-coordinator"],
+ legal:["legal-agent","research-agent","security-agent","qa-agent"],
+ research:["research-agent","analyst","verifier","qa-agent"],
+ coding:["software-builder-agent","backend-agent","qa-agent","security-agent"],
+ translation:["translator-agent","qa-agent"],
+ document:["document-agent","qa-agent"],
+ business:["product-growth-agent","research-agent","analyst","data-analyst-agent"],
+ education:["educator-agent","core-architect"],
+ creative:["product-growth-agent","chat-coordinator"],
+ math:["data-analyst-agent","qa-agent"],
+ conversation:["generalist","chat-coordinator"],
  general:["generalist","chat-coordinator","core-architect"]
 });
 function cleanTask(value){return String(value||"").replace(/\s+/g," ").trim().slice(0,4000);}
@@ -30,15 +33,15 @@ function route(value){
  else {const match=RULES.find(([,pattern])=>pattern.test(text));if(match)category=match[0];}
  const needsWebResearch=Boolean(task)&&(current||explicitSearch||category==="research"||category==="legal"||
   (category==="business"&&/(?:bozor|raqobatchi|narx|trend|mijozlar|market|competitor)/iu.test(text))||
-  (category==="general"&&/[?？]/u.test(task)));
+  (category==="general"&&/[?？]/u.test(text)));
  let roles=[...(ROLE_MAP[category]||ROLE_MAP.general)];
- if(category==="coding" && /(?:frontend|interfeys|dizayn|css|html)/iu.test(text)) roles=["engineer","software-builder-agent","frontend-agent","qa-agent"];
- if(category==="coding" && /(?:backend|api|server|database|ma.lumotlar bazasi)/iu.test(text)) roles=["engineer","software-builder-agent","backend-agent","qa-agent"];
- if(category==="coding" && /(?:deploy|render|hosting|serverga joyla)/iu.test(text)) roles=["engineer","backend-agent","devops-agent","qa-agent"];
+ if(category==="coding" && /(?:frontend|interfeys|dizayn|css|html)/iu.test(text)) roles=["software-builder-agent","frontend-agent","qa-agent","security-agent"];
+ if(category==="coding" && /(?:backend|api|server|database|ma.lumotlar bazasi)/iu.test(text)) roles=["software-builder-agent","backend-agent","qa-agent","security-agent"];
+ if(category==="coding" && /(?:deploy|render|hosting|serverga joyla)/iu.test(text)) roles=["software-builder-agent","backend-agent","devops-agent","qa-agent"];
  if(/(?:xavfsiz|himoya|parol|maxfiy|security|hujum|ruxsat)/iu.test(text) && !roles.includes("security-agent")) roles.splice(Math.max(0,roles.length-1),0,"security-agent");
- if(needsWebResearch&&!roles.includes("researcher"))roles.unshift("researcher");
+ if(needsWebResearch&&!roles.includes("research-agent"))roles.unshift("research-agent");
  if(needsWebResearch&&!roles.includes("verifier"))roles.push("verifier");
- roles=[...new Set(roles)].slice(0,4);
+ roles=[...new Set(roles)].slice(0,5);
  return {category,roles,needsWebResearch,current,explicitSearch};
 }
 module.exports={route,cleanTask,ROLE_MAP};
