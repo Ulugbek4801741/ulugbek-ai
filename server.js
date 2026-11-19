@@ -9,24 +9,8 @@ const universalAgentCore = require("./modules/universal-agent-core");
 const universalToolHub = require("./modules/universal-tool-hub");
 const singleAgent = require("./modules/single-agent").createSingleAgent();
 const { createAgentFleet } = require("./modules/agent-fleet");
-const agentFleet = createAgentFleet({
-  answer: async (prompt, entries = [], context = null) => {
-    const hosted = await singleAgent.answer(prompt, entries, context);
-    if (hosted && hosted.reply) return hosted;
-    // When no hosted model is configured, use the existing native knowledge/reasoning
-    // engine instead of leaving every specialist agent disconnected from chat.
-    const taskMatch = String(prompt || "").match(/Foydalanuvchi topshirig'i:\\s*([\\s\\S]*)$/i);
-    const task = taskMatch ? taskMatch[1].trim() : String(prompt || "").trim();
-    if (!task) return null;
-    try {
-      const nativeBrain = require("./lab-learning-worker");
-      const local = nativeBrain.buildLocalReply(task, Array.isArray(entries) ? entries : [], context);
-      return local && local.reasoning && local.reasoning.answerable === true && local.reply ? local : null;
-    } catch (_) { return null; }
-  },
-  maxAgents: 100,
-  concurrency: 3
-});
+const chatAgentAnswer = require("./modules/chat-agent-answer").createChatAgentAnswer({ singleAgent });
+const agentFleet = createAgentFleet({ answer: chatAgentAnswer, maxAgents: 100, concurrency: 3 });
 const answerSelection = require("./modules/answer-selection");
 const languageModule = require("./modules/language-module");
 const codingLanguageEngine = require("./modules/coding-language-engine");
