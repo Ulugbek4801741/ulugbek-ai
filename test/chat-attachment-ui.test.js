@@ -11,7 +11,8 @@ const app = fs.readFileSync(path.join(root, "public/app.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "public/index.html"), "utf8");
 
 test("chat composer and server accept the same 12,000-character message limit", () => {
-  assert.match(server, /MAX_TASK_LENGTH = 12000/);
+  assert.match(server, /MAX_CHAT_MESSAGE_LENGTH = 12000/);
+  assert.match(server, /message\.length > MAX_CHAT_MESSAGE_LENGTH/);
   assert.match(html, /id="message"[^>]*maxlength="12000"/);
 });
 
