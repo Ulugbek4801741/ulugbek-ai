@@ -151,11 +151,45 @@ async function fetchPage(value) {
   }
 }
 
+function parseBingRss(xml) {
+  const source = String(xml || "");
+  const results = [];
+  const readTag = (block, name) => {
+    const match = block.match(new RegExp("<" + name + ">([\\s\\S]*?)</" + name + ">", "i"));
+    return match ? decodeEntities(match[1].replace(/^<!\\[CDATA\\[|\\]\\]>$/g, "").trim()) : "";
+  };
+  for (const match of source.matchAll(/<item\\b[^>]*>([\\s\\S]*?)<\\/item>/gi)) {
+    const block = match[1];
+    const title = clean(readTag(block, "title"), 220);
+    const url = safePublicUrl(readTag(block, "link"));
+    const snippet = clean(readTag(block, "description"), 900);
+    if (title && url && !results.some(item => item.url === url)) results.push({ title, url, snippet });
+    if (results.length >= MAX_RESULTS) break;
+  }
+  return results;
+}
+async function searchBingRss(query) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5500);
+  try {
+    const endpoint = "https://www.bing.com/search?format=rss&q=" + encodeURIComponent(query);
+    const response = await fetch(endpoint, {
+      headers: { "User-Agent": "ULUGBEK-AI-PublicResearch/1.0 (read-only search)", "Accept": "application/rss+xml, application/xml, text/xml" },
+      signal: controller.signal,
+      redirect: "error"
+    });
+    if (!response.ok) throw new Error("Fallback search HTTP " + response.status);
+    const xml = await response.text();
+    if (Buffer.byteLength(xml, "utf8") > 1000000) throw new Error("Fallback search response too large");
+    return parseBingRss(xml);
+  } finally { clearTimeout(timeout); }
+}
 async function search(query) {
   const q = clean(query, MAX_QUERY);
   if (q.length < 3) return [];
+  let primaryError = null;
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const timeout = setTimeout(() => controller.abort(), 7000);
   try {
     const endpoint = "https://html.duckduckgo.com/html/?q=" + encodeURIComponent(q);
     const response = await fetch(endpoint, {
@@ -167,8 +201,12 @@ async function search(query) {
     if (!response.ok) throw new Error("Public search HTTP " + response.status);
     const html = await response.text();
     if (Buffer.byteLength(html, "utf8") > 1000000) throw new Error("Search response too large");
-    return parseResults(html);
-  } finally { clearTimeout(timeout); }
+    const results = parseResults(html);
+    if (results.length) return results;
+  } catch (error) { primaryError = error; }
+  finally { clearTimeout(timeout); }
+  try { return await searchBingRss(q); }
+  catch (fallbackError) { if (primaryError) throw primaryError; throw fallbackError; }
 }
 async function fetchOfficialJob(value, options = {}) {
   return require("./job-board-connectors").fetchOfficialJob(value, options);
@@ -176,4 +214,4 @@ async function fetchOfficialJob(value, options = {}) {
 async function fetchExchangeRates() {
   return require("./currency-converter").getUsdRates();
 }
-module.exports = { search, parseResults, safePublicUrl, fetchPage, fetchOfficialJob, fetchExchangeRates, stripHtml, isPrivateAddress, resolvePublicHost };
+module.exports = { search, parseResults, parseBingRss, searchBingRss, safePublicUrl, fetchPage, fetchOfficialJob, fetchExchangeRates, stripHtml, isPrivateAddress, resolvePublicHost };
