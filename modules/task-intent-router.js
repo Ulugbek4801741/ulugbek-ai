@@ -8,7 +8,7 @@ const RULES = [
  ["business", /(?:biznes|savdo|bozor|mijoz|daromad|xarajat|marketing|kompaniya|startap|business|sales)/iu],
  ["education", /(?:o.rgan|dars|ta.lim|kurs|tushuntir|misol bilan|mashq|lesson|teach|learn)/iu],
  ["creative", /(?:yozib ber|she.r|hikoya|ssenariy|post|reklama matni|g.oya|design|dizayn|logo|ijodiy|creative)/iu],
- ["math", /(?:hisobla|matematika|formula|tenglama|foiz|percentage|calculate|\d\s*[+*/×÷-]\s*\d)/iu]
+ ["math", /(?:hisobla|matematika|formula|tenglama|foiz|percentage|calculate|\d\s*[+*\\/×÷-]\s*\d)/iu]
 ];
 const ROLE_MAP = Object.freeze({
  legal:["legal","researcher","verifier"], research:["researcher","analyst","verifier"],
