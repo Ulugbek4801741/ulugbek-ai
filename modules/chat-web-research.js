@@ -11,6 +11,14 @@ const MAX_RESULTS = 10;
 const MAX_PAGE_BYTES = 900000;
 const MAX_PAGE_CHARS = 12000;
 const MAX_REDIRECTS = 3;
+const SEARCH_CACHE_TTL_MS = 3 * 60 * 1000;
+const SEARCH_CACHE_MAX = 120;
+const searchCache = new Map();
+function rememberSearch(query, results) {
+  const key = String(query || "").toLocaleLowerCase();
+  searchCache.set(key, { expiresAt: Date.now() + SEARCH_CACHE_TTL_MS, results });
+  while (searchCache.size > SEARCH_CACHE_MAX) searchCache.delete(searchCache.keys().next().value);
+}
 
 function decodeEntities(value) {
   return String(value || "")
@@ -187,6 +195,10 @@ async function searchBingRss(query) {
 async function search(query) {
   const q = clean(query, MAX_QUERY);
   if (q.length < 3) return [];
+  const cacheKey = q.toLocaleLowerCase();
+  const cached = searchCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.results.map(item => ({ ...item }));
+  if (cached) searchCache.delete(cacheKey);
   let primaryError = null;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 7000);
@@ -202,11 +214,17 @@ async function search(query) {
     const html = await response.text();
     if (Buffer.byteLength(html, "utf8") > 1000000) throw new Error("Search response too large");
     const results = parseResults(html);
-    if (results.length) return results;
+    if (results.length) {
+      rememberSearch(cacheKey, results);
+      return results.map(item => ({ ...item }));
+    }
   } catch (error) { primaryError = error; }
   finally { clearTimeout(timeout); }
-  try { return await searchBingRss(q); }
-  catch (fallbackError) { if (primaryError) throw primaryError; throw fallbackError; }
+  try {
+    const results = await searchBingRss(q);
+    rememberSearch(cacheKey, results);
+    return results.map(item => ({ ...item }));
+  } catch (fallbackError) { if (primaryError) throw primaryError; throw fallbackError; }
 }
 async function fetchOfficialJob(value, options = {}) {
   return require("./job-board-connectors").fetchOfficialJob(value, options);
