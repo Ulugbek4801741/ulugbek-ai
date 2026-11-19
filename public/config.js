@@ -6,5 +6,5 @@ const host = window.location.hostname.toLowerCase();
 const isGitHubPages = host === "github.io" || host.endsWith(".github.io");
 const isNativeLocalhost = host === "localhost" || host === "127.0.0.1";
 window.ULUGBEK_API_BASE_URL = (isGitHubPages || isNativeLocalhost)
-  ? "https://ulugbek-ai-1.onrender.com"
+  ? "https://ulugbek-ai1.onrender.com"
   : window.location.origin;
