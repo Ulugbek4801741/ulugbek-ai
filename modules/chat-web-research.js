@@ -156,7 +156,7 @@ function parseBingRss(xml) {
   const results = [];
   const readTag = (block, name) => {
     const match = block.match(new RegExp("<" + name + ">([\\s\\S]*?)</" + name + ">", "i"));
-    return match ? decodeEntities(match[1].replace(/^<!\\[CDATA\\[|\\]\\]>$/g, "").trim()) : "";
+    return match ? decodeEntities(match[1].replace("<![CDATA[", "").replace("]]>", "").trim()) : "";
   };
   for (const match of source.matchAll(/<item\b[^>]*>([\s\S]*?)<\/item>/gi)) {
     const block = match[1];
