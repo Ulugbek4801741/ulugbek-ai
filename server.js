@@ -1598,7 +1598,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       const fleet = await agentFleet.runTask(conversationMessage, { roles: effectiveTaskRoles, evidence, context: conversationContext });
       if (fleet.ok) result = {
         reply: fleet.reply, modelUsed: fleet.modelUsed, provider: fleet.provider, externalProviderUsed: fleet.externalProviderUsed, reasoning: fleet.reasoning,
-        agentFleet: { requestedAgents: fleet.requestedAgents, completedAgents: fleet.completedAgents, failedAgents: fleet.failedAgents, roles: fleet.roles, durationMs: fleet.durationMs }
+        agentFleet: { requestedAgents: fleet.requestedAgents, completedAgents: fleet.completedAgents, failedAgents: fleet.failedAgents, roles: fleet.roles, durationMs: fleet.durationMs, qualityGate: fleet.qualityGate || null }
       };
     } catch (_) {}
     if (!result) {
@@ -1666,7 +1666,7 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
         if (fleet.ok) fleetResult = {
           reply: fleet.reply, modelUsed: fleet.modelUsed, provider: fleet.provider,
           externalProviderUsed: fleet.externalProviderUsed, reasoning: fleet.reasoning,
-          agentFleet: { requestedAgents: fleet.requestedAgents, completedAgents: fleet.completedAgents, failedAgents: fleet.failedAgents, roles: fleet.roles, durationMs: fleet.durationMs }
+          agentFleet: { requestedAgents: fleet.requestedAgents, completedAgents: fleet.completedAgents, failedAgents: fleet.failedAgents, roles: fleet.roles, durationMs: fleet.durationMs, qualityGate: fleet.qualityGate || null }
         };
       } catch (_) {}
       // Prefer a grounded built-in answer for simple learning/programming guidance;
