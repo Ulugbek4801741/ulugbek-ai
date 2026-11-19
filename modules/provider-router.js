@@ -10,6 +10,7 @@ function validHttpUrl(value) {
 function providerFor(env) {
   const explicit = String(env.ULUGBEK_AI_PROVIDER || "").trim().toLowerCase();
   if (explicit) return explicit;
+  if ((String(env.ULUGBEK_OLLAMA_URL || env.ULUGBEK_OLLAMA_BASE_URL || "").trim()) && String(env.ULUGBEK_OLLAMA_MODEL || "").trim()) return "ollama";
   if (String(env.ULUGBEK_LOCAL_MODEL_URL || "").trim() && String(env.ULUGBEK_LOCAL_MODEL_NAME || "").trim()) return "openai-compatible";
   if (String(env.GEMINI_API_KEY || "").trim()) return "gemini";
   if (String(env.OPENAI_API_KEY || "").trim() && String(env.OPENAI_BASE_URL || "").trim() && String(env.OPENAI_MODEL || "").trim()) return "openai-compatible";
@@ -18,6 +19,7 @@ function providerFor(env) {
 }
 
 function modelFor(provider, env) {
+  if (provider === "ollama") return String(env.ULUGBEK_OLLAMA_MODEL || "").trim();
   if (env.ULUGBEK_AI_MODEL) return String(env.ULUGBEK_AI_MODEL).trim();
   if (provider === "openai-compatible") return String(env.ULUGBEK_LOCAL_MODEL_NAME || env.OPENAI_MODEL || "").trim();
   if (provider === "gemini") return String(env.GEMINI_MODEL || "").trim();
@@ -26,6 +28,7 @@ function modelFor(provider, env) {
 }
 
 function tokenFor(provider, env) {
+  if (provider === "ollama") return String(env.ULUGBEK_OLLAMA_TOKEN || "").trim();
   if (env.ULUGBEK_AI_TOKEN || env.ULUGBEK_LOCAL_MODEL_TOKEN) {
     return String(env.ULUGBEK_AI_TOKEN || env.ULUGBEK_LOCAL_MODEL_TOKEN).trim();
   }
@@ -48,6 +51,10 @@ function endpointFor(provider, env) {
 
 function configuration(env = process.env) {
   const provider = providerFor(env);
+  if (provider === "ollama") {
+    const local = require("./ollama-provider").configuration(env);
+    return local.configured ? local : { ...local, apiKeyRequired: false };
+  }
   const model = modelFor(provider, env);
   const token = tokenFor(provider, env);
   if (provider === "none" || !provider) return { configured: false, provider: "not-configured", apiKeyRequired: false };
@@ -67,6 +74,10 @@ function request(prompt, systemPrompt, env = process.env) {
   if (!config.configured) throw new Error("AI provider sozlanmagan yoki konfiguratsiya to‘liq emas.");
   const userText = String(prompt || "");
   const token = tokenFor(config.provider, env);
+  if (config.provider === "ollama") {
+    const local = require("./ollama-provider").request([{ role: "system", content: systemPrompt }, { role: "user", content: userText }], env);
+    return local;
+  }
   if (config.provider === "openai-compatible") {
     const headers = { "Content-Type": "application/json", Accept: "application/json" };
     if (token) headers.Authorization = "Bearer " + token;
@@ -110,6 +121,7 @@ function request(prompt, systemPrompt, env = process.env) {
 }
 
 function extract(payload, provider) {
+  if (provider === "ollama") return require("./ollama-provider").extract(payload);
   if (provider === "openai-compatible") {
     const value = payload?.choices?.[0]?.message?.content;
     return typeof value === "string" ? value.trim() : "";
