@@ -163,7 +163,10 @@ function createAgentFleet(options = {}) {
     }
 
     let review = null;
-    if (final && final.reply && usable.some(item => item.modelUsed)) {
+    const trivialConversation = /^(?:salom|assalomu alaykum|rahmat|hello|hi|xayr)[.!?\\s]*$/iu.test(prompt);
+    if (trivialConversation) {
+      review = { status: "not-required-trivial-conversation", passed: true, confidence: 1, issues: [], checks: ["greeting response"], summary: "Oddiy salomlashuv uchun alohida tanqidiy tekshiruv talab qilinmaydi." };
+    } else if (final && final.reply && usable.some(item => item.modelUsed)) {
       const reviewPrompt = qualityGate.buildReviewPrompt(prompt, final.reply, usable);
       try {
         const reviewed = await answer(reviewPrompt, evidence, context);
