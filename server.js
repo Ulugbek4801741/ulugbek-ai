@@ -725,7 +725,7 @@ app.post("/api/independent/answer", independentAnswerRateLimit, async (req, res)
 
 app.get("/api/ai/status", (_req, res) => {
   res.set("Cache-Control", "no-store");
-  res.json({ ok: true, agentCount: 1, agentName: "ULUGBEK Universal Agent", model: singleAgent.status(), language: languageModule.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status(), conversationPipeline: conversationOrchestrator.status(), independentLanguage: languageLearningWorker.status(), mathEngine: "native-safe-arithmetic", research: "public-read-only-with-source-checks" });
+  res.json({ ok: true, agentCount: 1, agentName: "ULUGBEK Universal Agent", coordinatorArchitecture: "single-coordinator-dynamic-specialists", specialistFleet: agentFleet.status(), model: singleAgent.status(), language: languageModule.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status(), conversationPipeline: conversationOrchestrator.status(), independentLanguage: languageLearningWorker.status(), mathEngine: "native-safe-arithmetic", research: "public-read-only-with-source-checks" });
 });
 
 app.get("/api/health", (_req, res) => {
@@ -779,11 +779,11 @@ app.get("/api/diagnostics", (_req, res) => {
     agentMemory: "single-agent memory per browser session; JSON file; durable hosting storage must be configured",
     voiceInput: "browser-dependent-and-user-permission-required",
     voiceOutput: "browser-dependent",
-    autonomousAgents: "one ULUGBEK Universal Agent; separate background knowledge-fetch worker only",
+    autonomousAgents: "one ULUGBEK Universal Agent coordinator with short-lived researcher, analyst, engineer, verifier, legal, translator, business and generalist specialists; separate background knowledge-fetch worker",
     developerAgent: developerAgent.status(),
     automaticFailover: "not-configured-requires-authorized-backup-host",
     productionDatabase: "not-configured-task-store-uses-local-json-file",
-    agentExecution: "one universal agent with optional self-hosted local model; no multi-agent delegation; source writes and deploy remain disabled",
+    agentExecution: "chat uses bounded short-lived specialist delegation; specialists share a configured model or fall back to the native evidence-gated reasoning engine; external writes and deploy remain disabled unless separately authorized",
     nativeReasoning: "ulugbek-native-rule-reasoner-v1; deterministic symbolic planning; not a trained neural language model",
     cognition: { language: languageModule.status(), languageLearning: languageLearningWorker.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status(), conversationPipeline: conversationOrchestrator.status() },
     externalAiApiEnabled: false,
@@ -872,7 +872,7 @@ app.get("/api/capabilities", async (_req, res) => {
   try {
     const [knowledge, tools] = await Promise.all([knowledgeStore.status(), Promise.resolve(universalToolHub.status())]);
     return res.json({
-      ok: true, agentCount: 1, architecture: "single-universal-agent",
+      ok: true, agentCount: 1, architecture: "single-universal-agent-with-dynamic-specialists", specialistFleet: agentFleet.status(),
       multiSourceResearch: { ready: true, mode: "cross-domain-open-page-reading", automaticFactVerification: false },
       youtube: youtubeTranscript.status(),
       coding: codingLanguageEngine.status(),
