@@ -9,13 +9,13 @@ test("image intent skips greetings and coding requests", () => {
   assert.equal(imageIntent("Buxoro haqida ma’lumot ber"), true);
 });
 test("image query uses concise place keywords", () => {
-  assert.equal(buildImageQuery("Buxoro viloyati Kogon shahri haqida ma’lumot ber"), "Buxoro viloyati Kogon shahri Uzbekistan");
+  assert.equal(buildImageQuery("Buxoro viloyati Kogon shahri haqida ma’lumot ber"), "Kogon Uzbekistan");
 });
 test("clean removes markup and bounds text", () => {
   assert.equal(clean("<b>Buxoro</b> shahri"), "Buxoro shahri");
   assert.equal(clean("x".repeat(220)).length, 180);
 });
-test("searchImages returns only Wikimedia-hosted thumbnails", async t => {
+test("searchImages returns only safe Wikimedia-hosted thumbnails when Openverse has no results", async t => {
   const original = global.fetch;
   global.fetch = async () => ({
     ok: true,
