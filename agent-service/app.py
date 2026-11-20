@@ -40,7 +40,7 @@ def model_configuration() -> tuple[AsyncOpenAI, str, str]:
     provider = os.getenv("AGENT_MODEL_PROVIDER", "gemini").strip().lower()
     if provider == "gemini":
         api_key = os.getenv("GEMINI_API_KEY", "").strip()
-        model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash").strip()
+        model_name = os.getenv("GEMINI_MODEL", "gemini-flash-latest").strip()
         base_url = "https://generativelanguage.googleapis.com/v1beta/openai/"
     elif provider == "openai":
         api_key = os.getenv("OPENAI_API_KEY", "").strip()
@@ -53,7 +53,7 @@ def model_configuration() -> tuple[AsyncOpenAI, str, str]:
     return AsyncOpenAI(api_key=api_key, base_url=base_url), model_name, provider
 
 
-def build_agent(instructions: str, model: OpenAIChatCompletionsModel) -> Agent:
+def build_agent(instructions: str, model: OpenAIChatCompletionsModel, category: str) -> Agent:
     specialists = [
         Agent(name=name.title() + " mutaxassisi", instructions=prompt, model=model)
         for name, prompt in SPECIALISTS.items()
@@ -111,12 +111,12 @@ async def answer(
     session_id = request.session_id if request.session_id and SESSION_RE.fullmatch(request.session_id) else None
     client, model_name, provider = model_configuration()
     model = OpenAIChatCompletionsModel(model=model_name, openai_client=client)
-    agent = build_agent(request.instructions, model)
+    agent = build_agent(request.instructions, model, request.category)
     data_dir = Path(os.getenv("AGENT_SDK_DATA_DIR", "/var/data"))
     data_dir.mkdir(parents=True, exist_ok=True)
     session = SQLiteSession(session_id, str(data_dir / "sessions.sqlite3")) if session_id else None
     try:
-        result = await Runner.run(agent, request.input, session=session)
+        result = await Runner.run(agent, request.input, session=session, max_turns=8)
         final_output = result.final_output
         if not isinstance(final_output, str) or not final_output.strip():
             raise HTTPException(status_code=502, detail="Agent returned an empty response.")
