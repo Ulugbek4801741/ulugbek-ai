@@ -94,6 +94,13 @@ function buildUniversalSearchQueries(value) {
   return [...new Set(queries.map(q => cleanText(q, 500)).filter(Boolean))]
     .slice(0, historyIntent.isHistorical ? 5 : 3);
 }
+function selectResearchQueries(message, allQueries) {
+  const cityMatch = String(message || "").match(/\b([\p{L}]{3,})\s+shahri\b/iu);
+  const cityOverview = cityMatch && /\b(shahar|shahri|city|town)\b/iu.test(String(message || ""));
+  return cityOverview
+    ? [allQueries[0], allQueries[2] || allQueries[1]].filter(Boolean).slice(0, 2)
+    : allQueries.slice(0, 2);
+}
 function buildUniversalSearchQuery(value) { return buildUniversalSearchQueries(value)[1] || cleanText(value, 500); }
 function hostOf(value) {
   try { return new URL(value).hostname.toLowerCase().replace(/^www\./, ""); } catch (_) { return ""; }
@@ -111,7 +118,9 @@ async function searchWeb(message, webSearch, options = {}) {
     ok: false, results: [], reply: "ULUGBEK AI internet qidiruv moduliga ulana olmadi.", error: "search-adapter-unavailable"
   };
   const limit = Math.max(3, Math.min(10, Number(options.limit) || 8));
-  const queries = buildUniversalSearchQueries(message).slice(0, 2);
+  const allQueries = buildUniversalSearchQueries(message);
+  // City overviews keep the official-statistics query within the bounded search budget.
+  const queries = selectResearchQueries(message, allQueries);
   let failedQueries = 0;
   const batches = await Promise.all(queries.map(async query => {
     try {
@@ -215,4 +224,4 @@ function formatEvidenceReply(results, reason = "") {
     : "Hozircha savolga ishonchli yakuniy javob tuzish uchun yetarli tasdiqlangan dalil topilmadi. Qidiruv parchalari fakt sifatida qabul qilinmadi.";
   return message + " Bilmagan ma’lumotimni taxmin qilib aytmayman.";
 }
-module.exports = { detectSearchIntent, isCurrentPopulationQuestion, isCurrentPopulationEvidence, filterCurrentPopulationEvidence, buildUniversalSearchQuery, buildUniversalSearchQueries, searchWeb, cleanText, removeWeatherWidgetContent, evidenceEntries, formatEvidenceReply, sourceRelevance };
+module.exports = { selectResearchQueries, detectSearchIntent, isCurrentPopulationQuestion, isCurrentPopulationEvidence, filterCurrentPopulationEvidence, buildUniversalSearchQuery, buildUniversalSearchQueries, searchWeb, cleanText, removeWeatherWidgetContent, evidenceEntries, formatEvidenceReply, sourceRelevance };

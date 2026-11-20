@@ -38,7 +38,7 @@ test("reads pages, searches in parallel and deduplicates results from same URL",
     async fetchPage(url) { return { title: "Read " + url, url, content: "Fotosintez — o‘simliklarda yorug‘lik energiyasi yordamida organik modda hosil bo‘lish jarayoni. ".repeat(60) }; }
   };
   const result = await searchWeb("Fotosintez nima?", web);
-  assert.equal(calls.length, 3);
+  assert.equal(calls.length, 2, "general research stays within the two-query latency budget");
   assert.equal(result.results.length, 2);
   assert.equal(result.results[0].pageRead, true);
   assert.ok(result.results[0].snippet.length > 1000);
