@@ -6,7 +6,7 @@ The administrator can import and export retrieval-only knowledge documents as ZI
 
 POST /api/admin/knowledge/import.zip
 
-Headers: Authorization: Bearer <admin session token>; Content-Type: application/zip. Also accepts application/x-zip-compressed and application/octet-stream.
+Authentication: sign in to the admin panel first; the browser sends the HttpOnly ulugbek_admin session cookie automatically. Content-Type: application/zip. Also accepts application/x-zip-compressed and application/octet-stream.
 
 Limits: 20 MiB compressed archive, 40 MiB expanded total, 100 files, 1 MiB per file. Text/document and source-code extensions are allowlisted. Unsupported/binary files and files containing detected credentials are skipped. ZIP paths are validated; symbolic links and encrypted archives are rejected. Files are streamed and never extracted to disk. Imported source code is retrieval-only and never executed.
 
