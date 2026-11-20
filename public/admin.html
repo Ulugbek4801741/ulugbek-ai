@@ -36,6 +36,16 @@
 <p id="change-code-message" class="error" aria-live="polite"></p>
 </form>
 </section>
+<section class="panel" id="knowledge-archive-panel">
+<div class="panel-heading"><div><p class="eyebrow">BILIMLAR OMBORI</p><h2>ZIP fayllar bilan ishlash</h2></div><button id="knowledge-zip-export" class="secondary" type="button">Bilimlarni ZIP qilib yuklab olish</button></div>
+<p class="muted">ZIP ichidagi matn va kod hujjatlari bilim qidiruv omboriga qo‘shiladi. Arxiv xavfsizlik tekshiruvidan o‘tadi; kod fayllari bajarilmaydi, faqat qidirish va o‘qish uchun saqlanadi.</p>
+<form id="knowledge-zip-form" style="max-width:none">
+<label for="knowledge-zip-file">ZIP arxivni tanlang (20 MiB gacha)</label>
+<input id="knowledge-zip-file" type="file" accept=".zip,application/zip" required>
+<button id="knowledge-zip-upload" type="submit">ZIP faylni bilim bazasiga import qilish</button>
+</form>
+<p id="knowledge-zip-message" class="error" aria-live="polite"></p>
+</section>
 <section class="panel" id="agent-permissions">
 <div class="panel-heading"><div><p class="eyebrow">VAKOLATLAR BOSHQARUVI</p><h2>Agent ruxsatlari</h2></div><button id="permissions-refresh" class="secondary" type="button">Yangilash</button></div>
 <p class="muted">Bu yerda yoqilgan vakolatlar siyosati saqlanadi. Hozirgi versiyada asosiy kodga bevosita yozish, maxfiy kalitlarni o‘qish, foydalanuvchi ma’lumotlarini o‘chirish va production deploy qat’iy bloklangan.</p>
@@ -104,5 +114,5 @@
 <div class="notice"><b>Xavfsizlik eslatmasi</b><p>AI kaliti hech qachon bu sahifada ko‘rsatilmaydi. Hosting, to‘lovlar, foydalanuvchi ma’lumotlari va deploy amallari alohida ruxsat hamda sinovlarni talab qiladi.</p></div>
 </section>
 <footer>ULUGBEK AI · Admin panel MVP · HTTPS talab qilinadi</footer>
-</main><script src="admin.js" defer></script><script src="admin-business.js" defer></script><script src="media-library-admin.js" defer></script>
+</main><script src="admin.js" defer></script><script src="admin-business.js" defer></script><script src="media-library-admin.js" defer></script><script src="knowledge-archive-admin.js" defer></script>
 </body></html>
