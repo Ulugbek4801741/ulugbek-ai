@@ -51,3 +51,9 @@ test("Openverse returns openly licensed, attributed Kogon images without Wikimed
     global.fetch = originalFetch;
   }
 });
+
+
+test("rejects common transliterations of the unrelated Bahauddin Naqshband mausoleum", () => {
+  assert.equal(images.relevanceScore({ title: "Bakhouddin Nakshband Mausoleum", tags: [] }, "Kogon"), 0);
+  assert.equal(images.relevanceScore({ title: "Bahauddin Naqshband Mausoleum", tags: [] }, "Kogon"), 0);
+});
