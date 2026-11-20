@@ -6,7 +6,7 @@ function configuration(env = process.env) {
   try {
     const url = new URL(base);
     const local = ["localhost", "127.0.0.1", "::1"].includes(url.hostname);
-    const privateServiceHost = !url.hostname.includes(".") && !/^\\d+(?:\\.\\d+){3}$/.test(url.hostname);
+    const privateServiceHost = !url.hostname.includes(".") && !local;
     if (!["https:", "http:"].includes(url.protocol) || (!local && !privateServiceHost && url.protocol !== "https:")) {
       return { configured: false, reason: "https-required" };
     }
