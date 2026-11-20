@@ -231,7 +231,8 @@ marketplaceRouter.setAssistant(async ({ message, senderRole, order, recentMessag
   return result && result.reply ? result.reply : null;
 });
 app.use("/api/marketplace", marketplaceRouter);
-const memoryGuard = require("./modules/memory-guard").createMemoryGuard({ maxConcurrent: 2, heapLimitBytes: 210 * 1024 * 1024 });\nconst chatRateLimit = rateLimit({
+const memoryGuard = require("./modules/memory-guard").createMemoryGuard({ maxConcurrent: 2, heapLimitBytes: 210 * 1024 * 1024 });
+const chatRateLimit = rateLimit({
   windowMs: 60 * 1000, limit: 8, standardHeaders: "draft-8", legacyHeaders: false,
   message: { error: "Chat so‘rovlari vaqtinchalik chegaraga yetdi. Bir daqiqadan keyin qayta urinib ko‘ring." }
 });
