@@ -1292,12 +1292,19 @@ app.use("/api/chat", (req, res, next) => {
   const originalJson = res.json.bind(res);
   res.json = body => {
     if (!body || typeof body.reply !== "string" || !chatImageSearch.imageIntent(req.body?.message)) return originalJson(body);
-    chatImageSearch.searchImages(req.body.message, 4)
-      .then(images => originalJson({ ...body, images }))
+    // Images are supplemental: never make the user's chat answer wait on external image providers.
+    const imagePromise = chatImageSearch.searchImages(req.body.message, 4)
       .catch(error => {
         console.warn("Chat image search skipped:", String(error.message || error).slice(0, 140));
-        originalJson({ ...body, images: [] });
+        return [];
       });
+    const deadline = new Promise(resolve => {
+      const timer = setTimeout(() => resolve([]), 2500);
+      if (typeof timer.unref === "function") timer.unref();
+    });
+    Promise.race([imagePromise, deadline])
+      .then(images => originalJson({ ...body, images: Array.isArray(images) ? images : [] }))
+      .catch(() => originalJson({ ...body, images: [] }));
     return res;
   };
   next();
