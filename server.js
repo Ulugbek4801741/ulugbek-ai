@@ -761,6 +761,7 @@ app.get("/api/health", (_req, res) => {
     mode: !singleAgent.status().configured ? "native-single-agent-fallback-no-model" :
       singleAgent.status().provider === "openai-compatible" ? "openai-compatible-model" : "external-ai-provider",
     storageMode: process.env.ULUGBEK_DATABASE_URL ? "neon-postgresql" : "local-json",
+    ulugbekKnowledgeDatabaseConfigured: Boolean(process.env.ULUGBEK_DATABASE_URL),
     vizorDatabaseConfigured: Boolean(process.env.VIZOR_DATABASE_URL),
     workerConcurrency: 1,
     multiInstanceSafe: false,
@@ -785,7 +786,7 @@ app.get("/api/diagnostics", (_req, res) => {
     autonomousAgents: "one ULUGBEK Universal Agent coordinator with short-lived researcher, analyst, engineer, verifier, legal, translator, business and generalist specialists; separate background knowledge-fetch worker",
     developerAgent: developerAgent.status(),
     automaticFailover: "not-configured-requires-authorized-backup-host",
-    productionDatabase: "not-configured-task-store-uses-local-json-file",
+    productionDatabase: process.env.VIZOR_DATABASE_URL ? "vizor-postgresql-separate-project" : "vizor-database-not-configured",
     agentExecution: "chat uses bounded short-lived specialist delegation; specialists share a configured model or fall back to the native evidence-gated reasoning engine; external writes and deploy remain disabled unless separately authorized",
     nativeReasoning: "ulugbek-native-rule-reasoner-v1; deterministic symbolic planning; not a trained neural language model",
     cognition: { language: languageModule.status(), languageLearning: languageLearningWorker.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status(), conversationPipeline: conversationOrchestrator.status() },
