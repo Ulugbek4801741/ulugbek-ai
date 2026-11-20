@@ -39,6 +39,7 @@ function removeWeatherWidgetContent(value, question = "") {
     .replace(/(?:hozirgi ob[- ]?havo|current weather|weather now)[\s\S]{0,900}?(?:open[- ]?meteo(?: api)?|yangilangan\s*[:：]?\s*\d{1,2}:\d{2})/giu, " ")
     .replace(/\b(?:his qilish|feels like|namlik|humidity|shamol tezligi|wind speed|yog['’ʻ]?in|precipitation)\s*[:：]?\s*\d+(?:[.,]\d+)?\s*(?:%|°?[cf]?|m\/s|mm)?/giu, " ")
     .replace(/\b\d{1,2}\s*°\s*(?:bulutli|cloudy|clear|sunny|yomg['’ʻ]?irli|rainy)\b/giu, " ")
+    .replace(/\s*[·|]\s*open[- ]?meteo(?: api)?/giu, " ")
     .replace(/\s+/g, " ").trim();
 }
 function isCurrentPopulationQuestion(value) {
