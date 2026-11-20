@@ -64,7 +64,7 @@ function relevanceScore(item, place) {
     (Array.isArray(item.tags) ? item.tags.map(tag => typeof tag === "string" ? tag : tag?.name || "").join(" ") : "")).toLocaleLowerCase("uz");
   // Reject nearby-but-not-the-requested-place results before positive matching.
   // In particular, a district boundary map or Bukhara landmark is not a Kogon city photo.
-  if (place === "Kogon" && /kogon district|district map|bukhara districts|бахоуддин|bahouddin|bahauddin|naqshband|naqshbandi|накшбанд|бухара old city/.test(text)) return 0;
+  if (place === "Kogon" && /kogon district|district map|bukhara districts|бахоуддин|bahouddin|bahauddin|bakhouddin|naqshband|naqshbandi|nakshband|nakshbandi|накшбанд|баховуддин|бухара old city/.test(text)) return 0;
   if (/kogon|kagan|каган|когон/.test(text) && !/district|район/.test(text)) return 5;
   if (/bukhara.?1|бухара.?1/.test(text)) return 4;
   if (place === "Bukhara" && /bukhara|buxoro/.test(text)) return 3;
