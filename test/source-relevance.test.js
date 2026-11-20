@@ -94,3 +94,32 @@ test("treats Uzbek maʼlumot as a request word, not part of the subject", () => 
   });
   assert.equal(score.relevant, true);
 });
+
+
+test("accepts Kogon city sources when Uzbek administrative words are in the query", () => {
+  const question = "Buxoro viloyati Kogon shahri haqida ma'lumot ber";
+  const score = relevance.scoreSource(question, {
+    title: "Kogon — city in Bukhara Region",
+    snippet: "Kogon is a city in Bukhara Region, Uzbekistan, and an important railway and industrial centre."
+  });
+  assert.equal(score.relevant, true);
+  assert.ok(score.matchedTerms.includes("kogon"));
+  assert.ok(score.matchedTerms.includes("buxoro"));
+});
+
+test("matches the Russian historical name Kagan to Kogon", () => {
+  const score = relevance.scoreSource("Kogon shahri haqida ma'lumot ber", {
+    title: "Старый железнодорожный вокзал Каган",
+    snippet: "Историческая железнодорожная станция Каган находится в городе Когон, Узбекистан."
+  });
+  assert.equal(score.relevant, true);
+  assert.ok(score.matchedTerms.includes("kogon"));
+});
+
+test("does not accept unrelated sources just because they mention Bukhara", () => {
+  const score = relevance.scoreSource("Buxoro viloyati Kogon shahri tarixi", {
+    title: "Bukhara tourism and hotels",
+    snippet: "Bukhara is known for its hotels, restaurants and tourist services."
+  });
+  assert.equal(score.relevant, false);
+});
