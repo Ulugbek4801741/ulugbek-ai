@@ -125,7 +125,7 @@ async def answer(
             "ok": True,
             "reply": final_output.strip()[:16000],
             "agent": getattr(last_agent, "name", "ULUGBEK AI Coordinator"),
-            "handoffs": [item.name for item in SPECIALISTS] if False else [],
+            "handoffs": ([last_agent.name] if last_agent and getattr(last_agent, "name", "") != "ULUGBEK AI Coordinator" else []),
             "provider": provider,
             "model": model_name,
             "session_persisted": session is not None,
