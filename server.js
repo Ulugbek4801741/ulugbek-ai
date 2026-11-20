@@ -192,7 +192,7 @@ app.use(helmet({
       scriptSrc: ["'self'"],
       styleSrc: ["'self'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
-      imgSrc: ["'self'", "data:", "blob:"],
+      imgSrc: ["'self'", "data:", "blob:", "https://upload.wikimedia.org"],
       connectSrc: ["'self'", ...FRONTEND_ORIGINS],
       manifestSrc: ["'self'"],
       workerSrc: ["'self'"],
@@ -1286,6 +1286,22 @@ app.use("/api/chat", async (req, res, next) => {
     next();
   } catch (_) { return res.status(503).json({ error: "Akkaunt sessiyasini tekshirib bo‘lmadi." }); }
 });
+const chatImageSearch = require("./modules/chat-image-search");
+app.use("/api/chat", (req, res, next) => {
+  if (req.method !== "POST") return next();
+  const originalJson = res.json.bind(res);
+  res.json = body => {
+    if (!body || typeof body.reply !== "string" || !chatImageSearch.imageIntent(req.body?.message)) return originalJson(body);
+    chatImageSearch.searchImages(req.body.message, 4)
+      .then(images => originalJson({ ...body, images }))
+      .catch(error => {
+        console.warn("Chat image search skipped:", String(error.message || error).slice(0, 140));
+        originalJson({ ...body, images: [] });
+      });
+    return res;
+  };
+  next();
+});
 app.get("/api/system/memory/status", (_req, res) => {
   res.set("Cache-Control", "no-store");
   return res.json({ ok: true, memoryGuard: memoryGuard.status() });
@@ -1742,40 +1758,36 @@ app.use((err, _req, res, _next) => {
   console.error("Server xatosi:", err.message);
   return res.status(500).json({ error: "Ichki server xatosi." });
 });
-// Restore the verified public-only knowledge archive before the learning worker resumes.
-void publicKnowledgeArchive.cycle().finally(() => {
-  publicKnowledgeArchive.start();
-  // The supervised learning worker is started only after the persisted
-  // watchdog state has been loaded and quarantine has been checked.
-  languageLearningWorker.start();
-});
+// Fon o‘rganish va audit jarayonlari kichik bepul hostingda xotirani tugatmasligi uchun
+// sukut bo‘yicha o‘chiq. Administrator kerak bo‘lsa ENABLE_BACKGROUND_WORKERS=true qiladi.
+const ENABLE_BACKGROUND_WORKERS = process.env.ENABLE_BACKGROUND_WORKERS === "true";
+if (ENABLE_BACKGROUND_WORKERS) {
+  void publicKnowledgeArchive.cycle().finally(() => {
+    publicKnowledgeArchive.start();
+    languageLearningWorker.start();
+  });
+} else {
+  console.log("Fon o‘rganish/audit jarayonlari o‘chiq (ENABLE_BACKGROUND_WORKERS=true bilan yoqiladi).");
+}
 agentRuntime.startWorker().then(() => {
   const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`ULUGBEK AI serveri ${PORT}-portda ishga tushdi.`);
-
-    // Start the repository auditor only after HTTP is accepting requests.
-    // It is read-only: it may create local review proposals, but never edits,
-    // merges, executes, or deploys source code.
-    // Load the persisted watchdog state before starting supervised workers.
-    // A previous quarantine must survive a Render restart and must not be
-    // bypassed by unconditional startup calls.
+    if (!ENABLE_BACKGROUND_WORKERS) {
+      console.log("Yengil hosting rejimi: chat va API xizmatlari faol; fon agentlari ishga tushirilmadi.");
+      return;
+    }
     adminAutopilot.start()
       .then(async watchdogStatus => {
         if (watchdogStatus.quarantined) {
           console.warn("Agentlar karantinda; administrator tiklashni tasdiqlamaguncha ishga tushirilmaydi.");
           return;
         }
-        try {
-          await developerAgent.start();
-        } catch (error) {
-          console.error("Developer Agent ishga tushmadi:", error.message);
-        }
+        try { await developerAgent.start(); }
+        catch (error) { console.error("Developer Agent ishga tushmadi:", error.message); }
         learningWorker.start();
         await selfRecovery.start();
       })
-      .catch(error => {
-        console.error("Watchdog yoki Self-Recovery diagnostikasi ishga tushmadi:", error.message);
-      });
+      .catch(error => console.error("Watchdog yoki Self-Recovery diagnostikasi ishga tushmadi:", error.message));
   });
   server.on("error", error => console.error("HTTP server xatosi:", error.message));
 }).catch(error => {
