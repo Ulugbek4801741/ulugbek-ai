@@ -35,7 +35,7 @@ test("ZIP import adds supported text files to retrieval-only knowledge", async (
   const zip = await makeZip([
     ["docs/guide.md", "ULUGBEK AI uchun ochiq bilim hujjati. ".repeat(8)],
     ["run.exe", "not executable content"],
-    [".env", "OPENAI_API_KEY=sk-abcdefghijklmnopqrstuvwxyz123456"]
+    ["secrets.txt", "OPENAI_API_KEY=sk-abcdefghijklmnopqrstuvwxyz123456"]
   ]);
   const calls = [];
   const store = { ingest: async input => {
