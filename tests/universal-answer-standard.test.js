@@ -10,3 +10,9 @@ test("universal answer standard requires evidence, Uzbek clarity, and honest too
   assert.match(UNIVERSAL_ANSWER_STANDARD, /bajarilganini faqat haqiqiy vosita/i);
   assert.match(UNIVERSAL_ANSWER_STANDARD, /yakuniy tekshiruv/i);
 });
+
+
+test("researched answers automatically show used source links and image fallback does not cancel text", () => {
+  assert.match(UNIVERSAL_ANSWER_STANDARD, /1–4 ta manba nomi va havolasini/i);
+  assert.match(UNIVERSAL_ANSWER_STANDARD, /rasm qidiruvi ishlamasa.*matnli javobni bekor qilma/i);
+});
