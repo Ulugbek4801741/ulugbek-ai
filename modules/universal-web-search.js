@@ -32,6 +32,15 @@ function detectSearchIntent(value) {
 function cleanText(value, max = 1200) {
   return String(value || "").replace(/\s+/g, " ").trim().slice(0, max);
 }
+function removeWeatherWidgetContent(value, question = "") {
+  const text = String(value || "");
+  if (/(?:ob[- ]?havo|weather|prognoz|harorat|temperatura)/iu.test(String(question || ""))) return text;
+  return text
+    .replace(/(?:hozirgi ob[- ]?havo|current weather|weather now)[\s\S]{0,900}?(?:open[- ]?meteo(?: api)?|yangilangan\s*[:：]?\s*\d{1,2}:\d{2})/giu, " ")
+    .replace(/\b(?:his qilish|feels like|namlik|humidity|shamol tezligi|wind speed|yog['’ʻ]?in|precipitation)\s*[:：]?\s*\d+(?:[.,]\d+)?\s*(?:%|°?[cf]?|m\/s|mm)?/giu, " ")
+    .replace(/\b\d{1,2}\s*°\s*(?:bulutli|cloudy|clear|sunny|yomg['’ʻ]?irli|rainy)\b/giu, " ")
+    .replace(/\s+/g, " ").trim();
+}
 function isCurrentPopulationQuestion(value) {
   const text = String(value || "");
   return detectSearchIntent(text).currentInfo &&
@@ -61,7 +70,11 @@ function buildUniversalSearchQueries(value) {
   if (intent.isLinkSearch) suffix.push("official website official page link");
   const historyIntent = require("./history-intent").normalizeHistoryIntent(original);
   if (historyIntent.isHistorical && historyIntent.queryBoost.length) suffix.push(historyIntent.queryBoost[0]);
-  const queries = [original, [original, ...suffix].join(" ")];
+  const cityMatch = original.match(/\b([\p{L}]{3,})\s+shahri\b/iu);
+  const cityOverview = /\b(shahar|shahri|city|town)\b/iu.test(original);
+  const queries = cityOverview && cityMatch
+    ? [original, cityMatch[1] + " city history railway station Uzbekistan", cityMatch[1] + " city official statistics population history"]
+    : [original, [original, ...suffix].join(" ")];
   const currentPopulation = isCurrentPopulationQuestion(original);
   if (currentPopulation && /(?:hindiston|india)/iu.test(original)) {
     queries.push("India population 2026 estimate United Nations UNFPA UNData 2025");
@@ -134,7 +147,7 @@ async function searchWeb(message, webSearch, options = {}) {
     const url = page?.url || item.url;
     const result = {
       title: cleanText(page?.title || item.title, 220),
-      snippet: cleanText(page?.content || item.snippet, page ? 5000 : 1400),
+      snippet: cleanText(removeWeatherWidgetContent(page?.content || item.snippet, message), page ? 5000 : 1400),
       url, pageRead: Boolean(page), host: hostOf(url)
     };
     result.qualityScore = sourceQuality(result);
@@ -191,4 +204,4 @@ function formatEvidenceReply(results, reason = "") {
     : "Hozircha savolga ishonchli yakuniy javob tuzish uchun yetarli tasdiqlangan dalil topilmadi. Qidiruv parchalari fakt sifatida qabul qilinmadi.";
   return message + " Bilmagan ma’lumotimni taxmin qilib aytmayman.";
 }
-module.exports = { detectSearchIntent, isCurrentPopulationQuestion, isCurrentPopulationEvidence, filterCurrentPopulationEvidence, buildUniversalSearchQuery, buildUniversalSearchQueries, searchWeb, cleanText, evidenceEntries, formatEvidenceReply, sourceRelevance };
+module.exports = { detectSearchIntent, isCurrentPopulationQuestion, isCurrentPopulationEvidence, filterCurrentPopulationEvidence, buildUniversalSearchQuery, buildUniversalSearchQueries, searchWeb, cleanText, removeWeatherWidgetContent, evidenceEntries, formatEvidenceReply, sourceRelevance };
