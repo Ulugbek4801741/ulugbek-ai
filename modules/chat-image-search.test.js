@@ -1,14 +1,14 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { clean, imageIntent, searchImages } = require("./chat-image-search");
+const { clean, imageIntent, buildImageQuery, searchImages } = require("./chat-image-search");
 
 test("image intent skips greetings and coding requests", () => {
   assert.equal(imageIntent("Salom"), false);
   assert.equal(imageIntent("JavaScript kod yozib ber"), false);
   assert.equal(imageIntent("Buxoro haqida ma’lumot ber"), true);
 });
-test("clean removes markup and bounds text", () => {
+test("image query uses concise place keywords", () => {\n  assert.equal(buildImageQuery("Buxoro viloyati Kogon shahri haqida ma’lumot ber"), "Buxoro viloyati Kogon shahri Uzbekistan");\n});\ntest("clean removes markup and bounds text", () => {
   assert.equal(clean("<b>Buxoro</b> shahri"), "Buxoro shahri");
   assert.equal(clean("x".repeat(220)).length, 180);
 });
