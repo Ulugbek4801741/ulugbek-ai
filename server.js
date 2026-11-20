@@ -1742,40 +1742,36 @@ app.use((err, _req, res, _next) => {
   console.error("Server xatosi:", err.message);
   return res.status(500).json({ error: "Ichki server xatosi." });
 });
-// Restore the verified public-only knowledge archive before the learning worker resumes.
-void publicKnowledgeArchive.cycle().finally(() => {
-  publicKnowledgeArchive.start();
-  // The supervised learning worker is started only after the persisted
-  // watchdog state has been loaded and quarantine has been checked.
-  languageLearningWorker.start();
-});
+// Fon o‘rganish va audit jarayonlari kichik bepul hostingda xotirani tugatmasligi uchun
+// sukut bo‘yicha o‘chiq. Administrator kerak bo‘lsa ENABLE_BACKGROUND_WORKERS=true qiladi.
+const ENABLE_BACKGROUND_WORKERS = process.env.ENABLE_BACKGROUND_WORKERS === "true";
+if (ENABLE_BACKGROUND_WORKERS) {
+  void publicKnowledgeArchive.cycle().finally(() => {
+    publicKnowledgeArchive.start();
+    languageLearningWorker.start();
+  });
+} else {
+  console.log("Fon o‘rganish/audit jarayonlari o‘chiq (ENABLE_BACKGROUND_WORKERS=true bilan yoqiladi).");
+}
 agentRuntime.startWorker().then(() => {
   const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`ULUGBEK AI serveri ${PORT}-portda ishga tushdi.`);
-
-    // Start the repository auditor only after HTTP is accepting requests.
-    // It is read-only: it may create local review proposals, but never edits,
-    // merges, executes, or deploys source code.
-    // Load the persisted watchdog state before starting supervised workers.
-    // A previous quarantine must survive a Render restart and must not be
-    // bypassed by unconditional startup calls.
+    if (!ENABLE_BACKGROUND_WORKERS) {
+      console.log("Yengil hosting rejimi: chat va API xizmatlari faol; fon agentlari ishga tushirilmadi.");
+      return;
+    }
     adminAutopilot.start()
       .then(async watchdogStatus => {
         if (watchdogStatus.quarantined) {
           console.warn("Agentlar karantinda; administrator tiklashni tasdiqlamaguncha ishga tushirilmaydi.");
           return;
         }
-        try {
-          await developerAgent.start();
-        } catch (error) {
-          console.error("Developer Agent ishga tushmadi:", error.message);
-        }
+        try { await developerAgent.start(); }
+        catch (error) { console.error("Developer Agent ishga tushmadi:", error.message); }
         learningWorker.start();
         await selfRecovery.start();
       })
-      .catch(error => {
-        console.error("Watchdog yoki Self-Recovery diagnostikasi ishga tushmadi:", error.message);
-      });
+      .catch(error => console.error("Watchdog yoki Self-Recovery diagnostikasi ishga tushmadi:", error.message));
   });
   server.on("error", error => console.error("HTTP server xatosi:", error.message));
 }).catch(error => {
