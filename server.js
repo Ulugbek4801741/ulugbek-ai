@@ -29,6 +29,7 @@ const userPreferences = require("./modules/user-preferences").createUserPreferen
 const researchCache = require("./modules/research-cache");
 const knowledgeStore = require("./modules/knowledge-store");
 const knowledgeZip = require("./modules/knowledge-zip");
+const knowledgeVaultSync = require("./modules/knowledge-vault-sync");
 const publicWebReader = require("./modules/public-web-reader");
 const youtubeTranscript = require("./modules/youtube-transcript");
 const multiSourceResearch = require("./modules/multi-source-research");
@@ -1816,6 +1817,7 @@ if (ENABLE_BACKGROUND_WORKERS) {
 agentRuntime.startWorker().then(() => {
   const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`ULUGBEK AI serveri ${PORT}-portda ishga tushdi.`);
+    knowledgeVaultSync.start(knowledgeStore);
     if (process.env.ULUGBEK_DATABASE_URL) {
       void knowledgeStore.status()
         .then(state => console.log("ULUGBEK knowledge storage:", state.database?.ready ? "Neon PostgreSQL tayyor." : "PostgreSQL holatini tekshiring."))
