@@ -10,6 +10,11 @@ test("SDK client stays disabled until URL and strong service token are configure
   assert.equal(client.status({ AGENT_SDK_URL: "https://agent.example.com", AGENT_SDK_TOKEN: "x".repeat(40) }).configured, true);
 });
 
+test("SDK client accepts a private single-label Render hostname", () => {
+  const status = client.status({ AGENT_SDK_URL: "http://ulugbek-agent-sdk:10000", AGENT_SDK_TOKEN: "x".repeat(40) });
+  assert.equal(status.configured, true);
+});
+
 test("SDK client rejects non-HTTPS public endpoints", () => {
   const status = client.status({ AGENT_SDK_URL: "http://agent.example.com", AGENT_SDK_TOKEN: "x".repeat(40) });
   assert.equal(status.configured, false);
