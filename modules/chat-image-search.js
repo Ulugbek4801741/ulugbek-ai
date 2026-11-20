@@ -13,7 +13,7 @@ function imageIntent(query) {
   const q = clean(query, 400);
   if (q.length < 8) return false;
   if (/^(salom|assalomu alaykum|rahmat|xayr|ha|yo‘q|yo'q)\b/i.test(q)) return false;
-  if (/\b(kod yoz|dastur yoz|debug|xatoni tuzat|translate|tarjima qil|hisobla|necha\s*(\+|-|\*|\/))\b/i.test(q)) return false;
+  if (/\b(kod|dastur|debug|xatoni tuzat|translate|tarjima|hisobla)\b/i.test(q)) return false;
   return true;
 }
 async function searchImages(query, limit = 4) {
