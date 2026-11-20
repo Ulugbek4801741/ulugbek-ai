@@ -759,6 +759,7 @@ app.get("/api/health", (_req, res) => {
     modelName: singleAgent.status().model || null,
     agentCount: 1,
     agentFleet: agentFleet.status(),
+    agentSdk: singleAgent.status().agentSdk || { configured: false },
     mode: !singleAgent.status().configured ? "native-single-agent-fallback-no-model" :
       singleAgent.status().provider === "openai-compatible" ? "openai-compatible-model" : "external-ai-provider",
     storageMode: process.env.ULUGBEK_DATABASE_URL ? "neon-postgresql" : "local-json",
@@ -1076,7 +1077,7 @@ app.post("/api/images/generate", (req, res, next) => {
 app.get("/api/ai/status", (_req, res) => {
   res.set("Cache-Control", "no-store");
   const model = singleAgent.status();
-  return res.json({ ok: true, configured: model.configured, provider: model.provider, model: model.model || null, apiKeyRequired: model.apiKeyRequired, tokenConfigured: model.tokenConfigured || false });
+  return res.json({ ok: true, configured: model.configured, provider: model.provider, model: model.model || null, apiKeyRequired: model.apiKeyRequired, tokenConfigured: model.tokenConfigured || false, agentSdk: model.agentSdk || { configured: false } });
 });
 
 app.get("/api/videos/status", (_req, res) => {
@@ -1417,6 +1418,14 @@ app.post("/api/chat", chatRateLimit, memoryGuard.middleware(), async (req, res) 
   res.set("Cache-Control", "no-store");
   if (!message) return res.status(400).json({ error: "Xabar bo‘sh bo‘lmasligi kerak." });
   if (message.length > MAX_TASK_LENGTH) return res.status(413).json({ error: "Xabar 4000 belgidan oshmasligi kerak." });
+  if (/^admin$/iu.test(message)) {
+    return res.json({
+      reply: "Administrator paneli: /admin. Panelni ochish uchun administrator kirish kodi bilan alohida tizimga kiring.",
+      mode: "admin-panel-shortcut",
+      adminPanel: "/admin",
+      authenticationRequired: true
+    });
+  }
   const preferenceUpdate = userPreferences.apply(sessionId, message);
   if (preferenceUpdate.changed) {
     const languageName = preferenceUpdate.preference?.name || "tanlangan";
@@ -1463,6 +1472,7 @@ app.post("/api/chat", chatRateLimit, memoryGuard.middleware(), async (req, res) 
   // Keep the original message in its detected language. The native language module
   // handles Uzbek, English, Russian, Turkish, and Kazakh without requiring a translation API.
   const conversationContext = conversationOrchestrator.analyze(conversationMessage);
+  conversationContext.sessionId = sessionId;
   conversationContext.agentPlan = universalAgentCore.createTaskPlan(conversationMessage);
   const savedLanguagePreference = userPreferences.get(sessionId);
   if (savedLanguagePreference) {
