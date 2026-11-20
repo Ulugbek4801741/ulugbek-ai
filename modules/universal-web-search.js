@@ -111,7 +111,15 @@ async function searchWeb(message, webSearch, options = {}) {
     ok: false, results: [], reply: "ULUGBEK AI internet qidiruv moduliga ulana olmadi.", error: "search-adapter-unavailable"
   };
   const limit = Math.max(3, Math.min(10, Number(options.limit) || 8));
-  const queries = buildUniversalSearchQueries(message).slice(0, 2);
+  const allQueries = buildUniversalSearchQueries(message);
+  // City overviews need both the user's exact wording and the dedicated
+  // city-history/official-statistics query. The generic third query used to
+  // be silently dropped by this two-query cap, reducing source diversity.
+  const cityMatch = String(message || "").match(/\\b([\\p{L}]{3,})\\s+shahri\\b/iu);
+  const cityOverview = cityMatch && /\\b(shahar|shahri|city|town)\\b/iu.test(String(message || ""));
+  const queries = cityOverview
+    ? [allQueries[0], allQueries[2] || allQueries[1]].filter(Boolean).slice(0, 2)
+    : allQueries.slice(0, 2);
   let failedQueries = 0;
   const batches = await Promise.all(queries.map(async query => {
     try {
