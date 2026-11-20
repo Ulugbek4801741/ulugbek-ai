@@ -760,8 +760,8 @@ app.get("/api/health", (_req, res) => {
     agentFleet: agentFleet.status(),
     mode: !singleAgent.status().configured ? "native-single-agent-fallback-no-model" :
       singleAgent.status().provider === "openai-compatible" ? "openai-compatible-model" : "external-ai-provider",
-    storageMode: "local-json",
-    vizorDatabaseConfigured: Boolean(process.env.DATABASE_URL),
+    storageMode: process.env.ULUGBEK_DATABASE_URL ? "neon-postgresql" : "local-json",
+    vizorDatabaseConfigured: Boolean(process.env.VIZOR_DATABASE_URL),
     workerConcurrency: 1,
     multiInstanceSafe: false,
     automaticFailoverReady: false
@@ -778,7 +778,7 @@ app.get("/api/diagnostics", (_req, res) => {
     agentCount: 1,
     model: singleAgent.status(),
     publicWebResearch: "available-through-lab-route-when-server-has-internet",
-    knowledgeStorage: "server-local-json-files",
+    knowledgeStorage: process.env.ULUGBEK_DATABASE_URL ? "Neon PostgreSQL" : "server-local-json-files",
     agentMemory: "single-agent memory per browser session; JSON file; durable hosting storage must be configured",
     voiceInput: "browser-dependent-and-user-permission-required",
     voiceOutput: "browser-dependent",
