@@ -168,7 +168,7 @@ function createVizorLearning(options = {}) {
   ];
 
   const initPromise = (async () => {
-    if (!pool) throw new Error("VIZOR_DATABASE_URL sozlanmagan.");
+    if (!pool) throw new Error("VIZOR_VIZOR_DATABASE_URL sozlanmagan.");
     for (const statement of schema) await pool.query(statement);
   })().catch(error => {
     initError = error;
@@ -237,7 +237,7 @@ function createVizorLearning(options = {}) {
       ok: !initError && Boolean(pool),
       ready: !initError && Boolean(pool),
       storage: pool ? "postgresql" : "not-configured",
-      error: initError ? "PostgreSQL ulanishi yoki jadval tayyorlashda xato." : (!pool ? "VIZOR_DATABASE_URL sozlanmagan." : null),
+      error: initError ? "PostgreSQL ulanishi yoki jadval tayyorlashda xato." : (!pool ? "VIZOR_VIZOR_DATABASE_URL sozlanmagan." : null),
       roles: ["student", "parent", "teacher", "admin"],
       features: {
         accounts: Boolean(pool && secret),
