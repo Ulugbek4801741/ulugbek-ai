@@ -1799,6 +1799,7 @@ app.use((err, _req, res, _next) => {
 // Fon o‘rganish va audit jarayonlari kichik bepul hostingda xotirani tugatmasligi uchun
 // sukut bo‘yicha o‘chiq. Administrator kerak bo‘lsa ENABLE_BACKGROUND_WORKERS=true qiladi.
 const ENABLE_BACKGROUND_WORKERS = process.env.ENABLE_BACKGROUND_WORKERS === "true";
+const ENABLE_PUBLIC_LEARNING_WORKER = process.env.ENABLE_PUBLIC_LEARNING_WORKER === "true";
 if (ENABLE_BACKGROUND_WORKERS) {
   void publicKnowledgeArchive.cycle().finally(() => {
     publicKnowledgeArchive.start();
@@ -1811,7 +1812,11 @@ agentRuntime.startWorker().then(() => {
   const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`ULUGBEK AI serveri ${PORT}-portda ishga tushdi.`);
     if (!ENABLE_BACKGROUND_WORKERS) {
-      console.log("Yengil hosting rejimi: chat va API xizmatlari faol; fon agentlari ishga tushirilmadi.");
+      console.log("Yengil hosting rejimi: chat va API xizmatlari faol; admin autopilot va developer agentlar ishga tushirilmadi.");
+      if (ENABLE_PUBLIC_LEARNING_WORKER) {
+        console.log("Faqat ruxsat etilgan ochiq manbalarni o‘qiydigan research worker ishga tushmoqda.");
+        learningWorker.start();
+      }
       return;
     }
     adminAutopilot.start()
