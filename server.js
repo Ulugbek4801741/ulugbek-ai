@@ -28,6 +28,7 @@ const conversationMemory = require("./modules/conversation-memory");
 const userPreferences = require("./modules/user-preferences").createUserPreferences();
 const researchCache = require("./modules/research-cache");
 const knowledgeStore = require("./modules/knowledge-store");
+const knowledgeZip = require("./modules/knowledge-zip");
 const publicWebReader = require("./modules/public-web-reader");
 const youtubeTranscript = require("./modules/youtube-transcript");
 const multiSourceResearch = require("./modules/multi-source-research");
@@ -1252,6 +1253,43 @@ app.post("/api/internal/knowledge/upload", requireKnowledgeWorker,
       return res.status(503).json({ error: error.message || "Arxiv hujjatini import qilish xatosi." });
     }
   });
+
+// ZIP import/export is administrator-only. Archive entries are streamed and never extracted or executed.
+app.post("/api/admin/knowledge/import.zip", requireAdmin,
+  express.raw({ type: ["application/zip", "application/x-zip-compressed", "application/octet-stream"], limit: "20mb" }),
+  async (req, res) => {
+    res.set("Cache-Control", "no-store");
+    if (!Buffer.isBuffer(req.body) || req.body.length < 4 ||
+        req.body[0] !== 0x50 || req.body[1] !== 0x4b) {
+      return res.status(400).json({ error: "Yaroqli ZIP fayl yuboring (PK imzosi tekshirilmadi)." });
+    }
+    try {
+      const result = await knowledgeZip.importKnowledgeZip(req.body, knowledgeStore);
+      return res.status(201).json(result);
+    } catch (error) {
+      return res.status(error.statusCode || 422).json({ error: error.message || "ZIP bilim omboriga import qilinmadi." });
+    }
+  });
+
+app.get("/api/admin/knowledge/export.zip", requireAdmin, async (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  try {
+    const archive = await knowledgeZip.createKnowledgeZip(knowledgeStore);
+    res.set({
+      "Content-Type": "application/zip",
+      "Content-Disposition": 'attachment; filename="ulugbek-ai-knowledge.zip"',
+      "X-Knowledge-Documents": String(archive.documents)
+    });
+    archive.outputStream.on("error", error => {
+      console.error("Knowledge ZIP export stream failed:", error.message);
+      if (!res.headersSent) res.status(500).end();
+      else res.destroy(error);
+    });
+    archive.outputStream.pipe(res);
+  } catch (error) {
+    return res.status(503).json({ error: error.message || "ZIP arxiv yaratilmadi." });
+  }
+});
 
 app.post("/api/admin/knowledge/read-url", requireAdmin, async (req, res) => {
   const url = typeof req.body?.url === "string" ? req.body.url.trim() : "";
