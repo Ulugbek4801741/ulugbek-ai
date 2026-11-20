@@ -62,7 +62,10 @@ function isSafeHttps(value) {
 function relevanceScore(item, place) {
   const text = (String(item.title || "") + " " +
     (Array.isArray(item.tags) ? item.tags.map(tag => typeof tag === "string" ? tag : tag?.name || "").join(" ") : "")).toLocaleLowerCase("uz");
-  if (/kogon|kagan|каган|когон/.test(text)) return 5;
+  // Reject nearby-but-not-the-requested-place results before positive matching.
+  // In particular, a district boundary map or Bukhara landmark is not a Kogon city photo.
+  if (place === "Kogon" && /kogon district|district map|bukhara districts|бахоуддин|bahouddin|bahauddin|naqshband|naqshbandi|накшбанд|бухара old city/.test(text)) return 0;
+  if (/kogon|kagan|каган|когон/.test(text) && !/district|район/.test(text)) return 5;
   if (/bukhara.?1|бухара.?1/.test(text)) return 4;
   if (place === "Bukhara" && /bukhara|buxoro/.test(text)) return 3;
   const placeTokens = String(place || "").toLocaleLowerCase("uz")
