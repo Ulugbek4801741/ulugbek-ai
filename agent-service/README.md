@@ -9,14 +9,14 @@ If the service is unavailable, ULUGBEK AI falls back to its existing Node provid
 Create a separate **Private Service** or an internal web service from this repository:
 - Root directory: `agent-service`
 - Runtime: Docker
-- Dockerfile path: `agent-service/Dockerfile`
+- Dockerfile path: `Dockerfile`
 - Health check path: `/health`
 - Persistent disk mount: `/var/data` (for SQLite conversation sessions)
 
 Required environment variables:
 - `AGENT_SDK_TOKEN`: random secret with at least 32 characters; same value must be set on the Node service as `AGENT_SDK_TOKEN`.
 - `AGENT_MODEL_PROVIDER`: `gemini` or `openai`.
-- For Gemini: `GEMINI_API_KEY` and optionally `GEMINI_MODEL` (default `gemini-2.5-flash`).
+- For Gemini: `GEMINI_API_KEY` and optionally `GEMINI_MODEL` (default `gemini-flash-latest`).
 - For OpenAI: `OPENAI_API_KEY` and optionally `OPENAI_MODEL` (default `gpt-4o-mini`).
 - `AGENT_SDK_DATA_DIR`: `/var/data`.
 
