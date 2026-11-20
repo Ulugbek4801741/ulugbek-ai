@@ -760,8 +760,9 @@ app.get("/api/health", (_req, res) => {
     agentFleet: agentFleet.status(),
     mode: !singleAgent.status().configured ? "native-single-agent-fallback-no-model" :
       singleAgent.status().provider === "openai-compatible" ? "openai-compatible-model" : "external-ai-provider",
-    storageMode: "local-json",
-    vizorDatabaseConfigured: Boolean(process.env.DATABASE_URL),
+    storageMode: process.env.ULUGBEK_DATABASE_URL ? "neon-postgresql" : "local-json",
+    ulugbekKnowledgeDatabaseConfigured: Boolean(process.env.ULUGBEK_DATABASE_URL),
+    vizorDatabaseConfigured: Boolean(process.env.VIZOR_DATABASE_URL),
     workerConcurrency: 1,
     multiInstanceSafe: false,
     automaticFailoverReady: false
@@ -778,14 +779,14 @@ app.get("/api/diagnostics", (_req, res) => {
     agentCount: 1,
     model: singleAgent.status(),
     publicWebResearch: "available-through-lab-route-when-server-has-internet",
-    knowledgeStorage: "server-local-json-files",
+    knowledgeStorage: process.env.ULUGBEK_DATABASE_URL ? "Neon PostgreSQL" : "server-local-json-files",
     agentMemory: "single-agent memory per browser session; JSON file; durable hosting storage must be configured",
     voiceInput: "browser-dependent-and-user-permission-required",
     voiceOutput: "browser-dependent",
     autonomousAgents: "one ULUGBEK Universal Agent coordinator with short-lived researcher, analyst, engineer, verifier, legal, translator, business and generalist specialists; separate background knowledge-fetch worker",
     developerAgent: developerAgent.status(),
     automaticFailover: "not-configured-requires-authorized-backup-host",
-    productionDatabase: "not-configured-task-store-uses-local-json-file",
+    productionDatabase: process.env.VIZOR_DATABASE_URL ? "vizor-postgresql-separate-project" : "vizor-database-not-configured",
     agentExecution: "chat uses bounded short-lived specialist delegation; specialists share a configured model or fall back to the native evidence-gated reasoning engine; external writes and deploy remain disabled unless separately authorized",
     nativeReasoning: "ulugbek-native-rule-reasoner-v1; deterministic symbolic planning; not a trained neural language model",
     cognition: { language: languageModule.status(), languageLearning: languageLearningWorker.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status(), conversationPipeline: conversationOrchestrator.status() },
@@ -1815,6 +1816,11 @@ if (ENABLE_BACKGROUND_WORKERS) {
 agentRuntime.startWorker().then(() => {
   const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`ULUGBEK AI serveri ${PORT}-portda ishga tushdi.`);
+    if (process.env.ULUGBEK_DATABASE_URL) {
+      void knowledgeStore.status()
+        .then(state => console.log("ULUGBEK knowledge storage:", state.database?.ready ? "Neon PostgreSQL tayyor." : "PostgreSQL holatini tekshiring."))
+        .catch(error => console.error("ULUGBEK knowledge database init failed:", error.message));
+    }
     if (!ENABLE_BACKGROUND_WORKERS) {
       console.log("Yengil hosting rejimi: chat va API xizmatlari faol; admin autopilot va developer agentlar ishga tushirilmadi.");
       if (ENABLE_PUBLIC_LEARNING_WORKER) {

@@ -56,7 +56,7 @@ function safeUser(row) {
 function createVizorLearning(options = {}) {
   const router = express.Router();
   const secret = String(options.sessionSecret || process.env.SOCIAL_SESSION_SECRET || process.env.ADMIN_SESSION_SECRET || "");
-  const databaseUrl = String(options.databaseUrl || process.env.DATABASE_URL || "");
+  const databaseUrl = String(options.databaseUrl || process.env.VIZOR_DATABASE_URL || "");
   const pool = databaseUrl ? new Pool({
     connectionString: databaseUrl,
     ssl: { rejectUnauthorized: false },
@@ -168,7 +168,7 @@ function createVizorLearning(options = {}) {
   ];
 
   const initPromise = (async () => {
-    if (!pool) throw new Error("DATABASE_URL sozlanmagan.");
+    if (!pool) throw new Error("VIZOR_DATABASE_URL sozlanmagan.");
     for (const statement of schema) await pool.query(statement);
   })().catch(error => {
     initError = error;
@@ -199,7 +199,7 @@ function createVizorLearning(options = {}) {
     await initPromise;
     if (!pool || initError) return res.status(503).json({
       ok: false,
-      error: "VIZOR PostgreSQL bazasi tayyor emas. Render DATABASE_URL sozlamasini tekshiring."
+      error: "VIZOR PostgreSQL bazasi tayyor emas. Render VIZOR_DATABASE_URL sozlamasini tekshiring."
     });
     next();
   }
@@ -237,7 +237,7 @@ function createVizorLearning(options = {}) {
       ok: !initError && Boolean(pool),
       ready: !initError && Boolean(pool),
       storage: pool ? "postgresql" : "not-configured",
-      error: initError ? "PostgreSQL ulanishi yoki jadval tayyorlashda xato." : (!pool ? "DATABASE_URL sozlanmagan." : null),
+      error: initError ? "PostgreSQL ulanishi yoki jadval tayyorlashda xato." : (!pool ? "VIZOR_DATABASE_URL sozlanmagan." : null),
       roles: ["student", "parent", "teacher", "admin"],
       features: {
         accounts: Boolean(pool && secret),
