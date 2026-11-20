@@ -622,4 +622,52 @@ async function researchQuestion(query) {
 function buildLocalReply(query, hits, context) {
   return require("./native-cognition").respond(query, hits, context);
 }
-module.exports = { start, stop, status, cycle, learnTopic, searchKnowledge, researchQuestion, researchOpenWeb, parseOpenWebResults, buildLocalReply, loadVisitedPages, robotsAllows };
+
+async function exportPublicKnowledge() {
+  const items = await readKnowledge();
+  return items.filter(item => item && item.agent === "AutonomousResearchAgent" &&
+    typeof item.source === "string" && item.status !== "rejected" &&
+    ALLOWED_WIKIPEDIA_HOSTS.has((() => { try { return new URL(item.source).hostname; } catch (_) { return ""; } })()))
+    .map(item => ({
+      title: clean(item.title, 180), content: clean(item.content, 12000),
+      source: item.source, language: item.language, agent: item.agent,
+      license: "CC BY-SA 4.0",
+      licenseUrl: "https://creativecommons.org/licenses/by-sa/4.0/",
+      attribution: "Wikimedia contributors",
+      status: item.status === "approved" ? "approved" : "pending-review",
+      createdAt: item.createdAt || new Date().toISOString()
+    })).filter(item => item.content.length >= 80 && item.content.length <= 12000);
+}
+async function importPublicKnowledge(records) {
+  if (!Array.isArray(records) || records.length > 10000) throw new Error("Vault arxividagi yozuvlar soni noto‘g‘ri.");
+  const current = await readKnowledge();
+  const bySource = new Map(current.map(item => [item.source, item]));
+  let added = 0;
+  for (const item of records) {
+    if (!item || item.license !== "CC BY-SA 4.0" ||
+        item.licenseUrl !== "https://creativecommons.org/licenses/by-sa/4.0/" ||
+        item.attribution !== "Wikimedia contributors" ||
+        item.agent !== "AutonomousResearchAgent") continue;
+    let url;
+    try { url = new URL(item.source); } catch (_) { continue; }
+    const language = url.hostname.split(".")[0];
+    const content = clean(item.content, 12000);
+    if (url.protocol !== "https:" || !ALLOWED_WIKIPEDIA_HOSTS.has(url.hostname) ||
+        !url.pathname.startsWith("/wiki/") || item.language !== language ||
+        content.length < 80 || /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(content) ||
+        /(?:api[_ -]?key|access[_ -]?token|password|secret)\s*[:=]/i.test(content)) continue;
+    if (bySource.has(url.href)) continue;
+    bySource.set(url.href, {
+      id: crypto.randomUUID(), title: clean(item.title, 180), content, source: url.href,
+      language, agent: "AutonomousResearchAgent", status: "pending-review",
+      quality: "restored-from-verified-cc-by-sa-4.0-vault",
+      licenseNote: "CC BY-SA 4.0; Wikimedia contributors attribution retained.",
+      createdAt: item.createdAt || new Date().toISOString()
+    });
+    added += 1;
+  }
+  if (added) await writeKnowledge([...bySource.values()]);
+  return { imported: added, total: bySource.size };
+}
+
+module.exports = { start, stop, status, cycle, learnTopic, searchKnowledge, researchQuestion, researchOpenWeb, parseOpenWebResults, buildLocalReply, loadVisitedPages, robotsAllows, exportPublicKnowledge, importPublicKnowledge };
