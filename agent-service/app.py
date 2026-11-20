@@ -83,6 +83,11 @@ def check_token(authorization: str | None) -> None:
         raise HTTPException(status_code=401, detail="Unauthorized.")
 
 
+@app.get("/")
+async def root() -> dict[str, str]:
+    return {"ok": "true", "service": "ulugbek-agent-sdk", "health": "/health"}
+
+
 @app.get("/health")
 async def health() -> dict[str, Any]:
     provider = os.getenv("AGENT_MODEL_PROVIDER", "gemini").strip().lower()
