@@ -198,4 +198,23 @@ async function status() {
     documents: docs.size, chunks: all.length, vocabulary: postings.size, bytes,
     storage: ROOT, persistentVolumeRequired: true, vector };
 }
-module.exports = { ingest, search, status, splitText, terms, reindexVectors };
+async function exportDocuments() {
+  const all = await load();
+  const groups = new Map();
+  for (const item of all) {
+    if (!groups.has(item.documentId)) groups.set(item.documentId, []);
+    groups.get(item.documentId).push(item);
+  }
+  return [...groups.values()].map(chunks => {
+    chunks.sort((a, b) => Number(a.chunkIndex) - Number(b.chunkIndex));
+    const first = chunks[0];
+    return {
+      title: first.title, author: first.author || "", source: first.source,
+      language: first.language || "auto",
+      content: chunks.map(item => item.text).join("\\n\\n"),
+      contentHash: first.contentHash, chunks: chunks.length,
+      updatedAt: first.updatedAt, usage: "retrieval-only"
+    };
+  });
+}
+module.exports = { ingest, search, status, splitText, terms, reindexVectors, exportDocuments };
