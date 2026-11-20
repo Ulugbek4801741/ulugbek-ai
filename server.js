@@ -1612,16 +1612,11 @@ app.post("/api/chat", chatRateLimit, memoryGuard.middleware(), async (req, res) 
         }))
       ])
     ].slice(0, 12);
+    // Render Free: chat always uses one universal agent. Specialist fleet is not
+    // started because its parallel prompts can exhaust the 256 MB heap.
     let result = null;
-    try {
-      // Route substantive chat requests through the specialist fleet. Specialists share
-      // the configured model but have isolated role prompts; synthesis and critic are separate calls.
-      const fleet = await agentFleet.runTask(conversationMessage, { roles: effectiveTaskRoles, evidence, context: conversationContext });
-      if (fleet.ok) result = {
-        reply: fleet.reply, modelUsed: fleet.modelUsed, provider: fleet.provider, externalProviderUsed: fleet.externalProviderUsed, reasoning: fleet.reasoning,
-        agentFleet: { requestedAgents: fleet.requestedAgents, completedAgents: fleet.completedAgents, failedAgents: fleet.failedAgents, roles: fleet.roles, durationMs: fleet.durationMs, qualityGate: fleet.qualityGate || null }
-      };
-    } catch (_) {}
+    try { result = await singleAgent.answer(conversationMessage, evidence.slice(0, 5), conversationContext); }
+    catch (_) {}
     if (!result) {
       try { result = await singleAgent.answer(conversationMessage, evidence, conversationContext); } catch (_) {}
     }
@@ -1681,25 +1676,11 @@ app.post("/api/chat", chatRateLimit, memoryGuard.middleware(), async (req, res) 
   try {
     const nativeBrain = require("./lab-learning-worker");
     const answerWithOneAgent = async entries => {
-      let fleetResult = null;
-      try {
-        const fleet = await agentFleet.runTask(conversationMessage, { roles: effectiveTaskRoles, evidence: entries, context: conversationContext });
-        if (fleet.ok) fleetResult = {
-          reply: fleet.reply, modelUsed: fleet.modelUsed, provider: fleet.provider,
-          externalProviderUsed: fleet.externalProviderUsed, reasoning: fleet.reasoning,
-          agentFleet: { requestedAgents: fleet.requestedAgents, completedAgents: fleet.completedAgents, failedAgents: fleet.failedAgents, roles: fleet.roles, durationMs: fleet.durationMs, qualityGate: fleet.qualityGate || null }
-        };
-      } catch (_) {}
-      // Prefer a grounded built-in answer for simple learning/programming guidance;
-      // still run the relevant specialist fleet, but do not let a generic code scaffold
-      // replace a precise deterministic answer.
+      // One bounded agent call; no specialist fan-out on the free instance.
       if (!singleAgent.status().configured && localCandidate?.reasoning?.answerable === true &&
-          localCandidate.reasoning.method === "built-in-dialogue" && localCandidate.reply) {
-        return { ...localCandidate, agentFleet: fleetResult?.agentFleet || null };
-      }
-      if (fleetResult) return fleetResult;
-      const modelAnswer = await singleAgent.answer(conversationMessage, entries, conversationContext);
-      return modelAnswer || nativeBrain.buildLocalReply(conversationMessage, entries, conversationContext);
+          localCandidate.reasoning.method === "built-in-dialogue" && localCandidate.reply) return localCandidate;
+      const modelAnswer = await singleAgent.answer(conversationMessage, entries.slice(0, 5), conversationContext);
+      return modelAnswer || nativeBrain.buildLocalReply(conversationMessage, entries.slice(0, 5), conversationContext);
     };
     let learned = [...localKnowledge, ...cachedKnowledge].slice(0, 8);
     let result = await answerWithOneAgent(learned);
