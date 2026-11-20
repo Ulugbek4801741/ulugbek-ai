@@ -28,6 +28,21 @@ function normalizePlaceQuery(query) {
       "Bukhara railway station Uzbekistan"
     ] };
   }
+  const cityOptions = [
+    { pattern: /\bsamarqand\b|\bsamarkand\b/iu, place: "Samarkand" },
+    { pattern: /\btoshkent\b|\btashkent\b/iu, place: "Tashkent" },
+    { pattern: /\bxiva\b|\bkhiva\b/iu, place: "Khiva" },
+    { pattern: /\burganch\b|\burgench\b/iu, place: "Urgench" },
+    { pattern: /\bandijon\b|\bandijan\b/iu, place: "Andijan" },
+    { pattern: /\bnamangan\b/iu, place: "Namangan" },
+    { pattern: /\bfarg['’ʻ]?ona\b|\bfergana\b/iu, place: "Fergana" }
+  ];
+  const knownCity = cityOptions.find(item => item.pattern.test(lower));
+  if (knownCity) return { place: knownCity.place, queries: [
+    knownCity.place + " Uzbekistan",
+    knownCity.place + " historic landmarks Uzbekistan",
+    knownCity.place + " railway station Uzbekistan"
+  ] };
   if (!/uzbekistan/i.test(q)) q += " Uzbekistan";
   return { place: q, queries: [q, q + " historic landmarks", q + " railway station"] };
 }
@@ -50,6 +65,18 @@ function relevanceScore(item, place) {
   if (/kogon|kagan|каган|когон/.test(text)) return 5;
   if (/bukhara.?1|бухара.?1/.test(text)) return 4;
   if (place === "Bukhara" && /bukhara|buxoro/.test(text)) return 3;
+  const placeTokens = String(place || "").toLocaleLowerCase("uz")
+    .split(/[^\p{L}]+/u).filter(token => token.length >= 4 && token !== "uzbekistan");
+  if (placeTokens.some(token => text.includes(token))) return 3;
+  const aliases = {
+    Samarkand: /samarkand|samarqand/,
+    Tashkent: /tashkent|toshkent/,
+    Khiva: /khiva|xiva/,
+    Urgench: /urgench|urganch/,
+    Andijan: /andijan|andijon/,
+    Fergana: /fergana|farg['’ʻ]?ona/
+  };
+  if (aliases[place]?.test(text)) return 3;
   return 0;
 }
 async function searchOpenverse(queries, place, limit) {
