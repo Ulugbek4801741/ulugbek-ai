@@ -11,9 +11,9 @@ function clean(value, max = 180) {
 }
 function buildImageQuery(query) {
   let q = clean(query, 400)
-    .replace(/\\b(haqida|ma'lumot|malumot|ber|aytib ber|tushuntir|yozib ber|qanday|nima)\\b/giu, " ")
-    .replace(/[?!.,:;]+/g, " ").replace(/\\s+/g, " ").trim();
-  const place = q.match(/\\b(kogon|buxoro|samarqand|toshkent|xiva|urganch|andijon|namangan|farg'ona)\\b/iu);
+    .replace(/\b(haqida|ma'lumot|malumot|ber|aytib ber|tushuntir|yozib ber|qanday|nima)\b/giu, " ")
+    .replace(/[?!.,:;]+/g, " ").replace(/\s+/g, " ").trim();
+  const place = q.match(/\b(kogon|buxoro|samarqand|toshkent|xiva|urganch|andijon|namangan|farg'ona)\b/iu);
   if (place && !/uzbekistan/i.test(q)) q += " Uzbekistan";
   return q.slice(0, 180);
 }
