@@ -9,6 +9,14 @@ const cache = new Map();
 function clean(value, max = 180) {
   return String(value || "").replace(/<[^>]*>/g, " ").replace(/[\u0000-\u001f]/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
 }
+function buildImageQuery(query) {
+  let q = clean(query, 400)
+    .replace(/\b(haqida|ma[’ʻ']?lumot|malumot|ber|aytib ber|tushuntir|yozib ber|qanday|nima)\b/giu, " ")
+    .replace(/[?!.,:;]+/g, " ").replace(/\s+/g, " ").trim();
+  const place = q.match(/\b(kogon|buxoro|samarqand|toshkent|xiva|urganch|andijon|namangan|farg'ona)\b/iu);
+  if (place && !/uzbekistan/i.test(q)) q += " Uzbekistan";
+  return q.slice(0, 180);
+}
 function imageIntent(query) {
   const q = clean(query, 400);
   if (q.length < 8) return false;
@@ -17,8 +25,10 @@ function imageIntent(query) {
   return true;
 }
 async function searchImages(query, limit = 4) {
-  const q = clean(query, 180);
-  if (!imageIntent(q)) return [];
+  const original = clean(query, 400);
+  if (!imageIntent(original)) return [];
+  const q = buildImageQuery(original);
+  if (!q) return [];
   const key = q.toLocaleLowerCase();
   const cached = cache.get(key);
   if (cached && cached.expiresAt > Date.now()) return cached.items;
@@ -55,4 +65,4 @@ async function searchImages(query, limit = 4) {
   while (cache.size > CACHE_MAX) cache.delete(cache.keys().next().value);
   return items;
 }
-module.exports = { clean, imageIntent, searchImages };
+module.exports = { clean, imageIntent, buildImageQuery, searchImages };
