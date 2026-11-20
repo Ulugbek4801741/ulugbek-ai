@@ -111,11 +111,14 @@ async function searchWeb(message, webSearch, options = {}) {
     ok: false, results: [], reply: "ULUGBEK AI internet qidiruv moduliga ulana olmadi.", error: "search-adapter-unavailable"
   };
   const limit = Math.max(3, Math.min(10, Number(options.limit) || 8));
-  const queries = buildUniversalSearchQueries(message);
+  const queries = buildUniversalSearchQueries(message).slice(0, 2);
   let failedQueries = 0;
   const batches = await Promise.all(queries.map(async query => {
     try {
-      const found = await webSearch.search(query);
+      const found = await Promise.race([
+        webSearch.search(query),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Search deadline exceeded")), 6000))
+      ]);
       return Array.isArray(found) ? found : [];
     } catch (_) { failedQueries += 1; return []; }
   }));
@@ -142,10 +145,15 @@ async function searchWeb(message, webSearch, options = {}) {
       ? "Internet qidiruv manbalari hozircha javob bermadi. Keyinroq qayta urinib ko'ring."
       : "ULUGBEK AI bir nechta qidiruv so'rovi bilan izlandi, ammo hozircha mos ochiq manba topilmadi. Bu ma'lumot mavjud emas degani emas."
   };
-  const pages = await Promise.all(candidates.slice(0, Math.min(15, limit * 2)).map(async item => {
+  const pages = await Promise.all(candidates.slice(0, Math.min(5, limit)).map(async item => {
     let page = null;
     if (typeof webSearch.fetchPage === "function") {
-      try { page = await webSearch.fetchPage(item.url); } catch (_) {}
+      try {
+        page = await Promise.race([
+          webSearch.fetchPage(item.url),
+          new Promise(resolve => setTimeout(() => resolve(null), 4000))
+        ]);
+      } catch (_) {}
     }
     const url = page?.url || item.url;
     const result = {
