@@ -28,6 +28,7 @@ const conversationMemory = require("./modules/conversation-memory");
 const userPreferences = require("./modules/user-preferences").createUserPreferences();
 const researchCache = require("./modules/research-cache");
 const knowledgeStore = require("./modules/knowledge-store");
+const knowledgeZip = require("./modules/knowledge-zip");
 const publicWebReader = require("./modules/public-web-reader");
 const youtubeTranscript = require("./modules/youtube-transcript");
 const multiSourceResearch = require("./modules/multi-source-research");
@@ -1253,6 +1254,43 @@ app.post("/api/internal/knowledge/upload", requireKnowledgeWorker,
     }
   });
 
+// ZIP import/export is administrator-only. Archive entries are streamed and never extracted or executed.
+app.post("/api/admin/knowledge/import.zip", requireAdmin,
+  express.raw({ type: ["application/zip", "application/x-zip-compressed", "application/octet-stream"], limit: "20mb" }),
+  async (req, res) => {
+    res.set("Cache-Control", "no-store");
+    if (!Buffer.isBuffer(req.body) || req.body.length < 4 ||
+        req.body[0] !== 0x50 || req.body[1] !== 0x4b) {
+      return res.status(400).json({ error: "Yaroqli ZIP fayl yuboring (PK imzosi tekshirilmadi)." });
+    }
+    try {
+      const result = await knowledgeZip.importKnowledgeZip(req.body, knowledgeStore);
+      return res.status(201).json(result);
+    } catch (error) {
+      return res.status(error.statusCode || 422).json({ error: error.message || "ZIP bilim omboriga import qilinmadi." });
+    }
+  });
+
+app.get("/api/admin/knowledge/export.zip", requireAdmin, async (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  try {
+    const archive = await knowledgeZip.createKnowledgeZip(knowledgeStore);
+    res.set({
+      "Content-Type": "application/zip",
+      "Content-Disposition": 'attachment; filename="ulugbek-ai-knowledge.zip"',
+      "X-Knowledge-Documents": String(archive.documents)
+    });
+    archive.outputStream.on("error", error => {
+      console.error("Knowledge ZIP export stream failed:", error.message);
+      if (!res.headersSent) res.status(500).end();
+      else res.destroy(error);
+    });
+    archive.outputStream.pipe(res);
+  } catch (error) {
+    return res.status(503).json({ error: error.message || "ZIP arxiv yaratilmadi." });
+  }
+});
+
 app.post("/api/admin/knowledge/read-url", requireAdmin, async (req, res) => {
   const url = typeof req.body?.url === "string" ? req.body.url.trim() : "";
   if (!url || url.length > 2000) return res.status(400).json({ error: "Ochiq HTTPS manzil kerak." });
@@ -1728,7 +1766,11 @@ app.use("/api/lab", require("./lab"));
 const learningWorker = require("./lab-learning-worker");
 app.get("/api/lab/learning/status", (_req, res) => {
   res.set("Cache-Control", "no-store");
-  res.json({ ok:true, learning:learningWorker.status() });
+  res.json({
+    ok: true,
+    learning: learningWorker.status(),
+    languageTraining: languageLearningWorker.status()
+  });
 });
 
 // Expose only the public chat and health tools through the MCP bridge.
@@ -1761,6 +1803,7 @@ app.use((err, _req, res, _next) => {
 // Fon o‘rganish va audit jarayonlari kichik bepul hostingda xotirani tugatmasligi uchun
 // sukut bo‘yicha o‘chiq. Administrator kerak bo‘lsa ENABLE_BACKGROUND_WORKERS=true qiladi.
 const ENABLE_BACKGROUND_WORKERS = process.env.ENABLE_BACKGROUND_WORKERS === "true";
+const ENABLE_PUBLIC_LEARNING_WORKER = process.env.ENABLE_PUBLIC_LEARNING_WORKER === "true";
 if (ENABLE_BACKGROUND_WORKERS) {
   void publicKnowledgeArchive.cycle().finally(() => {
     publicKnowledgeArchive.start();
@@ -1773,7 +1816,12 @@ agentRuntime.startWorker().then(() => {
   const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`ULUGBEK AI serveri ${PORT}-portda ishga tushdi.`);
     if (!ENABLE_BACKGROUND_WORKERS) {
-      console.log("Yengil hosting rejimi: chat va API xizmatlari faol; fon agentlari ishga tushirilmadi.");
+      console.log("Yengil hosting rejimi: chat va API xizmatlari faol; admin autopilot va developer agentlar ishga tushirilmadi.");
+      if (ENABLE_PUBLIC_LEARNING_WORKER) {
+        console.log("Faqat ruxsat etilgan ochiq manbalarni o‘qiydigan research va language-learning workerlar ishga tushmoqda.");
+        learningWorker.start();
+        languageLearningWorker.start();
+      }
       return;
     }
     adminAutopilot.start()
