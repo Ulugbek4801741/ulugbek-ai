@@ -7,21 +7,21 @@ const CACHE_MAX = 40;
 const cache = new Map();
 
 function clean(value, max = 180) {
-  return String(value || "").replace(/<[^>]*>/g, " ").replace(/[\\u0000-\\u001f]/g, " ").replace(/\\s+/g, " ").trim().slice(0, max);
+  return String(value || "").replace(/<[^>]*>/g, " ").replace(/[\u0000-\u001f]/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
 }
 function normalizePlaceQuery(query) {
   let q = clean(query, 400)
-    .replace(/\\b(haqida|ma[’ʻ']?lumot|malumot|ber|aytib ber|tushuntir|yozib ber|qanday|nima|shahri|shahar|viloyati|viloyat)\\b/giu, " ")
-    .replace(/[?!.,:;]+/g, " ").replace(/\\s+/g, " ").trim();
+    .replace(/\b(haqida|ma[’ʻ']?lumot|malumot|ber|aytib ber|tushuntir|yozib ber|qanday|nima|shahri|shahar|viloyati|viloyat)\b/giu, " ")
+    .replace(/[?!.,:;]+/g, " ").replace(/\s+/g, " ").trim();
   const lower = q.toLocaleLowerCase("uz");
-  if (/\\bkogon\\b|\\bkagan\\b/iu.test(lower)) {
+  if (/\bkogon\b|\bkagan\b/iu.test(lower)) {
     return { place: "Kogon", queries: [
       "Kogon Uzbekistan",
       "Kagan railway station Uzbekistan",
       "Bukhara-1 railway station Kogon Uzbekistan"
     ] };
   }
-  if (/\\bbuxoro\\b|\\bbukhara\\b/iu.test(lower)) {
+  if (/\bbuxoro\b|\bbukhara\b/iu.test(lower)) {
     return { place: "Bukhara", queries: [
       "Bukhara Uzbekistan historic city",
       "Bukhara old city architecture Uzbekistan",
@@ -37,8 +37,8 @@ function buildImageQuery(query) {
 function imageIntent(query) {
   const q = clean(query, 400);
   if (q.length < 8) return false;
-  if (/^(salom|assalomu alaykum|rahmat|xayr|ha|yo‘q|yo'q)\\b/i.test(q)) return false;
-  if (/\\b(kod|dastur|debug|xatoni tuzat|translate|tarjima|hisobla)\\b/i.test(q)) return false;
+  if (/^(salom|assalomu alaykum|rahmat|xayr|ha|yo‘q|yo'q)\b/i.test(q)) return false;
+  if (/\b(kod|dastur|debug|xatoni tuzat|translate|tarjima|hisobla)\b/i.test(q)) return false;
   return true;
 }
 function isSafeHttps(value) {
