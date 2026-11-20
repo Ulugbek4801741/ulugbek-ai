@@ -62,7 +62,6 @@ app.put("/api/vault/archive", authorize, express.raw({
     await s3.send(new PutObjectCommand({
       Bucket: BUCKET, Key: key, Body: bytes, ContentType: "application/zip",
       Metadata: { sha256, source: "ulugbek-ai-public-learning" },
-      ServerSideEncryption: "AES256"
     }));
     const manifest = {
       schema: "ulugbek-knowledge-vault-v1", createdAt, key, sha256,
@@ -72,7 +71,7 @@ app.put("/api/vault/archive", authorize, express.raw({
     await s3.send(new PutObjectCommand({
       Bucket: BUCKET, Key: "public-knowledge/latest.json",
       Body: Buffer.from(JSON.stringify(manifest, null, 2)),
-      ContentType: "application/json", ServerSideEncryption: "AES256"
+      ContentType: "application/json"
     }));
     lastArchive = manifest;
     lastError = null;
