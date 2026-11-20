@@ -211,7 +211,7 @@ async function exportDocuments() {
     return {
       title: first.title, author: first.author || "", source: first.source,
       language: first.language || "auto",
-      content: chunks.map(item => item.text).join("\\n\\n"),
+      content: chunks.map(item => item.text).join("\n\n"),
       contentHash: first.contentHash, chunks: chunks.length,
       updatedAt: first.updatedAt, usage: "retrieval-only"
     };
