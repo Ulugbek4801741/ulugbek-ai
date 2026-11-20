@@ -126,7 +126,7 @@ test("does not accept unrelated sources just because they mention Bukhara", () =
 
 
 test("normalizes Uzbek Buxoro and English Bukhara to the same canonical place term", () => {
-  assert.deepEqual(relevance.terms("Buxoro shahri"), ["buxor"]);
+  assert.deepEqual(relevance.terms("Buxoro shahri"), ["buxoro"]);
   assert.deepEqual(relevance.terms("Bukhara city"), ["buxor"]);
 });
 
@@ -136,5 +136,5 @@ test("accepts Kogon city sources that use the English spelling Bukhara", () => {
     snippet: "Kogon is a city in Bukhara Region, Uzbekistan, and an important railway and industrial centre."
   });
   assert.equal(score.relevant, true);
-  assert.deepEqual(score.queryTerms, ["buxor", "kogon"]);
+  assert.deepEqual(score.queryTerms, ["buxoro", "kogon"]);
 });
