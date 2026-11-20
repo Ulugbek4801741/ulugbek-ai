@@ -1286,7 +1286,12 @@ app.use("/api/chat", async (req, res, next) => {
     next();
   } catch (_) { return res.status(503).json({ error: "Akkaunt sessiyasini tekshirib bo‘lmadi." }); }
 });
-app.get("/api/system/memory/status", (_req, res) => {\n  res.set("Cache-Control", "no-store");\n  return res.json({ ok: true, memoryGuard: memoryGuard.status() });\n});\n\napp.post("/api/chat", chatRateLimit, memoryGuard.middleware(), async (req, res) => {
+app.get("/api/system/memory/status", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  return res.json({ ok: true, memoryGuard: memoryGuard.status() });
+});
+
+app.post("/api/chat", chatRateLimit, memoryGuard.middleware(), async (req, res) => {
   const message = typeof req.body?.message === "string" ? req.body.message.trim() : "";
   const countryCode = legalResearch.normalizeCountryCode(req.body?.countryCode);
   const suppliedSessionId = typeof req.body?.sessionId === "string" ? req.body.sessionId : "";
