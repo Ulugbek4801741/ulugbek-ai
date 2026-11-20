@@ -32,3 +32,26 @@ test("searchWeb fails closed when no result matches the user's topic", async () 
   assert.equal(result.results.length, 0);
   assert.match(result.reply, /bevosita mosligi tasdiqlanmadi/i);
 });
+
+
+test("city overview search adds city-specific history and official statistics queries", () => {
+  const { buildUniversalSearchQueries } = require("../modules/universal-web-search");
+  const queries = buildUniversalSearchQueries("Buxoro viloyati Kogon shahri haqida ma'lumot ber");
+  assert.ok(queries.some(query => /Kogon city history railway station Uzbekistan/i.test(query)));
+  assert.ok(queries.some(query => /Kogon city official statistics population history/i.test(query)));
+});
+
+test("general city research removes an embedded weather widget but preserves place facts", () => {
+  const { removeWeatherWidgetContent } = require("../modules/universal-web-search");
+  const source = "Kogon — Buxoro viloyati. Hozirgi ob-havo 14°C His qilish 13°C 42% Namlik 3.2 m/s Shamol tezligi 0 mm Yog'in Yangilangan: 05:52 · Open-Meteo API Kogon haqida Asosiy ma'lumot Temiryo'l stansiyasi sifatida paydo bo'lgan.";
+  const cleaned = removeWeatherWidgetContent(source, "Buxoro viloyati Kogon shahri haqida ma'lumot ber");
+  assert.match(cleaned, /Kogon haqida Asosiy ma'lumot/);
+  assert.match(cleaned, /Temiryo'l stansiyasi/);
+  assert.doesNotMatch(cleaned, /14°C|Open-Meteo|Namlik|Shamol tezligi/);
+});
+
+test("explicit weather questions retain weather evidence", () => {
+  const { removeWeatherWidgetContent } = require("../modules/universal-web-search");
+  const source = "Kogon — Hozirgi ob-havo 14°C Namlik 42% Open-Meteo API";
+  assert.equal(removeWeatherWidgetContent(source, "Kogon ob-havo hozir qanday?"), source);
+});
