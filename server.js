@@ -11,7 +11,7 @@ const universalToolHub = require("./modules/universal-tool-hub");
 const singleAgent = require("./modules/single-agent").createSingleAgent();
 const { createAgentFleet } = require("./modules/agent-fleet");
 const chatAgentAnswer = require("./modules/chat-agent-answer").createChatAgentAnswer({ singleAgent });
-const agentFleet = createAgentFleet({ answer: chatAgentAnswer, maxAgents: 100, concurrency: 3 });
+const agentFleet = createAgentFleet({ answer: chatAgentAnswer, maxAgents: 12, concurrency: 1 });
 const answerSelection = require("./modules/answer-selection");
 const languageModule = require("./modules/language-module");
 const codingLanguageEngine = require("./modules/coding-language-engine");
@@ -206,7 +206,7 @@ app.use(helmet({
     directives: { microphone: ["self"], camera: [], geolocation: [] }
   }
 }));
-app.use(express.json({ limit: "12mb", strict: true, type: "application/json" }));
+app.use(express.json({ limit: "2mb", strict: true, type: "application/json" }));
 // Capture only failure metadata automatically; raw chat text is not stored without explicit feedback.
 app.use("/api/chat", errorLearning.middleware(), conversationMemory.middleware());
 app.use("/api/", rateLimit({
@@ -231,7 +231,7 @@ marketplaceRouter.setAssistant(async ({ message, senderRole, order, recentMessag
   return result && result.reply ? result.reply : null;
 });
 app.use("/api/marketplace", marketplaceRouter);
-const chatRateLimit = rateLimit({
+const memoryGuard = require("./modules/memory-guard").createMemoryGuard({ maxConcurrent: 2, heapLimitBytes: 210 * 1024 * 1024 });\nconst chatRateLimit = rateLimit({
   windowMs: 60 * 1000, limit: 8, standardHeaders: "draft-8", legacyHeaders: false,
   message: { error: "Chat so‘rovlari vaqtinchalik chegaraga yetdi. Bir daqiqadan keyin qayta urinib ko‘ring." }
 });
@@ -1285,7 +1285,7 @@ app.use("/api/chat", async (req, res, next) => {
     next();
   } catch (_) { return res.status(503).json({ error: "Akkaunt sessiyasini tekshirib bo‘lmadi." }); }
 });
-app.post("/api/chat", chatRateLimit, async (req, res) => {
+app.get("/api/system/memory/status", (_req, res) => {\n  res.set("Cache-Control", "no-store");\n  return res.json({ ok: true, memoryGuard: memoryGuard.status() });\n});\n\napp.post("/api/chat", chatRateLimit, memoryGuard.middleware(), async (req, res) => {
   const message = typeof req.body?.message === "string" ? req.body.message.trim() : "";
   const countryCode = legalResearch.normalizeCountryCode(req.body?.countryCode);
   const suppliedSessionId = typeof req.body?.sessionId === "string" ? req.body.sessionId : "";
