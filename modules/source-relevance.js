@@ -24,7 +24,9 @@ const TERM_ALIASES = Object.freeze({
   total: "son",
   history: "tarix",
   historical: "tarix",
-  kagan: "kogon"
+  kagan: "kogon",
+  "каган": "kogon",
+  "когон": "kogon"
 });
 
 const SUFFIXES = [
