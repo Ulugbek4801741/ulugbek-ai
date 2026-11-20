@@ -53,6 +53,10 @@ services:
         sync: false
       - key: LANGUAGE_TRAINING_INTERVAL_MS
         value: "300000"
+      - key: AGENT_SDK_URL
+        sync: false
+      - key: AGENT_SDK_TOKEN
+        sync: false
       - key: GEMINI_API_KEY
         sync: false
       - key: GEMINI_MODEL
