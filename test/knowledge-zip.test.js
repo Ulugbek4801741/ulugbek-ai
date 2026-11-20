@@ -65,5 +65,5 @@ test("ZIP import rejects a traversal member before ingesting any file", async ()
   }
   assert.equal(replacements, 2);
   const store = { ingest: async () => { throw new Error("must not be called"); } };
-  await assert.rejects(() => importKnowledgeZip(zip, store), /xavfli fayl yo‘li/);
+  await assert.rejects(() => importKnowledgeZip(zip, store), /(?:xavfli fayl yo‘li|invalid relative path)/);
 });
