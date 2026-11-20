@@ -123,3 +123,18 @@ test("does not accept unrelated sources just because they mention Bukhara", () =
   });
   assert.equal(score.relevant, false);
 });
+
+
+test("normalizes Uzbek Buxoro and English Bukhara to the same canonical place term", () => {
+  assert.deepEqual(relevance.terms("Buxoro shahri"), ["buxor"]);
+  assert.deepEqual(relevance.terms("Bukhara city"), ["buxor"]);
+});
+
+test("accepts Kogon city sources that use the English spelling Bukhara", () => {
+  const score = relevance.scoreSource("Buxoro viloyati Kogon shahri haqida batafsil ma'lumot ber", {
+    title: "Kogon — city in Bukhara Region",
+    snippet: "Kogon is a city in Bukhara Region, Uzbekistan, and an important railway and industrial centre."
+  });
+  assert.equal(score.relevant, true);
+  assert.deepEqual(score.queryTerms, ["buxor", "kogon"]);
+});
