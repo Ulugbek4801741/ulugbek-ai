@@ -1256,6 +1256,60 @@ app.post("/api/internal/knowledge/upload", requireKnowledgeWorker,
     }
   });
 
+
+const VAULT_UPLOAD_PART_BYTES = 16 * 1024 * 1024;
+function vaultUploadConfig() {
+  return { base: String(process.env.VAULT_URL || "").replace(/\/$/, ""), token: String(process.env.VAULT_TOKEN || "") };
+}
+app.post("/api/admin/knowledge/vault-upload/start", requireAdmin, express.json({ limit: "8kb" }), async (req, res) => {
+  const { base, token } = vaultUploadConfig();
+  if (!base || !token) return res.status(503).json({ error: "Ikkinchi server sozlanmagan." });
+  try {
+    const upstream = await fetch(base + "/api/vault/multipart/start", {
+      method: "POST", headers: { authorization: "Bearer " + token, "content-type": "application/json" },
+      body: JSON.stringify({ size: req.body?.size, name: req.body?.name }), signal: AbortSignal.timeout(30000)
+    });
+    const body = await upstream.json();
+    return res.status(upstream.status).json(body);
+  } catch (_) { return res.status(503).json({ error: "Ikkinchi serverga ulanish amalga oshmadi." }); }
+});
+app.put("/api/admin/knowledge/vault-upload/:session/:part", requireAdmin,
+  express.raw({ type: ["application/octet-stream"], limit: "16mb" }), async (req, res) => {
+    const { base, token } = vaultUploadConfig();
+    if (!base || !token) return res.status(503).json({ error: "Ikkinchi server sozlanmagan." });
+    if (!Buffer.isBuffer(req.body) || !req.body.length || req.body.length > VAULT_UPLOAD_PART_BYTES) {
+      return res.status(413).json({ error: "Bo‘lak 16 MiB dan oshmasligi kerak." });
+    }
+    try {
+      const upstream = await fetch(base + "/api/vault/multipart/" + encodeURIComponent(req.params.session) + "/" + req.params.part, {
+        method: "PUT", headers: { authorization: "Bearer " + token, "content-type": "application/octet-stream" },
+        body: req.body, signal: AbortSignal.timeout(120000)
+      });
+      return res.status(upstream.status).json(await upstream.json());
+    } catch (_) { return res.status(503).json({ error: "ZIP bo‘lagi ikkinchi serverga yetkazilmadi." }); }
+  });
+app.post("/api/admin/knowledge/vault-upload/:session/complete", requireAdmin, async (req, res) => {
+  const { base, token } = vaultUploadConfig();
+  if (!base || !token) return res.status(503).json({ error: "Ikkinchi server sozlanmagan." });
+  try {
+    const upstream = await fetch(base + "/api/vault/multipart/" + encodeURIComponent(req.params.session) + "/complete", {
+      method: "POST", headers: { authorization: "Bearer " + token }, signal: AbortSignal.timeout(120000)
+    });
+    return res.status(upstream.status).json(await upstream.json());
+  } catch (_) { return res.status(503).json({ error: "ZIP yuklashni yakunlashda ikkinchi server javob bermadi." }); }
+});
+app.delete("/api/admin/knowledge/vault-upload/:session", requireAdmin, async (req, res) => {
+  const { base, token } = vaultUploadConfig();
+  if (!base || !token) return res.status(204).end();
+  try {
+    await fetch(base + "/api/vault/multipart/" + encodeURIComponent(req.params.session), {
+      method: "DELETE", headers: { authorization: "Bearer " + token }, signal: AbortSignal.timeout(15000)
+    });
+  } catch (_) {}
+  return res.status(204).end();
+});
+
+
 // ZIP import/export is administrator-only. Archive entries are streamed and never extracted or executed.
 app.post("/api/admin/knowledge/import.zip", requireAdmin,
   express.raw({ type: ["application/zip", "application/x-zip-compressed", "application/octet-stream"], limit: "20mb" }),

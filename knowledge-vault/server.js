@@ -82,6 +82,90 @@ app.put("/api/vault/archive", authorize, express.raw({
   }
 });
 
+
+const { CreateMultipartUploadCommand, UploadPartCommand, CompleteMultipartUploadCommand, AbortMultipartUploadCommand } = require("@aws-sdk/client-s3");
+const MAX_UPLOAD_BYTES = 1024 * 1024 * 1024;
+const MAX_PART_BYTES = 16 * 1024 * 1024;
+const uploadSessions = new Map();
+
+app.post("/api/vault/multipart/start", authorize, express.json({ limit: "8kb" }), async (req, res) => {
+  const size = Number(req.body?.size);
+  const name = safeName(req.body?.name);
+  if (!Number.isSafeInteger(size) || size < 22 || size > MAX_UPLOAD_BYTES) {
+    return res.status(413).json({ ok: false, error: "ZIP hajmi 1 GiB dan oshmasligi kerak." });
+  }
+  try {
+    const key = "admin-uploads/" + Date.now() + "-" + crypto.randomBytes(12).toString("hex") + "-" + name;
+    const created = await s3.send(new CreateMultipartUploadCommand({
+      Bucket: BUCKET, Key: key, ContentType: "application/zip",
+      Metadata: { source: "ulugbek-ai-admin-upload" }
+    }));
+    const session = crypto.randomBytes(24).toString("hex");
+    uploadSessions.set(session, { key, uploadId: created.UploadId, size, parts: new Map(), nextPart: 1 });
+    res.status(201).json({ ok: true, session, partBytes: MAX_PART_BYTES, maxBytes: MAX_UPLOAD_BYTES });
+  } catch (error) {
+    res.status(503).json({ ok: false, error: "Neon omborida yuklash sessiyasi ochilmadi." });
+  }
+});
+
+app.put("/api/vault/multipart/:session/:part", authorize, express.raw({
+  type: ["application/octet-stream"], limit: MAX_PART_BYTES
+}), async (req, res) => {
+  const state = uploadSessions.get(String(req.params.session));
+  const part = Number(req.params.part);
+  if (!state || !Number.isInteger(part) || part < 1 || part > 64 || part !== state.nextPart) {
+    return res.status(400).json({ ok: false, error: "Yuklash sessiyasi yoki bo‘lak tartibi noto‘g‘ri." });
+  }
+  if (!Buffer.isBuffer(req.body) || !req.body.length || req.body.length > MAX_PART_BYTES ||
+      (part < Math.ceil(state.size / MAX_PART_BYTES) && req.body.length !== MAX_PART_BYTES)) {
+    return res.status(413).json({ ok: false, error: "ZIP bo‘lagi hajmi noto‘g‘ri." });
+  }
+  try {
+    const result = await s3.send(new UploadPartCommand({
+      Bucket: BUCKET, Key: state.key, UploadId: state.uploadId,
+      PartNumber: part, Body: req.body, ContentLength: req.body.length
+    }));
+    state.parts.set(part, { ETag: result.ETag, PartNumber: part });
+    state.nextPart += 1;
+    res.json({ ok: true, part, etag: result.ETag });
+  } catch (_) {
+    res.status(503).json({ ok: false, error: "ZIP bo‘lagi omborga yozilmadi." });
+  }
+});
+
+app.post("/api/vault/multipart/:session/complete", authorize, async (req, res) => {
+  const state = uploadSessions.get(String(req.params.session));
+  if (!state) return res.status(404).json({ ok: false, error: "Yuklash sessiyasi topilmadi." });
+  const count = Math.ceil(state.size / MAX_PART_BYTES);
+  if (state.parts.size !== count || state.nextPart !== count + 1) {
+    return res.status(409).json({ ok: false, error: "ZIP ning barcha bo‘laklari kelmagan." });
+  }
+  try {
+    await s3.send(new CompleteMultipartUploadCommand({
+      Bucket: BUCKET, Key: state.key,
+      UploadId: state.uploadId,
+      MultipartUpload: { Parts: [...state.parts.values()].sort((a,b) => a.PartNumber-b.PartNumber) }
+    }));
+    const head = await s3.send(new HeadObjectCommand({ Bucket: BUCKET, Key: state.key }));
+    if (Number(head.ContentLength) !== state.size) throw new Error("Stored size mismatch");
+    uploadSessions.delete(String(req.params.session));
+    res.status(201).json({ ok: true, key: state.key, bytes: state.size, storage: "neon-private-s3",
+      note: "ZIP saqlandi; arxiv ichidagi kodlar hali tahlil qilinmadi va ishga tushirilmadi." });
+  } catch (_) {
+    res.status(503).json({ ok: false, error: "ZIP yakunlanmadi yoki saqlangan hajm tekshiruvi xato." });
+  }
+});
+
+app.delete("/api/vault/multipart/:session", authorize, async (req, res) => {
+  const state = uploadSessions.get(String(req.params.session));
+  if (!state) return res.status(204).end();
+  try {
+    await s3.send(new AbortMultipartUploadCommand({ Bucket: BUCKET, Key: state.key, UploadId: state.uploadId }));
+  } catch (_) {}
+  uploadSessions.delete(String(req.params.session));
+  res.status(204).end();
+});
+
 app.get("/api/vault/latest", authorize, async (_req, res) => {
   try {
     const latest = await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: "public-knowledge/latest.json" }));
