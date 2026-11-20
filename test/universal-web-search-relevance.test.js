@@ -47,7 +47,7 @@ test("general city research removes an embedded weather widget but preserves pla
   const cleaned = removeWeatherWidgetContent(source, "Buxoro viloyati Kogon shahri haqida ma'lumot ber");
   assert.match(cleaned, /Kogon haqida Asosiy ma'lumot/);
   assert.match(cleaned, /Temiryo'l stansiyasi/);
-  assert.doesNotMatch(cleaned, /14°C|Open-Meteo|Namlik|Shamol tezligi/);
+  assert.doesNotMatch(cleaned, /14°C|Open-Meteo|Namlik|Shamol tezligi|56K|218m|218 m/);
 });
 
 test("explicit weather questions retain weather evidence", () => {
