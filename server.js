@@ -1766,7 +1766,11 @@ app.use("/api/lab", require("./lab"));
 const learningWorker = require("./lab-learning-worker");
 app.get("/api/lab/learning/status", (_req, res) => {
   res.set("Cache-Control", "no-store");
-  res.json({ ok:true, learning:learningWorker.status() });
+  res.json({
+    ok: true,
+    learning: learningWorker.status(),
+    languageTraining: languageLearningWorker.status()
+  });
 });
 
 // Expose only the public chat and health tools through the MCP bridge.
@@ -1814,8 +1818,9 @@ agentRuntime.startWorker().then(() => {
     if (!ENABLE_BACKGROUND_WORKERS) {
       console.log("Yengil hosting rejimi: chat va API xizmatlari faol; admin autopilot va developer agentlar ishga tushirilmadi.");
       if (ENABLE_PUBLIC_LEARNING_WORKER) {
-        console.log("Faqat ruxsat etilgan ochiq manbalarni o‘qiydigan research worker ishga tushmoqda.");
+        console.log("Faqat ruxsat etilgan ochiq manbalarni o‘qiydigan research va language-learning workerlar ishga tushmoqda.");
         learningWorker.start();
+        languageLearningWorker.start();
       }
       return;
     }
