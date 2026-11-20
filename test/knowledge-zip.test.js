@@ -51,7 +51,19 @@ test("ZIP import adds supported text files to retrieval-only knowledge", async (
 });
 
 test("ZIP import rejects a traversal member before ingesting any file", async () => {
-  const zip = await makeZip([["../outside.txt", "This is a long text document. ".repeat(5)]]);
+  // yazl correctly refuses unsafe names, so mutate both ZIP filename headers
+  // after creating a valid archive to simulate an attacker-crafted upload.
+  const zip = await makeZip([["safe.txt", "This is a long text document. ".repeat(5)]]);
+  const safeName = Buffer.from("safe.txt");
+  const maliciousName = Buffer.from("../evilx"); // same byte length
+  let offset = 0;
+  let replacements = 0;
+  while ((offset = zip.indexOf(safeName, offset)) !== -1) {
+    maliciousName.copy(zip, offset);
+    offset += maliciousName.length;
+    replacements += 1;
+  }
+  assert.equal(replacements, 2);
   const store = { ingest: async () => { throw new Error("must not be called"); } };
   await assert.rejects(() => importKnowledgeZip(zip, store), /xavfli fayl yo‘li/);
 });
