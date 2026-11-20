@@ -7,17 +7,17 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 const vectorIndex = require("./vector-knowledge");
 const { Pool } = require("pg");
-const DATABASE_URL = String(process.env.DATABASE_URL || "").trim();
+const ULUGBEK_DATABASE_URL = String(process.env.ULUGBEK_DATABASE_URL || "").trim();
 const DB_MAX_CHUNKS = Math.max(1000, Math.min(Number(process.env.KNOWLEDGE_DB_MAX_CHUNKS) || 10000, 50000));
 let pool = null;
 let dbInitialized = false;
 let dbError = null;
 
 function getPool() {
-  if (!DATABASE_URL) return null;
+  if (!ULUGBEK_DATABASE_URL) return null;
   if (!pool) {
     pool = new Pool({
-      connectionString: DATABASE_URL,
+      connectionString: ULUGBEK_DATABASE_URL,
       max: 2,
       connectionTimeoutMillis: 7000,
       idleTimeoutMillis: 10000,
@@ -28,7 +28,7 @@ function getPool() {
   return pool;
 }
 async function ensureDatabase() {
-  if (!DATABASE_URL) return false;
+  if (!ULUGBEK_DATABASE_URL) return false;
   if (dbInitialized) return true;
   const db = getPool();
   await db.query(`
@@ -118,7 +118,7 @@ function buildIndex() {
 }
 async function load() {
   if (records) return records;
-  if (DATABASE_URL) {
+  if (ULUGBEK_DATABASE_URL) {
     try {
       await ensureDatabase();
       const result = await getPool().query(
@@ -178,7 +178,7 @@ async function ingest(input = {}) {
       contentHash: digest, chunkIndex: index, chunkCount: pieces.length,
       text: part, createdAt: now, updatedAt: now, usage: "retrieval-only"
     }));
-    if (DATABASE_URL) {
+    if (ULUGBEK_DATABASE_URL) {
       const db = getPool();
       await ensureDatabase();
       const client = await db.connect();
@@ -289,7 +289,7 @@ async function status() {
   const all = await load();
   const docs = new Set(all.map(item => item.documentId));
   let bytes = 0;
-  if (DATABASE_URL) {
+  if (ULUGBEK_DATABASE_URL) {
     try {
       const result = await getPool().query("SELECT pg_total_relation_size('ulugbek_knowledge_chunks') AS bytes");
       bytes = Number(result.rows[0]?.bytes || 0);
@@ -301,9 +301,9 @@ async function status() {
   return { ready: true, engine: vector.enabled && vector.ready !== false
       ? "multilingual-vector-with-bm25-fallback" : "ulugbek-inverted-index-bm25-v1",
     documents: docs.size, chunks: all.length, vocabulary: postings.size, bytes,
-    storage: DATABASE_URL ? "neon-postgresql" : ROOT,
-    persistentVolumeRequired: !DATABASE_URL,
-    database: { configured: Boolean(DATABASE_URL), ready: Boolean(DATABASE_URL && dbInitialized && !dbError), error: dbError },
+    storage: ULUGBEK_DATABASE_URL ? "neon-postgresql" : ROOT,
+    persistentVolumeRequired: !ULUGBEK_DATABASE_URL,
+    database: { configured: Boolean(ULUGBEK_DATABASE_URL), ready: Boolean(ULUGBEK_DATABASE_URL && dbInitialized && !dbError), error: dbError },
     vector };
 }
 async function exportDocuments() {
