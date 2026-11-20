@@ -6,6 +6,63 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const vectorIndex = require("./vector-knowledge");
+const { Pool } = require("pg");
+const DATABASE_URL = String(process.env.DATABASE_URL || "").trim();
+const DB_MAX_CHUNKS = Math.max(1000, Math.min(Number(process.env.KNOWLEDGE_DB_MAX_CHUNKS) || 10000, 50000));
+let pool = null;
+let dbInitialized = false;
+let dbError = null;
+
+function getPool() {
+  if (!DATABASE_URL) return null;
+  if (!pool) {
+    pool = new Pool({
+      connectionString: DATABASE_URL,
+      max: 2,
+      connectionTimeoutMillis: 7000,
+      idleTimeoutMillis: 10000,
+      keepAlive: true
+    });
+    pool.on("error", error => { dbError = String(error.message || error).slice(0, 180); });
+  }
+  return pool;
+}
+async function ensureDatabase() {
+  if (!DATABASE_URL) return false;
+  if (dbInitialized) return true;
+  const db = getPool();
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS ulugbek_knowledge_chunks (
+      id TEXT PRIMARY KEY,
+      document_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      author TEXT NOT NULL DEFAULT '',
+      source TEXT NOT NULL,
+      language TEXT NOT NULL DEFAULT 'auto',
+      content_hash TEXT NOT NULL,
+      chunk_index INTEGER NOT NULL,
+      chunk_count INTEGER NOT NULL,
+      text TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL,
+      usage TEXT NOT NULL DEFAULT 'retrieval-only'
+    )
+  `);
+  await db.query("CREATE INDEX IF NOT EXISTS ulugbek_knowledge_document_idx ON ulugbek_knowledge_chunks (document_id, updated_at DESC)");
+  await db.query("CREATE INDEX IF NOT EXISTS ulugbek_knowledge_source_idx ON ulugbek_knowledge_chunks (source)");
+  dbInitialized = true;
+  dbError = null;
+  return true;
+}
+function mapDatabaseRow(row) {
+  return {
+    id: row.id, documentId: row.document_id, title: row.title, author: row.author,
+    source: row.source, language: row.language, contentHash: row.content_hash,
+    chunkIndex: Number(row.chunk_index), chunkCount: Number(row.chunk_count), text: row.text,
+    createdAt: new Date(row.created_at).toISOString(),
+    updatedAt: new Date(row.updated_at).toISOString(), usage: row.usage
+  };
+}
 
 const ROOT = path.resolve(process.env.ULUGBEK_KNOWLEDGE_DIR ||
   path.join(process.env.ULUGBEK_DATA_DIR || path.join(__dirname, "..", "data"), "knowledge-base"));
@@ -61,6 +118,22 @@ function buildIndex() {
 }
 async function load() {
   if (records) return records;
+  if (DATABASE_URL) {
+    try {
+      await ensureDatabase();
+      const result = await getPool().query(
+        "SELECT id, document_id, title, author, source, language, content_hash, chunk_index, chunk_count, text, created_at, updated_at, usage FROM ulugbek_knowledge_chunks ORDER BY updated_at DESC LIMIT $1",
+        [DB_MAX_CHUNKS]
+      );
+      records = result.rows.map(mapDatabaseRow);
+      buildIndex();
+      dbError = null;
+      return records;
+    } catch (error) {
+      dbError = String(error.message || error).slice(0, 180);
+      throw error;
+    }
+  }
   await fs.mkdir(ROOT, { recursive: true });
   let raw = "";
   try { raw = await fs.readFile(FILE, "utf8"); } catch (error) {
@@ -105,8 +178,33 @@ async function ingest(input = {}) {
       contentHash: digest, chunkIndex: index, chunkCount: pieces.length,
       text: part, createdAt: now, updatedAt: now, usage: "retrieval-only"
     }));
-    await fs.mkdir(ROOT, { recursive: true });
-    await fs.appendFile(FILE, added.map(item => JSON.stringify(item)).join("\n") + "\n", { encoding: "utf8", mode: 0o600 });
+    if (DATABASE_URL) {
+      const db = getPool();
+      await ensureDatabase();
+      const client = await db.connect();
+      try {
+        await client.query("BEGIN");
+        await client.query("DELETE FROM ulugbek_knowledge_chunks WHERE document_id = $1", [id]);
+        for (const item of added) {
+          await client.query(
+            "INSERT INTO ulugbek_knowledge_chunks (id, document_id, title, author, source, language, content_hash, chunk_index, chunk_count, text, created_at, updated_at, usage) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) ON CONFLICT (id) DO UPDATE SET title=EXCLUDED.title, author=EXCLUDED.author, source=EXCLUDED.source, language=EXCLUDED.language, content_hash=EXCLUDED.content_hash, chunk_index=EXCLUDED.chunk_index, chunk_count=EXCLUDED.chunk_count, text=EXCLUDED.text, updated_at=EXCLUDED.updated_at, usage=EXCLUDED.usage",
+            [item.id, item.documentId, item.title, item.author, item.source, item.language,
+              item.contentHash, item.chunkIndex, item.chunkCount, item.text, item.createdAt, item.updatedAt, item.usage]
+          );
+        }
+        await client.query("COMMIT");
+        dbError = null;
+      } catch (error) {
+        try { await client.query("ROLLBACK"); } catch (_) {}
+        dbError = String(error.message || error).slice(0, 180);
+        throw error;
+      } finally {
+        client.release();
+      }
+    } else {
+      await fs.mkdir(ROOT, { recursive: true });
+      await fs.appendFile(FILE, added.map(item => JSON.stringify(item)).join("\n") + "\n", { encoding: "utf8", mode: 0o600 });
+    }
     records = remaining.concat(added);
     buildIndex();
     let vector = { enabled: false, indexed: 0 };
@@ -191,12 +289,22 @@ async function status() {
   const all = await load();
   const docs = new Set(all.map(item => item.documentId));
   let bytes = 0;
-  try { bytes = (await fs.stat(FILE)).size; } catch (_) {}
+  if (DATABASE_URL) {
+    try {
+      const result = await getPool().query("SELECT pg_total_relation_size('ulugbek_knowledge_chunks') AS bytes");
+      bytes = Number(result.rows[0]?.bytes || 0);
+    } catch (error) { dbError = String(error.message || error).slice(0, 180); }
+  } else {
+    try { bytes = (await fs.stat(FILE)).size; } catch (_) {}
+  }
   const vector = await vectorIndex.status();
   return { ready: true, engine: vector.enabled && vector.ready !== false
       ? "multilingual-vector-with-bm25-fallback" : "ulugbek-inverted-index-bm25-v1",
     documents: docs.size, chunks: all.length, vocabulary: postings.size, bytes,
-    storage: ROOT, persistentVolumeRequired: true, vector };
+    storage: DATABASE_URL ? "neon-postgresql" : ROOT,
+    persistentVolumeRequired: !DATABASE_URL,
+    database: { configured: Boolean(DATABASE_URL), ready: Boolean(DATABASE_URL && dbInitialized && !dbError), error: dbError },
+    vector };
 }
 async function exportDocuments() {
   const all = await load();
