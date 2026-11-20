@@ -122,7 +122,9 @@ async function searchCommons(queries, limit) {
       attribution: "", provider: "Wikimedia Commons"
     });
   }
-  return items.slice(0, limit);
+  const unique = new Map();
+  for (const item of items) if (!unique.has(item.source)) unique.set(item.source, item);
+  return [...unique.values()].slice(0, limit);
 }
 async function searchImages(query, limit = 4) {
   const original = clean(query, 400);
