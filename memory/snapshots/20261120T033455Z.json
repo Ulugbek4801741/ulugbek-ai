@@ -1,0 +1,152 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-11-20T03:34:53.374Z",
+  "mode": "read-only-public-source-review",
+  "automaticCodeImport": false,
+  "automaticDependencyInstall": false,
+  "automaticModelTraining": false,
+  "note": "This report collects public metadata, release notes and short README excerpts. It does not execute upstream code, copy code, or modify ULUGBEK AI source files.",
+  "repositories": [
+    {
+      "repository": "nodejs/node",
+      "reason": "Node.js runtime used by the backend",
+      "fetchedAt": "2026-11-20T03:34:52.600Z",
+      "status": "license-review-required",
+      "reviewRequired": true,
+      "description": "Node.js JavaScript runtime ✨🐢🚀✨",
+      "htmlUrl": "https://github.com/nodejs/node",
+      "defaultBranch": "main",
+      "stars": 123808,
+      "pushedAt": "2026-11-20T01:20:02Z",
+      "license": "NOASSERTION",
+      "licenseDecision": "do-not-copy-code-review-license",
+      "latestRelease": {
+        "status": "skipped-license-review-required"
+      },
+      "readmeExcerpt": ""
+    },
+    {
+      "repository": "expressjs/express",
+      "reason": "HTTP server framework used by the backend",
+      "fetchedAt": "2026-11-20T03:34:52.629Z",
+      "status": "review-candidate",
+      "reviewRequired": true,
+      "description": "Fast, unopinionated, minimalist web framework for node.",
+      "htmlUrl": "https://github.com/expressjs/express",
+      "defaultBranch": "master",
+      "stars": 69670,
+      "pushedAt": "2026-11-19T17:49:18Z",
+      "license": "MIT",
+      "licenseDecision": "permissive-license-review-still-required",
+      "latestRelease": {
+        "tag": "v5.3.0",
+        "publishedAt": "2026-10-09T12:50:31Z",
+        "url": "https://github.com/expressjs/express/releases/tag/v5.3.0",
+        "notes": "## Highlights ### 🐞 Bug fixes - Fixed HTTP header conflict between Content-Length and Transfer-Encoding in res.send - by [@YuryShkoda](https://github.com/YuryShkoda) in [#4893](https://github.com/expressjs/express/pull/4893) Fixed the behavior of `res.send()` to prevent conflicts between `Content-Length` and `Transfer-Encoding` HTTP headers in responses. The `Content-Length` header in `res.send()` is now only added when a `Transfer-Encoding` header is not present, complying with the HTTP specification that states both headers should not coexist in the same response. ETag generation is unaffected by the presence of a `Transfer-Encoding` header - by [@cuishuang](https://github.com/cuishuang) in [#7459](https://github.com/expressjs/express/pull/7459) * Upgrade `qs` to `^6.16.0`, which fixes [CVE-2026-2391](https://www.cve.org/CVERecord?id=CVE-2026-2391) ([GHSA-w7fw-mjwx-w883](https://github.com/ljharb/qs/security/advisories/GHSA-w7fw-mjwx-w883)), [CVE-2026-82417](https://www.cve.org/CVERecord?id=CVE-2026-82417) ([GHSA-4mjr-xmp4-gh2g](https://github.com/advisories/GHSA-4mjr-xmp4-gh2g)) and [CVE-2026-82562](https://www.cve.org/CVERecord?id=CVE-2026-82562) ([GHSA-x5fp-wj9c-mxmx](https://github.com/advisories/GHSA-x5fp-wj9c-mxmx)):"
+      },
+      "readmeExcerpt": "<a href=\"https://expressjs.com/\"> <picture> <source media=\"(prefers-color-scheme: dark)\" srcset=\"https://expressjs.com/images/logos/logo-express-white.svg\"> <img alt=\"Express Logo\" src=\"https://expressjs.com/images/logos/logo-express-black.svg\" width=\"280\"> </picture> </a> **Fast, unopinionated, minimalist web framework for [Node.js](https://nodejs.org).** ## Table of contents - [Installation](#installation) - [Features](#features) - [Docs \\& Community](#docs--community) - [Quick Start](#quick-start) - [Philosophy](#philosophy) - [Examples](#examples) - [Contributing](#contributing) - [Security Issues](#security-issues) - [Running Tests](#running-tests) - [Current project team members](#current-project-team-members) - [TC (Technical Committee)](#tc-technical-committee) - [TC emeriti members](#tc-emeriti-members) - [Triagers](#triagers) - [Emeritus Triagers](#emeritus-triagers) - [License](#license) [![NPM Version][npm-version-image]][npm-url] [![NPM Downloads][npm-downloads-image]][npm-downloads-url] [![Linux Build][github-actions-ci-image]][github-actions-ci-url] [![Test Coverage][coveralls-image]][coveralls-url] [![OpenSSF Scorecard Badge][ossf-scorecard-badge]][ossf-scorecard-visualizer] ```js import express from 'express' const app = express() app.get('/', (req, res) => { res.send('Hello World') }) app.listen(3000, () => {"
+    },
+    {
+      "repository": "ionic-team/capacitor",
+      "reason": "Android application bridge",
+      "fetchedAt": "2026-11-20T03:34:52.630Z",
+      "status": "review-candidate",
+      "reviewRequired": true,
+      "description": "Build cross-platform Native Progressive Web Apps for iOS, Android, and the Web ⚡️",
+      "htmlUrl": "https://github.com/ionic-team/capacitor",
+      "defaultBranch": "main",
+      "stars": 17123,
+      "pushedAt": "2026-11-19T17:26:10Z",
+      "license": "MIT",
+      "licenseDecision": "permissive-license-review-still-required",
+      "latestRelease": {
+        "tag": "8.6.2",
+        "publishedAt": "2026-11-12T18:11:59Z",
+        "url": "https://github.com/ionic-team/capacitor/releases/tag/8.6.2",
+        "notes": "## [8.6.2](https://github.com/ionic-team/capacitor/compare/8.6.1...8.6.2) (2026-11-12) **Note:** Version bump only for package capacitor"
+      },
+      "readmeExcerpt": "<br /> <div align=\"center\"> <img src=\"https://user-images.githubusercontent.com/236501/105104854-e5e42e80-5a67-11eb-8cb8-46fccb079062.png\" width=\"560\" /> </div> <div align=\"center\"> ⚡️ Cross-platform apps with JavaScript and the Web ⚡️ </div> <br /> <p align=\"center\"> <a href=\"https://github.com/ionic-team/capacitor/actions?query=workflow%3ACI\"><img src=\"https://img.shields.io/github/actions/workflow/status/ionic-team/capacitor/ci.yml?style=flat-square\" /></a> <a href=\"https://www.npmjs.com/package/@capacitor/core\"><img src=\"https://img.shields.io/npm/dw/@capacitor/core?style=flat-square\" /></a> <a href=\"https://www.npmjs.com/package/@capacitor/core\"><img src=\"https://img.shields.io/npm/v/@capacitor/core?style=flat-square\" /></a> <a href=\"https://www.npmjs.com/package/@capacitor/core\"><img src=\"https://img.shields.io/npm/l/@capacitor/core?style=flat-square\" /></a> </p> <p align=\"center\"> <a href=\"https://capacitorjs.com/docs\"><img src=\"https://img.shields.io/static/v1?label=docs&message=capacitorjs.com&color=blue&style=flat-square\" /></a> <a href=\"https://twitter.com/capacitorjs\"><img src=\"https://img.shields.io/twitter/follow/capacitorjs\" /></a> </p> --- Capacitor lets you run web apps natively on iOS, Android, Web, and more with a single codebase and cross-platform APIs. Capacitor provides a cross-platform API and code execution layer that makes it easy to call Native SDKs from web code and to write custom native plugins"
+    },
+    {
+      "repository": "OWASP/NodeGoat",
+      "reason": "Node.js application security learning reference",
+      "fetchedAt": "2026-11-20T03:34:52.631Z",
+      "status": "review-candidate",
+      "reviewRequired": true,
+      "description": "The OWASP NodeGoat project provides an environment to learn how OWASP Top 10 security risks apply to web applications developed using Node.js and how to effectively address them.",
+      "htmlUrl": "https://github.com/OWASP/NodeGoat",
+      "defaultBranch": "master",
+      "stars": 2083,
+      "pushedAt": "2024-06-15T01:20:40Z",
+      "license": "Apache-2.0",
+      "licenseDecision": "permissive-license-review-still-required",
+      "latestRelease": {
+        "tag": "v1.4",
+        "publishedAt": "2019-08-04T12:53:35Z",
+        "url": "https://github.com/OWASP/NodeGoat/releases/tag/v1.4",
+        "notes": "- Addition of details on SSRF, Context specific XSS validations - Defect fixes - Updates to target Node.js version - Optimization to Docker config - Addition of integration tests with cypress - Travis CI integration"
+      },
+      "readmeExcerpt": "# NodeGoat Being lightweight, fast, and scalable, Node.js is becoming a widely adopted platform for developing web applications. This project provides an environment to learn how OWASP Top 10 security risks apply to web applications developed using Node.js and how to effectively address them. ## Getting Started OWASP Top 10 for Node.js web applications: ### Know it! This application bundled a tutorial page that explains the OWASP Top 10 vulnerabilities and how to fix them. Once the application is running, you can access the tutorial page at [http://localhost:4000/tutorial](http://localhost:4000/tutorial) (or the port you have configured). ### Do it! [A Vulnerable Node.js"
+    },
+    {
+      "repository": "langchain-ai/langchainjs",
+      "reason": "Agent orchestration and retrieval patterns to evaluate",
+      "fetchedAt": "2026-11-20T03:34:52.632Z",
+      "status": "review-candidate",
+      "reviewRequired": true,
+      "description": "The agent engineering platform",
+      "htmlUrl": "https://github.com/langchain-ai/langchainjs",
+      "defaultBranch": "main",
+      "stars": 18353,
+      "pushedAt": "2026-11-20T02:18:34Z",
+      "license": "MIT",
+      "licenseDecision": "permissive-license-review-still-required",
+      "latestRelease": {
+        "tag": "@langchain/google@0.2.16",
+        "publishedAt": "2026-11-18T22:26:21Z",
+        "url": "https://github.com/langchain-ai/langchainjs/releases/tag/%40langchain/google%400.2.16",
+        "notes": "### Patch Changes - [#12263](https://github.com/langchain-ai/langchainjs/pull/12263) [`7f1c5e1`](https://github.com/langchain-ai/langchainjs/commit/7f1c5e1ee2fefa331b7fa6f0c8e63cd630a36b28) Thanks [@thushanth-bengre-langchain](https://github.com/thushanth-bengre-langchain)! - Add `gemini-4-neon` model profile and `xhigh` thinking level support. - [#12243](https://github.com/langchain-ai/langchainjs/pull/12243) [`c93f9bc`](https://github.com/langchain-ai/langchainjs/commit/c93f9bc61611677507760f8e31ca23f8e3463fa1) Thanks [@afirstenberg](https://github.com/afirstenberg)! - Adds **experimental** support for the Google Gemini Decisions API on AI Studio. (Google Cloud / Vertex support has been added, but final support is pending platform implementation.) - Add `GoogleClassifier` and `BaseGoogleClassifier` (implementing `BaseDecisionModel` from `@langchain/core/decisions`) in `@langchain/google` and `@langchain/google/node` - Support `Noul`, `Choice`, and `Score` questions across text, structured JSON, `BaseMessage` conversations, and multimodal `ContentBlock` inputs - Add Decisions API converters for state, questions, responses, and `PromptRefusedError` safety refusals Incorporates the most recent changes to"
+      },
+      "readmeExcerpt": "<div align=\"center\"> <a href=\"https://www.langchain.com/\"> <picture> <source media=\"(prefers-color-scheme: light)\" srcset=\".github/images/logo-light.svg\"> <source media=\"(prefers-color-scheme: dark)\" srcset=\".github/images/logo-dark.svg\"> <img alt=\"LangChain Logo\" src=\".github/images/logo-dark.svg\" width=\"50%\"> </picture> </a> </div> <div align=\"center\"> <h3>The agent engineering platform.</h3> </div> ![npm](https://img.shields.io/npm/dm/langchain) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![Twitter](https://img.shields.io/twitter/url/https/twitter.com/langchain_js.svg?style=social&label=Follow%20%40LangChain)](https://x.com/langchain_js) LangChain is a framework for building LLM-powered applications. It helps you chain together interoperable components and third-party integrations to simplify AI application development — all while future-proofing decisions as the underlying technology evolves. > [!TIP] > Just getting started? Check out **[Deep Agents](http://docs.langchain.com/oss/javascript/deepagents/)** — a higher-level package built on LangChain for agents that have built-in capabilities for common usage patterns such as planning, subagents, file system usage, and"
+    },
+    {
+      "repository": "modelcontextprotocol/typescript-sdk",
+      "reason": "Tool integration and capability protocol reference",
+      "fetchedAt": "2026-11-20T03:34:52.633Z",
+      "status": "license-review-required",
+      "reviewRequired": true,
+      "description": "The official TypeScript SDK for Model Context Protocol servers and clients",
+      "htmlUrl": "https://github.com/modelcontextprotocol/typescript-sdk",
+      "defaultBranch": "main",
+      "stars": 13787,
+      "pushedAt": "2026-11-19T18:36:52Z",
+      "license": "NOASSERTION",
+      "licenseDecision": "do-not-copy-code-review-license",
+      "latestRelease": {
+        "status": "skipped-license-review-required"
+      },
+      "readmeExcerpt": ""
+    },
+    {
+      "repository": "actions/runner",
+      "reason": "CI runner and automation infrastructure reference",
+      "fetchedAt": "2026-11-20T03:34:52.634Z",
+      "status": "review-candidate",
+      "reviewRequired": true,
+      "description": "The Runner for GitHub Actions :rocket:",
+      "htmlUrl": "https://github.com/actions/runner",
+      "defaultBranch": "main",
+      "stars": 6402,
+      "pushedAt": "2026-11-19T18:19:42Z",
+      "license": "MIT",
+      "licenseDecision": "permissive-license-review-still-required",
+      "latestRelease": {
+        "tag": "v2.338.2",
+        "publishedAt": "2026-10-26T14:45:12Z",
+        "url": "https://github.com/actions/runner/releases/tag/v2.338.2",
+        "notes": "## What's Changed * Bump @typescript-eslint/eslint-plugin from 8.67.0 to 8.68.0 in /src/Misc/expressionFunc/hashFiles by @dependabot[bot] in https://github.com/actions/runner/pull/4661 * chore: update Node versions by @github-actions[bot] in https://github.com/actions/runner/pull/4665 * Bump browserslist from 4.28.5 to 4.28.9 in /src/Misc/expressionFunc/hashFiles by @dependabot[bot] in https://github.com/actions/runner/pull/4677 * Update Docker to v29.8.0 and Buildx to v0.37.0 by @github-actions[bot] in https://github.com/actions/runner/pull/4676 * Update Node.js 20 removal date to September 23rd, 2026 by @salmanmkc in https://github.com/actions/runner/pull/4685 * Bump @typescript-eslint/parser from 8.68.0 to 8.69.0 in /src/Misc/expressionFunc/hashFiles by @dependabot[bot] in https://github.com/actions/runner/pull/4673 * Bump Microsoft.DevTunnels.Connections from 1.3.51 to 1.3.56 by @dependabot[bot] in https://github.com/actions/runner/pull/4667 * Bump github/codeql-action from 4.37.8 to 4.37.9 by @dependabot[bot] in https://github.com/actions/runner/pull/4664"
+      },
+      "readmeExcerpt": "<p align=\"center\"> <img src=\"docs/res/github-graph.png\"> </p> # GitHub Actions Runner [![Actions Status](https://github.com/actions/runner/workflows/Runner%20CI/badge.svg)](https://github.com/actions/runner/actions) The runner is the application that runs a job from a GitHub Actions workflow. It is used by GitHub Actions in the [hosted virtual environments](https://github.com/actions/virtual-environments), or you can [self-host the runner](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/about-self-hosted-runners) in your own environment. ## Get Started For more information about installing and using self-hosted runners, see [Adding self-hosted runners](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/adding-self-hosted-runners) and [Using self-hosted runners in a workflow](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/using-self-hosted-runners-in-a-workflow) Runner releases: ![win](docs/res/win_sm.png) [Pre-reqs](docs/start/envwin.md) | [Download](https://github.com/actions/runner/releases) ![macOS](docs/res/apple_sm.png) [Pre-reqs](docs/start/envosx.md) | [Download](https://github.com/actions/runner/releases) ![linux](docs/res/linux_sm.png) [Pre-reqs](docs/start/envlinux.md) | [Download](https://github.com/actions/runner/releases) ### Note Thank you for your interest in this GitHub repo, however, right now we are not"
+    }
+  ]
+}
