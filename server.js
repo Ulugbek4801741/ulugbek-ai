@@ -1816,6 +1816,11 @@ if (ENABLE_BACKGROUND_WORKERS) {
 agentRuntime.startWorker().then(() => {
   const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`ULUGBEK AI serveri ${PORT}-portda ishga tushdi.`);
+    if (process.env.ULUGBEK_DATABASE_URL) {
+      void knowledgeStore.status()
+        .then(state => console.log("ULUGBEK knowledge storage:", state.database?.ready ? "Neon PostgreSQL tayyor." : "PostgreSQL holatini tekshiring."))
+        .catch(error => console.error("ULUGBEK knowledge database init failed:", error.message));
+    }
     if (!ENABLE_BACKGROUND_WORKERS) {
       console.log("Yengil hosting rejimi: chat va API xizmatlari faol; admin autopilot va developer agentlar ishga tushirilmadi.");
       if (ENABLE_PUBLIC_LEARNING_WORKER) {
