@@ -1408,9 +1408,15 @@ app.post("/api/chat", chatRateLimit, memoryGuard.middleware(), async (req, res) 
   let storedKnowledge = [];
   try {
     [localKnowledge, cachedKnowledge, storedKnowledge] = await Promise.all([
-      nativeBrain.searchKnowledge(conversationMessage, 5),
-      researchCache.search(conversationMessage, 5),
-      knowledgeStore.search(conversationMessage, 6)
+      // Keep the approved learning corpus small on Render Free. Full BM25
+      // index loading is opt-in because a large JSONL corpus can consume the heap.
+      process.env.ENABLE_HEAVY_KNOWLEDGE_SEARCH === "true"
+        ? nativeBrain.searchKnowledge(conversationMessage, 3)
+        : Promise.resolve([]),
+      researchCache.search(conversationMessage, 3),
+      process.env.ENABLE_HEAVY_KNOWLEDGE_SEARCH === "true"
+        ? knowledgeStore.search(conversationMessage, 3)
+        : Promise.resolve([])
     ]);
   } catch (_) {}
   // Search the public web when the local approved knowledge and persistent research cache
@@ -1591,7 +1597,7 @@ app.post("/api/chat", chatRateLimit, memoryGuard.middleware(), async (req, res) 
     const nativeBrain = require("./lab-learning-worker");
     let found = { ok: false, results: [], reply: "Internet qidiruvi hozircha ishlamadi." };
     try {
-      found = await universalSearch.searchWeb(conversationMessage, webSearch, { limit: 8, includeScholarly: true });
+      found = await universalSearch.searchWeb(conversationMessage, webSearch, { limit: 3, includeScholarly: false });
     } catch (_) {
       // Search failure must not crash chat; try the local knowledge and configured local model.
     }
@@ -1599,7 +1605,7 @@ app.post("/api/chat", chatRateLimit, memoryGuard.middleware(), async (req, res) 
     try { await researchCache.save(found.results, conversationMessage); } catch (_) {}
     conversationMemory.rememberSources(sessionId, conversationMessage, found.results);
     const evidence = [
-      ...universalSearch.evidenceEntries(found.results),
+      ...universalSearch.evidenceEntries(found.results.slice(0, 4)),
       ...(searchIntent.currentInfo ? [] : [
         ...relevantCachedKnowledge,
         ...relevantStoredKnowledge.map(item => ({
