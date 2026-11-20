@@ -115,7 +115,7 @@ async function searchOpenverse(queries, place, limit) {
   }
   return [...byUrl.values()].slice(0, limit);
 }
-async function searchCommons(queries, limit) {
+async function searchCommons(queries, limit, place) {
   const batches = await Promise.all(queries.slice(0, 2).map(async q => {
     const url = new URL("https://commons.wikimedia.org/w/api.php");
     url.search = new URLSearchParams({
@@ -150,7 +150,10 @@ async function searchCommons(queries, limit) {
     });
   }
   const unique = new Map();
-  for (const item of items) if (!unique.has(item.source)) unique.set(item.source, item);
+  for (const item of items) {
+    if (relevanceScore(item, place) < (place === "Kogon" ? 4 : 2)) continue;
+    if (!unique.has(item.source)) unique.set(item.source, item);
+  }
   return [...unique.values()].slice(0, limit);
 }
 async function searchImages(query, limit = 4) {
@@ -167,7 +170,7 @@ async function searchImages(query, limit = 4) {
   catch (error) { errors.push(String(error.message || error)); }
   if (items.length < max) {
     try {
-      const commons = await searchCommons(queries, max - items.length);
+      const commons = await searchCommons(queries, max - items.length, place);
       const seen = new Set(items.map(item => item.source));
       items.push(...commons.filter(item => !seen.has(item.source)));
     } catch (error) { errors.push(String(error.message || error)); }
