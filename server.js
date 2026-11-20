@@ -1408,9 +1408,15 @@ app.post("/api/chat", chatRateLimit, memoryGuard.middleware(), async (req, res) 
   let storedKnowledge = [];
   try {
     [localKnowledge, cachedKnowledge, storedKnowledge] = await Promise.all([
-      nativeBrain.searchKnowledge(conversationMessage, 5),
-      researchCache.search(conversationMessage, 5),
-      knowledgeStore.search(conversationMessage, 6)
+      // Keep the approved learning corpus small on Render Free. Full BM25
+      // index loading is opt-in because a large JSONL corpus can consume the heap.
+      process.env.ENABLE_HEAVY_KNOWLEDGE_SEARCH === "true"
+        ? nativeBrain.searchKnowledge(conversationMessage, 3)
+        : Promise.resolve([]),
+      researchCache.search(conversationMessage, 3),
+      process.env.ENABLE_HEAVY_KNOWLEDGE_SEARCH === "true"
+        ? knowledgeStore.search(conversationMessage, 3)
+        : Promise.resolve([])
     ]);
   } catch (_) {}
   // Search the public web when the local approved knowledge and persistent research cache
@@ -1591,7 +1597,7 @@ app.post("/api/chat", chatRateLimit, memoryGuard.middleware(), async (req, res) 
     const nativeBrain = require("./lab-learning-worker");
     let found = { ok: false, results: [], reply: "Internet qidiruvi hozircha ishlamadi." };
     try {
-      found = await universalSearch.searchWeb(conversationMessage, webSearch, { limit: 8, includeScholarly: true });
+      found = await universalSearch.searchWeb(conversationMessage, webSearch, { limit: 3, includeScholarly: false });
     } catch (_) {
       // Search failure must not crash chat; try the local knowledge and configured local model.
     }
@@ -1599,7 +1605,7 @@ app.post("/api/chat", chatRateLimit, memoryGuard.middleware(), async (req, res) 
     try { await researchCache.save(found.results, conversationMessage); } catch (_) {}
     conversationMemory.rememberSources(sessionId, conversationMessage, found.results);
     const evidence = [
-      ...universalSearch.evidenceEntries(found.results),
+      ...universalSearch.evidenceEntries(found.results.slice(0, 4)),
       ...(searchIntent.currentInfo ? [] : [
         ...relevantCachedKnowledge,
         ...relevantStoredKnowledge.map(item => ({
@@ -1612,16 +1618,11 @@ app.post("/api/chat", chatRateLimit, memoryGuard.middleware(), async (req, res) 
         }))
       ])
     ].slice(0, 12);
+    // Render Free: chat always uses one universal agent. Specialist fleet is not
+    // started because its parallel prompts can exhaust the 256 MB heap.
     let result = null;
-    try {
-      // Route substantive chat requests through the specialist fleet. Specialists share
-      // the configured model but have isolated role prompts; synthesis and critic are separate calls.
-      const fleet = await agentFleet.runTask(conversationMessage, { roles: effectiveTaskRoles, evidence, context: conversationContext });
-      if (fleet.ok) result = {
-        reply: fleet.reply, modelUsed: fleet.modelUsed, provider: fleet.provider, externalProviderUsed: fleet.externalProviderUsed, reasoning: fleet.reasoning,
-        agentFleet: { requestedAgents: fleet.requestedAgents, completedAgents: fleet.completedAgents, failedAgents: fleet.failedAgents, roles: fleet.roles, durationMs: fleet.durationMs, qualityGate: fleet.qualityGate || null }
-      };
-    } catch (_) {}
+    try { result = await singleAgent.answer(conversationMessage, evidence.slice(0, 5), conversationContext); }
+    catch (_) {}
     if (!result) {
       try { result = await singleAgent.answer(conversationMessage, evidence, conversationContext); } catch (_) {}
     }
@@ -1681,25 +1682,11 @@ app.post("/api/chat", chatRateLimit, memoryGuard.middleware(), async (req, res) 
   try {
     const nativeBrain = require("./lab-learning-worker");
     const answerWithOneAgent = async entries => {
-      let fleetResult = null;
-      try {
-        const fleet = await agentFleet.runTask(conversationMessage, { roles: effectiveTaskRoles, evidence: entries, context: conversationContext });
-        if (fleet.ok) fleetResult = {
-          reply: fleet.reply, modelUsed: fleet.modelUsed, provider: fleet.provider,
-          externalProviderUsed: fleet.externalProviderUsed, reasoning: fleet.reasoning,
-          agentFleet: { requestedAgents: fleet.requestedAgents, completedAgents: fleet.completedAgents, failedAgents: fleet.failedAgents, roles: fleet.roles, durationMs: fleet.durationMs, qualityGate: fleet.qualityGate || null }
-        };
-      } catch (_) {}
-      // Prefer a grounded built-in answer for simple learning/programming guidance;
-      // still run the relevant specialist fleet, but do not let a generic code scaffold
-      // replace a precise deterministic answer.
+      // One bounded agent call; no specialist fan-out on the free instance.
       if (!singleAgent.status().configured && localCandidate?.reasoning?.answerable === true &&
-          localCandidate.reasoning.method === "built-in-dialogue" && localCandidate.reply) {
-        return { ...localCandidate, agentFleet: fleetResult?.agentFleet || null };
-      }
-      if (fleetResult) return fleetResult;
-      const modelAnswer = await singleAgent.answer(conversationMessage, entries, conversationContext);
-      return modelAnswer || nativeBrain.buildLocalReply(conversationMessage, entries, conversationContext);
+          localCandidate.reasoning.method === "built-in-dialogue" && localCandidate.reply) return localCandidate;
+      const modelAnswer = await singleAgent.answer(conversationMessage, entries.slice(0, 5), conversationContext);
+      return modelAnswer || nativeBrain.buildLocalReply(conversationMessage, entries.slice(0, 5), conversationContext);
     };
     let learned = [...localKnowledge, ...cachedKnowledge].slice(0, 8);
     let result = await answerWithOneAgent(learned);

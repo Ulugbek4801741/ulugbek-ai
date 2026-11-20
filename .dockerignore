@@ -11,3 +11,9 @@ coverage
 dist
 android
 ios
+
+# Keep tests and local development artifacts out of the production image
+**/*.test.js
+**/*.spec.js
+tests
+__tests__
