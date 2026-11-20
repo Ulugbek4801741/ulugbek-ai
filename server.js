@@ -1817,7 +1817,7 @@ if (ENABLE_BACKGROUND_WORKERS) {
 agentRuntime.startWorker().then(() => {
   const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`ULUGBEK AI serveri ${PORT}-portda ishga tushdi.`);
-    knowledgeVaultSync.start(knowledgeStore);
+    knowledgeVaultSync.start(learningWorkerForAdmin);
     if (process.env.ULUGBEK_DATABASE_URL) {
       void knowledgeStore.status()
         .then(state => console.log("ULUGBEK knowledge storage:", state.database?.ready ? "Neon PostgreSQL tayyor." : "PostgreSQL holatini tekshiring."))
