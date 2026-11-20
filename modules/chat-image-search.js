@@ -7,7 +7,7 @@ const CACHE_MAX = 40;
 const cache = new Map();
 
 function clean(value, max = 180) {
-  return String(value || "").replace(/[<>\u0000-\u001f]/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
+  return String(value || "").replace(/<[^>]*>/g, " ").replace(/[\u0000-\u001f]/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
 }
 function imageIntent(query) {
   const q = clean(query, 400);
