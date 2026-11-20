@@ -1,7 +1,7 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { clean, imageIntent, buildImageQuery, searchImages } = require("./chat-image-search");
+const { clean, imageIntent, buildImageQuery, relevanceScore, searchImages } = require("./chat-image-search");
 
 test("image intent skips greetings and coding requests", () => {
   assert.equal(imageIntent("Salom"), false);
@@ -10,6 +10,11 @@ test("image intent skips greetings and coding requests", () => {
 });
 test("image query uses concise place keywords", () => {
   assert.equal(buildImageQuery("Buxoro viloyati Kogon shahri haqida ma’lumot ber"), "Kogon Uzbekistan");
+});
+test("Kogon image matching rejects district maps and nearby Bukhara landmarks", () => {
+  assert.equal(relevanceScore({ title: "Kogon District location map" }, "Kogon"), 0);
+  assert.equal(relevanceScore({ title: "Bakhouddin Nakshband Mausoleum" }, "Kogon"), 0);
+  assert.equal(relevanceScore({ title: "Kagan railway station Uzbekistan" }, "Kogon"), 5);
 });
 test("clean removes markup and bounds text", () => {
   assert.equal(clean("<b>Buxoro</b> shahri"), "Buxoro shahri");
