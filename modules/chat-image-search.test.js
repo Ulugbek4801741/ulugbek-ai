@@ -8,7 +8,10 @@ test("image intent skips greetings and coding requests", () => {
   assert.equal(imageIntent("JavaScript kod yozib ber"), false);
   assert.equal(imageIntent("Buxoro haqida ma’lumot ber"), true);
 });
-test("image query uses concise place keywords", () => {\n  assert.equal(buildImageQuery("Buxoro viloyati Kogon shahri haqida ma’lumot ber"), "Buxoro viloyati Kogon shahri Uzbekistan");\n});\ntest("clean removes markup and bounds text", () => {
+test("image query uses concise place keywords", () => {
+  assert.equal(buildImageQuery("Buxoro viloyati Kogon shahri haqida ma’lumot ber"), "Buxoro viloyati Kogon shahri Uzbekistan");
+});
+test("clean removes markup and bounds text", () => {
   assert.equal(clean("<b>Buxoro</b> shahri"), "Buxoro shahri");
   assert.equal(clean("x".repeat(220)).length, 180);
 });
