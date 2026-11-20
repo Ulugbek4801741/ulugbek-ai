@@ -6,7 +6,9 @@ const STOP_WORDS = new Set((
   "the a an and or but for about with from into on in at to of is are was were be been " +
   "what when where why how tell me explain give information facts " +
   "это как что где когда почему для про о об и или но на в из к по с со " +
-  "информация расскажи объясни"
+  "информация расскажи объясни " +
+  "viloyat viloyati viloyatda viloyatida viloyatidagi shahar shahri shaharda shahrida shaharni tuman tumani tumanda tumandagi " +
+  "region city town district province oblast"
 ).split(/\s+/u));
 
 const TERM_ALIASES = Object.freeze({
@@ -21,7 +23,10 @@ const TERM_ALIASES = Object.freeze({
   count: "son",
   total: "son",
   history: "tarix",
-  historical: "tarix"
+  historical: "tarix",
+  kagan: "kogon",
+  "каган": "kogon",
+  "когон": "kogon"
 });
 
 const SUFFIXES = [
