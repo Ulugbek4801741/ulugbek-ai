@@ -1670,6 +1670,12 @@ app.post("/api/chat", chatRateLimit, memoryGuard.middleware(), async (req, res) 
       reasoning: reasoning ? { method: reasoning.method, answerable: reasoning.answerable, inference: reasoning.inference, outputPolicy: "single-professional-answer" } : null,
       webSearchUsed: found.ok,
       webSearchSucceeded: found.ok && found.results.length > 0,
+      sources: found.results.slice(0, 4).map(item => ({
+        title: String(item.title || "Nomsiz manba").slice(0, 220),
+        url: String(item.url || ""),
+        pageRead: item.pageRead === true,
+        host: String(item.host || "").slice(0, 180)
+      })),
       jobSearchUsed: searchIntent.isJobSearch,
       platformSearch: searchIntent.platforms,
       synthesisModelConfigured: singleAgent.status().configured,
