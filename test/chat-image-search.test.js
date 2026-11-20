@@ -13,6 +13,12 @@ test("Kogon image search expands to the city, historic Kagan station and Bukhara
   ]);
 });
 
+test("major Uzbek city names are normalized for image search", () => {
+  const result = images.normalizePlaceQuery("Samarqand shahri haqida ma'lumot ber");
+  assert.equal(result.place, "Samarkand");
+  assert.equal(images.relevanceScore({ title: "Samarkand Registan square", tags: [] }, result.place), 3);
+});
+
 test("image relevance rejects generic Bukhara photos for a Kogon request", () => {
   assert.equal(images.relevanceScore({ title: "Kogon railway station", tags: [] }, "Kogon"), 5);
   assert.equal(images.relevanceScore({ title: "Bukhara old town", tags: [] }, "Kogon"), 0);
