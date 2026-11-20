@@ -192,7 +192,7 @@ app.use(helmet({
       scriptSrc: ["'self'"],
       styleSrc: ["'self'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
-      imgSrc: ["'self'", "data:", "blob:"],
+      imgSrc: ["'self'", "data:", "blob:", "https://upload.wikimedia.org"],
       connectSrc: ["'self'", ...FRONTEND_ORIGINS],
       manifestSrc: ["'self'"],
       workerSrc: ["'self'"],
@@ -1285,6 +1285,22 @@ app.use("/api/chat", async (req, res, next) => {
     req.body = { ...(req.body || {}), sessionId: String(user.id).replace(/-/g, "") };
     next();
   } catch (_) { return res.status(503).json({ error: "Akkaunt sessiyasini tekshirib bo‘lmadi." }); }
+});
+const chatImageSearch = require("./modules/chat-image-search");
+app.use("/api/chat", (req, res, next) => {
+  if (req.method !== "POST") return next();
+  const originalJson = res.json.bind(res);
+  res.json = body => {
+    if (!body || typeof body.reply !== "string" || !chatImageSearch.imageIntent(req.body?.message)) return originalJson(body);
+    chatImageSearch.searchImages(req.body.message, 4)
+      .then(images => originalJson({ ...body, images }))
+      .catch(error => {
+        console.warn("Chat image search skipped:", String(error.message || error).slice(0, 140));
+        originalJson({ ...body, images: [] });
+      });
+    return res;
+  };
+  next();
 });
 app.get("/api/system/memory/status", (_req, res) => {
   res.set("Cache-Control", "no-store");
