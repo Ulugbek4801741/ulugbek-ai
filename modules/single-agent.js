@@ -105,7 +105,7 @@ function createSingleAgent(options = {}) {
       const payload = await response.json();
       const content = providerRouter.extract(payload, config.provider);
       if (typeof content !== "string" || !content.trim()) return null;
-      const hosted = config.provider === "ollama" ? false : config.provider !== "openai-compatible" || (() => { try { return !["127.0.0.1", "localhost", "::1"].includes(new URL(config.endpoint).hostname); } catch (_) { return true; } })();
+      const hosted = !["ollama", "local-compatible", "openai-compatible"].includes(config.provider);
       return { reply: content.trim().slice(0, 16000), emotion: emotional.emotion, ethicalAssessment: ethics, cognition: contextState.cognition, reasoning: { method: "provider-adapter-evidence-grounded-universal-agent", answerable: true, facts: [] }, modelUsed: config.model, provider: config.provider, externalProviderUsed: hosted };
     } catch (_) { return null; } finally { clearTimeout(timer); }
   }
