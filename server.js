@@ -12,6 +12,7 @@ const singleAgent = require("./modules/single-agent").createSingleAgent();
 const { createAgentFleet } = require("./modules/agent-fleet");
 const { FaultRecoveryCoordinator } = require("./modules/fault-recovery-coordinator");
 const agentCatalog = require("./modules/agent-100-catalog");
+const threeReaderAgents = require("./modules/three-reader-agents");
 const chatAgentAnswer = require("./modules/chat-agent-answer").createChatAgentAnswer({ singleAgent });
 const agentFleet = createAgentFleet({ answer: chatAgentAnswer, maxAgents: 100, concurrency: 1 });
 const agentFaultRecovery = new FaultRecoveryCoordinator({ maxAttempts: 1, timeoutMs: 20000, backoffMs: 250 });
@@ -932,6 +933,30 @@ app.get("/api/modules", (_req, res) => {
   res.json({ ok: true, product: "ULUGBEK AI", note: "planned modullar hali ishlaydigan integratsiya emas.", modules: capabilityCatalog.listModules() });
 });
 
+
+// Three read-only research agents: public GitHub, code structure, and ZIP text reader.
+app.get("/api/agents/reader/status", requireAdmin, (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  return res.json({ ok: true, agents: [
+    { id: "githubPublicRepoReader", name: "GitHub Research Agent", capability: "Public repository metadata, README, file tree" },
+    { id: "publicCodeStructureAnalyst", name: "Code Analysis Agent", capability: "Read-only repo structure and source categorization" },
+    { id: "zipContentReader", name: "ZIP Reader Agent", capability: "Extract and display supported text/code files without executing" }
+  ], limits: threeReaderAgents.limits });
+});
+app.post("/api/agents/github/read", requireAdmin, plannerRateLimit, async (req, res) => {
+  try { const result = await threeReaderAgents.githubReader(req.body?.repo); res.set("Cache-Control", "no-store"); return res.json({ ok: true, result }); }
+  catch (error) { return res.status(400).json({ ok: false, error: error.message || "Public GitHub repository o‘qilmadi." }); }
+});
+app.post("/api/agents/github/analyze", requireAdmin, plannerRateLimit, async (req, res) => {
+  try { const result = await threeReaderAgents.codeAnalyst(req.body?.repo); res.set("Cache-Control", "no-store"); return res.json({ ok: true, result }); }
+  catch (error) { return res.status(400).json({ ok: false, error: error.message || "Repository tahlili bajarilmadi." }); }
+});
+app.post("/api/agents/zip/read", requireAdmin,
+  express.raw({ type: ["application/zip", "application/x-zip-compressed", "application/octet-stream"], limit: "10mb" }),
+  async (req, res) => {
+    try { const result = await threeReaderAgents.zipReader(req.body); res.set("Cache-Control", "no-store"); return res.json(result); }
+    catch (error) { return res.status(error.statusCode || 400).json({ ok: false, error: error.message || "ZIP o‘qilmadi." }); }
+  });
 
 app.get("/api/agent/fleet/status", (_req, res) => {
   res.set("Cache-Control", "no-store");
