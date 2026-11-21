@@ -255,6 +255,7 @@ const imageRateLimit = rateLimit({
 });
 const imageGenerator = require("./modules/image-generation").createImageGenerator();
 const videoGenerator = require("./modules/video-generation").createVideoGenerator();
+const longVideoEngine = require("./modules/long-video-engine").createLongVideoEngine();
 const videoRateLimit = rateLimit({
   windowMs: 60 * 1000, limit: 1, standardHeaders: "draft-8", legacyHeaders: false,
   message: { error: "Video yaratish limiti tugadi. Bir daqiqadan keyin qayta urinib ko‘ring." }
@@ -1102,6 +1103,44 @@ app.post("/api/videos/generate", (req, res, next) => {
     return res.json({ ok: true, ...result, provider: "self-hosted-comfyui" });
   } catch (error) {
     return res.status(error.status || 502).json({ error: error.message || "Video yaratib bo‘lmadi." });
+  }
+});
+
+
+const videoStudioRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: "draft-8", legacyHeaders: false,
+  message: { error: "Video Studio loyiha yaratish limiti tugadi. Keyinroq urinib ko‘ring." }
+});
+app.get("/api/video-studio/status", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  return res.json({ ok: true, ...longVideoEngine.status(), videoProvider: videoGenerator.status() });
+});
+app.get("/api/video-studio/projects", async (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  try { return res.json({ ok: true, projects: await longVideoEngine.list() }); }
+  catch (error) { return res.status(500).json({ error: "Video loyihalarini o‘qib bo‘lmadi." }); }
+});
+app.post("/api/video-studio/projects", videoStudioRateLimit, async (req, res) => {
+  res.set("Cache-Control", "no-store");
+  try {
+    const project = await longVideoEngine.create(req.body || {});
+    return res.status(201).json({ ok: true, project });
+  } catch (error) {
+    return res.status(error.status || 500).json({ error: error.message || "Film rejasini yaratib bo‘lmadi." });
+  }
+});
+app.get("/api/video-studio/projects/:id", async (req, res) => {
+  res.set("Cache-Control", "no-store");
+  try { return res.json({ ok: true, project: await longVideoEngine.get(req.params.id) }); }
+  catch (error) { return res.status(error.status || 500).json({ error: error.message || "Film loyihasi topilmadi." }); }
+});
+app.patch("/api/video-studio/projects/:id/scenes/:sceneId", async (req, res) => {
+  res.set("Cache-Control", "no-store");
+  try {
+    const project = await longVideoEngine.updateScene(req.params.id, req.params.sceneId, req.body || {});
+    return res.json({ ok: true, project });
+  } catch (error) {
+    return res.status(error.status || 500).json({ error: error.message || "Sahna yangilanmadi." });
   }
 });
 
