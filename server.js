@@ -1082,32 +1082,16 @@ app.post("/api/chat", chatRateLimit, async (req, res) => {
       }
       const jobWebSearch = require("./modules/chat-web-research");
       const jobs = await jobSearch.searchJobs(conversationMessage, jobWebSearch, { limit: 5 });
-      let jobReply = jobs.reply;
-      let jobModelUsed = false;
-      if (jobs.results.length && singleAgent.status().configured) {
-        try {
-          const evidence = jobs.results.map(item => ({
-            title: item.title,
-            content: item.snippet,
-            source: item.url,
-            status: item.pageRead ? "unverified-public-job-page" : "unverified-job-search-snippet"
-          }));
-          const synthesized = await singleAgent.answer(conversationMessage, evidence, conversationContext);
-          if (synthesized?.reply) {
-            jobReply = synthesized.reply + "\n\nVakansiyalar manbalari:\n" +
-              jobs.results.map((item, index) => (index + 1) + ". " + item.title + "\n" + item.url).join("\n");
-            jobModelUsed = true;
-          }
-        } catch (_) {}
-      }
+      // Keep vacancy facts grounded in the dedicated job-search adapter.
+      // A generative model may explain results, but must not invent salaries,
+      // employers, application links, or claim that a listing is verified.
       return res.json({
-        reply: jobReply,
-        mode: jobModelUsed ? "self-hosted-job-search-agent" : "native-job-search-results",
+        reply: jobs.reply,
+        mode: "native-job-search-results",
         agents: ["ULUGBEK Universal Agent"],
         jobSearchUsed: true,
         webSearchUsed: jobs.ok,
         webResults: jobs.results,
-        synthesisModelConfigured: singleAgent.status().configured,
         cognition
       });
     }
