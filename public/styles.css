@@ -15,3 +15,16 @@
 }
 
 .generated-image,.generated-video{display:block;width:min(100%,640px);height:auto;max-height:75vh;object-fit:contain;border:1px solid var(--line);border-radius:14px;margin-top:12px;background:var(--bg)}.message-action-link{display:inline-block;margin:10px 0;color:var(--text);font-size:12px;font-weight:650;text-decoration:underline;text-underline-offset:3px}
+
+
+/* Vacancy results: source-first cards, no decorative or unrelated images. */
+.job-results{margin-top:16px;display:grid;gap:10px;max-width:100%}
+.job-results-title{font-size:15px;font-weight:700;margin:0 0 2px}
+.job-result-card{border:1px solid var(--line);border-radius:13px;padding:12px;background:var(--surface);min-width:0}
+.job-result-title{font-size:14px;line-height:1.4;margin:0 0 7px;overflow-wrap:anywhere}
+.job-result-snippet,.job-results-empty{font-size:13px;line-height:1.55;color:var(--text);margin:0 0 8px;overflow-wrap:anywhere}
+.job-result-status{display:block;font-size:11px;color:var(--muted);margin:6px 0}
+.job-result-link{display:inline-flex;align-items:center;min-height:36px;margin-top:5px;padding:8px 11px;border:1px solid var(--line);border-radius:9px;color:var(--text);font-size:12px;font-weight:650;text-decoration:none}
+.job-result-link:hover,.job-followup-btn:hover{background:var(--hover)}
+.job-followups{display:flex;flex-wrap:wrap;gap:7px;margin-top:5px}
+.job-followup-btn{min-height:36px;padding:8px 11px;border:1px solid var(--line);border-radius:20px;background:var(--surface);color:var(--text);font-size:12px}
