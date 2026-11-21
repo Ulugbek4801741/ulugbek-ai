@@ -51,12 +51,6 @@ const AGENTS = [
     "category": "management"
   },
   {
-    "id": "complexityEstimator",
-    "name": "Murakkablik baholovchisi",
-    "specialty": "Vazifa hajmi va qiyinligini baholaydi",
-    "category": "management"
-  },
-  {
     "id": "qualityCoordinator",
     "name": "Sifat koordinatori",
     "specialty": "Agent natijalarining umumiy sifatini nazorat qiladi",
@@ -96,12 +90,6 @@ const AGENTS = [
     "id": "comparisonAnalyst",
     "name": "Taqqoslash mutaxassisi",
     "specialty": "Variantlar va mahsulotlarni mezonlar asosida solishtiradi",
-    "category": "research"
-  },
-  {
-    "id": "trendAnalyst",
-    "name": "Trend tahlilchisi",
-    "specialty": "O‘zgarishlar va tendensiyalarni aniqlaydi",
     "category": "research"
   },
   {
@@ -195,12 +183,6 @@ const AGENTS = [
     "category": "coding"
   },
   {
-    "id": "cssEngineer",
-    "name": "CSS mutaxassisi",
-    "specialty": "CSS, layout va responsive ko‘rinish",
-    "category": "coding"
-  },
-  {
     "id": "integrationEngineer",
     "name": "Integratsiya muhandisi",
     "specialty": "Tizimlararo integratsiya va protokollar",
@@ -252,12 +234,6 @@ const AGENTS = [
     "id": "apiTester",
     "name": "API tester",
     "specialty": "API javoblari va xatolarini tekshiradi",
-    "category": "quality"
-  },
-  {
-    "id": "compatibilityTester",
-    "name": "Moslik tester",
-    "specialty": "Platforma va versiya mosligini tekshiradi",
     "category": "quality"
   },
   {
@@ -567,12 +543,6 @@ const AGENTS = [
     "category": "innovation"
   },
   {
-    "id": "contentStrategist",
-    "name": "Kontent strateg",
-    "specialty": "Kontent yo‘nalishi va rejalari",
-    "category": "innovation"
-  },
-  {
     "id": "solutionArchitect",
     "name": "Yechim arxitektori",
     "specialty": "Muammoga end-to-end yechim taklif qiladi",
@@ -618,12 +588,6 @@ const AGENTS = [
     "id": "githubMonitor",
     "name": "GitHub nazoratchisi",
     "specialty": "Repo, commit va CI holatlarini tahlil qiladi",
-    "category": "recovery"
-  },
-  {
-    "id": "backupPlanner",
-    "name": "Zaxira rejalashtiruvchi",
-    "specialty": "Backup va qayta tiklash rejasi",
     "category": "recovery"
   },
   {
