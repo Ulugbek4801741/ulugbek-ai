@@ -11,6 +11,7 @@ const universalToolHub = require("./modules/universal-tool-hub");
 const singleAgent = require("./modules/single-agent").createSingleAgent();
 const { createAgentFleet } = require("./modules/agent-fleet");
 const { FaultRecoveryCoordinator } = require("./modules/fault-recovery-coordinator");
+const agentCatalog = require("./modules/agent-100-catalog");
 const chatAgentAnswer = require("./modules/chat-agent-answer").createChatAgentAnswer({ singleAgent });
 const agentFleet = createAgentFleet({ answer: chatAgentAnswer, maxAgents: 100, concurrency: 1 });
 const agentFaultRecovery = new FaultRecoveryCoordinator({ maxAttempts: 1, timeoutMs: 20000, backoffMs: 250 });
@@ -954,7 +955,7 @@ app.post("/api/agent/fleet/run", requireAdmin, plannerRateLimit, async (req, res
       delegatedReviewers: agents.map(agent => agent.id),
       fallbackRoles
     }));
-    return res.status(result.ok ? 200 : 503).set("Cache-Control", "no-store").json(result);
+    return res.status(result.ok ? 200 : 503).set("Cache-Control", "no-store").json(result.ok ? { ...(result.value || {}), recovery: { recovered: result.recovered, source: result.source, diagnosis: result.diagnosis || null, primaryError: result.primaryError || null, agents: result.agents || [] } } : result);
   } catch (error) {
     return res.status(error.statusCode || 400).json({ ok: false, error: error.message || "Agent jamoasi ishlamadi." });
   }
