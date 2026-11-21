@@ -13,6 +13,7 @@ const { createAgentFleet } = require("./modules/agent-fleet");
 const { FaultRecoveryCoordinator } = require("./modules/fault-recovery-coordinator");
 const agentCatalog = require("./modules/agent-100-catalog");
 const threeReaderAgents = require("./modules/three-reader-agents");
+const diagnostic99Agents = require("./modules/diagnostic-99-agents");
 const chatAgentAnswer = require("./modules/chat-agent-answer").createChatAgentAnswer({ singleAgent });
 const agentFleet = createAgentFleet({ answer: chatAgentAnswer, maxAgents: 100, concurrency: 1 });
 const agentFaultRecovery = new FaultRecoveryCoordinator({ maxAttempts: 1, timeoutMs: 20000, backoffMs: 250 });
@@ -469,6 +470,26 @@ app.get("/api/admin/overview", requireAdmin, (_req, res) => {
     adminEmail: "local-admin",
     deployment: "manual-host-configuration-required"
   });
+});
+
+// Coordinated 99-role read-only diagnostics. Does not edit files or run project code.
+app.get("/api/admin/diagnostics/99-agents", requireAdmin, async (_req, res) => {
+  try {
+    const report = await diagnostic99Agents.diagnose();
+    res.set("Cache-Control", "no-store");
+    return res.json({ ok: report.ok, report });
+  } catch (error) {
+    return res.status(500).json({ ok: false, error: error.message || "99-agent diagnostika bajarilmadi." });
+  }
+});
+app.post("/api/admin/diagnostics/99-agents/run", requireAdmin, async (_req, res) => {
+  try {
+    const [report, recovery] = await Promise.all([diagnostic99Agents.diagnose(), selfRecovery.run()]);
+    res.set("Cache-Control", "no-store");
+    return res.json({ ok: report.ok, report, runtimeProbes: recovery, note: "Statik tekshiruv va mavjud health-probelar bajarildi; kod o‘zgartirilmadi." });
+  } catch (error) {
+    return res.status(500).json({ ok: false, error: error.message || "Diagnostika bajarilmadi." });
+  }
 });
 
 app.get("/api/admin/recovery/status", requireAdmin, (_req, res) => {
