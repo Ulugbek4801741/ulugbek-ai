@@ -452,7 +452,7 @@ app.get("/api/admin/overview", requireAdmin, (_req, res) => {
     ethicalReasoningReady: ethicalReasoning.status().ready,
     conversationPipelineReady: conversationOrchestrator.status().ready,
     independentLanguageReady: languageCognition.status().ready,
-    localModelConfigured: singleAgent.status().configured && singleAgent.status().provider === "openai-compatible",
+    localModelConfigured: singleAgent.status().configured && ["ollama", "local-compatible", "openai-compatible"].includes(singleAgent.status().provider),
     externalAiApiEnabled: singleAgent.status().configured && ["gemini", "anthropic"].includes(singleAgent.status().provider),
     modelProvider: singleAgent.status().provider,
     modelName: singleAgent.status().model || null,
@@ -761,7 +761,7 @@ app.get("/api/health", (_req, res) => {
     agentFleet: agentFleet.status(),
     agentSdk: singleAgent.status().agentSdk || { configured: false },
     mode: !singleAgent.status().configured ? "native-single-agent-fallback-no-model" :
-      singleAgent.status().provider === "openai-compatible" ? "openai-compatible-model" : "external-ai-provider",
+      ["ollama", "local-compatible", "openai-compatible"].includes(singleAgent.status().provider) ? "independent-local-model" : "native-or-other-provider",
     storageMode: process.env.ULUGBEK_DATABASE_URL ? "neon-postgresql" : "local-json",
     ulugbekKnowledgeDatabaseConfigured: Boolean(process.env.ULUGBEK_DATABASE_URL),
     vizorDatabaseConfigured: Boolean(process.env.VIZOR_DATABASE_URL),
