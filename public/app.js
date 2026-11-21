@@ -4,7 +4,7 @@ section.appendChild(el("h3","job-results-title","Topilgan ish e’lonlari"));
 const items=Array.isArray(results)?results:[];
 if(!items.length)section.appendChild(el("p","job-results-empty","Hozircha vakansiya ekanini tasdiqlaydigan e’lon topilmadi. Rasmlar va sayyohlik sahifalari ish o‘rni sifatida ko‘rsatilmaydi."));
 items.forEach(item=>{
-if(!item||typeof item.url!=="string"||!/^https?:\\/\\//i.test(item.url))return;
+if(!item||typeof item.url!=="string"||!/^https?:\/\//i.test(item.url))return;
 const card=el("article","job-result-card");
 card.appendChild(el("h4","job-result-title",item.title||"Ish e’loni"));
 if(item.snippet)card.appendChild(el("p","job-result-snippet",item.snippet));
