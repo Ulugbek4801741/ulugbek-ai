@@ -96,3 +96,45 @@ test("job search output decodes nested HTML entities from search snippets", () =
   assert.equal(cleanText("Buxoroda bo&amp;#x27;sh ish o&amp;#x27;rinlari"), "Buxoroda bo'sh ish o'rinlari");
   assert.equal(cleanText("A &amp;amp; B"), "A & B");
 });
+
+
+test("rejects unrelated photos, tourist pages, and generic pages from vacancy results", async () => {
+  const result = await searchJobs("Kogonda ish topib ber", {
+    async search() {
+      return [
+        { title: "Kogon rasmi", url: "https://images.example.org/kogon.jpg", snippet: "Kogon city photo" },
+        { title: "Bakhouddin Nakshband Mausoleum", url: "https://travel.example.org/kogon", snippet: "Tourist attraction and travel guide" },
+        { title: "Kogon vakansiyalari", url: "https://jobs.example.org/kogon", snippet: "Ish o'rinlari va ishga qabul. Sotuvchi kerak." }
+      ];
+    },
+    async fetchPage(url) {
+      return { title: "Kogon vakansiyalari", url, content: "Sotuvchi kerak. Ishga qabul davom etmoqda." };
+    }
+  });
+  assert.equal(result.results.length, 1);
+  assert.match(result.results[0].title, /vakansiya/i);
+  assert.doesNotMatch(result.reply, /Mausoleum|Kogon rasmi/i);
+});
+
+test("does not invent vacancies or salaries when search returns no relevant listing", async () => {
+  const result = await searchJobs("Kogonda ish topib ber", {
+    async search() {
+      return [{ title: "Kogon city photos", url: "https://photos.example.org/kogon", snippet: "Travel photos" }];
+    }
+  });
+  assert.equal(result.results.length, 0);
+  assert.match(result.reply, /ish vakansiyasi/i);
+  assert.doesNotMatch(result.reply, /4–8 mln|3–5 mln|maosh: [0-9]/i);
+});
+
+test("deduplicates matching job listings by canonical URL", async () => {
+  const result = await searchJobs("Kogonda ish topib ber", {
+    async search() {
+      return [
+        { title: "Sotuvchi vakansiyasi", url: "https://jobs.example.org/kogon/", snippet: "Sotuvchi kerak, ishga qabul." },
+        { title: "Sotuvchi vakansiyasi", url: "https://jobs.example.org/kogon/#apply", snippet: "Sotuvchi kerak, ishga qabul." }
+      ];
+    }
+  });
+  assert.equal(result.results.length, 1);
+});
