@@ -10,8 +10,10 @@ const taskIntentRouter = require("./modules/task-intent-router");
 const universalToolHub = require("./modules/universal-tool-hub");
 const singleAgent = require("./modules/single-agent").createSingleAgent();
 const { createAgentFleet } = require("./modules/agent-fleet");
+const { FaultRecoveryCoordinator } = require("./modules/fault-recovery-coordinator");
 const chatAgentAnswer = require("./modules/chat-agent-answer").createChatAgentAnswer({ singleAgent });
 const agentFleet = createAgentFleet({ answer: chatAgentAnswer, maxAgents: 100, concurrency: 1 });
+const agentFaultRecovery = new FaultRecoveryCoordinator({ maxAttempts: 1, timeoutMs: 20000, backoffMs: 250 });
 const answerSelection = require("./modules/answer-selection");
 const languageModule = require("./modules/language-module");
 const codingLanguageEngine = require("./modules/coding-language-engine");
@@ -935,9 +937,23 @@ app.get("/api/agent/fleet/status", (_req, res) => {
   return res.json({ ok: true, fleet: agentFleet.status() });
 });
 
+app.get("/api/agent/fault-recovery/status", requireAdmin, (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  return res.json({ ok: true, recovery: agentFaultRecovery.status() });
+});
+
 app.post("/api/agent/fleet/run", requireAdmin, plannerRateLimit, async (req, res) => {
   try {
-    const result = await agentFleet.runTask(req.body?.task, { evidence: [], context: null });
+    const task = req.body?.task;
+    const primary = () => agentFleet.runTask(task, { evidence: [], context: null });
+    const fallbackRoles = agentCatalog.selectForTask(String(task || "") + " independent second reviewer recovery", 6)
+      .map(agent => agent.id).filter(role => role !== "orchestrator");
+    const fallback = () => agentFleet.runTask(task, { evidence: [], context: null, roles: fallbackRoles });
+    const result = await agentFaultRecovery.execute("agent-fleet-run", primary, fallback, async (error, agents) => ({
+      error: String(error),
+      delegatedReviewers: agents.map(agent => agent.id),
+      fallbackRoles
+    }));
     return res.status(result.ok ? 200 : 503).set("Cache-Control", "no-store").json(result);
   } catch (error) {
     return res.status(error.statusCode || 400).json({ ok: false, error: error.message || "Agent jamoasi ishlamadi." });
