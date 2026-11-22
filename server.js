@@ -597,8 +597,26 @@ app.get("/api/version", (_req, res) => {
 });
 
 app.get("/api/ai/status", (_req, res) => {
+  const modelStatus = singleAgent.status();
   res.set("Cache-Control", "no-store");
-  res.json({ ok: true, agentCount: 1, agentName: "ULUGBEK Universal Agent", model: singleAgent.status(), language: languageModule.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status(), conversationPipeline: conversationOrchestrator.status(), independentLanguage: languageLearningWorker.status(), mathEngine: "native-safe-arithmetic", research: "public-read-only-with-source-checks" });
+  res.json({
+    ok: true,
+    configured: modelStatus.configured === true,
+    provider: modelStatus.provider || "not-configured",
+    modelName: modelStatus.model || null,
+    apiKeyRequired: modelStatus.apiKeyRequired === true,
+    tokenConfigured: modelStatus.tokenConfigured === true,
+    agentCount: 1,
+    agentName: "ULUGBEK Universal Agent",
+    model: modelStatus,
+    language: languageModule.status(),
+    emotion: emotionalIntelligence.status(),
+    ethics: ethicalReasoning.status(),
+    conversationPipeline: conversationOrchestrator.status(),
+    independentLanguage: languageLearningWorker.status(),
+    mathEngine: "native-safe-arithmetic",
+    research: "public-read-only-with-source-checks"
+  });
 });
 
 app.get("/api/health", (_req, res) => {
@@ -774,11 +792,7 @@ app.post("/api/images/generate", (req, res, next) => {
   }
 });
 
-app.get("/api/ai/status", (_req, res) => {
-  res.set("Cache-Control", "no-store");
-  const model = singleAgent.status();
-  return res.json({ ok: true, configured: model.configured, provider: model.provider, model: model.model || null, apiKeyRequired: model.apiKeyRequired, tokenConfigured: model.tokenConfigured || false });
-});
+
 
 app.get("/api/videos/status", (_req, res) => {
   res.set("Cache-Control", "no-store");

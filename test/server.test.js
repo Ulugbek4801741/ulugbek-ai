@@ -48,6 +48,19 @@ test("API smoke tests", async (t) => {
       assert.ok(body.endpoints.research);
     });
 
+    await t.test("AI status exposes consistent top-level model readiness and agent diagnostics", async () => {
+      const response = await fetch(`${baseUrl}/api/ai/status`);
+      const body = await response.json();
+      assert.equal(response.status, 200);
+      assert.equal(body.ok, true);
+      assert.equal(body.agentCount, 1);
+      assert.equal(body.configured, body.model.configured);
+      assert.equal(body.provider, body.model.provider);
+      assert.equal(body.modelName, body.model.model || null);
+      assert.equal(body.apiKeyRequired, body.model.apiKeyRequired === true);
+      assert.equal(body.tokenConfigured, body.model.tokenConfigured === true);
+    });
+
     await t.test("independent language learner status endpoint is available", async () => {
       const response = await fetch(`${baseUrl}/api/language/status`);
       const body = await response.json();
