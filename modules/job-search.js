@@ -48,7 +48,7 @@ function cleanText(value, max = 650) {
   return decodeHtmlEntities(value).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
 }
 
-const JOB_SIGNAL = /(?:vakans|ish\s*o['’‘ʻ]?rni|ishga\s*qabul|ishchi\s*kerak|ish\s*bor|bo['’‘ʻ]?sh\s*ish|xodim\s*kerak|работа|ваканси|сотрудник|job\s*opening|job\s*vacanc|career|hiring|recruit(?:ment)?|employment|apply\s*now)/iu;
+const JOB_SIGNAL = /(?:\bvacanc(?:y|ies)\b|vakans|ish\s*o['’‘ʻ]?rni|ishga\s*qabul|ishchi\s*kerak|ish\s*bor|bo['’‘ʻ]?sh\s*ish|xodim\s*kerak|работа|ваканси|сотрудник|job\s*opening|job\s*vacanc|career|hiring|recruit(?:ment)?|employment|apply\s*now)/iu;
 const NON_JOB_SIGNAL = /(?:stock\s*photo|rasm\s*galereya|photo\s*gallery|tourist\s*attraction|mausoleum|travel\s*guide|weather|ob[- ]?havo|wikipedia|map\s*of)/iu;
 
 function isRelevantJobResult(item) {
