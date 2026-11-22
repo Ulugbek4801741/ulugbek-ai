@@ -4,7 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { detectSearchIntent, buildUniversalSearchQuery, buildUniversalSearchQueries, searchWeb, evidenceEntries, formatEvidenceReply } = require("../modules/universal-web-search");
 const { knowledgeContext, SYSTEM_PROMPT } = require("../modules/single-agent");
-const { isJobSearchRequest, hasLocationHint, locationClarification, searchJobs, cleanText, decodeHtmlEntities } = require("../modules/job-search");
+const { isJobSearchRequest, hasLocationHint, locationClarification, searchJobs, cleanText, decodeHtmlEntities, isRelevantJobResult } = require("../modules/job-search");
 
 test("searches only explicit discovery, job, and current-information requests", () => {
   for (const q of ["Bugun ob-havo qanday?", "Bugungi eng so'nggi yangiliklarni top", "Shveysariyada traktorchi ish topish", "Menga vakansiya qidirib ber", "YouTube kanalining linkini topib ber"]) assert.equal(detectSearchIntent(q).shouldSearch, true, q);
@@ -21,6 +21,19 @@ test("detects job and platform search intents", () => {
   assert.equal(detectSearchIntent("YouTube kanalining linkini topib ber").shouldSearch, true);
   assert.ok(detectSearchIntent("Instagram profil manzilini top").platforms.includes("site:instagram.com"));
 });
+test("accepts standalone English vacancy terminology as a job signal", () => {
+  assert.equal(isRelevantJobResult({
+    title: "Tractor operator vacancy",
+    url: "https://jobs.example.org/tractor",
+    snippet: "Full-time operator role."
+  }), true);
+  assert.equal(isRelevantJobResult({
+    title: "Tractor operator vacancies",
+    url: "https://jobs.example.org/tractors",
+    snippet: "Full-time operator roles."
+  }), true);
+});
+
 test("creates multiple distinct search queries for independent discovery", () => {
   const queries = buildUniversalSearchQueries("Telegramdagi rasmiy kanal linkini top");
   assert.equal(queries.length, 3);
