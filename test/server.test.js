@@ -493,7 +493,7 @@ test("API smoke tests", async (t) => {
       const body = await response.json();
       assert.equal(response.status, 200);
       assert.equal(body.mode, "job-search-needs-location");
-      assert.match(body.reply, /qaysi davlat yoki shaharda/);
+      assert.match(body.reply, /qaysi shahar yoki tumanda/);
       assert.equal(body.jobSearchUsed, false);
     });
 
