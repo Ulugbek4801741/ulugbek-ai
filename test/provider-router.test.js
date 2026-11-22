@@ -35,7 +35,6 @@ test("does not allow custom untrusted Anthropic API hosts", () => {
     ULUGBEK_AI_TOKEN: "secret", ULUGBEK_AI_BASE_URL: "https://attacker.example/messages"
   }));
 });
-
 test("uses existing Render Gemini variables without requiring renamed secrets", () => {
   const env = { GEMINI_API_KEY: "render-gemini-secret", GEMINI_MODEL: "gemini-flash-latest" };
   const config = provider.configuration(env);
@@ -45,17 +44,39 @@ test("uses existing Render Gemini variables without requiring renamed secrets", 
   const request = provider.request("Salom", "System", env);
   assert.match(request.url, /key=render-gemini-secret/);
 });
+test("ignores legacy OpenAI credentials and blocks the official OpenAI endpoint", () => {
+  const legacy = provider.configuration({
+    OPENAI_API_KEY: "not-a-real-secret",
+    OPENAI_BASE_URL: "https://api.openai.com/v1/",
+    OPENAI_MODEL: "gpt-test"
+  });
+  assert.equal(legacy.configured, false);
+  assert.equal(legacy.provider, "not-configured");
 
-test("uses existing Render OpenAI variables as an OpenAI-compatible endpoint", () => {
-  const env = { OPENAI_API_KEY: "render-openai-secret", OPENAI_BASE_URL: "https://api.openai.com/v1/", OPENAI_MODEL: "gpt-test" };
+  const blocked = provider.configuration({
+    ULUGBEK_AI_PROVIDER: "openai-compatible",
+    ULUGBEK_AI_MODEL: "local-test",
+    ULUGBEK_AI_BASE_URL: "https://api.openai.com/v1/chat/completions",
+    OPENAI_API_KEY: "not-a-real-secret"
+  });
+  assert.equal(blocked.configured, false);
+  assert.equal(blocked.reason, "hosted-provider-blocked");
+  assert.equal(blocked.apiKeyRequired, false);
+});
+test("local compatible endpoint works without an OpenAI key or hosted endpoint", () => {
+  const env = {
+    ULUGBEK_AI_PROVIDER: "openai-compatible",
+    ULUGBEK_LOCAL_MODEL_URL: "http://127.0.0.1:11434/v1/chat/completions",
+    ULUGBEK_LOCAL_MODEL_NAME: "qwen-local"
+  };
   const config = provider.configuration(env);
   assert.equal(config.configured, true);
   assert.equal(config.provider, "openai-compatible");
-  assert.equal(config.endpoint, "https://api.openai.com/v1/chat/completions");
-  const request = provider.request("Hi", "System", env);
-  assert.equal(request.options.headers.Authorization, "Bearer render-openai-secret");
+  assert.equal(config.tokenConfigured, false);
+  const request = provider.request("Salom", "System", env);
+  assert.equal(request.url, "http://127.0.0.1:11434/v1/chat/completions");
+  assert.equal(request.options.headers.Authorization, undefined);
 });
-
 test("explicit provider selection takes precedence over legacy Render credentials", () => {
   const env = {
     ULUGBEK_AI_PROVIDER: "anthropic",

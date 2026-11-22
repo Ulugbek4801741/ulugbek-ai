@@ -12,14 +12,13 @@ function providerFor(env) {
   if (explicit) return explicit;
   if (String(env.ULUGBEK_LOCAL_MODEL_URL || "").trim() && String(env.ULUGBEK_LOCAL_MODEL_NAME || "").trim()) return "openai-compatible";
   if (String(env.GEMINI_API_KEY || "").trim()) return "gemini";
-  if (String(env.OPENAI_API_KEY || "").trim() && String(env.OPENAI_BASE_URL || "").trim() && String(env.OPENAI_MODEL || "").trim()) return "openai-compatible";
   if (String(env.ANTHROPIC_API_KEY || "").trim()) return "anthropic";
   return "none";
 }
 
 function modelFor(provider, env) {
   if (env.ULUGBEK_AI_MODEL) return String(env.ULUGBEK_AI_MODEL).trim();
-  if (provider === "openai-compatible") return String(env.ULUGBEK_LOCAL_MODEL_NAME || env.OPENAI_MODEL || "").trim();
+  if (provider === "openai-compatible") return String(env.ULUGBEK_LOCAL_MODEL_NAME || "").trim();
   if (provider === "gemini") return String(env.GEMINI_MODEL || "").trim();
   if (provider === "anthropic") return String(env.ANTHROPIC_MODEL || "").trim();
   return "";
@@ -30,17 +29,13 @@ function tokenFor(provider, env) {
     return String(env.ULUGBEK_AI_TOKEN || env.ULUGBEK_LOCAL_MODEL_TOKEN).trim();
   }
   if (provider === "gemini") return String(env.GEMINI_API_KEY || "").trim();
-  if (provider === "openai-compatible") return String(env.OPENAI_API_KEY || "").trim();
   if (provider === "anthropic") return String(env.ANTHROPIC_API_KEY || "").trim();
   return "";
 }
 
 function endpointFor(provider, env) {
   if (provider === "openai-compatible") {
-    const configured = String(env.ULUGBEK_AI_BASE_URL || env.ULUGBEK_LOCAL_MODEL_URL || "").trim();
-    if (configured) return configured;
-    const base = String(env.OPENAI_BASE_URL || "").trim().replace(/\/+$/, "");
-    return base ? base + "/chat/completions" : "";
+    return String(env.ULUGBEK_AI_BASE_URL || env.ULUGBEK_LOCAL_MODEL_URL || "").trim();
   }
   if (provider === "anthropic") return String(env.ULUGBEK_AI_BASE_URL || "https://api.anthropic.com/v1/messages").trim();
   return "";
@@ -54,12 +49,15 @@ function configuration(env = process.env) {
   if (!model) return { configured: false, provider, reason: "model-name-missing", apiKeyRequired: provider !== "openai-compatible" };
   if (provider === "openai-compatible") {
     const url = validHttpUrl(endpointFor(provider, env));
-    if (!url) return { configured: false, provider, reason: "endpoint-invalid", apiKeyRequired: false };
-    return { configured: true, provider, model, endpoint: url.toString(), apiKeyRequired: false, tokenConfigured: Boolean(token) };
+    if (!url) return { configured: false, provider: "local-compatible", reason: "endpoint-invalid", apiKeyRequired: false };
+    if (url.hostname.toLowerCase() === "api.openai.com") {
+      return { configured: false, provider: "local-compatible", reason: "hosted-provider-blocked", apiKeyRequired: false };
+    }
+    return { configured: true, provider: "openai-compatible", model, endpoint: url.toString(), apiKeyRequired: false, tokenConfigured: Boolean(token) };
   }
   if (provider === "gemini") return { configured: Boolean(token), provider, model, apiKeyRequired: true, tokenConfigured: Boolean(token) };
   if (provider === "anthropic") return { configured: Boolean(token), provider, model, apiKeyRequired: true, tokenConfigured: Boolean(token) };
-  return { configured: false, provider, reason: "provider-unsupported", apiKeyRequired: true };
+  return { configured: false, provider, reason: "provider-unsupported", apiKeyRequired: false };
 }
 
 function request(prompt, systemPrompt, env = process.env) {
