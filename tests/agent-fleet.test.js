@@ -5,7 +5,9 @@ const assert = require("node:assert/strict");
 const { createAgentFleet, chooseRoles, MAX_AGENTS } = require("../modules/agent-fleet");
 
 test("task routing selects specialists dynamically", () => {
-  assert.deepEqual(chooseRoles("GitHub serverdagi kod xatosini tekshir"), ["engineer", "verifier"]);
+  const selected = chooseRoles("GitHub serverdagi kod xatosini tekshir");
+  assert.deepEqual(selected.slice(0, 2), ["engineer", "verifier"]);
+  assert.ok(selected.length <= 6, "routing must respect the specialist selection cap");
   assert.ok(chooseRoles("O'zbekiston qonunlari va soliq talablari").includes("legal"));
   assert.equal(MAX_AGENTS, 100);
 });

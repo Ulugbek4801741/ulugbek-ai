@@ -4,6 +4,7 @@ const crypto = require("node:crypto");
 const agentRegistry = require("../agents/registry");
 const qualityGate = require("./agent-quality-gate");
 const codexProtocol = require("./codex-agent-protocol");
+const agentCatalog = require("./agent-100-catalog");
 
 const MAX_AGENTS = 100;
 const DEFAULT_CONCURRENCY = 3;
@@ -25,7 +26,8 @@ const BASE_ROLE_DEFINITIONS = {
 const REGISTERED_ROLE_DEFINITIONS = Object.fromEntries(agentRegistry.listAgents().map(agent => [
   agent.id, agent.name + ": " + agent.specialty
 ]));
-const ROLE_DEFINITIONS = Object.freeze({ ...BASE_ROLE_DEFINITIONS, ...REGISTERED_ROLE_DEFINITIONS });
+const CATALOG_ROLE_DEFINITIONS = Object.fromEntries(agentCatalog.AGENTS.map(agent => [agent.id, agent.name + ": " + agent.specialty]));
+const ROLE_DEFINITIONS = Object.freeze({ ...BASE_ROLE_DEFINITIONS, ...REGISTERED_ROLE_DEFINITIONS, ...CATALOG_ROLE_DEFINITIONS });
 
 function clean(value, max = 4000) {
   return String(value == null ? "" : value).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, " ").trim().slice(0, max);
@@ -46,6 +48,11 @@ function chooseRoles(task) {
   if (/(tahlil|solishtir|reja|strategiya|murakkab|batafsil)/i.test(text)) roles.push("analyst");
   if (roles.length === 0) roles.push("generalist");
   if (roles.length > 1 || /(tekshir|isbot|manba|xavfsiz|ishonchli)/i.test(text)) roles.push("verifier");
+  const selectedCatalog = agentCatalog.selectForTask(task, 6).map(agent => agent.id);
+  for (const role of selectedCatalog) {
+    if (!roles.includes(role)) roles.push(role);
+    if (roles.length >= 6) break;
+  }
   return [...new Set(roles)].slice(0, 6);
 }
 

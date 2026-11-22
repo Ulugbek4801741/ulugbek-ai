@@ -10,8 +10,13 @@ const taskIntentRouter = require("./modules/task-intent-router");
 const universalToolHub = require("./modules/universal-tool-hub");
 const singleAgent = require("./modules/single-agent").createSingleAgent();
 const { createAgentFleet } = require("./modules/agent-fleet");
+const { FaultRecoveryCoordinator } = require("./modules/fault-recovery-coordinator");
+const agentCatalog = require("./modules/agent-100-catalog");
+const threeReaderAgents = require("./modules/three-reader-agents");
+const diagnostic99Agents = require("./modules/diagnostic-99-agents");
 const chatAgentAnswer = require("./modules/chat-agent-answer").createChatAgentAnswer({ singleAgent });
-const agentFleet = createAgentFleet({ answer: chatAgentAnswer, maxAgents: 12, concurrency: 1 });
+const agentFleet = createAgentFleet({ answer: chatAgentAnswer, maxAgents: 100, concurrency: 1 });
+const agentFaultRecovery = new FaultRecoveryCoordinator({ maxAttempts: 1, timeoutMs: 20000, backoffMs: 250 });
 const answerSelection = require("./modules/answer-selection");
 const languageModule = require("./modules/language-module");
 const codingLanguageEngine = require("./modules/coding-language-engine");
@@ -465,6 +470,26 @@ app.get("/api/admin/overview", requireAdmin, (_req, res) => {
     adminEmail: "local-admin",
     deployment: "manual-host-configuration-required"
   });
+});
+
+// Coordinated 99-role read-only diagnostics. Does not edit files or run project code.
+app.get("/api/admin/diagnostics/99-agents", requireAdmin, async (_req, res) => {
+  try {
+    const report = await diagnostic99Agents.diagnose();
+    res.set("Cache-Control", "no-store");
+    return res.json({ ok: report.ok, report });
+  } catch (error) {
+    return res.status(500).json({ ok: false, error: error.message || "99-agent diagnostika bajarilmadi." });
+  }
+});
+app.post("/api/admin/diagnostics/99-agents/run", requireAdmin, async (_req, res) => {
+  try {
+    const [report, recovery] = await Promise.all([diagnostic99Agents.diagnose(), selfRecovery.run()]);
+    res.set("Cache-Control", "no-store");
+    return res.json({ ok: report.ok, report, runtimeProbes: recovery, note: "Statik tekshiruv va mavjud health-probelar bajarildi; kod o‘zgartirilmadi." });
+  } catch (error) {
+    return res.status(500).json({ ok: false, error: error.message || "Diagnostika bajarilmadi." });
+  }
 });
 
 app.get("/api/admin/recovery/status", requireAdmin, (_req, res) => {
@@ -930,15 +955,53 @@ app.get("/api/modules", (_req, res) => {
 });
 
 
+// Three read-only research agents: public GitHub, code structure, and ZIP text reader.
+app.get("/api/agents/reader/status", requireAdmin, (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  return res.json({ ok: true, agents: [
+    { id: "githubPublicRepoReader", name: "GitHub Research Agent", capability: "Public repository metadata, README, file tree" },
+    { id: "publicCodeStructureAnalyst", name: "Code Analysis Agent", capability: "Read-only repo structure and source categorization" },
+    { id: "zipContentReader", name: "ZIP Reader Agent", capability: "Extract and display supported text/code files without executing" }
+  ], limits: threeReaderAgents.limits });
+});
+app.post("/api/agents/github/read", requireAdmin, plannerRateLimit, async (req, res) => {
+  try { const result = await threeReaderAgents.githubReader(req.body?.repo); res.set("Cache-Control", "no-store"); return res.json({ ok: true, result }); }
+  catch (error) { return res.status(400).json({ ok: false, error: error.message || "Public GitHub repository o‘qilmadi." }); }
+});
+app.post("/api/agents/github/analyze", requireAdmin, plannerRateLimit, async (req, res) => {
+  try { const result = await threeReaderAgents.codeAnalyst(req.body?.repo); res.set("Cache-Control", "no-store"); return res.json({ ok: true, result }); }
+  catch (error) { return res.status(400).json({ ok: false, error: error.message || "Repository tahlili bajarilmadi." }); }
+});
+app.post("/api/agents/zip/read", requireAdmin,
+  express.raw({ type: ["application/zip", "application/x-zip-compressed", "application/octet-stream"], limit: "10mb" }),
+  async (req, res) => {
+    try { const result = await threeReaderAgents.zipReader(req.body); res.set("Cache-Control", "no-store"); return res.json(result); }
+    catch (error) { return res.status(error.statusCode || 400).json({ ok: false, error: error.message || "ZIP o‘qilmadi." }); }
+  });
+
 app.get("/api/agent/fleet/status", (_req, res) => {
   res.set("Cache-Control", "no-store");
   return res.json({ ok: true, fleet: agentFleet.status() });
 });
 
+app.get("/api/agent/fault-recovery/status", requireAdmin, (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  return res.json({ ok: true, recovery: agentFaultRecovery.status() });
+});
+
 app.post("/api/agent/fleet/run", requireAdmin, plannerRateLimit, async (req, res) => {
   try {
-    const result = await agentFleet.runTask(req.body?.task, { evidence: [], context: null });
-    return res.status(result.ok ? 200 : 503).set("Cache-Control", "no-store").json(result);
+    const task = req.body?.task;
+    const primary = () => agentFleet.runTask(task, { evidence: [], context: null });
+    const fallbackRoles = agentCatalog.selectForTask(String(task || "") + " independent second reviewer recovery", 6)
+      .map(agent => agent.id).filter(role => role !== "orchestrator");
+    const fallback = () => agentFleet.runTask(task, { evidence: [], context: null, roles: fallbackRoles });
+    const result = await agentFaultRecovery.execute("agent-fleet-run", primary, fallback, async (error, agents) => ({
+      error: String(error),
+      delegatedReviewers: agents.map(agent => agent.id),
+      fallbackRoles
+    }));
+    return res.status(result.ok ? 200 : 503).set("Cache-Control", "no-store").json(result.ok ? { ...(result.value || {}), recovery: { recovered: result.recovered, source: result.source, diagnosis: result.diagnosis || null, primaryError: result.primaryError || null, agents: result.agents || [] } } : result);
   } catch (error) {
     return res.status(error.statusCode || 400).json({ ok: false, error: error.message || "Agent jamoasi ishlamadi." });
   }
