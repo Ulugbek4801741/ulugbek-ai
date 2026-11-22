@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#10131b"><title>ULUGBEK AI Video Studio</title>
+<link rel="stylesheet" href="video-studio.css">
+</head>
+<body>
+<header class="top"><a href="./" class="brand">← ULUGBEK AI</a><span>VIDEO STUDIO</span><span id="server-state" class="state">Server tekshirilmoqda…</span></header>
+<main class="layout">
+<section class="hero"><p class="eyebrow">AI FILM PRODUCTION</p><h1>G‘oyadan uzun metrajli film rejasigacha</h1><p>Film g‘oyasini kiriting. Studio uni sahnalarga ajratadi, davomiylikni hisoblaydi va loyiha xotirasida saqlaydi.</p></section>
+<section class="panel">
+<h2>Yangi film loyihasi</h2>
+<form id="project-form">
+<label>Film nomi<input name="title" maxlength="120" placeholder="Masalan: Buxoro tarixi"></label>
+<label>Film g‘oyasi / ssenariy<textarea name="story" maxlength="12000" rows="5" required placeholder="Filmda nima sodir bo‘lishini batafsil yozing…"></textarea></label>
+<div class="fields">
+<label>Davomiyligi<select name="durationMinutes"><option value="1">1 daqiqa — sinov</option><option value="10">10 daqiqa</option><option value="30">30 daqiqa</option><option value="60" selected>60 daqiqa</option><option value="120">120 daqiqa</option></select></label>
+<label>Janr<select name="genre"><option>Drama</option><option>Tarixiy</option><option>Sarguzasht</option><option>Fantastika</option><option>Hujjatli film</option><option>Multfilm</option><option>Reklama</option><option>Serial</option></select></label>
+<label>Til<select name="language"><option>O‘zbek</option><option>English</option><option>Русский</option></select></label>
+<label>Vizual uslub<input name="visualStyle" value="Kinematografik realizm" maxlength="100"></label>
+</div>
+<button id="create" type="submit">Film rejasini yaratish</button><p id="notice" role="status"></p>
+</form>
+</section>
+<section class="panel">
+<div class="section-head"><h2>Loyihalarim</h2><button id="refresh" class="secondary" type="button">Yangilash</button></div>
+<div id="projects" class="projects"><p class="muted">Loyihalar yuklanmoqda…</p></div>
+</section>
+<section class="panel" id="detail" hidden><div class="section-head"><h2 id="detail-title">Film sahnalari</h2><span id="progress" class="progress">0%</span></div><p id="detail-meta" class="muted"></p><div id="scenes" class="scenes"></div></section>
+<section class="disclaimer"><strong>Haqiqiy generatsiya holati:</strong> ushbu bosqich film ssenariysi va sahna rejasini yaratadi. MP4 video generatsiyasi uchun alohida GPU serveri, mos video modeli va ComfyUI workflow kerak. Ulanmagan generatsiya tugmasi yoki soxta tayyor video ko‘rsatilmaydi.</section>
+</main>
+<script src="config.js"></script><script src="video-studio.js"></script>
+</body></html>
