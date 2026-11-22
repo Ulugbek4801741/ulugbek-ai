@@ -13,6 +13,7 @@ const { createAgentFleet } = require("./modules/agent-fleet");
 const { FaultRecoveryCoordinator } = require("./modules/fault-recovery-coordinator");
 const agentCatalog = require("./modules/agent-100-catalog");
 const threeReaderAgents = require("./modules/three-reader-agents");
+const largeRemoteReader = require("./modules/large-remote-reader");
 const diagnostic99Agents = require("./modules/diagnostic-99-agents");
 const chatAgentAnswer = require("./modules/chat-agent-answer").createChatAgentAnswer({ singleAgent });
 const agentFleet = createAgentFleet({ answer: chatAgentAnswer, maxAgents: 100, concurrency: 1 });
@@ -963,6 +964,19 @@ app.get("/api/agents/reader/status", requireAdmin, (_req, res) => {
     { id: "publicCodeStructureAnalyst", name: "Code Analysis Agent", capability: "Read-only repo structure and source categorization" },
     { id: "zipContentReader", name: "ZIP Reader Agent", capability: "Extract and display supported text/code files without executing" }
   ], limits: threeReaderAgents.limits });
+});
+app.get("/api/agents/github/large-read/status", requireAdmin, (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  return res.json({ ok: true, limits: largeRemoteReader.limits, description: "Selective public GitHub source reading; repository ZIP is not downloaded." });
+});
+app.post("/api/agents/github/large-read", requireAdmin, plannerRateLimit, async (req, res) => {
+  try {
+    const result = await largeRemoteReader.readLargeRepository(req.body?.repo, { maxFiles: req.body?.maxFiles });
+    res.set("Cache-Control", "no-store");
+    return res.json(result);
+  } catch (error) {
+    return res.status(400).json({ ok: false, error: error.message || "Remote GitHub project o‘qilmadi." });
+  }
 });
 app.post("/api/agents/github/read", requireAdmin, plannerRateLimit, async (req, res) => {
   try { const result = await threeReaderAgents.githubReader(req.body?.repo); res.set("Cache-Control", "no-store"); return res.json({ ok: true, result }); }
