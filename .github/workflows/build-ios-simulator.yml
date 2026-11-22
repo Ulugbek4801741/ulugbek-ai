@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - apps/windows-ios-builds
+      - "fix/**"
     paths:
       - "public/**"
       - "package.json"
