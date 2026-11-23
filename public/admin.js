@@ -53,6 +53,41 @@ async function loadAutopilot() {
     ? "Agentlar karantinda: " + (status.quarantineReason || "xavfsizlik tekshiruvi")
     : (status.lastError ? "Oxirgi xato: " + status.lastError : status.note || "");
 }
+async function loadSafeAutonomy() {
+  const data = await request("/api/admin/safe-autonomy/status");
+  const value = data.autonomy || {};
+  $("safe-autonomy-status").replaceChildren(
+    metric("Holat", value.running ? "Ishlayapti" : (value.enabled ? "Faol" : "To‘xtagan")),
+    metric("Tekshiruvlar", value.runs ?? 0),
+    metric("Oxirgi tekshiruv", value.lastRunAt ? new Date(value.lastRunAt).toLocaleString() : "—"),
+    metric("Keyingi tekshiruv", value.nextRunAt ? new Date(value.nextRunAt).toLocaleString() : "—"),
+    metric("Repo fayllari", value.agent?.scannedFiles ?? 0),
+    metric("Takliflar", value.agent?.pendingApprovals ?? 0)
+  );
+  const list = $("safe-autonomy-checks");
+  list.replaceChildren();
+  for (const item of (value.checks || [])) {
+    const card = document.createElement("article"); card.className = "task-card";
+    addText(card, "strong", (item.ok ? "✓ " : "⚠ ") + item.id);
+    addText(card, "p", item.detail || "");
+    list.append(card);
+  }
+  if (!list.childElementCount) list.textContent = "Hali tekshiruv bajarilmagan.";
+  $("safe-autonomy-message").textContent = value.lastError || value.note || "";
+}
+async function runSafeAutonomyAction(action, buttonId, message) {
+  const button = $(buttonId); button.disabled = true;
+  $("safe-autonomy-message").textContent = message;
+  try {
+    await request("/api/admin/safe-autonomy/" + action, { method: "POST", body: "{}" });
+    await loadSafeAutonomy();
+  } catch (error) {
+    $("safe-autonomy-message").textContent = error.message;
+  } finally {
+    button.disabled = false;
+  }
+}
+
 async function loadSafety() {
   const [policyData, runtimeData, eventData] = await Promise.all([
     request("/api/security/policy"),
@@ -252,7 +287,7 @@ async function checkSession() {
     if (status.authenticated) {
       showDashboard(true);
       document.dispatchEvent(new Event("admin-session-ready"));
-      await Promise.all([loadOverview(), loadTasks(), loadSafety(), loadAgentPermissions(), loadDeveloperAgent(), loadAutopilot()]);
+      await Promise.all([loadOverview(), loadTasks(), loadSafety(), loadAgentPermissions(), loadDeveloperAgent(), loadAutopilot(), loadSafeAutonomy()]);
     } else {
       showDashboard(false);
     }
@@ -334,6 +369,9 @@ $("developer-run").addEventListener("click", async () => {
   } catch (error) { $("developer-message").textContent = error.message; }
   finally { button.disabled = false; }
 });
+$("safe-autonomy-start").addEventListener("click", () => runSafeAutonomyAction("start", "safe-autonomy-start", "Xavfsiz mustaqil tekshiruv ishga tushmoqda…"));
+$("safe-autonomy-run").addEventListener("click", () => runSafeAutonomyAction("run", "safe-autonomy-run", "Diagnostika bajarilmoqda…"));
+$("safe-autonomy-stop").addEventListener("click", () => runSafeAutonomyAction("stop", "safe-autonomy-stop", "Avtonom tekshiruv to‘xtatilmoqda…"));
 $("autopilot-check").addEventListener("click", async () => {
   const button = $("autopilot-check"); button.disabled = true;
   try { await request("/api/admin/autopilot/check", { method: "POST", body: "{}" }); await loadAutopilot(); }
@@ -357,7 +395,7 @@ checkSession();
 setInterval(() => {
   if (!$("dashboard").hidden) {
     request("/api/admin/status").then(data => { if (!data.authenticated) { showDashboard(false); $("login-error").textContent = "Administrator sessiyasi tugadi. Qayta kiring."; } }).catch(() => showDashboard(false));
-    loadTasks().catch(() => {}); loadOverview().catch(() => {}); loadDeveloperAgent().catch(() => {}); loadAutopilot().catch(() => {});
+    loadTasks().catch(() => {}); loadOverview().catch(() => {}); loadDeveloperAgent().catch(() => {}); loadAutopilot().catch(() => {}); loadSafeAutonomy().catch(() => {});
   }
 }, 10000);
 

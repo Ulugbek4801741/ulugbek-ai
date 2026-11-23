@@ -40,6 +40,7 @@ const publicKnowledgeArchive = require("./modules/public-knowledge-archive");
 const independentModel = require("./modules/independent-model").createIndependentModel({ knowledge: learningWorkerForAdmin });
 const { createAdminAutopilot } = require("./admin-autopilot");
 const adminAutopilot = createAdminAutopilot({ developerAgent, learningWorker: learningWorkerForAdmin, agentRuntime });
+const safeAutonomy = require("./safe-autonomy").createSafeAutonomy({ developerAgent, agentPermissions });
 const { createSelfRecoveryEngine } = require("./modules/self-recovery-engine");
 const selfRecovery = createSelfRecoveryEngine({
   probes: [
@@ -510,6 +511,26 @@ app.post("/api/admin/autopilot/stop", requireAdmin, async (_req, res) => {
   const status = await adminAutopilot.stop();
   res.set("Cache-Control", "no-store");
   res.json({ ok: true, autopilot: status });
+});
+
+app.get("/api/admin/safe-autonomy/status", requireAdmin, (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, autonomy: safeAutonomy.status() });
+});
+app.post("/api/admin/safe-autonomy/start", requireAdmin, async (_req, res) => {
+  const autonomy = await safeAutonomy.start();
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, autonomy });
+});
+app.post("/api/admin/safe-autonomy/run", requireAdmin, async (_req, res) => {
+  const autonomy = await safeAutonomy.runOnce();
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, autonomy });
+});
+app.post("/api/admin/safe-autonomy/stop", requireAdmin, async (_req, res) => {
+  const autonomy = await safeAutonomy.stop();
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, autonomy });
 });
 
 app.get("/api/admin/safety/status", requireAdmin, (_req, res) => {
@@ -1945,6 +1966,7 @@ agentRuntime.startWorker().then(() => {
         catch (error) { console.error("Developer Agent ishga tushmadi:", error.message); }
         learningWorker.start();
         await selfRecovery.start();
+        await safeAutonomy.resume();
       })
       .catch(error => console.error("Watchdog yoki Self-Recovery diagnostikasi ishga tushmadi:", error.message));
   });
