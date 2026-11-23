@@ -60,6 +60,9 @@ function createSingleAgent(options = {}) {
     const emotional = contextState.emotion;
     const ethics = contextState.ethics;
     const calculation = math.findExpression(question);
+    if (calculation?.error) {
+      return { reply: "Matematik xato: " + calculation.error + " Ifoda: " + calculation.expression + ".", emotion: emotional.emotion, ethicalAssessment: ethics, cognition: contextState.cognition, reasoning: { method: "verified-native-arithmetic-rejected", answerable: true, facts: [] }, modelUsed: null, externalProviderUsed: false };
+    }
     if (calculation) {
       const value = math.formatNumber(calculation.result);
       return { reply: "Hisoblash: " + calculation.expression + " = " + value + String.fromCharCode(10) + "Javob: " + value + ".", emotion: emotional.emotion, ethicalAssessment: ethics, cognition: contextState.cognition, reasoning: { method: "verified-native-arithmetic", answerable: true, facts: [] }, modelUsed: null, externalProviderUsed: false };
