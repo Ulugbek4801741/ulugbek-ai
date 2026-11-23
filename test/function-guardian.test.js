@@ -37,3 +37,14 @@ test("function guardian recovers queued writes after a transient filesystem fail
     await fs.rm(dir, { recursive: true, force: true });
   }
 });
+
+test("function guardian does not wrap ES class constructors", () => {
+  class ExampleModule {
+    value() { return "ok"; }
+  }
+  const guardian = createFunctionGuardian({ file: path.join(os.tmpdir(), "unused-guardian-test.json") });
+  const target = { ExampleModule };
+  guardian.instrumentModule("example", target);
+  assert.equal(target.ExampleModule, ExampleModule);
+  assert.equal(new target.ExampleModule().value(), "ok");
+});
