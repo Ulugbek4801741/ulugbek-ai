@@ -38,9 +38,9 @@ function createFunctionGuardian(options = {}) {
     };
     events.push(safe);
     events = events.slice(-max);
-    // Serialize atomic writes: concurrent requests must never race on the same temp file.
+    // A failed write must not permanently poison later writes in this process.
     const snapshot = JSON.stringify({ version: 1, events }, null, 2);
-    writeQueue = writeQueue.then(async () => {
+    writeQueue = writeQueue.catch(() => {}).then(async () => {
       await fs.mkdir(path.dirname(file), { recursive: true });
       const temp = file + "." + process.pid + ".tmp";
       await fs.writeFile(temp, snapshot, { mode: 0o600 });
@@ -56,7 +56,7 @@ function createFunctionGuardian(options = {}) {
       const original = target[key];
       if (typeof original !== "function" || original.__guardianWrapped) continue;
       // Do not wrap ES classes as ordinary functions: class constructors require 'new'.
-      if (/^class\s/.test(Function.prototype.toString.call(original))) continue;
+      if (/^class\\s/.test(Function.prototype.toString.call(original))) continue;
       const wrapped = function (...args) {
         const started = Date.now();
         const finish = outcome => record({
