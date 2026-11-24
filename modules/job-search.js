@@ -3,7 +3,7 @@
 const currencyConverter = require("./currency-converter");
 const publicJobFeeds = require("./public-job-feeds");
 
-const JOB_INTENT = /(?:\bish\s*(?:to[pb]ib\s*ber|top(?:ib)?\s*ber|qidir(?:ib)?\s*ber|kerak|o\s*rin(?:lar)?|vakans(?:iya|iyalar)?|izlay(?:apman|man)?|qidir)|\bvakans(?:iya|iyalar)\b|\bjob\s*(?:search|opening|vacanc(?:y|ies))\b|\bfind\s+(?:me\s+)?a?\s*jobs?\b|\bemployment\s+(?:opportunit|jobs?)|\bработ(?:а|у)\s*(?:найти|ищу|нужна)|\bваканси)/iu;
+const JOB_INTENT = /(?:\bish\s*(?:to[pb]ib\s*ber|top(?:ib)?\s*ber|qidir(?:ib)?\s*ber|kerak|o[\s’'ʻʼ]*rin(?:lari|lar|i)?|vakans(?:iya|iyalar)?|izlay(?:apman|man)?|qidir)|\bvakans(?:iya|iyalar)\b|\bjob\s*(?:search|opening|vacanc(?:y|ies))\b|\bfind\s+(?:me\s+)?a?\s*jobs?\b|\bemployment\s+(?:opportunit|jobs?)|\bработ(?:а|у)\s*(?:найти|ищу|нужна)|\bваканси)/iu;
 
 function isJobSearchRequest(value) {
   return JOB_INTENT.test(String(value || "").trim());
@@ -90,6 +90,15 @@ function buildJobSearchQueries(value) {
     queries.push(original + " " + role.terms + " site:hh.uz OR site:linkedin.com/jobs OR site:ishkop.uz OR site:olx.uz");
   }
   queries.push(...suffixes.map(suffix => original + " " + suffix));
+  // Prioritize regional vacancy registries for Uzbekistan searches instead of relying only on generic job boards.
+  if (/(?:buxoro|bukhara)/iu.test(original)) {
+    queries.push("Buxoro viloyati vakansiya bo'sh ish o'rinlari site:buxorodaish.uz");
+    queries.push("Buxoro viloyati bo'sh ish o'rinlari site:gov.uz");
+    queries.push("Buxoro vakansiya site:vacancy.gov.uz");
+  } else if (/(?:kogon|kog'on)/iu.test(original)) {
+    queries.push("Kogon shahri va tumani vakansiya bo'sh ish o'rinlari Buxoro");
+    queries.push("Kogon vakansiya site:buxorodaish.uz");
+  }
   if (criteria.worldwide || criteria.minHourlyUsd !== null) {
     const pay = criteria.minHourlyUsd === null ? "" : ' "$' + criteria.minHourlyUsd + ' per hour" OR "' + criteria.minHourlyUsd + ' USD/hour"';
     queries.push("worldwide remote jobs" + pay + " hiring now apply");
@@ -106,7 +115,7 @@ function buildJobSearchQueries(value) {
     queries.push(original + " " + role.terms + " vacancy jobs hiring");
     queries.push(original + " " + role.terms + " site:hh.uz OR site:linkedin.com/jobs OR site:ishkop.uz OR site:olx.uz");
   }
-  return [...new Set(queries)].filter(Boolean).slice(0, criteria.worldwide || criteria.minHourlyUsd !== null ? 12 : 6);
+  return [...new Set(queries)].filter(Boolean).slice(0, criteria.worldwide || criteria.minHourlyUsd !== null ? 12 : 8);
 }
 function buildJobSearchQuery(value) {
   return buildJobSearchQueries(value).slice(0, 2).join(" ");
@@ -380,8 +389,10 @@ async function searchJobs(message, webSearch, options = {}) {
     } catch (_) { return null; }
   });
   const openedPageResults = pages.filter(Boolean);
-  const feeds = openedPageResults.length ? { results: [], providers: [], failures: [], feedsChecked: 0, fetchedRecords: 0 } :
-    await publicJobFeeds.fetchPublicJobFeeds(message, options.feedOptions || {}).catch(error => ({ results: [], providers: [], failures: [String(error?.message || error)], feedsChecked: 0, fetchedRecords: 0 }));
+  // Search structured feeds even when a web page was readable: a single weak or
+  // unrelated page must not suppress additional independent vacancy sources.
+  const feeds = await publicJobFeeds.fetchPublicJobFeeds(message, options.feedOptions || {})
+    .catch(error => ({ results: [], providers: [], failures: [String(error?.message || error)], feedsChecked: 0, fetchedRecords: 0 }));
   const feedResults = (feeds.results || []).filter(item => {
     const content = [item.title, item.company, item.location, item.salary, item.description].join(" ");
     if (!matchesRequestedRole(requestedRole, item.title, item.description)) return false;
