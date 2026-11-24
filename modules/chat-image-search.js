@@ -51,10 +51,10 @@ function buildImageQuery(query) {
 }
 function imageIntent(query) {
   const q = clean(query, 400);
-  if (q.length < 8) return false;
-  if (/^(salom|assalomu alaykum|rahmat|xayr|ha|yo‘q|yo'q)\b/i.test(q)) return false;
-  if (/\b(kod|dastur|debug|xatoni tuzat|translate|tarjima|hisobla)\b/i.test(q)) return false;
-  return true;
+  if (q.length < 4) return false;
+  // Image search is supplemental only when the user explicitly requests a visual.
+  // Previously nearly every non-greeting chat message triggered image search.
+  return /(?:\\b(?:rasm|surat|foto|fotograf|picture|image|photo|photograph|drawing|illustration|sketch)\\b.{0,100}\\b(?:yarat|chiz|ber|qil|generate|draw|make|show|find|search|create)\\b|\\b(?:yarat|chiz|generate|draw|make|show|find|search|create)\\b.{0,100}\\b(?:rasm|surat|foto|picture|image|photo|drawing|illustration|sketch)\\b|\\b(?:rasm|surat|foto|picture|image|photo)\\s*(?:kerak|bilan|topib\\s*ber|chiqar|yubor)\\b)/iu.test(q);
 }
 function isSafeHttps(value) {
   try { return new URL(value).protocol === "https:"; } catch (_) { return false; }
