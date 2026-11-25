@@ -55,7 +55,8 @@ function createImageGenerator({ env = process.env, fetchImpl = globalThis.fetch 
   const isOpenAI = provider === "openai";
   const isSD = provider === "stable-diffusion" || provider === "sd" || provider === "automatic1111";
   function status() {
-    const configured = isOpenAI ? Boolean(env.IMAGE_API_KEY) : isSD ? Boolean(getStableDiffusionEndpoint(env)) : false;
+    let configured = false;
+    try { configured = isOpenAI ? Boolean(env.IMAGE_API_KEY) : isSD ? Boolean(getStableDiffusionEndpoint(env)) : false; } catch (_) {}
     return { enabled: configured, provider: configured ? (isOpenAI ? "openai-images" : "stable-diffusion-webui") : null, requiresApiKey: isOpenAI, configuredProvider: provider || null, supportedSizes: Array.from(SIZES), supportedStyles: Array.from(STYLES) };
   }
   async function generate(value, options = {}) {
