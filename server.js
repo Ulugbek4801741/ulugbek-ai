@@ -1084,7 +1084,7 @@ app.post("/api/media/worker/:kind", async (req, res) => {
     return res.status(404).json({ error: "Media worker turi topilmadi." });
   } catch (error) { return res.status(error.status || 400).json({ error: error.message || "Media worker xatosi." }); }
 });
-app.get("/api/media/status", (_req, res) => res.json({ ok: true, native: { enabled: true, image: "native-svg", video: "animated-svg", voice: "browser-tts" }, worker: { configured: Boolean(process.env.MEDIA_WORKER_URL) } }));
+app.get("/api/media/generation/status", (_req, res) => res.json({ ok: true, native: { enabled: true, image: "native-svg", video: "animated-svg", voice: "browser-tts" }, worker: { configured: Boolean(process.env.MEDIA_WORKER_URL) } }));
 app.post("/api/voice/generate", async (req, res) => {
   res.set("Cache-Control", "no-store");
   try { const remote = await mediaWorkerRequest("voice", { text: req.body?.text, language: req.body?.language }); return res.json(remote || nativeMediaEngine.makeVoice(req.body?.text, req.body)); }
