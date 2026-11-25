@@ -44,7 +44,11 @@
       const status = await req("/status");
       $("#status").textContent = status.features.accounts ? "Server ulangan" : "Sessiya xizmati sozlanmagan";
       $("#file-note").textContent = status.storage.warning;
-      if (!token) {\n        $("#auth").hidden = false;\n        $("#community").hidden = true;\n        return;\n      }
+      if (!token) {
+        $("#auth").hidden = false;
+        $("#community").hidden = true;
+        return;
+      }
       try { const me = await req("/me"); currentUser = me.user; show(); }
       catch (error) {
         if (error.status === 401) {
