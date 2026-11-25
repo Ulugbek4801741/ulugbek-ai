@@ -56,6 +56,10 @@
       }
     } catch (error) {
       $("#status").textContent = "Server bilan aloqa yo‘q";
+      $("#auth").hidden = false;
+      $("#community").hidden = true;
+      const authMessage = $("#auth p");
+      if (authMessage) authMessage.textContent = "Hamjamiyat yuklanmadi: " + error.message + ". Qayta urinish yoki akkauntga kirish uchun quyidagi tugmadan foydalaning.";
       toast(error.message);
     }
   }
