@@ -51,9 +51,24 @@ function createSocialNetwork(options={}){
   }catch(_){res.status(401).json({error:"ULUGBEK AI akkauntingizga qayta kiring."})}
  }
  const hash=(p,s)=>crypto.scryptSync(p,s,64).toString("hex");
- r.get("/status",(_q,s)=>s.json({ok:true,apiReady:true,features:{accounts:!!secret,posts:true,comments:true,likes:true,directMessages:true,groups:true,mediaUpload:true,videoCalls:false,groupVideoCalls:false},storage:{mode:"server-local",durableOnRenderFree:false,maxUploadBytes:max,warning:"Render Free xotirasi doimiy emas. Cloud storage kalitlari hali ulanmagan."}}));
+ r.get("/status",(_q,s)=>s.json({ok:true,apiReady:true,features:{accounts:!!secret,guestSessions:!!secret,posts:true,comments:true,likes:true,directMessages:true,groups:true,mediaUpload:true,videoCalls:false,groupVideoCalls:false},storage:{mode:"server-local",durableOnRenderFree:false,maxUploadBytes:max,warning:"Render Free xotirasi doimiy emas. Cloud storage kalitlari hali ulanmagan."}}));
  r.post("/register",async(q,s)=>{if(!secret)return s.status(503).json({error:"SOCIAL_SESSION_SECRET serverda sozlanmagan."});const username=clean(q.body.username,24).toLowerCase(),password=String(q.body.password||"");if(!/^[a-z0-9_]{3,24}$/.test(username))return s.status(400).json({error:"Login 3–24 belgi: lotin harfi, raqam yoki _."});if(password.length<10||password.length>200)return s.status(400).json({error:"Parol kamida 10 belgi bo‘lsin."});if(db.users.some(u=>u.username===username))return s.status(409).json({error:"Login band."});const salt=crypto.randomBytes(16).toString("hex"),u={id:id(),username,displayName:clean(q.body.displayName,60)||username,salt,passwordHash:hash(password,salt),createdAt:new Date().toISOString(),status:"active"};db.users.push(u);await save();s.status(201).json({ok:true,token:sign({sub:u.id,exp:Date.now()+30*86400000}),user:safe(u)})});
  r.post("/login",(q,s)=>{if(!secret)return s.status(503).json({error:"SOCIAL_SESSION_SECRET sozlanmagan."});const u=db.users.find(x=>x.username===clean(q.body.username,24).toLowerCase()),p=String(q.body.password||"");if(!u||hash(p,u.salt)!==u.passwordHash)return s.status(401).json({error:"Login yoki parol noto‘g‘ri."});s.json({ok:true,token:sign({sub:u.id,exp:Date.now()+30*86400000}),user:safe(u)})});
+ 
+ // Guest sessions: no signup form; the server creates a stable guest identity automatically.
+ const guestAttempts=new Map();
+ r.post("/guest-session",async(q,s)=>{
+  if(!secret)return s.status(503).json({error:"Mehmon sessiyasi uchun server imzo kaliti sozlanmagan."});
+  const ip=String(q.ip||q.socket?.remoteAddress||"unknown"),now=Date.now(),prior=guestAttempts.get(ip)||[];
+  const recent=prior.filter(t=>now-t<10*60*1000);
+  if(recent.length>=5)return s.status(429).json({error:"Juda ko‘p mehmon sessiyasi so‘raldi. 10 daqiqadan keyin urinib ko‘ring."});
+  recent.push(now);guestAttempts.set(ip,recent);
+  const suffix=crypto.randomBytes(5).toString("hex");
+  const username="mehmon_"+suffix;
+  const u={id:id(),username,displayName:"Mehmon "+suffix.slice(0,4),createdAt:new Date().toISOString(),status:"active",guest:true};
+  db.users.push(u);await save();
+  s.status(201).json({ok:true,token:sign({sub:u.id,exp:Date.now()+30*86400000}),user:safe(u),guest:true});
+ });
  r.get("/me",auth,(q,s)=>s.json({ok:true,user:safe(q.user)}));
  r.get("/posts",(_q,s)=>s.json({ok:true,posts:db.posts.slice(-100).reverse().map(p=>({...p,author:safe(db.users.find(u=>u.id===p.userId)||{id:p.userId,username:"unknown",displayName:"Foydalanuvchi"}),comments:db.comments.filter(c=>c.postId===p.id).slice(-30),likes:db.likes.filter(l=>l.postId===p.id).length}))}));
  r.post("/posts",auth,async(q,s)=>{const text=clean(q.body.text,2000),mediaUrl=clean(q.body.mediaUrl,500);if(!text&&!mediaUrl)return s.status(400).json({error:"Post matni yoki media kerak."});if(mediaUrl&&!/^\/api\/social\/media\/[a-f0-9-]+\.(jpg|png|webp|mp4|webm|ogg|mp3|mpeg)$/.test(mediaUrl))return s.status(400).json({error:"Media manzili noto‘g‘ri."});const p={id:id(),userId:q.user.id,text,mediaUrl,createdAt:new Date().toISOString()};db.posts.push(p);await save();s.status(201).json({ok:true,post:p})});
