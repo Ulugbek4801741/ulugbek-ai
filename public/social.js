@@ -137,7 +137,7 @@
       $("#groups").querySelectorAll("[data-join]").forEach(button => button.onclick = async () => {
         try { await req("/groups/" + button.dataset.join + "/join", { method:"POST", body:"{}" }); groups(); toast("Guruhga qo‘shildingiz."); }
         catch (error) { toast(error.message); }
-      };
+      });
     } catch (error) { $("#groups").textContent = error.message; }
   }
   $("#refresh").onclick = posts;
