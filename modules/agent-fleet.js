@@ -5,8 +5,8 @@ const agentRegistry = require("../agents/registry");
 const qualityGate = require("./agent-quality-gate");
 const codexProtocol = require("./codex-agent-protocol");
 
-const MAX_AGENTS = 100;
-const DEFAULT_CONCURRENCY = 3;
+const MAX_AGENTS = 1000;
+const DEFAULT_CONCURRENCY = 8;
 const DEFAULT_IDLE_TTL_MS = 5 * 60 * 1000;
 const BASE_ROLE_DEFINITIONS = {
   generalist: "Savolga bevosita, sodda va aniq javob beruvchi mutaxassis.",
@@ -53,7 +53,7 @@ function createAgentFleet(options = {}) {
   const answer = typeof options.answer === "function" ? options.answer : async () => null;
   const now = typeof options.now === "function" ? options.now : () => Date.now();
   const maxAgents = Math.max(1, Math.min(MAX_AGENTS, Number(options.maxAgents) || MAX_AGENTS));
-  const concurrency = Math.max(1, Math.min(10, Number(options.concurrency) || DEFAULT_CONCURRENCY));
+  const concurrency = Math.max(1, Math.min(32, Number(options.concurrency) || DEFAULT_CONCURRENCY));
   const idleTtlMs = Math.max(1000, Number(options.idleTtlMs) || DEFAULT_IDLE_TTL_MS);
   const agents = new Map();
   let activeRuns = 0;
