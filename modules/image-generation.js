@@ -26,7 +26,7 @@ function normalizeOptions(options = {}) {
   return { prompt: styledPrompt, size, style };
 }
 function promptWithStyle(prompt, styleText) {
-  return validatePrompt(String(prompt).trim() + ", " + styleText);
+  return validatePrompt(prompt) + ", " + styleText;
 }
 function getStableDiffusionEndpoint(env = process.env) {
   const raw = String(env.IMAGE_GENERATION_URL || "").trim();
