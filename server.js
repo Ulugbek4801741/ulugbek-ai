@@ -1098,51 +1098,6 @@ app.post("/api/images/generate", imageRateLimit, async (req, res) => {
     return res.json(remote || { ok: true, ...nativeMediaEngine.makeImage(req.body?.prompt, req.body), provider: "native-svg" });
   } catch (error) { return res.status(error.status || 502).json({ error: error.message || "Rasm yaratib bo‘lmadi." }); }
 });
-app.get("/api/videos/status", (_req, res) => {
-  res.set("Cache-Control", "no-store");
-  const status = videoGenerator.status();
-  res.json({ ok: true, videoGeneration: { ...status, enabled: true, nativeFallback: true, provider: status.enabled ? status.provider : "native-animated-svg" } });
-});
-app.post("/api/videos/generate", videoRateLimit, async (req, res) => {
-  res.set("Cache-Control", "no-store");
-  try {
-    if (videoGenerator.status().enabled) return res.json({ ok: true, ...await videoGenerator.generate(req.body?.prompt), provider: "self-hosted-comfyui" });
-    const remote = await mediaWorkerRequest("video", { prompt: req.body?.prompt });
-    return res.json(remote || { ok: true, ...nativeMediaEngine.makeVideo(req.body?.prompt), provider: "native-animated-svg" });
-  } catch (error) { return res.status(error.status || 502).json({ error: error.message || "Video yaratib bo‘lmadi." }); }
-});
-app.get("/api/ai/status", (_req, res) => {
-  res.set("Cache-Control", "no-store");
-  const model = singleAgent.status();
-  return res.json({ ok: true, configured: model.configured, provider: model.provider, model: model.model || null, apiKeyRequired: model.apiKeyRequired, tokenConfigured: model.tokenConfigured || false, agentSdk: model.agentSdk || { configured: false } });
-});
-
-app.get("/api/videos/status", (_req, res) => {
-  res.set("Cache-Control", "no-store");
-  res.json({ ok: true, videoGeneration: videoGenerator.status() });
-});
-
-app.post("/api/videos/generate", (req, res, next) => {
-  // Do not consume the one-per-minute generation quota when no model/workflow is configured.
-  if (!videoGenerator.status().enabled) {
-    res.set("Cache-Control", "no-store");
-    return res.status(503).json({
-      error: "Video modeli ulanmagan. Serverda VIDEO_COMFYUI_URL va VIDEO_COMFYUI_WORKFLOW sozlang.",
-      videoGeneration: videoGenerator.status()
-    });
-  }
-  next();
-}, videoRateLimit, async (req, res) => {
-  res.set("Cache-Control", "no-store");
-  try {
-    const result = await videoGenerator.generate(req.body?.prompt);
-    return res.json({ ok: true, ...result, provider: "self-hosted-comfyui" });
-  } catch (error) {
-    return res.status(error.status || 502).json({ error: error.message || "Video yaratib bo‘lmadi." });
-  }
-});
-
-
 const videoStudioRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: "draft-8", legacyHeaders: false,
   message: { error: "Video Studio loyiha yaratish limiti tugadi. Keyinroq urinib ko‘ring." }
