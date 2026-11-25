@@ -1068,8 +1068,8 @@ app.post("/api/images/generate", (req, res, next) => {
 }, imageRateLimit, async (req, res) => {
   res.set("Cache-Control", "no-store");
   try {
-    const result = await imageGenerator.generate(req.body?.prompt);
-    return res.json({ ok: true, ...result, provider: "self-hosted-stable-diffusion-webui" });
+    const result = await imageGenerator.generate(req.body?.prompt, { size: req.body?.size, style: req.body?.style });
+    return res.json({ ok: true, ...result, provider: imageGenerator.status().provider });
   } catch (error) {
     return res.status(error.status || 502).json({ error: error.message || "Rasm yaratib bo‘lmadi." });
   }
