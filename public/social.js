@@ -34,7 +34,6 @@
     return data;
   }
   function show() {
-    $("#auth").hidden = true;
     $("#community").hidden = false;
     posts();
     groups();
@@ -44,27 +43,15 @@
       const status = await req("/status");
       $("#status").textContent = status.features.accounts ? "Server ulangan" : "Sessiya xizmati sozlanmagan";
       $("#file-note").textContent = status.storage.warning;
-      if (!token) {
-        $("#auth").hidden = false;
-        $("#community").hidden = true;
-        return;
-      }
+      if (!token) { show(); toast("Kirish talab qilinadigan funksiyalar akkaunt bilan ishlaydi."); return; }
       try { const me = await req("/me"); currentUser = me.user; show(); }
       catch (error) {
-        if (error.status === 401) {
-          localStorage.removeItem(TOKEN_KEY);
-          localStorage.removeItem(LEGACY_TOKEN_KEY);
-          return window.location.replace(loginUrl);
-        }
+        if (error.status === 401) { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(LEGACY_TOKEN_KEY); show(); toast("Sessiya tugagan. Ayrim funksiyalar uchun ULUGBEK AI akkauntiga kiring."); return; }
         throw error;
       }
     } catch (error) {
       $("#status").textContent = "Server bilan aloqa yo‘q";
-      $("#auth").hidden = false;
-      $("#community").hidden = true;
-      const authMessage = $("#auth p");
-      if (authMessage) authMessage.textContent = "Hamjamiyat yuklanmadi: " + error.message + ". Qayta urinish yoki akkauntga kirish uchun quyidagi tugmadan foydalaning.";
-      toast(error.message);
+      $("#community").hidden = false; toast(error.message);
     }
   }
   $("#logout").textContent = "Bosh sahifa";
