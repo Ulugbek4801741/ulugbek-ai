@@ -5,6 +5,7 @@
   const TOKEN_KEY = "ulugbek-account-token";
   const LEGACY_TOKEN_KEY = "ulugbek-vizor-token";
   let token = localStorage.getItem(TOKEN_KEY) || localStorage.getItem(LEGACY_TOKEN_KEY) || "";
+  let currentUser = null;
   const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({
     "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
   })[char]);
@@ -44,7 +45,7 @@
       $("#status").textContent = status.features.accounts ? "Server ulangan" : "Sessiya xizmati sozlanmagan";
       $("#file-note").textContent = status.storage.warning;
       if (!token) return window.location.replace(loginUrl);
-      try { await req("/me"); show(); }
+      try { const me = await req("/me"); currentUser = me.user; show(); }
       catch (error) {
         if (error.status === 401) {
           localStorage.removeItem(TOKEN_KEY);
@@ -133,10 +134,22 @@
       const data = await req("/groups");
       $("#groups").innerHTML = data.groups.length ? data.groups.map(group =>
         '<div class="group"><b>' + esc(group.name) + '</b><br><span class="hint">' +
-        esc(group.description) + ' · ' + group.members + ' a’zo</span></div>'
+        esc(group.description) + ' · ' + group.members + ' a’zo</span><button class="secondary" data-join="' + esc(group.id) + '">Guruhga qo‘shilish</button></div>'
       ).join("") : '<span class="hint">Hozircha guruh yo‘q.</span>';
+      $("#groups").querySelectorAll("[data-join]").forEach(button => button.onclick = async () => {
+        try { await req("/groups/" + button.dataset.join + "/join", { method:"POST", body:"{}" }); groups(); toast("Guruhga qo‘shildingiz."); }
+        catch (error) { toast(error.message); }
+      };
     } catch (error) { $("#groups").textContent = error.message; }
   }
   $("#refresh").onclick = posts;
+  $("#messages-load").onclick = async () => {
+    const username = $("#messages-user").value.trim().replace(/^@/, "");
+    if (!username) return toast("Login kiriting.");
+    try {
+      const data = await req("/messages/" + encodeURIComponent(username));
+      $("#messages-list").innerHTML = data.messages.length ? data.messages.map(m => '<div class="comment"><b>@' + esc(m.fromUsername) + '</b> ' + esc(m.text) + '<small> · ' + new Date(m.createdAt).toLocaleString("uz-UZ") + '</small></div>').join("") : '<span class="hint">Bu suhbatda hali xabar yo‘q.</span>;
+    } catch (error) { $("#messages-list").textContent = error.message; }
+  };
   init();
 })();
