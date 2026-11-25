@@ -71,8 +71,11 @@
           '<p>' + esc(post.text) + '</p>' +
           (post.mediaUrl ? (/\.(mp4|webm)$/i.test(post.mediaUrl)
             ? '<video controls src="' + esc(post.mediaUrl) + '"></video>'
+            : /\.(ogg|mp3)$/i.test(post.mediaUrl) ? '<audio controls src="' + esc(post.mediaUrl) + '"></audio>'
             : '<img loading="lazy" src="' + esc(post.mediaUrl) + '" alt="Post rasmi">') : "") +
           '<div class="actions"><button data-like="' + esc(post.id) + '">♡ ' + post.likes + '</button>' +
+          '<a class="call-link" target="_blank" rel="noopener noreferrer" href="https://meet.jit.si/ULUGBEK-post-' + esc(post.id) + '">📹 Video chat</a>' +
+          '<a class="call-link" target="_blank" rel="noopener noreferrer" href="https://meet.jit.si/ULUGBEK-post-' + esc(post.id) + '#config.disableVideo=true">🎙️ Ovozli chat</a>' +
           '<span class="hint">' + post.comments.length + ' izoh</span></div>' +
           '<div>' + post.comments.map(comment => '<div class="comment"><b>@' +
             esc(comment.username) + '</b> ' + esc(comment.text) + '</div>').join("") + '</div>' +
@@ -97,7 +100,7 @@
   $("#post-form").onsubmit = async event => {
     event.preventDefault();
     const form = event.currentTarget;
-    const file = $("#media").files[0];
+    const file = $("#media").files[0] || $("#voice-file").files[0];
     const text = new FormData(form).get("text");
     try {
       let mediaUrl = "";
@@ -143,12 +146,13 @@
     } catch (error) { $("#groups").textContent = error.message; }
   }
   $("#refresh").onclick = posts;
+  $("#voice-file").onchange = () => { if ($("#voice-file").files[0]) $("#media").value = ""; };
   $("#messages-load").onclick = async () => {
     const username = $("#messages-user").value.trim().replace(/^@/, "");
     if (!username) return toast("Login kiriting.");
     try {
       const data = await req("/messages/" + encodeURIComponent(username));
-      $("#messages-list").innerHTML = data.messages.length ? data.messages.map(m => '<div class="comment"><b>@' + esc(m.fromUsername) + '</b> ' + esc(m.text) + '<small> · ' + new Date(m.createdAt).toLocaleString("uz-UZ") + '</small></div>').join("") : '<span class="hint">Bu suhbatda hali xabar yo‘q.</span>;
+      $("#messages-list").innerHTML = data.messages.length ? data.messages.map(m => '<div class="comment"><b>@' + esc(m.fromUsername) + '</b> ' + esc(m.text) + '<small> · ' + new Date(m.createdAt).toLocaleString("uz-UZ") + '</small></div>').join("") : '<span class="hint">Bu suhbatda hali xabar yo‘q.</span>';
     } catch (error) { $("#messages-list").textContent = error.message; }
   };
   init();
