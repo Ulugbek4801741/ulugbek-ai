@@ -205,7 +205,7 @@ test("API smoke tests", async (t) => {
     });
 
     await t.test("native video endpoint returns animated SVG without a provider", async () => {
-      const response = await fetch(`${baseUrl/api/videos/generate`, {
+      const response = await fetch(`${baseUrl}/api/videos/generate`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: "cinematic mountain sunset" })
       });
@@ -217,7 +217,7 @@ test("API smoke tests", async (t) => {
     });
 
     await t.test("native image endpoint creates SVG without a provider", async () => {
-      const response = await fetch(`${baseUrl/api/images/generate`, {
+      const response = await fetch(`${baseUrl}/api/images/generate`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: "a mountain at sunset" })
       });
