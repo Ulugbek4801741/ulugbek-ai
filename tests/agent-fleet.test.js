@@ -7,7 +7,7 @@ const { createAgentFleet, chooseRoles, MAX_AGENTS } = require("../modules/agent-
 test("task routing selects specialists dynamically", () => {
   assert.deepEqual(chooseRoles("GitHub serverdagi kod xatosini tekshir"), ["engineer", "verifier"]);
   assert.ok(chooseRoles("O'zbekiston qonunlari va soliq talablari").includes("legal"));
-  assert.equal(MAX_AGENTS, 100);
+  assert.equal(MAX_AGENTS, 1000);
 });
 
 test("agent team runs specialists and deletes ephemeral agents after completion", async () => {
