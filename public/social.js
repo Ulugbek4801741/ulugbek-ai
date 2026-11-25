@@ -41,14 +41,21 @@
   async function init() {
     try {
       const status = await req("/status");
-      $("#status").textContent = status.features.accounts ? "Server ulangan" : "Sessiya xizmati sozlanmagan";
+      $("#status").textContent = status.features.guestSessions ? "Server ulangan · Mehmon rejimi" : "Sessiya xizmati sozlanmagan";
       $("#file-note").textContent = status.storage.warning;
-      if (!token) { show(); toast("Kirish talab qilinadigan funksiyalar akkaunt bilan ishlaydi."); return; }
-      try { const me = await req("/me"); currentUser = me.user; show(); }
-      catch (error) {
-        if (error.status === 401) { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(LEGACY_TOKEN_KEY); show(); toast("Sessiya tugagan. Ayrim funksiyalar uchun ULUGBEK AI akkauntiga kiring."); return; }
-        throw error;
+      if (token) {
+        try { const me = await req("/me"); currentUser = me.user; show(); return; }
+        catch (error) {
+          if (error.status !== 401) throw error;
+          localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(LEGACY_TOKEN_KEY); token = "";
+        }
       }
+      const guest = await req("/guest-session", { method:"POST", body:"{}" });
+      token = guest.token;
+      currentUser = guest.user;
+      localStorage.setItem(TOKEN_KEY, token);
+      show();
+      toast("Mehmon sifatida kirdingiz: @" + guest.user.username);
     } catch (error) {
       $("#status").textContent = "Server bilan aloqa yo‘q";
       $("#community").hidden = false; toast(error.message);
