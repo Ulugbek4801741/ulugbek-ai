@@ -204,30 +204,28 @@ test("API smoke tests", async (t) => {
       assert.match(preflight.headers.get("access-control-allow-headers") || "", /authorization/i);
     });
 
-    await t.test("unconfigured video service returns 503 without consuming rate limit", async () => {
-      for (let attempt = 0; attempt < 2; attempt += 1) {
-        const response = await fetch(`${baseUrl}/api/videos/generate`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt: "cinematic mountain sunset" })
-        });
-        assert.equal(response.status, 503);
-        const body = await response.json();
-        assert.match(body.error, /VIDEO_COMFYUI_URL/);
-      }
+    await t.test("native video endpoint returns animated SVG without a provider", async () => {
+      const response = await fetch(`${baseUrl/api/videos/generate`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: "cinematic mountain sunset" })
+      });
+      assert.equal(response.status, 200);
+      const body = await response.json();
+      assert.equal(body.mimeType, "image/svg+xml");
+      assert.equal(body.provider, "native-animated-svg");
+      assert.match(Buffer.from(body.video, "base64").toString("utf8"), /<animate/);
     });
 
-    await t.test("unconfigured image service returns 503 without consuming rate limit", async () => {
-      for (let attempt = 0; attempt < 2; attempt += 1) {
-        const response = await fetch(`${baseUrl}/api/images/generate`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt: "a mountain at sunset" })
-        });
-        assert.equal(response.status, 503);
-        const body = await response.json();
-        assert.match(body.error, /IMAGE_GENERATION_URL/);
-      }
+    await t.test("native image endpoint creates SVG without a provider", async () => {
+      const response = await fetch(`${baseUrl/api/images/generate`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: "a mountain at sunset" })
+      });
+      assert.equal(response.status, 200);
+      const body = await response.json();
+      assert.equal(body.mimeType, "image/svg+xml");
+      assert.equal(body.provider, "native-svg");
+      assert.match(Buffer.from(body.image, "base64").toString("utf8"), /<svg/);
     });
 
     await t.test("admin dashboard assets are served", async () => {
