@@ -2,7 +2,7 @@
 const button=document.getElementById("mini-menu-toggle"),menu=document.getElementById("mini-menu"),input=document.getElementById("message"),form=document.getElementById("chat-form");
 if(!button||!menu)return;
 const close=()=>{menu.hidden=true;button.setAttribute("aria-expanded","false")};
-const open=()=>{menu.hidden=false;button.setAttribute("aria-expanded","true"};
+const open=()=>{menu.hidden=false;button.setAttribute("aria-expanded","true")};
 button.setAttribute("aria-expanded","false");
 button.addEventListener("click",e=>{e.stopPropagation();menu.hidden?open():close()});
 menu.addEventListener("click",e=>{
