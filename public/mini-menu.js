@@ -14,7 +14,7 @@ menu.addEventListener("click",e=>{
  if(label.includes("Ijtimoiy tarmoq")){window.location.href="./social.html";return}
  if(label.includes("Virtual kompyuter")){window.location.href="./virtual-computer.html";return}
  if(label.includes("Ilovalarni yuklab olish")){window.location.href="./downloads.html";return}
- if(label.includes("Onlayn do‘kon")||label.includes("Logistika")){const settings=document.getElementById("settings-open");if(settings)settings.click();const business=document.getElementById("business-menu");if(business){const target=label.includes("Logistika")?"logistics":"store";const choice=business.querySelector('[data-open="'+target+'"]');if(choice)choice.click()}return}
+ if(label.includes("Onlayn do‘kon")||label.includes("Logistika")){const settings=document.getElementById("settings-open"),business=document.getElementById("business-menu"),target=label.includes("Logistika")?"logistics":"store";if(settings&&business){settings.click();const choice=business.querySelector('[data-open="'+target+'"]');if(choice){choice.click();return}}const fallback=label.includes("Logistika")?"Logistika va yetkazib berish funksiyasini ochishga yordam ber: jo‘natma, kuryer, transport, buyurtma holati.":"Onlayn magazin funksiyasini ishga tushirishga yordam ber: mahsulot, narx, savat, buyurtma va sotuvchi.";if(input&&form){input.value=fallback;input.dispatchEvent(new Event("input",{bubbles:true}));form.requestSubmit()}return}
  if(label.includes("Integratsiyalar")){const plugins=document.getElementById("side-plugins");if(plugins)plugins.click();return}
  if(label.includes("No-code")||label.includes("Sayt / ilova")){const builder=document.getElementById("side-builder");if(builder)builder.click();return}
  const prompt=item.getAttribute("data-mini-prompt");
