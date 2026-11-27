@@ -2,7 +2,7 @@
 
 const STOP_WORDS = new Set((
   "ha yo'q yoq va yoki ammo lekin uchun haqida bilan bu shu u uni unga ular qanday nima qaysi qachon qancha necha nechta " +
-  "ber menga kerak ayt hozir bugun bugungi ayni paytda ma'lumot ma lumot lumot malumot malumotlar maʼlumot tushuntir tushuntirib izohla izoh " +
+  "ber menga kerak ayt hozir bugun bugungi ayni paytda batafsil ma'lumot ma lumot lumot malumot malumotlar maʼlumot tushuntir tushuntirib izohla izoh " +
   "the a an and or but for about with from into on in at to of is are was were be been " +
   "what when where why how tell me explain give information facts " +
   "это как что где когда почему для про о об и или но на в из к по с со " +
@@ -67,6 +67,7 @@ function terms(value) {
     .filter(token => !STOP_WORDS.has(token))
     .map(normalizeToken)
     .map(token => TERM_ALIASES[token] || token)
+    .map(token => normalizeToken(token) || token)
     .filter(token => token && !STOP_WORDS.has(token)))];
 }
 
