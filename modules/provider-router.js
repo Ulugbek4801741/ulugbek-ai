@@ -61,8 +61,12 @@ function configuration(env = process.env) {
   if (!model) return { configured: false, provider, reason: "model-name-missing", apiKeyRequired: provider !== "openai-compatible" };
   if (provider === "openai-compatible") {
     const url = validHttpUrl(endpointFor(provider, env));
-    if (!url) return { configured: false, provider, reason: "endpoint-invalid", apiKeyRequired: false };
-    return { configured: true, provider, model, endpoint: url.toString(), apiKeyRequired: false, tokenConfigured: Boolean(token) };
+    if (!url) return { configured: false, provider, reason: "endpoint-invalid", apiKeyRequired: true, tokenConfigured: Boolean(token) };
+    const apiKeyRequired = url.hostname === "api.openai.com";
+    if (apiKeyRequired && !token) {
+      return { configured: false, provider, model, endpoint: url.toString(), reason: "api-key-missing", apiKeyRequired: true, tokenConfigured: false };
+    }
+    return { configured: true, provider, model, endpoint: url.toString(), apiKeyRequired, tokenConfigured: Boolean(token) };
   }
   if (provider === "gemini") return { configured: Boolean(token), provider, model, apiKeyRequired: true, tokenConfigured: Boolean(token) };
   if (provider === "anthropic") return { configured: Boolean(token), provider, model, apiKeyRequired: true, tokenConfigured: Boolean(token) };
