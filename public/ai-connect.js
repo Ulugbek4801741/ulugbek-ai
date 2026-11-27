@@ -1,0 +1,15 @@
+(()=>{"use strict";
+const menu=document.getElementById("mini-menu");
+if(!menu||document.getElementById("ai-connect-entry"))return;
+const entry=document.createElement("button");entry.id="ai-connect-entry";entry.type="button";entry.innerHTML="🔌 AI ulash";
+menu.insertBefore(entry,menu.children[1]||null);
+const modal=document.createElement("div");modal.id="ai-connect-modal";modal.className="ai-connect-backdrop";modal.hidden=true;
+modal.innerHTML='<section class="ai-connect-panel" role="dialog" aria-modal="true" aria-labelledby="ai-connect-title"><header><div><h2 id="ai-connect-title">AI xizmatlarini ulash</h2><p>ULUGBEK AI uchun AI provayder boshqaruvi</p></div><button type="button" class="ai-connect-close" aria-label="Yopish">×</button></header><article class="ai-provider ai-primary"><div class="ai-provider-head"><span class="ai-logo">◎</span><div><h3>ChatGPT (OpenAI)</h3><small>1-bosqich · Asosiy AI</small></div><span class="ai-tag">Birinchi</span></div><p>ChatGPT API ulash uchun API kalitini OpenAI platformasida yarating, so‘ng Render serverining Environment bo‘limiga kiriting. Kalitni bu oynaga yoki GitHub kodiga yozmang.</p><a class="ai-connect-link" href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">OpenAI API kalit yaratish ↗</a><div class="ai-env"><b>Render Environment qiymatlari</b><code>OPENAI_API_KEY = (yangi maxfiy kalit)</code><code>AI_PROVIDER = openai</code><code>OPENAI_MODEL = gpt-4.1-mini</code></div><button type="button" class="ai-copy-env">Environment nomlarini nusxalash</button><p class="ai-warning">API foydalanish to‘lovli bo‘lishi mumkin. ChatGPT obunasi API kreditlarini bermaydi. Avval limit/budget belgilang.</p></article><div class="ai-provider-list"><div><b>Ollama</b><span>Server yoki lokal qurilmada ochiq model · Keyingi bosqich</span></div><div><b>Gemini / OpenRouter</b><span>Keyinroq ulash · API kaliti va provider sozlamasi talab qilinadi</span></div></div><p class="ai-connect-note">Bu panel hozir ulanish bo‘yicha ko‘rsatma beradi. ChatGPT backendga real ulanmagan bo‘lsa, sozlash tugamaguncha ulangan deb ko‘rsatilmaydi.</p></section>';
+document.body.appendChild(modal);
+const close=()=>{modal.hidden=true;};
+entry.addEventListener("click",e=>{e.stopPropagation();menu.hidden=true;modal.hidden=false;});
+modal.querySelector(".ai-connect-close").addEventListener("click",close);
+modal.addEventListener("click",e=>{if(e.target===modal)close();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!modal.hidden)close();});
+modal.querySelector(".ai-copy-env").addEventListener("click",async()=>{const text="AI_PROVIDER=openai\nOPENAI_MODEL=gpt-4.1-mini\nOPENAI_API_KEY= (yangi maxfiy kalit)";try{await navigator.clipboard.writeText(text);const b=modal.querySelector(".ai-copy-env");b.textContent="Nusxalandi ✓";setTimeout(()=>b.textContent="Environment nomlarini nusxalash",1800);}catch(_){alert(text);}});
+})();
