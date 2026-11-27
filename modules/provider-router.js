@@ -10,20 +10,15 @@ function validHttpUrl(value) {
 function providerFor(env) {
   const explicit = String(env.ULUGBEK_AI_PROVIDER || "").trim().toLowerCase();
   if (explicit) return explicit;
-  if ((String(env.ULUGBEK_OLLAMA_URL || env.ULUGBEK_OLLAMA_BASE_URL || "").trim()) && String(env.ULUGBEK_OLLAMA_MODEL || "").trim()) return "ollama";
+  if (String(env.ULUGBEK_OLLAMA_URL || env.ULUGBEK_OLLAMA_BASE_URL || "").trim() && String(env.ULUGBEK_OLLAMA_MODEL || "").trim()) return "ollama";
   if (String(env.ULUGBEK_LOCAL_MODEL_URL || "").trim() && String(env.ULUGBEK_LOCAL_MODEL_NAME || "").trim()) return "openai-compatible";
-  if (String(env.GEMINI_API_KEY || "").trim()) return "gemini";
-  if (String(env.OPENAI_API_KEY || "").trim() && String(env.OPENAI_BASE_URL || "").trim() && String(env.OPENAI_MODEL || "").trim()) return "openai-compatible";
-  if (String(env.ANTHROPIC_API_KEY || "").trim()) return "anthropic";
   return "none";
 }
 
 function modelFor(provider, env) {
   if (provider === "ollama") return String(env.ULUGBEK_OLLAMA_MODEL || "").trim();
   if (env.ULUGBEK_AI_MODEL) return String(env.ULUGBEK_AI_MODEL).trim();
-  if (provider === "openai-compatible") return String(env.ULUGBEK_LOCAL_MODEL_NAME || env.OPENAI_MODEL || "").trim();
-  if (provider === "gemini") return String(env.GEMINI_MODEL || "").trim();
-  if (provider === "anthropic") return String(env.ANTHROPIC_MODEL || "").trim();
+  if (provider === "openai-compatible") return String(env.ULUGBEK_LOCAL_MODEL_NAME || "").trim();
   return "";
 }
 
@@ -32,20 +27,14 @@ function tokenFor(provider, env) {
   if (env.ULUGBEK_AI_TOKEN || env.ULUGBEK_LOCAL_MODEL_TOKEN) {
     return String(env.ULUGBEK_AI_TOKEN || env.ULUGBEK_LOCAL_MODEL_TOKEN).trim();
   }
-  if (provider === "gemini") return String(env.GEMINI_API_KEY || "").trim();
-  if (provider === "openai-compatible") return String(env.OPENAI_API_KEY || "").trim();
-  if (provider === "anthropic") return String(env.ANTHROPIC_API_KEY || "").trim();
   return "";
 }
 
 function endpointFor(provider, env) {
   if (provider === "openai-compatible") {
     const configured = String(env.ULUGBEK_AI_BASE_URL || env.ULUGBEK_LOCAL_MODEL_URL || "").trim();
-    if (configured) return configured;
-    const base = String(env.OPENAI_BASE_URL || "").trim().replace(/\/+$/, "");
-    return base ? base + "/chat/completions" : "";
+    return configured;
   }
-  if (provider === "anthropic") return String(env.ULUGBEK_AI_BASE_URL || "https://api.anthropic.com/v1/messages").trim();
   return "";
 }
 
@@ -58,82 +47,45 @@ function configuration(env = process.env) {
   const model = modelFor(provider, env);
   const token = tokenFor(provider, env);
   if (provider === "none" || !provider) return { configured: false, provider: "not-configured", apiKeyRequired: false };
-  if (!model) return { configured: false, provider, reason: "model-name-missing", apiKeyRequired: provider !== "openai-compatible" };
+  if (!model) return { configured: false, provider, reason: "model-name-missing", apiKeyRequired: false };
   if (provider === "openai-compatible") {
     const url = validHttpUrl(endpointFor(provider, env));
-    if (!url) return { configured: false, provider, reason: "endpoint-invalid", apiKeyRequired: false };
-    return { configured: true, provider, model, endpoint: url.toString(), apiKeyRequired: false, tokenConfigured: Boolean(token) };
+    if (!url || url.hostname === "api.openai.com") {
+      return { configured: false, provider: "local-compatible", reason: !url ? "endpoint-invalid" : "hosted-provider-blocked", apiKeyRequired: false };
+    }
+    return { configured: true, provider: "local-compatible", model, endpoint: url.toString(), apiKeyRequired: false, tokenConfigured: Boolean(token) };
   }
-  if (provider === "gemini") return { configured: Boolean(token), provider, model, apiKeyRequired: true, tokenConfigured: Boolean(token) };
-  if (provider === "anthropic") return { configured: Boolean(token), provider, model, apiKeyRequired: true, tokenConfigured: Boolean(token) };
-  return { configured: false, provider, reason: "provider-unsupported", apiKeyRequired: true };
+  return { configured: false, provider, reason: "provider-unsupported", apiKeyRequired: false };
 }
 
 function request(prompt, systemPrompt, env = process.env) {
   const config = configuration(env);
-  if (!config.configured) throw new Error("AI provider sozlanmagan yoki konfiguratsiya to‘liq emas.");
+  if (!config.configured) throw new Error("Mustaqil mahalliy AI modeli sozlanmagan.");
   const userText = String(prompt || "");
-  const token = tokenFor(config.provider, env);
   if (config.provider === "ollama") {
-    const local = require("./ollama-provider").request([{ role: "system", content: systemPrompt }, { role: "user", content: userText }], env);
-    return local;
+    return require("./ollama-provider").request([
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userText }
+    ], env);
   }
-  if (config.provider === "openai-compatible") {
-    const headers = { "Content-Type": "application/json", Accept: "application/json" };
-    if (token) headers.Authorization = "Bearer " + token;
-    return {
-      url: config.endpoint,
-      options: { method: "POST", headers, body: JSON.stringify({
-        model: config.model,
-        messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userText }],
-        temperature: 0.2, max_tokens: 2400, stream: false
-      }) }
-    };
-  }
-  if (config.provider === "gemini") {
-    const url = "https://generativelanguage.googleapis.com/v1beta/models/" +
-      encodeURIComponent(config.model) + ":generateContent?key=" + encodeURIComponent(token);
-    return {
-      url,
-      options: { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: systemPrompt }] },
-          contents: [{ role: "user", parts: [{ text: userText }] }],
-          generationConfig: { temperature: 0.2, maxOutputTokens: 2400 }
-        }) }
-    };
-  }
-  const url = endpointFor(config.provider, env);
-  const parsed = validHttpUrl(url);
-  if (!parsed || parsed.hostname !== "api.anthropic.com") throw new Error("Anthropic endpoint faqat rasmiy api.anthropic.com bo‘lishi mumkin.");
+  const headers = { "Content-Type": "application/json", Accept: "application/json" };
+  const token = tokenFor("openai-compatible", env);
+  if (token) headers.Authorization = "Bearer " + token;
   return {
-    url: parsed.toString(),
-    options: { method: "POST", headers: {
-      "Content-Type": "application/json", Accept: "application/json",
-      "x-api-key": token,
-      "anthropic-version": "2023-06-01"
-    }, body: JSON.stringify({
-      model: config.model, system: systemPrompt,
-      messages: [{ role: "user", content: userText }],
-      temperature: 0.2, max_tokens: 2400
+    url: config.endpoint,
+    options: { method: "POST", headers, body: JSON.stringify({
+      model: config.model,
+      messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userText }],
+      temperature: 0.2, max_tokens: 2400, stream: false
     }) }
   };
 }
 
 function extract(payload, provider) {
   if (provider === "ollama") return require("./ollama-provider").extract(payload);
-  if (provider === "openai-compatible") {
+  if (provider === "local-compatible" || provider === "openai-compatible") {
     const value = payload?.choices?.[0]?.message?.content;
     return typeof value === "string" ? value.trim() : "";
-  }
-  if (provider === "gemini") {
-    return (payload?.candidates?.[0]?.content?.parts || [])
-      .map(part => typeof part?.text === "string" ? part.text : "").join("\n").trim();
-  }
-  if (provider === "anthropic") {
-    return (payload?.content || [])
-      .filter(part => part?.type === "text" && typeof part.text === "string")
-      .map(part => part.text).join("\n").trim();
   }
   return "";
 }
