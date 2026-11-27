@@ -754,12 +754,16 @@ app.post("/api/ai/test", aiConnectionTestLimit, async (_req, res) => {
   if (config.provider !== "openai-compatible" || !String(config.endpoint || "").includes("api.openai.com")) {
     return res.status(400).json({ ok: false, error: "Sinov hozir faqat rasmiy OpenAI API uchun yoqilgan." });
   }
-  const request = providerRouter.request("ULUGBEK AI ulanish sinovi. Faqat OK deb javob bering.", "You are a connection test. Reply with OK.", process.env);
-  const payload = JSON.parse(request.options.body);
-  payload.max_tokens = 12;
-  payload.messages[1].content = "Reply with OK only.";
   const started = Date.now();
   try {
+    const endpoint = new URL(config.endpoint);
+    if (endpoint.hostname !== "api.openai.com") {
+      return res.status(400).json({ ok: false, error: "Sinov faqat rasmiy api.openai.com manzilida ishlaydi." });
+    }
+    const request = providerRouter.request("ULUGBEK AI ulanish sinovi. Faqat OK deb javob bering.", "You are a connection test. Reply with OK.", process.env);
+    const payload = JSON.parse(request.options.body);
+    payload.max_tokens = 12;
+    payload.messages[1].content = "Reply with OK only.";
     const response = await fetch(request.url, {
       ...request.options,
       body: JSON.stringify(payload),
