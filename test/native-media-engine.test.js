@@ -6,7 +6,7 @@ test("native image generator creates an SVG asset without a provider key",()=>{
  const result=makeImage("sunset over mountain village",{style:"cinematic"});
  assert.equal(result.mimeType,"image/svg+xml");
  const svg=Buffer.from(result.image,"base64").toString("utf8");
- assert.match(svg,/<svg/);assert.match(svg,/mountain village/);assert.match(result.notice,/Diffusion\/rasm AI model emas/);
+ assert.match(svg,/<svg/);assert.match(svg,/mountain village/);assert.match(result.notice,/AI tasvir modeli emas/);
 });
 test("native animated scene is valid SVG with animation tags",()=>{
  const result=makeVideo("space and stars");
