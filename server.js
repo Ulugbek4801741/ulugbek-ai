@@ -734,6 +734,56 @@ app.get("/api/ai/status", (_req, res) => {
   res.json({ ok: true, agentCount: 1, agentName: "ULUGBEK Universal Agent", coordinatorArchitecture: "single-coordinator-dynamic-specialists", specialistFleet: agentFleet.status(), model: singleAgent.status(), language: languageModule.status(), emotion: emotionalIntelligence.status(), ethics: ethicalReasoning.status(), conversationPipeline: conversationOrchestrator.status(), independentLanguage: languageLearningWorker.status(), mathEngine: "native-safe-arithmetic", research: "public-read-only-with-source-checks" });
 });
 
+const aiConnectionTestLimit = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 2,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: { ok: false, error: "Sinov limiti tugadi. Bir daqiqadan keyin qayta urinib ko‘ring." }
+});
+app.post("/api/ai/test", aiConnectionTestLimit, async (_req, res) => {
+  const providerRouter = require("./modules/provider-router");
+  const config = providerRouter.configuration(process.env);
+  res.set("Cache-Control", "no-store");
+  if (!config.configured) {
+    const message = config.reason === "api-key-missing"
+      ? "Render Environment’da OPENAI_API_KEY mavjud emas."
+      : "OpenAI sozlamalari to‘liq emas. Provider, model va API manzilini tekshiring.";
+    return res.status(503).json({ ok: false, error: message, reason: config.reason || "not-configured" });
+  }
+  if (config.provider !== "openai-compatible" || !String(config.endpoint || "").includes("api.openai.com")) {
+    return res.status(400).json({ ok: false, error: "Sinov hozir faqat rasmiy OpenAI API uchun yoqilgan." });
+  }
+  const request = providerRouter.request("ULUGBEK AI ulanish sinovi. Faqat OK deb javob bering.", "You are a connection test. Reply with OK.", process.env);
+  const payload = JSON.parse(request.options.body);
+  payload.max_tokens = 12;
+  payload.messages[1].content = "Reply with OK only.";
+  const started = Date.now();
+  try {
+    const response = await fetch(request.url, {
+      ...request.options,
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(15000)
+    });
+    if (!response.ok) {
+      const safeErrors = {
+        401: "OpenAI API kaliti noto‘g‘ri yoki bekor qilingan (401).",
+        403: "OpenAI API ushbu so‘rovga ruxsat bermadi (403).",
+        429: "OpenAI limit yoki billing cheklovi qaytardi (429).",
+        500: "OpenAI serverida vaqtinchalik xatolik (500)."
+      };
+      return res.status(502).json({ ok: false, error: safeErrors[response.status] || "OpenAI so‘rovni rad etdi (" + response.status + ")." });
+    }
+    const data = await response.json();
+    const reply = providerRouter.extract(data, config.provider);
+    if (!reply) return res.status(502).json({ ok: false, error: "OpenAI javobi keldi, lekin matn topilmadi." });
+    return res.json({ ok: true, provider: "openai", model: config.model, latencyMs: Date.now() - started });
+  } catch (error) {
+    const timedOut = error && (error.name === "TimeoutError" || error.name === "AbortError");
+    return res.status(502).json({ ok: false, error: timedOut ? "OpenAI javobi 15 soniyada kelmadi." : "OpenAI bilan aloqa o‘rnatilmadi. Server tarmog‘ini tekshiring." });
+  }
+});
+
 app.get("/api/health", (_req, res) => {
   res.set("Cache-Control", "no-store");
   res.json({
