@@ -78,3 +78,22 @@ test("supports native Ollama chat API without an API key",()=>{
  assert.equal(body.model,"qwen2.5:7b");assert.equal(body.stream,false);
  assert.equal(provider.extract({message:{content:"Javob"}},"ollama"),"Javob");
 });
+
+test("requires a key for the official OpenAI endpoint", () => {
+  const missing = provider.configuration({
+    ULUGBEK_AI_PROVIDER: "openai-compatible",
+    OPENAI_BASE_URL: "https://api.openai.com/v1",
+    OPENAI_MODEL: "gpt-4.1-mini"
+  });
+  assert.equal(missing.configured, false);
+  assert.equal(missing.reason, "api-key-missing");
+  assert.equal(missing.apiKeyRequired, true);
+  const ready = provider.configuration({
+    ULUGBEK_AI_PROVIDER: "openai-compatible",
+    OPENAI_API_KEY: "test-key",
+    OPENAI_BASE_URL: "https://api.openai.com/v1",
+    OPENAI_MODEL: "gpt-4.1-mini"
+  });
+  assert.equal(ready.configured, true);
+  assert.equal(ready.endpoint, "https://api.openai.com/v1/chat/completions");
+});
