@@ -6,7 +6,7 @@ test("native image generator creates an SVG asset without a provider key",()=>{
  const result=makeImage("sunset over mountain village",{style:"cinematic"});
  assert.equal(result.mimeType,"image/svg+xml");
  const svg=Buffer.from(result.image,"base64").toString("utf8");
- assert.match(svg,/<svg/);assert.match(svg,/mountain village/);assert.match(result.notice,/Diffusion\/rasm AI model emas/);
+ assert.match(svg,/<svg/);assert.match(svg,/mountain village/);assert.match(result.notice,/fotorealistik AI tasvir modeli emas/);
 });
 test("native animated scene is valid SVG with animation tags",()=>{
  const result=makeVideo("space and stars");
@@ -15,7 +15,8 @@ test("native animated scene is valid SVG with animation tags",()=>{
 });
 test("voice output splits sentences and supports Uzbek language",()=>{
  const result=makeVoice("Salom. Bugun yaxshi kun! Qanday yordam kerak?","uz-UZ");
- assert.equal(result.language,"uz-UZ");assert.deepEqual(result.segments,["Salom.","Bugun yaxshi kun!","Qanday yordam kerak?"]);
+ assert.equal(result.language,"uz-UZ");
+ assert.deepEqual(result.segments,["Salom.","Bugun yaxshi kun!","Qanday yordam kerak?"]);
 });
 test("empty prompts are rejected",()=>{
  assert.throws(()=>makeImage(" "),error=>error.status===400);
