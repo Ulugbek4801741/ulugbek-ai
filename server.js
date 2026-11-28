@@ -7,6 +7,7 @@ const crypto = require("node:crypto");
 const agentRuntime = require("./agent-runtime");
 const universalAgentCore = require("./modules/universal-agent-core");
 const taskIntentRouter = require("./modules/task-intent-router");
+const problemSolvingEngine = require("./modules/problem-solving-engine");
 const universalToolHub = require("./modules/universal-tool-hub");
 const singleAgent = require("./modules/single-agent").createSingleAgent();
 const { createAgentFleet } = require("./modules/agent-fleet");
@@ -444,6 +445,7 @@ app.get("/api/admin/overview", requireAdmin, (_req, res) => {
     memory: { rssBytes: process.memoryUsage().rss, heapUsedBytes: process.memoryUsage().heapUsed },
     aiConfigured: singleAgent.status().configured,
     nativeReasoningReady: true,
+    problemSolvingEngine: problemSolvingEngine.status(),
     trainedLanguageModelReady: languageCognition.status().modelTrained,
     independentLanguageModelTrained: languageCognition.status().modelTrained,
     independentLanguageModelType: languageCognition.status().modelType,
@@ -943,6 +945,28 @@ app.post("/api/agent/fleet/run", requireAdmin, plannerRateLimit, async (req, res
     return res.status(result.ok ? 200 : 503).set("Cache-Control", "no-store").json(result);
   } catch (error) {
     return res.status(error.statusCode || 400).json({ ok: false, error: error.message || "Agent jamoasi ishlamadi." });
+  }
+});
+
+app.get("/api/problem-solving/status", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  return res.json({ ok: true, problemSolving: problemSolvingEngine.status() });
+});
+
+app.post("/api/problem-solving/analyze", plannerRateLimit, (req, res) => {
+  try {
+    const report = problemSolvingEngine.analyzeProblem(req.body?.problem ?? req.body?.task);
+    res.set("Cache-Control", "no-store");
+    return res.status(201).json({
+      ok: true,
+      report,
+      note: "Tahlil va reja tayyorlandi. Tashqi amallar yoki kod bajarildi degani emas."
+    });
+  } catch (error) {
+    return res.status(error.statusCode || 400).json({
+      ok: false,
+      error: error.message || "Muammo tahlil qilinmadi."
+    });
   }
 });
 
